@@ -9,6 +9,7 @@ This folder records methodology decisions: what was decided, on what evidence, w
   - *Proposed* — drafted, not yet applied to the protocol.
   - *Accepted (pre-freeze)* — applied to the working protocol; may still change before the freeze.
   - *Frozen* — part of the tagged confirmatory protocol.
+  - *Accepted* — in force; used for process and governance decisions that are not part of the confirmatory protocol (e.g. DR-004).
   - *Superseded by DR-NNN*.
 - **Evidence tags** (as in the feasibility notebook):
   - **[D]** observed in the dataset;
@@ -24,7 +25,8 @@ This folder records methodology decisions: what was decided, on what evidence, w
 | [DR-001](DR-001-temporal-split-strategy.md) | Temporal split strategy | Accepted (pre-freeze) | 2026-09-23 | Split structure; roles of V1 and V2; no primary gap |
 | [DR-002](DR-002-review-capacity-definition.md) | Review-capacity definition | Accepted (pre-freeze) | 2026-09-23 | Capacity grid; fixed daily budget K; primary metric interpretation |
 | [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) | RQ2 / H3: policy-transfer fidelity | Accepted (pre-freeze), Δ open | 2026-09-23 | RQ2 wording; H3 equivalence formulation; budget-fidelity outcomes |
+| [DR-004](DR-004-github-issue-driven-workflow.md) | GitHub issue-driven workflow | Accepted | 2026-09-23 | Project workflow; AI-assisted work rules (see [`AGENTS.md`](../../AGENTS.md)) |
 
 ## Source of evidence
 
-All three records draw on [`notebooks/01_dataset_feasibility_audit.ipynb`](../../notebooks/01_dataset_feasibility_audit.ipynb). Its conclusion was *"Suitable with methodological changes."*
+DR-001 to DR-003 draw on [`notebooks/01_dataset_feasibility_audit.ipynb`](../../notebooks/01_dataset_feasibility_audit.ipynb). Its conclusion was *"Suitable with methodological changes."* DR-004 is a project-governance decision (GitHub Issue #6).
