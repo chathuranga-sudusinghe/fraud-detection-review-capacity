@@ -60,12 +60,26 @@ Literature suggests that class weighting mainly distorts calibration and has lit
 
 ### H3 — Alert-rate transfer fidelity
 
-Defined per [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). τ₂ is the V2-selected 2 % rate threshold (policy R2); r is the realised Test alert rate at τ₂.
+Defined per [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). τ₂ is the V2-selected 2 % rate threshold (policy R2). r is the realised Test alert rate at τ₂, pooled over Test days: r = Σ_d n_d / Σ_d N_d.
 
-- **H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ).
-- **H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ).
+- **H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ, where Δ = 0.004, i.e. ±20% of the target).
+- **H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ, where Δ = 0.004, i.e. ±20% of the target).
 
-Tested by TOST at α = 0.05, i.e. H3₁ is concluded if the 90 % bootstrap CI for r lies entirely within [0.02 − Δ, 0.02 + Δ] [REF-030]. **Δ is not yet fixed** (open item). The old point-null H3 ("the threshold preserves the intended workload") is withdrawn.
+**Equivalence tolerance.**
+- Δ = 0.004 is a **relative tolerance of 20 % of the 2 % target**, giving the band (1.6 %, 2.4 %), i.e. ±11 reviews per day at K = 56.
+- It was fixed before any Test access (Issue #7).
+- No fraud- or alerting-specific literature standard exists, so the magnitude is a pre-specified researcher judgement. It is anchored in V2 volume-driven workload variation (upper quartile 16.7 %, 90th percentile 26.5 %) and in a precision-feasibility check.
+- The relative form follows the common practice of defining equivalence margins relative to a reference value [REF-065].
+- Full justification and the alternatives considered (absolute, budget-derived; 10 %, 25 %, 50 %) are in [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
+
+**Test.**
+- TOST at α = 0.05 [REF-061, REF-062, REF-030]: H3₁ is concluded only if the 90 % CI for r lies entirely inside (0.016, 0.024).
+- A CI overlapping a bound is **inconclusive**.
+- The CI comes from a **moving-block bootstrap over Test days**: block length 3 days, B = 10,000, percentile interval [REF-037, REF-064]. Sensitivity block lengths are 1 and 7 days.
+- Inference is conditional on the deployed model and τ₂.
+- Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded.
+
+The old point-null H3 ("the threshold preserves the intended workload") is withdrawn.
 
 **Daily-budget fidelity** is a separate operational outcome, reported descriptively and **not** hypothesis-tested. Measures:
 - realised daily review count;
@@ -266,11 +280,11 @@ No assumed value will be presented as an actual institutional banking cost.
 
 **Uncertainty must be cluster- or day-block-aware.** Fraud labels cluster by entity: V2 frauds average ≈ 2 per heuristic pseudo-entity, with an upper-bound design effect ≈ 4.3 [D]. Days are autocorrelated. Transaction-level resampling would therefore understate uncertainty.
 
-- **Primary:** paired bootstrap 95 % CIs, resampling either heuristic pseudo-entity clusters [REF-036] or day blocks [REF-037, REF-044]. The exact unit is an open item.
+- **Primary (H1, H2):** paired bootstrap 95 % CIs, resampling either heuristic pseudo-entity clusters [REF-036] or day blocks [REF-037, REF-044]. The exact unit is an open item. H3 uses the day-level moving-block bootstrap specified above, because its outcome does not depend on labels.
 - **Secondary:** exact McNemar test on paired fraud-capture differences [REF-035, REF-028]. It assumes independent frauds and is reported as a secondary check only.
 - **Effect sizes** with CIs.
 - **Holm correction** across the pre-specified confirmatory tests [REF-029].
-- **TOST equivalence** for H3 (Δ open), and optionally for H2 (SESOI open) [REF-030].
+- **TOST equivalence** for H3, with Δ = 0.004 (±20 % relative) and a day-level moving-block bootstrap [REF-061, REF-062, REF-064]. Optionally also for H2, once its SESOI is fixed [REF-030, REF-063].
 - **Secondary outcomes** use estimation with confidence intervals, not additional hypothesis tests. Proportions use Wilson intervals [REF-034] where a bootstrap is not required.
 
 **Power (projection, not Test data).** About 2,660 Test frauds are projected from V2 prevalence. The minimum detectable paired difference in Recall@2% is roughly:
@@ -334,9 +348,9 @@ AI assistance used in this project must be declared in the AI Reflection (AIR) r
 
 | # | Item | Notes |
 |---|---|---|
-| 1 | **Justify and freeze the H3 tolerance Δ** | Absolute or relative; operational justification; no Test information ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)) |
+| 1 | ~~Justify and freeze the H3 tolerance Δ~~ | **Resolved (Issue #7), pending supervisor review:** Δ = 0.004 (±20 % relative); TOST with a day-level moving-block bootstrap ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)) |
 | 2 | **Justify and freeze the SESOI for H1 and H2** | Needed to interpret non-significant results; enables TOST for H2 |
-| 3 | **Decide the primary clustered-bootstrap unit** | Heuristic pseudo-entity clusters vs day blocks (block length); the other as sensitivity |
+| 3 | **Decide the primary clustered-bootstrap unit** for H1/H2 | Heuristic pseudo-entity clusters vs day blocks (block length); the other as sensitivity. (H3 is already specified: day blocks, ℓ = 3; DR-003.) |
 | 4 | **Declare the cost-ratio grid for RQ3** | e.g. C_miss / C_R ∈ {1, 2, 5, 10, 20, 50, 100} as a candidate; whether C_FP is included; precise break-even definition |
 | 5 | **Finalise the feature-category declaration** | Exact columns declared categorical for both libraries; confirm the excluded columns |
 | 6 | **Declare the overflow rule** for R0/R1/R2 | Report-only vs truncate-to-top-K |
@@ -370,6 +384,6 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 
 Full entries and verification status are in [`docs/references.md`](references.md).
 
-REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053.
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065.
 
 \* Partially verified. † Unverified; open item.

@@ -2,7 +2,7 @@
 
 Master list of every source used by this research project. Other documents cite sources by **Reference ID** (e.g. `REF-005`), so each claim can be traced back to this register when writing the dissertation.
 
-**Last verification pass:** 23 September 2026.
+**Last verification pass:** 23 September 2026 (REF-001–REF-060); 24 September 2026 (REF-061–REF-065, Issue #7).
 
 ## Verification status
 
@@ -62,6 +62,10 @@ Initial evidence base: the reference list of `notebooks/01_dataset_feasibility_a
 | REF-038 | Hernández-Orallo, J., Flach, P. & Ferri, C. (2012) 'A unified view of performance metrics: translating threshold choice into expected classification loss', *Journal of Machine Learning Research*, 13, pp. 2813–2869. | doi:10.5555/2503308.2503332 (ACM DL record) | Journal article | Threshold-choice methods as part of evaluation | Verified | Semantic Scholar / DBLP `journals/jmlr/Hernandez-OralloFF12` |
 | REF-039 | Provost, F. & Fawcett, T. (2001) 'Robust classification for imprecise environments', *Machine Learning*, 42(3), pp. 203–231. | doi:10.1023/A:1007601015854 | Journal article | Evaluation when costs are uncertain; motivates cost-ratio sensitivity | Verified | Crossref |
 | REF-040 | Drummond, C. & Holte, R.C. (2006) 'Cost curves: an improved method for visualizing classifier performance', *Machine Learning*, 65(1), pp. 95–130. | doi:10.1007/s10994-006-8199-5 | Journal article | Cost curves / break-even presentation (RQ3) | Verified | Crossref |
+| REF-061 | Schuirmann, D.J. (1987) 'A comparison of the two one-sided tests procedure and the power approach for assessing the equivalence of average bioavailability', *Journal of Pharmacokinetics and Biopharmaceutics*, 15(6), pp. 657–680. | doi:10.1007/BF01068419 | Journal article | Original TOST procedure; equivalence with the 90 % CI inside the bounds (H3) | Verified | Crossref (added for Issue #7) |
+| REF-062 | Berger, R.L. & Hsu, J.C. (1996) 'Bioequivalence trials, intersection-union tests and equivalence confidence sets', *Statistical Science*, 11(4), pp. 283–319. | doi:10.1214/ss/1032280304 | Journal article | TOST as an intersection-union test (each one-sided test at α; no α split); link to equivalence confidence sets (H3) | Verified | Crossref (volume, issue, DOI) and Semantic Scholar (pages) (added for Issue #7) |
+| REF-063 | Lakens, D., Scheel, A.M. & Isager, P.M. (2018) 'Equivalence testing for psychological research: a tutorial', *Advances in Methods and Practices in Psychological Science*, 1(2), pp. 259–269. | doi:10.1177/2515245918770963 | Journal article (tutorial) | Equivalence bounds as a smallest effect size of interest (SESOI) that the researcher must justify (H3; H2 SESOI) | Verified | Crossref. **Only the abstract was read; the full text returned HTTP 403.** Cite only for the TOST/SESOI framing stated in the abstract until the full text is checked (added for Issue #7) |
+| REF-064 | Hall, P., Horowitz, J.L. & Jing, B.-Y. (1995) 'On blocking rules for the bootstrap with dependent data', *Biometrika*, 82(3), pp. 561–574. | doi:10.1093/biomet/82.3.561 | Journal article | Order of the optimal block length (n^(1/3) for variance, n^(1/4) for one-sided distribution estimation); H3 block-length choice | Verified | Crossref; the block-length orders are confirmed from the abstract and summary (added for Issue #7) |
 
 ### 1.1 Studies using the IEEE-CIS dataset (prior-work context)
 
@@ -102,7 +106,11 @@ All accessed 23 September 2026.
 
 ## 5. Other authoritative sources
 
-None at present. Practitioner web pages (e.g. vendor blogs, unreviewed Kaggle notebooks) are deliberately excluded.
+| ID | Citation | DOI / URL | Type | Used for | Status | Note |
+|---|---|---|---|---|---|---|
+| REF-065 | European Medicines Agency, Committee for Medicinal Products for Human Use (2010) *Guideline on the investigation of bioequivalence*, CPMP/EWP/QWP/1401/98 Rev. 1/Corr\*\*. London, 20 January 2010; effective 1 August 2010. | https://www.ema.europa.eu/en/documents/scientific-guideline/guideline-investigation-bioequivalence-rev1_en.pdf | Regulatory guideline | Precedent that equivalence margins for positive quantities are defined relative to a reference (the 90 % CI of the test/reference ratio must lie within 80.00–125.00 %). **Used for the form of the H3 margin only, not its magnitude** | Verified | PDF read; the 80.00–125.00 % acceptance interval and the 90 % CI rule were confirmed in the text (added for Issue #7) |
+
+Practitioner web pages (e.g. vendor blogs, unreviewed Kaggle notebooks) and non-peer-reviewed preprints are deliberately excluded.
 
 ## 6. Sources listed in `docs/literature-review.md` awaiting verification
 
