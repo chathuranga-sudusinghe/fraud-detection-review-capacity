@@ -284,7 +284,7 @@ Expected argument:
 
 ### 3.11 Statistical Uncertainty and Model Comparison
 
-The current engineering repository contains many point estimates. The MSc study should extend this by reviewing:
+The MSc study should strengthen point-estimate evaluation by reviewing:
 
 - bootstrap confidence intervals;
 - paired bootstrap comparisons;
@@ -502,7 +502,7 @@ A literature evidence matrix should be created later so that studies can be comp
 
 ## 8. Preliminary Research Gap
 
-A preliminary gap supported by the current project inspection and initial literature review is:
+A preliminary gap supported by the initial literature review is:
 
 > Fraud-detection studies frequently compare predictive models using global discrimination or threshold-based classification metrics, while operational fraud detection also requires converting model scores into review decisions under severe class imbalance, asymmetric error costs, and limited investigation resources. Although class weighting, threshold optimisation, calibration, and cost-sensitive approaches are individually well represented in the literature, there remains value in a controlled empirical study that jointly examines model family and decision-threshold strategy under explicit human-review capacity constraints, while preserving temporal evaluation, untouched test data, statistical uncertainty, and false-negative analysis.
 
@@ -529,21 +529,7 @@ The final research-gap statement must be revised after the complete literature s
 
 ---
 
-## 9. Relationship to the Previous Engineering Repository
-
-The earlier `fraud-detection-ml-system` repository provides implementation experience and reusable ML components, but it is not treated as the literature evidence base.
-
-The literature review must justify the MSc research design independently through published academic work.
-
-Existing engineering results may motivate questions, but the final research claims must be supported by:
-
-1. published literature;
-2. the new COMP1885 experimental protocol;
-3. newly generated research results.
-
----
-
-## 10. Next Literature-Review Tasks
+## 9. Next Literature-Review Tasks
 
 1. Build a literature evidence matrix.
 2. Collect approximately 20–30 high-relevance academic sources, prioritising quality over volume.
