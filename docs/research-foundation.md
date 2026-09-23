@@ -4,7 +4,7 @@
 
 **Programme:** MSc Data Science, University of Greenwich  
 **Module:** COMP1885 Individual Project  
-**Repository:** `cost-sensitive-fraud-detection-research`  
+**Repository:** `fraud-detection-review-capacity`  
 **Research type:** Quantitative, non-participant, secondary-data experimental study
 
 ## Working Research Title
@@ -13,11 +13,13 @@
 
 ## Research Problem
 
-Transaction fraud detection is a low-prevalence binary-classification problem in which missed fraud can be costly, while excessive false alerts can create unnecessary manual-review workload and customer friction.
+Transaction fraud detection is a low-prevalence, imbalanced binary-classification problem in which missed fraud can be costly, while excessive false alerts can create unnecessary manual-review workload and customer friction.
 
 In operational settings, review resources are limited. Therefore, a useful fraud-detection system must do more than produce a strong global discrimination score: it must prioritise transactions effectively under a fixed review budget, and the decision policy chosen during validation should remain operationally stable when applied to later data.
 
 Temporal change can alter score distributions, fraud prevalence, feature distributions, and realised alert volume. This creates a research problem at the boundary between predictive ranking and operational decision policy.
+
+In the IEEE-CIS development data, fraud prevalence is about 3.5 %, an imbalance ratio of about 28 : 1. This is described as **imbalanced / low-prevalence**, not "severely" imbalanced: that label is conventionally reserved for ratios of about 100 : 1 and above [REF-002, REF-001]. The practical difficulty comes from low prevalence combined with temporal drift and a review budget that, at 2 % capacity, is smaller than the daily number of frauds ([DR-002](decisions/DR-002-review-capacity-definition.md)).
 
 ## Main Research Question
 
@@ -31,11 +33,15 @@ Temporal change can alter score distributions, fraud prevalence, feature distrib
 
 ### RQ2
 
-> **When score thresholds selected on validation data are applied to a later period, how accurately do they preserve the intended review workload, and what effect does workload drift have on missed fraud?**
+> **When a score threshold selected on validation data is transferred to a later temporal period, how well does it preserve the intended alert rate, and how does the resulting daily review workload compare with the fixed review budget?**
+
+Revised after the feasibility audit ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). The earlier wording mixed alert-rate drift, which depends on the model and data, with daily-volume variation, which exists regardless of the model.
 
 ### RQ3
 
 > **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
+
+RQ3 is evaluated **across the capacity grid** (1 %, 2 %, 5 %, 10 %). Its main output is the **break-even miss-to-review cost ratio at each capacity**. At 2 % the budget is below the daily fraud count, so the cost-aware policy is expected to coincide with filling capacity for most plausible ratios. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md)).
 
 ## Confirmatory Hypotheses
 
@@ -51,13 +57,17 @@ Temporal change can alter score distributions, fraud prevalence, feature distrib
 
 **H2₁:** Class weighting changes Recall@2% review capacity relative to the corresponding unweighted model.
 
-### H3 — Policy-transfer effect
+Smallest effects of interest for H1 and H2 must be declared before protocol freeze. An equivalence test for H2 may be added only once its SESOI is justified [REF-030].
 
-**H3₀:** A validation-selected 2% review threshold preserves the intended review workload on the later temporal test period.
+### H3 — Alert-rate transfer fidelity
 
-**H3₁:** A validation-selected 2% review threshold does not preserve the intended review workload on the later temporal test period.
+**H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target.
 
-RQ3 will primarily be evaluated through cost-ratio sensitivity analysis and break-even analysis rather than a separate omnibus hypothesis test.
+**H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target.
+
+The band is 2 % ± Δ. **Δ must be justified and fixed before protocol freeze** ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with two one-sided tests (TOST) [REF-030]. Fidelity to the fixed daily budget (daily review count vs K, overflow and underuse days) is a separate descriptive operational outcome, not a hypothesis.
+
+RQ3 will primarily be evaluated through cost-ratio sensitivity analysis and break-even analysis across the capacity grid rather than a separate omnibus hypothesis test.
 
 ## Research Aim
 
@@ -69,9 +79,9 @@ To quantify how predictive ranking quality and score-to-review decision policies
 2. Compare LightGBM and CatBoost under identical data, features, tuning budgets, and evaluation conditions.
 3. Evaluate unweighted and balanced class-weighted variants of each primary model family.
 4. Measure fraud capture under fixed review-capacity scenarios using capacity-aware metrics.
-5. Evaluate how validation-selected score thresholds transfer to later data in terms of realised workload and missed fraud.
-6. Evaluate calibrated cost-aware review policies using scenario-based cost ratios and sensitivity analysis.
-7. Quantify uncertainty using pre-specified confidence intervals, paired comparisons, and effect sizes.
+5. Evaluate how validation-selected score thresholds transfer to later data, separating alert-rate fidelity from fixed daily-budget fidelity.
+6. Evaluate calibrated cost-aware review policies across the capacity grid, using scenario-based cost ratios and break-even analysis.
+7. Quantify uncertainty using pre-specified, cluster- or day-block-aware confidence intervals, paired comparisons, and effect sizes.
 8. Characterise false-negative behaviour across pre-declared transaction subgroups without causal interpretation.
 9. Document ethical considerations, assumptions, limitations, and threats to validity.
 
@@ -87,7 +97,9 @@ A simple L2-regularised Logistic Regression model may be included only as a refe
 ### Class weighting
 
 - unweighted
-- balanced weighting
+- balanced weighting: explicit sample weights, w_pos = n_neg / n_pos computed from Train only
+
+Resampling methods (SMOTE, over- and under-sampling) are excluded [REF-019, REF-020, REF-022].
 
 ### Decision policies
 
@@ -108,13 +120,15 @@ Candidate capacity scenarios:
 - 5%
 - 10%
 
-These are experimental scenarios and must not be represented as real institutional review capacities unless supported by evidence.
+These are simulated research scenarios. They must not be represented as real institutional review capacities. Each rate c is turned into a fixed daily budget K = round(c × mean daily volume in V2), giving 28 / 56 / 139 / 278 reviews per relative day ([DR-002](decisions/DR-002-review-capacity-definition.md)).
 
 ## Primary and Secondary Outcomes
 
 ### Primary outcome
 
-- Recall@2% review capacity
+- Recall@2% review capacity (daily top-K, K = 56), reported with its oracle ceiling (≈ 0.6) and normalised recall
+
+Precision@Capacity is a rescaling of Recall@Capacity under fixed K. It is reported descriptively, not as independent confirmatory evidence.
 
 ### Secondary outcomes
 
@@ -159,24 +173,22 @@ The research will use separate temporal stages:
 TRAIN
   -> model fitting
 
-VALIDATION 1
+VALIDATION 1   (relative days 106-126)
   -> hyperparameter selection
   -> early stopping
-  -> calibration fitting where required
 
-VALIDATION 2
+VALIDATION 2   (relative days 127-154)
+  -> probability calibration (for the cost-aware policy R4)
   -> threshold selection
-  -> review-capacity policy selection
-  -> cost-rule selection
+  -> daily review budget K
 
-OPTIONAL GAP
-  -> label-maturity / temporal separation if justified
+NO PRIMARY GAP
 
-FINAL TEST
+FINAL TEST     (relative days 155-182, sealed)
   -> one confirmatory evaluation
 ```
 
-The exact day boundaries will be validated from the raw dataset and frozen in the research protocol before confirmatory experiments.
+Train covers relative days 1–105. The day boundaries were chosen from transaction volume alone, before any target analysis, and are recorded with partition hashes in [DR-001](decisions/DR-001-temporal-split-strategy.md). Calibration is fitted on V2 rather than V1 because V1 is used for early stopping and its fraud prevalence differs from V2's. Calibration affects only the cost-aware policy, since monotone calibrators do not change rankings.
 
 The final test set must not be used to select:
 
@@ -193,11 +205,11 @@ The final test set must not be used to select:
 
 The final statistical plan will prioritise:
 
-- paired bootstrap confidence intervals;
-- exact McNemar testing where appropriate for paired fraud-capture differences;
+- paired bootstrap confidence intervals that respect fraud clustering and temporal dependence, using heuristic entity-cluster or day-block resampling [REF-036, REF-037];
+- exact McNemar testing as a secondary check for paired fraud-capture differences [REF-035];
 - effect sizes;
-- Holm correction for pre-specified confirmatory comparisons;
-- equivalence testing for class weighting only if a justified smallest effect size of interest is defined.
+- Holm correction for pre-specified confirmatory comparisons [REF-029];
+- equivalence testing (TOST) for H3, and for class weighting only if a justified smallest effect size of interest is defined [REF-030].
 
 Statistical significance will not be treated as equivalent to practical importance.
 
@@ -234,7 +246,7 @@ Subgroups with insufficient fraud counts will not be interpreted independently.
 
 ## Research Contribution
 
-The expected contribution is a reproducible empirical evaluation of:
+The expected contribution is **a controlled, pre-specified, uncertainty-quantified evaluation of how score-to-review policies transfer across time under fixed review capacity on a public benchmark.** It evaluates:
 
 ```text
 ranking model
@@ -252,16 +264,39 @@ workload fidelity
 cost-sensitive outcome
 ```
 
-The study does not claim a novel fraud-detection algorithm.
+The study does not claim a novel fraud-detection algorithm. It also claims **no novelty** for any of the following, each of which has established prior work:
+- capacity-constrained evaluation itself [REF-006, REF-004, REF-005, REF-046];
+- temporal evaluation itself, including on this dataset [REF-023, REF-041 (partially verified)];
+- cost-sensitive thresholding itself [REF-008, REF-039].
+
+The value lies in the controlled combination:
+- a split frozen before label analysis;
+- the separation of alert-rate fidelity from budget fidelity;
+- break-even analysis across capacity regimes;
+- cluster-aware uncertainty.
 
 ## Next Research Tasks
 
 1. Resolve and document the University ethics route.
-2. Complete the literature evidence matrix.
-3. Verify the raw dataset profile and candidate temporal split.
-4. Freeze `docs/protocol.md`.
+2. Complete the literature evidence matrix and verify the outstanding references in [`references.md`](references.md).
+3. ~~Verify the raw dataset profile and candidate temporal split.~~ Done: see the feasibility audit notebook and [DR-001](decisions/DR-001-temporal-split-strategy.md).
+4. Resolve the open items listed in [`protocol.md`](protocol.md#open-items-before-protocol-freeze), then freeze `docs/protocol.md`.
 5. Create the dataset manifest.
 6. Implement leakage-safe data and split pipelines.
 7. Run validation-only model development.
 8. Lock the final decision policies.
 9. Run the final test evaluation once.
+
+## Decision Records
+
+- [DR-001 — Temporal split strategy](decisions/DR-001-temporal-split-strategy.md)
+- [DR-002 — Review-capacity definition](decisions/DR-002-review-capacity-definition.md)
+- [DR-003 — RQ2 / H3: policy-transfer fidelity](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)
+
+## References
+
+Full entries and verification status are in [`references.md`](references.md).
+
+REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-041\*, REF-046\*.
+
+\* Partially verified.

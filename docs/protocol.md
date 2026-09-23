@@ -2,9 +2,15 @@
 
 ## Status
 
-**Working protocol — not yet frozen.**
+**Working protocol — pre-freeze. Not yet confirmatory.**
 
-This file defines the intended confirmatory research design. Exact dataset split boundaries, statistical effect-size thresholds, and final cost scenarios must be validated before the protocol is tagged as final.
+This file defines the intended confirmatory research design. It has been revised to incorporate the accepted findings of the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*). The resulting methodology decisions are recorded in [`docs/decisions/`](decisions/README.md).
+
+Several parameters are still **open** (see [Open items before protocol freeze](#open-items-before-protocol-freeze)). The protocol becomes confirmatory only when every open item is resolved and the file is tagged in Git.
+
+**Test-set status:** the final Test period (relative days 155–182) is **sealed**. Its labels have not been used for any analysis.
+
+Citations use Reference IDs from [`docs/references.md`](references.md).
 
 ## Research Title
 
@@ -20,13 +26,21 @@ This file defines the intended confirmatory research design. Exact dataset split
 
 > **How do LightGBM and CatBoost, with and without class weighting, differ in fraud capture at fixed review capacity on a later temporal test period?**
 
-### RQ2 — Policy transfer
+### RQ2 — Policy-transfer fidelity
 
-> **When score thresholds selected on validation data are applied to a later period, how accurately do they preserve the intended review workload, and what effect does workload drift have on missed fraud?**
+> **When a score threshold selected on validation data is transferred to a later temporal period, how well does it preserve the intended alert rate, and how does the resulting daily review workload compare with the fixed review budget?**
+
+Revised per [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). The previous wording mixed alert-rate drift (model/data) with daily-volume variation, which exists regardless of the model.
 
 ### RQ3 — Cost-aware capacity use
 
 > **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
+
+**Scope (revised):**
+- RQ3 is evaluated **across the whole capacity grid (1 %, 2 %, 5 %, 10 %)**, not at 2 % alone.
+- Its **main output is the break-even miss-to-review cost ratio at each capacity**, supported by cost curves [REF-039, REF-040].
+- At 2 % the budget is below the daily fraud count on every validation day, so the cost-aware policy is expected to coincide with daily top-K for most plausible ratios. The informative contrasts are expected at 5 % and 10 % and at low ratios ([DR-002](decisions/DR-002-review-capacity-definition.md)).
+- RQ3 is analysed by estimation and sensitivity analysis, not by a separate significance test.
 
 ## Confirmatory Hypotheses
 
@@ -35,118 +49,151 @@ This file defines the intended confirmatory research design. Exact dataset split
 - **H1₀:** ΔRecall@2% (CatBoost − LightGBM) = 0.
 - **H1₁:** ΔRecall@2% (CatBoost − LightGBM) ≠ 0.
 
+Recall@2% is evaluated under policy R3 (daily top-K, K = 56). A smallest effect size of interest (SESOI) must be declared before freeze, so that a non-significant result can be interpreted (open item).
+
 ### H2 — Class-weighting effect
 
 - **H2₀:** ΔRecall@2% (weighted − unweighted) = 0.
 - **H2₁:** ΔRecall@2% (weighted − unweighted) ≠ 0.
 
-An equivalence analysis may additionally be used if a smallest effect size of interest is justified before final testing.
+Literature suggests that class weighting mainly distorts calibration and has little effect on ranking [REF-019, REF-020], so a null result is plausible. An **equivalence test (TOST)** [REF-030] may be added for H2 **only after a SESOI has been justified and fixed** before the freeze. Without a fixed SESOI, a non-significant H2 result must be reported as inconclusive, not as "no effect".
 
-### H3 — Policy-transfer effect
+### H3 — Alert-rate transfer fidelity
 
-- **H3₀:** A validation-selected 2% review threshold preserves the intended review workload on the later temporal test period.
-- **H3₁:** A validation-selected 2% review threshold does not preserve the intended review workload on the later temporal test period.
+Defined per [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). τ₂ is the V2-selected 2 % rate threshold (policy R2); r is the realised Test alert rate at τ₂.
 
-RQ3 will be analysed through estimation, sensitivity analysis, and break-even cost ratios.
+- **H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ).
+- **H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ).
+
+Tested by TOST at α = 0.05, i.e. H3₁ is concluded if the 90 % bootstrap CI for r lies entirely within [0.02 − Δ, 0.02 + Δ] [REF-030]. **Δ is not yet fixed** (open item). The old point-null H3 ("the threshold preserves the intended workload") is withdrawn.
+
+**Daily-budget fidelity** is a separate operational outcome, reported descriptively and **not** hypothesis-tested. Measures:
+- realised daily review count;
+- deviation and absolute deviation from K;
+- percentage of days above and below K;
+- total overflow and total unused capacity;
+- rate/volume decomposition.
+
+See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
 
 ## Dataset
 
-**IEEE-CIS Fraud Detection**
+**IEEE-CIS Fraud Detection** [REF-047].
 
-Official source:
-
-https://www.kaggle.com/competitions/ieee-fraud-detection/data
+Official source: https://www.kaggle.com/competitions/ieee-fraud-detection/data
 
 Primary labelled source files:
 
-- `train_transaction.csv`
-- `train_identity.csv`
+- `train_transaction.csv` (590,540 rows)
+- `train_identity.csv` (144,233 rows; 24.4 % of transactions have an identity record)
 
-Join key:
+- **Join:** left join transaction ← identity on `TransactionID`; one-to-one, row-preserving.
+- **Temporal ordering variable:** `TransactionDT`, a relative time delta from an undisclosed reference point [REF-047]. Relative day = `TransactionDT // 86,400`, covering days 1–182. **No calendar dates are inferred.**
 
-- `TransactionID`
+The competition test data are not used because their labels are unavailable.
 
-Temporal ordering variable:
+**Class-imbalance terminology.**
+- Development-data prevalence is 3.49 %, an imbalance ratio of ≈ 28 : 1 [D].
+- The dataset is described as **imbalanced / low-prevalence**. It is **not** described as "severely" or "highly" imbalanced: that wording is conventionally reserved for majority:minority ratios of about 100 : 1 and above [REF-002, REF-001].
+- Imbalance ratio alone does not determine difficulty [REF-003, REF-043]. Here the difficulty comes from low prevalence combined with temporal drift and a review budget smaller than the daily fraud count.
 
-- `TransactionDT`
-
-The competition test data are not used as the dissertation's primary labelled test set because the target labels are unavailable.
+**Labelling caveat.** According to the organiser, a reported chargeback marks the card's transaction as fraud, and later transactions linked by account, email or billing address are also labelled fraud, within a 120-day window [REF-048, partially verified]. Labels are therefore not independent across transactions, and fraud that was never reported is labelled legitimate.
 
 ## Experimental Split Structure
 
-The final split will be chronological and day-aligned where practical.
+Chronological, day-aligned split, frozen from transaction volume only, before any target analysis ([DR-001](decisions/DR-001-temporal-split-strategy.md)):
 
-Planned structure:
+| Partition | Relative days | Rows | Role |
+|---|---|---|---|
+| Train | 1–105 | 368,632 | Model fitting. **No refit** on later data. |
+| Validation 1 (V1) | 106–126 | 65,544 | Hyper-parameter tuning and early stopping only |
+| Validation 2 (V2) | 127–154 | 77,822 | Probability calibration (for R4); threshold selection (R1, R2); daily budget K |
+| Gap | — | — | **None in the primary design** |
+| Final Test | 155–182 | 78,542 | **Sealed.** One confirmatory evaluation |
 
-```text
-Train
-  -> model fitting
+Partition hashes and `TransactionDT` bounds are recorded in [DR-001](decisions/DR-001-temporal-split-strategy.md).
 
-Validation 1
-  -> hyperparameter tuning
-  -> early stopping
-  -> calibration fitting
-
-Validation 2
-  -> threshold selection
-  -> review-capacity policy selection
-  -> cost-rule selection
-
-Optional temporal gap
-  -> included only if justified
-
-Final Test
-  -> one confirmatory evaluation
-```
-
-Exact day boundaries must be calculated from the raw data and justified before protocol freeze.
+**Supplementary analyses** (exploratory; development data only; no Test access):
+- **Label-latency sensitivity:** repeat label-dependent choices (R1 threshold, R4 calibrator) using only V2 days 127–147.
+- **Rolling-origin supplement for RQ2:** several V2-like → next-28-day transfers inside days 1–154, on the primary configuration only [REF-024, REF-025, REF-046].
 
 ## Models
 
 Primary:
 
-- LightGBM
-- CatBoost
+- LightGBM [REF-011]
+- CatBoost [REF-012]
 
-Optional reference:
+Optional reference (descriptive only, outside H1–H3):
 
-- L2 Logistic Regression
+- L2 logistic regression. Any preprocessing pipeline is fitted on Train only.
 
-No additional model family will be added without a clear research justification.
+Analytic baselines (always reported):
+- random review (precision = prevalence);
+- oracle ceiling at each capacity.
+
+**No additional model families will be added.** Tree ensembles are the reference family for tabular data of this kind [REF-013, REF-014].
+
+**Parity controls.** Both libraries receive:
+- the same features;
+- the same declared categorical columns;
+- the same tuning budget and search procedure on V1;
+- the same early-stopping rule.
+
+This ensures the comparison reflects model family, not preprocessing.
+
+## Feature Policy
+
+- **Raw or minimally processed features are the primary design.** There is no feature-engineering study.
+- **`TransactionID` and raw `TransactionDT` are not model features.** `TransactionID` is monotone in time, so it is a disguised timestamp [D]. Raw time cannot be extrapolated by tree models.
+- **No future-looking aggregate features.** Any frequency, count or entity-level aggregate would have to be computed from Train only or with past-only windows. None is planned for the primary design.
+- **No manual target encoding.** Categorical handling is native to each library: CatBoost ordered target statistics [REF-012]; LightGBM categorical splits [REF-011].
+- **No engineered entity identifiers as features.** Heuristic keys such as card + address + implied account-start day are used **only** for audit and slicing.
+- The exact list of columns declared categorical is still open. Several nominal variables (`card1`–`card3`, `card5`, `addr1`, `addr2`, many `id_*`) are stored as numbers, so the declaration must be explicit.
 
 ## Class-Imbalance Treatment
 
 Primary comparison:
-
 - no class weighting;
 - balanced class weighting.
 
-Sampling-based approaches such as SMOTE, random over-sampling, and random under-sampling are outside the core design unless the literature review identifies a compelling reason to include them.
+**Implementation.**
+- Weighting is **explicit** and computed **from Train only**: per-row sample weight w_pos = n_neg / n_pos (≈ 28.5 in Train) for fraud rows and 1 for legitimate rows.
+- The same weights are applied to both libraries, rather than each library's own "balanced" switch.
+
+**Excluded.** SMOTE, random over-sampling and random under-sampling are outside the design:
+- rebalancing distorts calibration without improving discrimination [REF-019, REF-020, REF-021];
+- synthetic points have no valid timestamp in a temporal design;
+- SMOTE is ill-suited to high-cardinality nominal data [REF-022].
 
 ## Review Capacity
 
-Candidate capacity scenarios:
+Defined in [DR-002](decisions/DR-002-review-capacity-definition.md).
 
-- 1%
-- 2% — primary
-- 5%
-- 10%
+- **Capacity grid:** 1 %, **2 % (primary)**, 5 %, 10 %. These are **simulated research scenarios**, not real institutional capacities.
+- **Fixed daily budget:** K = round(c × mean daily transaction volume in V2), i.e. K = 28 / **56** / 139 / 278 reviews per relative day.
+- **Capacity ÷ prevalence** is reported with every result. At 2 % it is 0.59 (binding regime); at 5 % and 10 % it is above 1 (slack regime).
 
-The final implementation will convert these scenarios into fixed review limits derived from validation-period transaction volume.
+Prior art for capacity-constrained fraud evaluation exists [REF-006, REF-004, REF-005, REF-046]. No novelty is claimed for it.
 
-Primary metric:
+**Primary metric:** Recall@2% under R3 (daily top-K, K = 56), pooled over the Test days. Reported with:
+- the **oracle recall ceiling** (≈ 0.6 at 2 % in V2);
+- **normalised recall** = TP / min(K, daily frauds).
 
-- Recall@2% review capacity
+Precision@K is a rescaling of Recall@K under fixed K. It is reported descriptively and **not** treated as independent confirmatory evidence.
 
-Secondary capacity metrics:
+**Secondary outcomes:**
+- Recall@1 %, 5 %, 10 %;
+- false negatives at capacity;
+- frauds per 1,000 reviews;
+- lift over random review;
+- utilisation, overflow and underuse (see RQ2);
+- Average Precision / PR-AUC [REF-010] and ROC-AUC;
+- amount-weighted recall;
+- scenario cost;
+- calibration metrics for R4.
 
-- Precision@Capacity
-- false negatives at capacity
-- frauds per 1,000 reviews
-- lift
-- utilisation
-- workload overflow / capacity violation
-- normalised recall relative to an oracle ceiling
+**Overflow rule** for uncapped policies (R0, R1, R2): to be declared at freeze (open item). Options are to report overflow only, or to truncate to the top-K of the flagged transactions.
 
 ## Decision Policies
 
@@ -154,136 +201,175 @@ Secondary capacity metrics:
 
 Probability threshold = 0.5.
 
-Purpose: naive reference policy.
+Purpose: naive reference only. Its alert volume mainly reflects the score scale (which changes with class weighting). **Descriptive only; excluded from confirmatory tests.**
 
 ### R1 — F1-optimal threshold
 
-Selected using Validation 2 only.
+Selected using V2 only [REF-009]. Capacity-agnostic, so the overflow rule applies. Secondary comparator.
 
-Purpose: common capacity-agnostic threshold reference.
+### R2 — Capacity-rate threshold
 
-### R2 — Capacity-quantile threshold
+τ_c is chosen on V2 so that a fraction c of V2 transactions is flagged. It uses V2 scores and needs no labels.
 
-Selected on Validation 2 to target the intended review capacity.
-
-Purpose: test whether a static validation-selected threshold transfers operationally to later data.
+Purpose: object of RQ2/H3. Is a static validation-selected operating point transferable in time?
 
 ### R3 — Daily top-K
 
-Review the highest-scoring K transactions within each evaluation period.
+Review the K highest-scoring transactions within each relative day.
 
-Purpose: ranking-quality benchmark under full capacity utilisation.
+Purpose: ranking-quality benchmark at full capacity, used for H1/H2. Note that it is an idealised end-of-day batch policy, not a streaming policy [REF-033].
 
 ### R4 — Calibrated cost-aware capped policy
 
-Use calibrated probabilities and an explicit cost rule, subject to the review-capacity limit.
+Review transaction i if its calibrated probability p_i exceeds the analytic cost threshold, capped at K per day (highest p_i first) [REF-008]:
+- p* = C_R / C_miss if only review cost and missed-fraud cost are modelled;
+- p* = (C_R + C_FP) / (C_miss + C_FP) if an additional false-alert friction cost C_FP is included.
 
-Purpose: determine when leaving capacity unused is economically preferable under stated cost assumptions.
+The threshold is **derived, not tuned**.
+
+Purpose: RQ3. When does leaving capacity unused become the cheaper choice under stated cost assumptions?
 
 ## Calibration
 
 Calibration is a supporting component, not a separate research question.
 
-Candidate method:
-
-- Platt scaling on Validation 1.
-
-Secondary comparison, if justified:
-
-- isotonic regression.
-
-Candidate metrics:
-
-- Brier score;
-- log loss;
-- calibration intercept;
-- calibration slope;
-- reliability diagram.
+- **Fitted on V2, not V1.** V1 scores are optimistic because V1 is used for early stopping, and V1 prevalence (4.22 %) differs from V2 (3.39 %): a −0.23 log-odds shift [D]. V2 is also closest in time to Test.
+- **Relevant to R4 (and the descriptive R0) only.** Platt and isotonic calibration are monotone. They do not change the ranking, so R2 and R3 are unaffected, and R1 selects the same flagged set on either scale [I; REF-015].
+- **Primary method:** Platt scaling [REF-016]. **Secondary check:** isotonic regression [REF-017].
+- **Metrics:** Brier score, log loss, calibration intercept and slope, reliability diagram [REF-018]. Reported on V2 (in-sample for the calibrator) and on Test.
 
 ## Cost Model
 
-The analysis will separate:
+The analysis separates:
+- review effort (C_R);
+- additional false-alert / customer-friction cost (C_FP, optional);
+- missed-fraud cost (C_miss).
 
-- review effort;
-- additional false-alert/customer-friction cost;
-- missed-fraud cost.
+**Data-supported quantities [D]:**
+- count of frauds captured and missed;
+- amount-weighted recall (`TransactionAmt`, in USD per the organiser [REF-048]);
+- fraud value exposed (Σ amount of missed fraud) as a proxy for loss exposure.
 
-All cost values are scenario assumptions.
+Amount-weighted results will have wide uncertainty: the top 20 % of development frauds by amount carry 62 % of fraud value [D].
 
-The final protocol will define:
-
-- normalised review cost;
-- miss-to-review cost ratios;
-- optional false-alert friction ratios;
-- break-even analyses.
+**Assumed quantities:**
+- all cost values are **scenario assumptions** [REF-039];
+- miss-to-review ratios C_miss / C_R are evaluated over a declared grid (open item);
+- results are summarised as **break-even ratios per capacity** and cost curves [REF-040];
+- amount-dependent miss costs may be used as a sensitivity scenario [REF-007].
 
 No assumed value will be presented as an actual institutional banking cost.
 
 ## Statistical Plan
 
-Primary confirmatory comparison:
+**Primary confirmatory comparison:** Recall@2% (H1, H2), plus H3 as specified above.
 
-- Recall@2%.
+**Uncertainty must be cluster- or day-block-aware.** Fraud labels cluster by entity: V2 frauds average ≈ 2 per heuristic pseudo-entity, with an upper-bound design effect ≈ 4.3 [D]. Days are autocorrelated. Transaction-level resampling would therefore understate uncertainty.
 
-Candidate methods:
+- **Primary:** paired bootstrap 95 % CIs, resampling either heuristic pseudo-entity clusters [REF-036] or day blocks [REF-037, REF-044]. The exact unit is an open item.
+- **Secondary:** exact McNemar test on paired fraud-capture differences [REF-035, REF-028]. It assumes independent frauds and is reported as a secondary check only.
+- **Effect sizes** with CIs.
+- **Holm correction** across the pre-specified confirmatory tests [REF-029].
+- **TOST equivalence** for H3 (Δ open), and optionally for H2 (SESOI open) [REF-030].
+- **Secondary outcomes** use estimation with confidence intervals, not additional hypothesis tests. Proportions use Wilson intervals [REF-034] where a bootstrap is not required.
 
-- paired bootstrap 95% confidence intervals;
-- exact McNemar test for paired fraud-capture differences where applicable;
-- effect-size reporting;
-- Holm correction across pre-specified confirmatory tests.
+**Power (projection, not Test data).** About 2,660 Test frauds are projected from V2 prevalence. The minimum detectable paired difference in Recall@2% is roughly:
+- 1.2–2.8 percentage points if frauds are treated as independent;
+- 2–5.6 percentage points under design effects of 2–4.
 
-Class-weighting equivalence testing may be added only after a defensible smallest effect size of interest has been declared.
+H1 and H2 are therefore powered only for moderate effects.
 
-Secondary outcomes will primarily use estimation with confidence intervals rather than additional hypothesis tests.
+Statistical significance will not be treated as equivalent to practical importance.
 
 ## False-Negative Analysis
 
-Pre-declared exploratory slices may include:
+Exploratory, descriptive and non-causal. Pre-declared slices:
 
 - identity information present / absent;
-- product category;
-- card characteristics;
-- device-information status;
+- ProductCD;
+- card4 and card6;
+- DeviceType (including missing);
 - transaction-amount bands;
-- temporal sub-periods;
-- score bands.
+- relative week within Test;
+- score band;
+- **recurring vs new pseudo-entity** (whether the transaction's heuristic entity already had a Train-period fraud label).
 
 The analysis will report:
-
 - fraud count per slice;
-- miss rate;
+- miss rate (FN ÷ frauds in slice);
 - uncertainty interval;
 - share of total false negatives.
 
-No causal claim will be made from subgroup associations.
+**Interpretability rule:** slices with fewer than about 100 frauds are pooled or reported descriptively only.
+
+Slice base rates differ strongly (e.g. identity present 9.4 % vs absent 2.1 % in V2 [D]), so raw false-negative counts are never interpreted alone. No causal claim will be made from subgroup associations.
 
 ## Leakage Controls
 
-Before the protocol is frozen:
+Before the protocol is frozen [REF-026, REF-027]:
 
-- all dataset partitions must be mutually exclusive;
-- preprocessing and encoders must be fitted on permitted training data only;
-- threshold and policy selection must use validation data only;
-- final test labels must not influence feature, model, or policy design;
-- no future-looking aggregate may be used;
-- all test access will be logged.
+- all partitions are mutually exclusive and chronological (asserted and hashed; [DR-001](decisions/DR-001-temporal-split-strategy.md));
+- no random or shuffled splitting or cross-validation across time;
+- preprocessing, encoders, class weights and any baseline pipelines are fitted on Train only;
+- tuning and early stopping use V1; calibration, threshold selection and K use V2;
+- final Test labels do not influence features, models, policies, capacities or cost scenarios;
+- no future-looking aggregates; no manual target encoding; `TransactionID` and raw `TransactionDT` are excluded;
+- all Test access is logged.
+
+**Known uncontrollable risks, stated as threats to validity:**
+- entity-level label dependence combined with the absence of label-report dates, which gives optimistic results;
+- organiser-engineered C / D / V features whose look-back windows are undocumented.
 
 ## Ethics
 
-The study uses secondary data and does not recruit human participants.
+The study uses secondary, anonymised data and does not recruit human participants.
 
-Before confirmatory experiments, the University of Greenwich ethics route must be confirmed and documented because the topic concerns fraud and potentially sensitive/criminal subject matter.
+The University of Greenwich Research Ethics Policy applies to master's students' research (§1.2) [REF-050]. It lists research involving "harmful, criminal, particularly sensitive … subject matters" as requiring ethical consideration (§1.3.4) and as **Higher Risk** (§2.2.1 iv) [REF-050]. Separate guidance states that fully anonymised secondary data should not normally need approval, and that taught students are advised on the route by their programme or module leader [REF-051].
+
+Whether this project falls under §1.3.4 must be **confirmed in writing** before confirmatory experiments (open item). The data-use terms of the competition must also be verified [REF-049].
+
+AI assistance used in this project must be declared in the AI Reflection (AIR) required by University guidance [REF-053].
+
+## Open items before protocol freeze
+
+| # | Item | Notes |
+|---|---|---|
+| 1 | **Justify and freeze the H3 tolerance Δ** | Absolute or relative; operational justification; no Test information ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)) |
+| 2 | **Justify and freeze the SESOI for H1 and H2** | Needed to interpret non-significant results; enables TOST for H2 |
+| 3 | **Decide the primary clustered-bootstrap unit** | Heuristic pseudo-entity clusters vs day blocks (block length); the other as sensitivity |
+| 4 | **Declare the cost-ratio grid for RQ3** | e.g. C_miss / C_R ∈ {1, 2, 5, 10, 20, 50, 100} as a candidate; whether C_FP is included; precise break-even definition |
+| 5 | **Finalise the feature-category declaration** | Exact columns declared categorical for both libraries; confirm the excluded columns |
+| 6 | **Declare the overflow rule** for R0/R1/R2 | Report-only vs truncate-to-top-K |
+| 7 | **Declare the H3 configuration(s) and multiplicity family** | Which model × weighting configuration(s) H3 is tested on; Holm family membership |
+| 8 | **Resolve the University of Greenwich ethics route in writing** | Research Ethics Policy §1.3.4 (criminal subject matter) [REF-050, REF-051] |
+| 9 | **Verify the Kaggle / IEEE-CIS data-use terms** | REF-049 unverified |
+| 10 | **Verify all currently unverified or partially verified references** | REF-016, REF-037, REF-041, REF-042, REF-045, REF-046, REF-047, REF-048, REF-049, REF-055, REF-056–REF-060 |
+| 11 | **Obtain the COMP1885 module handbook** | Marking criteria, required structure, AI-use tier [REF-055] |
+| 12 | **Create the dataset manifest** | SHA-256 values and partition hashes from the feasibility notebook |
 
 ## Protocol Freeze
 
 The protocol becomes confirmatory only after:
 
-1. literature evidence review is complete enough to justify the design;
-2. ethics route is confirmed;
-3. raw dataset statistics are independently reproduced;
-4. split boundaries are justified;
-5. primary metric and capacity are fixed;
-6. hypotheses and statistical tests are fixed;
-7. cost scenarios are declared.
+1. every open item above is resolved;
+2. the literature evidence review is complete enough to justify the design;
+3. the ethics route is confirmed;
+4. the raw dataset statistics and split hashes are reproduced by the split-generation code;
+5. hypotheses, SESOIs, Δ and statistical tests are fixed;
+6. cost scenarios are declared.
 
-After that point, the protocol should be tagged in Git before final-test evaluation.
+After that point the protocol is tagged in Git before the final Test evaluation.
+
+## Decision Records
+
+- [DR-001 — Temporal split strategy](decisions/DR-001-temporal-split-strategy.md)
+- [DR-002 — Review-capacity definition](decisions/DR-002-review-capacity-definition.md)
+- [DR-003 — RQ2 / H3: policy-transfer fidelity](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)
+
+## References
+
+Full entries and verification status are in [`docs/references.md`](references.md).
+
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053.
+
+\* Partially verified. † Unverified; open item.

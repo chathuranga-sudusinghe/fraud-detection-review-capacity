@@ -4,7 +4,7 @@
 
 **Programme:** MSc Data Science, University of Greenwich  
 **Module:** COMP1885 Individual Project  
-**Research repository:** `cost-sensitive-fraud-detection-research`
+**Research repository:** `fraud-detection-review-capacity`
 
 **Working title:**  
 **Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Gradient-Boosting Models and Decision Policies**
