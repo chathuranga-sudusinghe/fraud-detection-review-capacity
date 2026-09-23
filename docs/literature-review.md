@@ -7,7 +7,7 @@
 **Research repository:** `cost-sensitive-fraud-detection-research`
 
 **Working title:**  
-**Cost-Sensitive Transaction Fraud Detection Under Severe Class Imbalance and Constrained Human-Review Capacity: A Comparative Study of Model and Threshold Strategies**
+**Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Gradient-Boosting Models and Decision Policies**
 
 This document establishes the literature-review structure for the project. It is a research working document and will be expanded into the final dissertation literature review after the evidence base has been systematically collected and critically synthesised.
 
@@ -32,21 +32,21 @@ The literature review will establish:
 
 ## 2. Main Research Question
 
-> **How do model choice and decision-threshold strategy affect fraud-detection effectiveness under severe class imbalance and constrained human-review capacity?**
+> **Under constrained daily review capacity, how do model family, class weighting, and score-to-review decision policies affect fraud capture, review workload, and cost-sensitive outcomes on temporally unseen transaction data?**
 
 ### Supporting Questions
 
 **RQ1**
 
-> How do LightGBM and CatBoost compare in fraud-detection performance under a consistent, time-aware experimental setting?
+> How do LightGBM and CatBoost, with and without class weighting, differ in fraud capture at fixed review capacity on a later temporal test period?
 
 **RQ2**
 
-> How do alternative decision-threshold strategies affect fraud recall, precision, false-negative risk, and review workload?
+> When score thresholds selected on validation data are applied to a later period, how accurately do they preserve the intended review workload, and what effect does workload drift have on missed fraud?
 
 **RQ3**
 
-> How does constrained human-review capacity influence the effectiveness and operational trade-offs of different fraud-detection policies?
+> Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?
 
 The literature review must provide the theoretical and empirical basis for these questions rather than merely summarising unrelated fraud-detection papers.
 
@@ -59,7 +59,7 @@ The literature review must provide the theoretical and empirical basis for these
 Key issues to review:
 
 - rarity of fraudulent transactions;
-- misleading behaviour of raw accuracy under severe class imbalance;
+- misleading behaviour of raw accuracy under class imbalance;
 - importance of minority-class detection;
 - precision–recall trade-offs;
 - asymmetric consequences of false negatives and false positives;
@@ -71,7 +71,7 @@ Expected argument:
 
 ---
 
-### 3.2 Evaluation Metrics for Severe Class Imbalance
+### 3.2 Evaluation Metrics for Class Imbalance
 
 Metrics to review critically:
 
@@ -372,7 +372,7 @@ Discover Data, 2026.
 
 Initial relevance:
 
-- frames fraud detection around severe class imbalance, temporal behaviour, and asymmetric error costs;
+- frames fraud detection around class imbalance, temporal behaviour, and asymmetric error costs;
 - includes calibration;
 - applies cost-sensitive thresholding;
 - reports temporal future-slice evaluation;
@@ -455,7 +455,7 @@ Potential databases/search platforms:
 ### Include
 
 - research directly related to transaction, payment, or credit-card fraud detection;
-- studies addressing severe class imbalance;
+- studies addressing class imbalance;
 - cost-sensitive learning or threshold optimisation;
 - review-capacity, alert-budget, or risk-based decision policies;
 - LightGBM/CatBoost or comparable tabular classifiers where methodologically useful;
@@ -504,7 +504,7 @@ A literature evidence matrix should be created later so that studies can be comp
 
 A preliminary gap supported by the initial literature review is:
 
-> Fraud-detection studies frequently compare predictive models using global discrimination or threshold-based classification metrics, while operational fraud detection also requires converting model scores into review decisions under severe class imbalance, asymmetric error costs, and limited investigation resources. Although class weighting, threshold optimisation, calibration, and cost-sensitive approaches are individually well represented in the literature, there remains value in a controlled empirical study that jointly examines model family and decision-threshold strategy under explicit human-review capacity constraints, while preserving temporal evaluation, untouched test data, statistical uncertainty, and false-negative analysis.
+> Fraud-detection studies frequently compare predictive models using global discrimination or threshold-based classification metrics, while operational fraud detection also requires converting model scores into review decisions under class imbalance, asymmetric error costs, and limited investigation resources. Although class weighting, threshold optimisation, calibration, and cost-sensitive approaches are individually well represented in the literature, there remains value in a controlled empirical study that jointly examines model family and decision-threshold strategy under explicit human-review capacity constraints, while preserving temporal evaluation, untouched test data, statistical uncertainty, and false-negative analysis.
 
 The MSc project will therefore focus on:
 
