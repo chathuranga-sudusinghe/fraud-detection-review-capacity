@@ -132,45 +132,7 @@ TEST
 
 The test set must not be used to choose the final model, threshold, class weight, or operating policy.
 
-## Existing Engineering Baseline
-
-This research builds on selected components from the author's earlier repository:
-
-`chathuranga-sudusinghe/fraud-detection-ml-system`
-
-That repository already contains substantial engineering and experimental work, including:
-
-- IEEE-CIS fraud-detection data workflow;
-- LightGBM baseline;
-- CatBoost Model V2;
-- model-family comparison;
-- class-imbalance experiments;
-- threshold analysis;
-- false-negative analysis;
-- cost-sensitive policy experiments;
-- reproducibility and artifact validation;
-- FastAPI inference;
-- Docker;
-- Prometheus / Grafana;
-- Kafka;
-- Airflow;
-- CI;
-- Terraform / AWS scaffolding.
-
-Selected reusable ML components may be adapted into this repository. However, the COMP1885 contribution will be based on a new controlled research protocol and newly generated experimental evidence.
-
-## Academic Contribution Boundary
-
-The following are **supporting engineering**, not the primary MSc research contribution:
-
-- FastAPI serving;
-- Docker packaging;
-- Kafka streaming;
-- Airflow orchestration;
-- Prometheus / Grafana monitoring;
-- CI/CD;
-- Terraform;
-- AWS deployment.
+## Academic Contribution
 
 The primary research contribution is the controlled empirical study of:
 
@@ -199,7 +161,7 @@ Before final experiments are run, the research repository must add or confirm:
 - an explicit cost model or cost-ratio sensitivity analysis;
 - confidence intervals and paired statistical comparison;
 - final false-negative subgroup analysis;
-- complete experiment manifests and result provenance.
+- complete experiment manifests and result documentation.
 
 ## Planned Academic Documentation
 
@@ -212,7 +174,6 @@ docs/
 ├── methodology.md
 ├── ethics.md
 ├── threats-to-validity.md
-├── provenance.md
 └── results/
 ```
 
@@ -220,4 +181,4 @@ docs/
 
 **Research foundation established.**
 
-The next stage is to develop the literature review and methodology before importing or adapting implementation code from the earlier engineering repository.
+The next stage is to develop the literature review and methodology before implementation begins.

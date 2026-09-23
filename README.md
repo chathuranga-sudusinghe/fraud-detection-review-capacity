@@ -55,8 +55,6 @@ The academic contribution focuses on:
 - statistical uncertainty;
 - reproducible temporal evaluation.
 
-FastAPI, Docker, Kafka, Airflow, monitoring, CI/CD, Terraform, and AWS are supporting engineering topics from the earlier project and are not the primary COMP1885 research contribution.
-
 ## Human-in-the-Loop Interpretation
 
 The intended real-world interpretation is a Human-in-the-Loop (HITL) fraud-review workflow:
@@ -89,16 +87,7 @@ Planned next:
 - methodology;
 - ethics;
 - threats to validity;
-- provenance;
 - reproducible experiment and result documentation.
-
-## Relationship to the Earlier Project
-
-This project builds on selected implementation experience from:
-
-`chathuranga-sudusinghe/fraud-detection-ml-system`
-
-The earlier repository is a production-oriented ML engineering project. This repository is a separate MSc research project. Final research claims will be based on a new frozen experimental protocol and newly generated evidence.
 
 ## Status
 
