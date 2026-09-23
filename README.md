@@ -89,10 +89,6 @@ Planned next:
 - threats to validity;
 - reproducible experiment and result documentation.
 
-## Prior Work Disclosure
-
-This MSc research uses independently regenerated experimental evidence. Any pre-existing implementation experience is not treated as dissertation evidence.
-
 ## Status
 
 **Research foundation and dataset source established.**
