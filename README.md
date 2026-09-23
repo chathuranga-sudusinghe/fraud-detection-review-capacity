@@ -1,6 +1,6 @@
-# Cost-Sensitive Fraud Detection Research
+# Fraud Detection Under Limited Review Capacity
 
-MSc Data Science research project on cost-sensitive transaction fraud detection under severe class imbalance and constrained human-review capacity.
+MSc Data Science research project on temporally validated fraud-alert prioritisation under constrained review capacity.
 
 **University:** University of Greenwich  
 **Module:** COMP1885 Individual Project  
@@ -8,27 +8,47 @@ MSc Data Science research project on cost-sensitive transaction fraud detection 
 
 ## Working Research Title
 
-**Cost-Sensitive Transaction Fraud Detection Under Severe Class Imbalance and Constrained Human-Review Capacity: A Comparative Study of Model and Threshold Strategies**
+**Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Gradient-Boosting Models and Decision Policies**
 
 ## Main Research Question
 
-> **How do model choice and decision-threshold strategy affect fraud-detection effectiveness under severe class imbalance and constrained human-review capacity?**
+> **Under constrained daily review capacity, how do model family, class weighting, and score-to-review decision policies affect fraud capture, review workload, and cost-sensitive outcomes on temporally unseen transaction data?**
 
-### Supporting Research Questions
+## Supporting Research Questions
 
-1. **How do LightGBM and CatBoost compare in fraud-detection performance under a consistent, time-aware experimental setting?**
-2. **How do alternative decision-threshold strategies affect fraud recall, precision, false-negative risk, and review workload?**
-3. **How does constrained human-review capacity influence the effectiveness and operational trade-offs of different fraud-detection policies?**
+### RQ1
 
-## Hypotheses
+> **How do LightGBM and CatBoost, with and without class weighting, differ in fraud capture at fixed review capacity on a later temporal test period?**
 
-### H0 — Null Hypothesis
+### RQ2
 
-> **There is no statistically significant difference in fraud-detection effectiveness between the evaluated model and decision-threshold strategies under constrained human-review capacity.**
+> **When score thresholds selected on validation data are applied to a later period, how accurately do they preserve the intended review workload, and what effect does workload drift have on missed fraud?**
 
-### H1 — Alternative Hypothesis
+### RQ3
 
-> **There is a statistically significant difference in fraud-detection effectiveness between at least some of the evaluated model and decision-threshold strategies under constrained human-review capacity.**
+> **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
+
+## Confirmatory Hypotheses
+
+### H1 — Model-family effect
+
+**H1₀:** There is no difference in Recall@2% review capacity between CatBoost and LightGBM on the temporal test period.
+
+**H1₁:** There is a difference in Recall@2% review capacity between CatBoost and LightGBM on the temporal test period.
+
+### H2 — Class-weighting effect
+
+**H2₀:** Class weighting does not change Recall@2% review capacity relative to the corresponding unweighted model.
+
+**H2₁:** Class weighting changes Recall@2% review capacity relative to the corresponding unweighted model.
+
+### H3 — Policy-transfer effect
+
+**H3₀:** A validation-selected 2% review threshold preserves the intended review workload on the later temporal test period.
+
+**H3₁:** A validation-selected 2% review threshold does not preserve the intended review workload on the later temporal test period.
+
+RQ3 is primarily estimation and sensitivity analysis rather than a separate significance-testing exercise.
 
 ## Dataset
 
@@ -38,59 +58,66 @@ Official source:
 
 https://www.kaggle.com/competitions/ieee-fraud-detection/data
 
-The labelled transaction and identity training data will be used to create a reproducible time-aware Train → Validation → Final Test protocol for the MSc experiments.
+The labelled transaction and identity training data will be used to construct a reproducible time-aware experimental protocol.
 
 See [Dataset documentation](docs/dataset.md).
 
-## Research Scope
+## Research Focus
 
-The academic contribution focuses on:
+The research focuses on:
 
-- severe class imbalance;
-- LightGBM and CatBoost comparison;
-- class-weight / cost-sensitive treatment;
-- decision-threshold strategies;
-- constrained human-review capacity;
-- false-negative analysis;
+- temporal generalisation;
+- LightGBM and CatBoost;
+- class weighting;
+- fixed review capacity;
+- score-to-review decision policies;
+- Recall@Capacity and Precision@Capacity;
+- workload fidelity;
+- cost-sensitive decision analysis;
+- probability calibration where required;
 - statistical uncertainty;
-- reproducible temporal evaluation.
+- false-negative analysis.
 
-## Human-in-the-Loop Interpretation
+## Operational Interpretation
 
-The intended real-world interpretation is a Human-in-the-Loop (HITL) fraud-review workflow:
+The research models a capacity-constrained alert-triage workflow:
 
 ```text
 Transaction
     ↓
 ML fraud-risk score
     ↓
-Threshold / capacity policy
+Decision policy
     ↓
 Prioritised review queue
     ↓
-Human verification
+Manual verification
     ↓
 Final operational action
 ```
 
-The research itself does not recruit or evaluate real human analysts. Human review is represented as an operational capacity constraint.
+Human review is represented as an exogenous capacity constraint. The research does not recruit or evaluate human participants.
 
 ## Research Documentation
 
 - [Research foundation](docs/research-foundation.md)
+- [Research protocol](docs/protocol.md)
 - [Literature review foundation](docs/literature-review.md)
 - [Dataset documentation](docs/dataset.md)
 
 Planned next:
 
-- literature evidence matrix;
-- methodology;
 - ethics;
+- literature evidence matrix;
 - threats to validity;
-- reproducible experiment and result documentation.
+- dataset manifest;
+- split-generation code;
+- model and policy experiments;
+- statistical analysis;
+- final results.
 
 ## Status
 
-**Research foundation and dataset source established.**
+**Research direction revised and protocol established.**
 
-The next stage is to build the literature evidence matrix and then freeze the detailed methodology before final experiments are run.
+The next stage is to resolve the ethics route, complete the evidence matrix, and validate the dataset/split protocol before any confirmatory experiments are run.
