@@ -119,16 +119,6 @@ The final test partition must not be used to select:
 
 All such choices must be made using training and validation data only.
 
-## Relationship to the Earlier Project
-
-This MSc research originates from the author's earlier engineering repository:
-
-`chathuranga-sudusinghe/fraud-detection-ml-system`
-
-That project already used the IEEE-CIS Fraud Detection dataset and contains historical feature engineering, LightGBM, CatBoost, threshold, imbalance, and false-negative experiments.
-
-The COMP1885 repository does not treat those historical results as final dissertation evidence. Selected implementation components may be adapted, but the research dataset contract, split protocol, experiments, and final results will be regenerated under the new controlled MSc methodology.
-
 ## Ethics and Data Governance Note
 
 This project uses secondary competition data and does not require recruitment of human participants for the core experimental design.
@@ -147,7 +137,7 @@ However, the final ethics position must follow current University of Greenwich g
 
 The dissertation and repository should cite the official IEEE-CIS Fraud Detection competition source and any associated academic or organiser documentation used to describe the dataset.
 
-Do not describe the local Parquet copies or earlier project repository as the original dataset source.
+Local Parquet copies are derivative storage formats and should not be described as the original dataset source.
 
 ## Status
 
