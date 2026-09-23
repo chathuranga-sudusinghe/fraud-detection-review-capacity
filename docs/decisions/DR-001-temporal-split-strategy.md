@@ -1,0 +1,107 @@
+# DR-001 — Temporal split strategy
+
+| Field | Value |
+|---|---|
+| Status | Accepted (pre-freeze) |
+| Date | 2026-09-23 |
+| Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3–4, 5.1, 14, 15 |
+| Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
+
+## Context
+
+The study needs a leakage-safe temporal evaluation. Three things must be separated in time:
+- model fitting;
+- model selection (tuning, early stopping);
+- decision-policy selection (thresholds, calibration, capacity budget).
+
+Performance is then measured once, on a later untouched period. `TransactionDT` is a time offset in seconds from an **undisclosed** reference point [REF-047]. Only *relative* days can be used, and no calendar interpretation is possible.
+
+The split had to be chosen **before** any target-driven analysis, so that the final Test period stays uncontaminated. It was therefore chosen from transaction **volume only**. The only full-data label check was that `isFraud` exists, is binary and has no missing values.
+
+## Decision
+
+Use a chronological, day-aligned split, with relative day = `TransactionDT // 86,400`:
+
+| Partition | Relative days | Days | Rows | % rows | Role |
+|---|---|---|---|---|---|
+| **Train** | 1–105 | 105 | 368,632 | 62.4 | Model fitting. **Models are not refit** on later partitions. |
+| **V1** | 106–126 | 21 | 65,544 | 11.1 | Hyper-parameter selection and early stopping **only** |
+| **V2** | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for R4); threshold selection (R1, R2); daily budget K ([DR-002](DR-002-review-capacity-definition.md)) |
+| **Test** | 155–182 | 28 | 78,542 | 13.3 | **Sealed.** One confirmatory evaluation after the protocol freeze |
+
+- **No temporal gap in the primary design.**
+- **The Test period remains sealed.** Its labels have not been used for any analysis, and must not be until the protocol is frozen and tagged in Git.
+
+Reproducibility anchors, from the notebook (§4.3):
+
+| Partition | `TransactionDT` range (s) | SHA-256 of sorted `TransactionID`s (first 16 hex) |
+|---|---|---|
+| Train | 86,400 – 9,158,384 | `f3c088aa2f952738` |
+| V1 | 9,158,441 – 10,972,793 | `cb1325d41dae02a3` |
+| V2 | 10,972,801 – 13,391,998 | `54edb97bc6b82d4b` |
+| Test | 13,392,056 – 15,811,131 | `9f266b2bdf2da9f1` |
+
+## Evidence
+
+**Temporal structure [D].**
+- 590,540 transactions span relative days 1–182, with every day present.
+- Rows are sorted by `TransactionDT`, and `TransactionID` is monotone in time.
+- Mean volume is 3,245 per day, with a coefficient of variation of 0.26.
+- Days 1–28 average about 4,500 per day; later 4-week blocks average about 2,700–3,300 per day.
+- The lag-7 autocorrelation of daily volume (0.50) is weaker than lag-1 (0.75), so the weekly cycle is weak.
+
+**Partition sizes [D].**
+- V2 and Test have near-identical mean volume: 2,779 vs 2,805 rows per day.
+- Development fraud counts: Train 12,484 (3.39 %), V1 2,768 (4.22 %), V2 2,637 (3.39 %).
+- Test fraud count: not computed.
+
+**Drift between partitions [D].**
+- The V1 → V2 base-rate shift is −0.23 on the log-odds scale.
+- Identity coverage falls from 27.1 % (Train) to 20.7 % (V1) and 17.5 % (V2).
+- Most feature-level shift (PSI) occurs between Train and the validation periods, not between V1 and V2.
+
+**Entity-level label dependence [D].** About 16.9 % of V2 frauds come from heuristic pseudo-entities that already had a Train fraud label. Transactions from those entities are 68 % fraud, versus 0.06 % for pseudo-entities seen in Train without fraud.
+
+**Literature [L].**
+- Fraud systems face concept drift and verification latency, so evaluation must be temporal [REF-004, REF-005, REF-023].
+- Validation-before-test separation is standard leakage control [REF-026, REF-027].
+- Prequential / rolling-origin evaluation is recommended for fraud and temporal data [REF-046, REF-024, REF-025].
+
+## Alternatives considered
+
+| Alternative | Why not chosen |
+|---|---|
+| Random or stratified split, or k-fold CV | Label propagation across linked transactions [REF-048] and the observed entity recurrence [D] would inflate all metrics [REF-026, REF-027]. |
+| **B**: as chosen, plus a 7-day gap (Train 1–98, V1 99–119, V2 120–147, gap 148–154, Test 155–182) | Loses 21,443 rows (3.6 %). The dataset contains no label-report dates, so any gap length is arbitrary [D]. Without refitting, training data already ends 49 days before Test. |
+| **C**: 35-day Test (Train 1–91, V1 92–119, V2 120–147, Test 148–182) | About 27 % more Test rows (an approximately 11 % smaller detectable effect), but Train shrinks to 54.2 % and V1 grows beyond what early stopping needs. |
+| Two-way split (Train / Test) with thresholds chosen on Train or Test | Thresholds would be selected on in-sample or test data, which is leakage. |
+| Single validation set for both tuning and policy selection | V1 scores are *selected-on* (early stopping). Thresholds or calibrators fitted on them inherit optimism. A separate, later V2 is needed. |
+
+## Rationale
+
+1. **Train as large as possible, including the early high-volume regime.** The model then sees the full range of volumes.
+2. **V2 has the same length as Test (28 days) and near-identical volume.** Threshold and budget transfer (RQ2) is then a like-for-like comparison.
+3. **V1 and V2 have different jobs.** Early stopping makes V1 scores optimistic. V2 supplies out-of-sample scores for policy selection and calibration, and is closer in time to Test.
+4. **Calibration on V2, not V1.** V1's prevalence (4.22 %) differs from V2's (3.39 %), and V1 is used for early stopping. Calibration matters only for R4 (and the descriptive R0); monotone calibrators do not change the ranking used by R1–R3 [I; REF-015, REF-016].
+5. **No primary gap.** Its purpose would be to simulate label latency [REF-005, REF-046], but its length cannot be grounded in this dataset. Because models are not refit, the Train → Test separation is already 49 days.
+
+## Consequences
+
+- Development data total 511,998 rows and 17,889 frauds. Test has 78,542 rows (sealed).
+- Projected Test frauds, assuming V2 prevalence, are about 2,660. This is a projection, not an observation, and it drives the power discussion in the protocol.
+- Daily-level Test statistics rest on **n = 28 days**.
+- **RQ2 observes only one V2 → Test transfer event.** A small, development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only) is recommended to show whether transfer failure is systematic. It must not replace the single confirmatory Test evaluation.
+- **Label-latency sensitivity.** Label-dependent policy choices (R1 threshold; R4 calibrator) are repeated using only V2 days 127–147. This costs no Test access.
+- If the protocol is ever changed to **refit** on Train+V1(+V2), this decision must be revisited and a gap reconsidered.
+
+## Threats and limitations
+
+- **Unavoidable optimism from entity-level label dependence.** A temporally split model can still recognise entities that already carry fraud labels. That is realistic only if those labels would have been available at scoring time, and the dataset has no report dates [REF-048; D].
+- **Episodic prevalence.** Weekly fraud rates range from 2.1 % to 5.1 %, so a single 4-week Test window may be atypical.
+- **Relative time only.** No seasonal or calendar claims are possible.
+- **The relative-day boundary falls during active hours** (the activity trough is 8–9 hours after it). This affects which transactions compete in the same daily top-K queue, but not model comparisons.
+- **The split was chosen by the researcher.** Its defence is that it was fixed from volume alone, before any label analysis, and is recorded with partition hashes.
+
+## References
+
+REF-004, REF-005, REF-015, REF-016, REF-023, REF-024, REF-025, REF-026, REF-027, REF-046, REF-047, REF-048 — see [`../references.md`](../references.md).

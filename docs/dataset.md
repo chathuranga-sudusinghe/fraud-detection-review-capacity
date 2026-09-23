@@ -43,7 +43,7 @@ For this MSc study, the labelled Kaggle training data will be used to construct 
 - The dataset contains substantial class imbalance
 - Many feature meanings are masked or partially anonymised
 
-These properties are directly relevant to the research questions on severe class imbalance, temporal evaluation, decision thresholds, false-negative risk, and constrained review capacity.
+These properties are directly relevant to the research questions on class imbalance (low prevalence, ≈ 28 : 1 in development data; see [references](references.md) REF-002), temporal evaluation, decision thresholds, false-negative risk, and constrained review capacity.
 
 ## Local Research Data
 
