@@ -61,11 +61,11 @@ Smallest effects of interest for H1 and H2 must be declared before protocol free
 
 ### H3 — Alert-rate transfer fidelity
 
-**H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target.
+**H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ, where Δ = 0.004, i.e. ±20% of the target).
 
-**H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target.
+**H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ, where Δ = 0.004, i.e. ±20% of the target).
 
-The band is 2 % ± Δ. **Δ must be justified and fixed before protocol freeze** ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with two one-sided tests (TOST) [REF-030]. Fidelity to the fixed daily budget (daily review count vs K, overflow and underuse days) is a separate descriptive operational outcome, not a hypothesis.
+Here r is the realised alert rate pooled over the Test period. Δ = 0.004 is a relative tolerance of 20 % of the target, giving the band (1.6 %, 2.4 %). It was fixed before any Test access. No literature standard exists for this tolerance, so the magnitude is a pre-specified researcher judgement, anchored in development-period workload variation ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with two one-sided tests (TOST), using a day-level moving-block bootstrap confidence interval [REF-061, REF-062, REF-064]. Fidelity to the fixed daily budget (daily review count vs K, overflow and underuse days) is a separate descriptive operational outcome, not a hypothesis.
 
 RQ3 will primarily be evaluated through cost-ratio sensitivity analysis and break-even analysis across the capacity grid rather than a separate omnibus hypothesis test.
 
@@ -209,7 +209,7 @@ The final statistical plan will prioritise:
 - exact McNemar testing as a secondary check for paired fraud-capture differences [REF-035];
 - effect sizes;
 - Holm correction for pre-specified confirmatory comparisons [REF-029];
-- equivalence testing (TOST) for H3, and for class weighting only if a justified smallest effect size of interest is defined [REF-030].
+- equivalence testing (TOST) for H3 (Δ = 0.004, ±20 % relative), and for class weighting only if a justified smallest effect size of interest is defined [REF-030, REF-061].
 
 Statistical significance will not be treated as equivalent to practical importance.
 
@@ -297,6 +297,6 @@ The value lies in the controlled combination:
 
 Full entries and verification status are in [`references.md`](references.md).
 
-REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-041\*, REF-046\*.
+REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-041\*, REF-046\*, REF-061, REF-062, REF-064.
 
 \* Partially verified.
