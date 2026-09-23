@@ -9,176 +9,259 @@
 
 ## Working Research Title
 
-**Cost-Sensitive Transaction Fraud Detection Under Severe Class Imbalance and Constrained Human-Review Capacity: A Comparative Study of Model and Threshold Strategies**
+**Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Gradient-Boosting Models and Decision Policies**
 
 ## Research Problem
 
-Transaction fraud detection is a severely imbalanced classification problem in which fraudulent transactions are rare and false negatives can have serious consequences. However, lowering a decision threshold to capture more fraud can increase false positives and the number of cases requiring manual investigation.
+Transaction fraud detection is a low-prevalence binary-classification problem in which missed fraud can be costly, while excessive false alerts can create unnecessary manual-review workload and customer friction.
 
-In realistic fraud-review workflows, analysts have limited capacity. Therefore, predictive performance alone is not sufficient: the operational policy that converts model scores into review decisions also matters.
+In operational settings, review resources are limited. Therefore, a useful fraud-detection system must do more than produce a strong global discrimination score: it must prioritise transactions effectively under a fixed review budget, and the decision policy chosen during validation should remain operationally stable when applied to later data.
 
-This project investigates how model choice and decision-threshold strategy interact under severe class imbalance and constrained human-review capacity.
-
-The intended real-world interpretation is a Human-in-the-Loop (HITL) decision-support workflow in which a Machine Learning (ML) model produces a fraud-risk score and prioritises transactions for review, while the final operational decision remains with a human reviewer. The research does not recruit human participants or evaluate real analysts.
+Temporal change can alter score distributions, fraud prevalence, feature distributions, and realised alert volume. This creates a research problem at the boundary between predictive ranking and operational decision policy.
 
 ## Main Research Question
 
-> **How do model choice and decision-threshold strategy affect fraud-detection effectiveness under severe class imbalance and constrained human-review capacity?**
+> **Under constrained daily review capacity, how do model family, class weighting, and score-to-review decision policies affect fraud capture, review workload, and cost-sensitive outcomes on temporally unseen transaction data?**
 
 ## Supporting Research Questions
 
 ### RQ1
 
-> **How do LightGBM and CatBoost compare in fraud-detection performance under a consistent, time-aware experimental setting?**
+> **How do LightGBM and CatBoost, with and without class weighting, differ in fraud capture at fixed review capacity on a later temporal test period?**
 
 ### RQ2
 
-> **How do alternative decision-threshold strategies affect fraud recall, precision, false-negative risk, and review workload?**
+> **When score thresholds selected on validation data are applied to a later period, how accurately do they preserve the intended review workload, and what effect does workload drift have on missed fraud?**
 
 ### RQ3
 
-> **How does constrained human-review capacity influence the effectiveness and operational trade-offs of different fraud-detection policies?**
+> **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
 
-## Hypotheses
+## Confirmatory Hypotheses
 
-### H0 — Null Hypothesis
+### H1 — Model-family effect
 
-> **There is no statistically significant difference in fraud-detection effectiveness between the evaluated model and decision-threshold strategies under constrained human-review capacity.**
+**H1₀:** There is no difference in Recall@2% review capacity between CatBoost and LightGBM on the temporal test period.
 
-### H1 — Alternative Hypothesis
+**H1₁:** There is a difference in Recall@2% review capacity between CatBoost and LightGBM on the temporal test period.
 
-> **There is a statistically significant difference in fraud-detection effectiveness between at least some of the evaluated model and decision-threshold strategies under constrained human-review capacity.**
+### H2 — Class-weighting effect
+
+**H2₀:** Class weighting does not change Recall@2% review capacity relative to the corresponding unweighted model.
+
+**H2₁:** Class weighting changes Recall@2% review capacity relative to the corresponding unweighted model.
+
+### H3 — Policy-transfer effect
+
+**H3₀:** A validation-selected 2% review threshold preserves the intended review workload on the later temporal test period.
+
+**H3₁:** A validation-selected 2% review threshold does not preserve the intended review workload on the later temporal test period.
+
+RQ3 will primarily be evaluated through cost-ratio sensitivity analysis and break-even analysis rather than a separate omnibus hypothesis test.
 
 ## Research Aim
 
-To investigate how model choice and cost-sensitive decision-threshold strategies influence fraud-detection effectiveness under severe class imbalance and constrained human-review capacity.
+To quantify how predictive ranking quality and score-to-review decision policies jointly determine fraud capture, workload fidelity, and cost-sensitive outcomes under fixed review capacity and temporal shift.
 
 ## Research Objectives
 
-1. Establish a reproducible, time-aware experimental dataset and evaluation protocol using the IEEE-CIS Fraud Detection dataset.
-2. Compare LightGBM and CatBoost under a consistent preprocessing, feature-engineering, and data-partitioning protocol.
-3. Evaluate selected class-imbalance and cost-sensitive learning strategies.
-4. Compare alternative decision-threshold strategies under explicit review-capacity constraints.
-5. Quantify trade-offs using fraud recall, precision, false negatives, false positives, PR-AUC, ROC-AUC, review workload, and cost-sensitive outcomes.
-6. Evaluate statistical uncertainty and determine whether observed differences are statistically meaningful.
-7. Analyse the characteristics of fraud cases missed under constrained operating policies.
-8. Discuss ethical, operational, and validity limitations of model-assisted fraud-review decision support.
+1. Establish and freeze a reproducible, leakage-controlled temporal experimental protocol using the IEEE-CIS Fraud Detection dataset.
+2. Compare LightGBM and CatBoost under identical data, features, tuning budgets, and evaluation conditions.
+3. Evaluate unweighted and balanced class-weighted variants of each primary model family.
+4. Measure fraud capture under fixed review-capacity scenarios using capacity-aware metrics.
+5. Evaluate how validation-selected score thresholds transfer to later data in terms of realised workload and missed fraud.
+6. Evaluate calibrated cost-aware review policies using scenario-based cost ratios and sensitivity analysis.
+7. Quantify uncertainty using pre-specified confidence intervals, paired comparisons, and effect sizes.
+8. Characterise false-negative behaviour across pre-declared transaction subgroups without causal interpretation.
+9. Document ethical considerations, assumptions, limitations, and threats to validity.
 
-## Core Research Scope
+## Core Experimental Factors
 
-The academic contribution is centred on:
+### Model family
 
-- severe class imbalance;
-- LightGBM and CatBoost comparison;
-- class-weight / cost-sensitive treatment;
-- decision-threshold strategies;
-- constrained human-review capacity;
-- false-negative analysis;
-- operational trade-offs;
-- statistical evaluation;
-- reproducibility.
+- LightGBM
+- CatBoost
 
-Candidate review-capacity scenarios will be defined explicitly during methodology design, for example:
+A simple L2-regularised Logistic Regression model may be included only as a reference baseline if justified by the final methodology.
 
-- 1% of transactions;
-- 2% of transactions;
-- 5% of transactions;
-- 10% of transactions.
+### Class weighting
 
-These values are research scenarios and must not be presented as real bank analyst capacities unless supported by evidence.
+- unweighted
+- balanced weighting
 
-## Human-in-the-Loop Interpretation
+### Decision policies
 
-The intended production concept is:
+Candidate policies:
+
+- R0: default probability threshold 0.5;
+- R1: validation-selected F1-optimal threshold;
+- R2: validation-selected capacity-quantile threshold;
+- R3: fixed daily top-K review policy;
+- R4: calibrated cost-aware capped review policy.
+
+### Review-capacity scenarios
+
+Candidate capacity scenarios:
+
+- 1%
+- 2% — planned primary scenario
+- 5%
+- 10%
+
+These are experimental scenarios and must not be represented as real institutional review capacities unless supported by evidence.
+
+## Primary and Secondary Outcomes
+
+### Primary outcome
+
+- Recall@2% review capacity
+
+### Secondary outcomes
+
+- Recall@1%, 5%, and 10%
+- Precision@Capacity
+- false negatives at capacity
+- frauds detected per 1,000 reviews
+- lift over random review
+- review utilisation
+- realised workload
+- percentage of periods exceeding capacity
+- Average Precision / PR-AUC
+- ROC-AUC
+- scenario cost
+- calibration metrics where relevant
+
+## Operational Interpretation
+
+The research represents model-assisted manual-review prioritisation:
 
 ```text
 Transaction
     ↓
-ML fraud-risk model
+Fraud-risk score
     ↓
-Fraud probability / risk score
+Score-to-review decision policy
     ↓
-Decision-threshold or capacity policy
+Capacity-constrained review queue
     ↓
-Selected suspicious transactions
-    ↓
-Human review queue
-    ↓
-Human verification
+Manual verification
     ↓
 Final operational action
 ```
 
-The model is therefore treated as **decision support**, not as an unquestionable autonomous final decision-maker.
-
-The research itself remains non-participant research: no real fraud analysts, interviews, questionnaires, usability studies, or human-labelling exercises are required for the core experimental design.
+The study does not evaluate analyst behaviour. Human review is represented as an external capacity constraint under a stated verification assumption.
 
 ## Experimental Principle
 
-The final MSc results must follow a strict separation:
+The research will use separate temporal stages:
 
 ```text
 TRAIN
-  -> fit models
+  -> model fitting
 
-VALIDATION
-  -> select hyperparameters
-  -> select class-weight strategy
-  -> select threshold / review-capacity policy
+VALIDATION 1
+  -> hyperparameter selection
+  -> early stopping
+  -> calibration fitting where required
 
-TEST
-  -> final unbiased evaluation only
+VALIDATION 2
+  -> threshold selection
+  -> review-capacity policy selection
+  -> cost-rule selection
+
+OPTIONAL GAP
+  -> label-maturity / temporal separation if justified
+
+FINAL TEST
+  -> one confirmatory evaluation
 ```
 
-The test set must not be used to choose the final model, threshold, class weight, or operating policy.
+The exact day boundaries will be validated from the raw dataset and frozen in the research protocol before confirmatory experiments.
 
-## Academic Contribution
+The final test set must not be used to select:
 
-The primary research contribution is the controlled empirical study of:
+- model family;
+- features;
+- hyperparameters;
+- class weighting;
+- calibrator;
+- decision threshold;
+- review-capacity policy;
+- cost scenario.
+
+## Statistical Evaluation
+
+The final statistical plan will prioritise:
+
+- paired bootstrap confidence intervals;
+- exact McNemar testing where appropriate for paired fraud-capture differences;
+- effect sizes;
+- Holm correction for pre-specified confirmatory comparisons;
+- equivalence testing for class weighting only if a justified smallest effect size of interest is defined.
+
+Statistical significance will not be treated as equivalent to practical importance.
+
+## Cost-Sensitive Evaluation
+
+The research will use scenario-based cost analysis rather than unsupported claims about real banking costs.
+
+A candidate formulation is:
 
 ```text
-model choice
+Total Cost =
+    review cost
+  + additional false-alert/customer-friction cost
+  + missed-fraud cost
+```
+
+All cost ratios will be declared as illustrative research scenarios and analysed using sensitivity and break-even analysis.
+
+## False-Negative Analysis
+
+False-negative analysis will be exploratory and pre-declared before final test evaluation.
+
+Candidate slices include:
+
+- identity information present / absent;
+- product category;
+- card characteristics;
+- device information;
+- transaction-amount bands;
+- temporal sub-period;
+- score band.
+
+Subgroups with insufficient fraud counts will not be interpreted independently.
+
+## Research Contribution
+
+The expected contribution is a reproducible empirical evaluation of:
+
+```text
+ranking model
     ×
-imbalance treatment
+class weighting
     ×
-decision-threshold strategy
+score-to-review policy
     ×
-review-capacity constraint
+fixed review capacity
+    ×
+temporal shift
     ↓
-fraud-detection effectiveness and operational trade-offs
+fraud capture
+workload fidelity
+cost-sensitive outcome
 ```
 
-## Key Methodological Gaps to Address
+The study does not claim a novel fraud-detection algorithm.
 
-Before final experiments are run, the research repository must add or confirm:
+## Next Research Tasks
 
-- a frozen dataset version;
-- reproducible time-aware split generation;
-- a fixed feature-engineering contract;
-- validation-only model and policy selection;
-- untouched final test evaluation;
-- explicit review-capacity definitions;
-- an explicit cost model or cost-ratio sensitivity analysis;
-- confidence intervals and paired statistical comparison;
-- final false-negative subgroup analysis;
-- complete experiment manifests and result documentation.
-
-## Planned Academic Documentation
-
-The research repository should eventually include:
-
-```text
-docs/
-├── research-foundation.md
-├── literature-review.md
-├── methodology.md
-├── ethics.md
-├── threats-to-validity.md
-└── results/
-```
-
-## Status
-
-**Research foundation established.**
-
-The next stage is to develop the literature review and methodology before implementation begins.
+1. Resolve and document the University ethics route.
+2. Complete the literature evidence matrix.
+3. Verify the raw dataset profile and candidate temporal split.
+4. Freeze `docs/protocol.md`.
+5. Create the dataset manifest.
+6. Implement leakage-safe data and split pipelines.
+7. Run validation-only model development.
+8. Lock the final decision policies.
+9. Run the final test evaluation once.
