@@ -105,7 +105,7 @@ latest labelled observations
     -> final test
 ```
 
-The exact cut points and proportions will be frozen in the methodology before final model comparison.
+The exact cut points were subsequently frozen in [DR-001](decisions/DR-001-temporal-split-strategy.md): Train relative days 1–105, Validation 1 106–126, Validation 2 127–154 and a sealed final Test period 155–182 (relative day = `TransactionDT` in whole days from the undisclosed reference point). Partition hashes are recorded there.
 
 The final test partition must not be used to select:
 
@@ -154,3 +154,5 @@ Next dataset-governance task: create a reproducible dataset manifest with checks
 | `isFraud` | Binary target: 1 = fraud, 0 = legitimate |
 | `TransactionDT` | Time offset from an undisclosed reference point (seconds) |
 | `TransactionID` | Key joining the transaction and identity tables |
+| Relative day | `TransactionDT` expressed in whole days from the undisclosed reference point |
+| Validation 1, Validation 2 | Development partitions: relative days 106–126 and 127–154 |

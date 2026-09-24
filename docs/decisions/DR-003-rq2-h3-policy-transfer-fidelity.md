@@ -5,7 +5,7 @@
 | Status | Accepted (pre-freeze). Δ fixed at 0.004 (±20 % relative) by Issue #7, pending supervisor review. |
 | Date | 2026-09-23; Δ added 2026-09-24 (Issue #7) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
-| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [protocol](../protocol.md) |
+| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (later: multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (later: H1/H2 bootstrap unit), [protocol](../protocol.md) |
 
 ## Context
 
@@ -74,6 +74,10 @@ The old point-null H3 is **uninformative**. With about 78,500 Test transactions,
 **Still to specify at freeze:**
 - which model configuration(s) H3 is tested on (e.g. each of the four model × weighting configurations, or a single pre-declared primary one);
 - how H3 enters the multiplicity plan with hypotheses H1 (model family) and H2 (class weighting) [REF-029].
+
+*Current status of these two items:*
+- *The configuration(s) on which H3 is tested remain open (protocol open item 7).*
+- *The multiplicity plan was subsequently defined by [DR-005](DR-005-sesoi-and-h1-h2-inference.md): Holm's procedure at family-wise α = 0.05 over {H1, H2, H3}, with each additional H3 configuration adding a family member.*
 
 ### Daily-budget fidelity — a separate operational outcome (not a confirmatory hypothesis)
 
@@ -183,7 +187,7 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 | **Analysis unit** | The **relative day**. Flags are deterministic given the score, but a day's scores share that day's transaction composition (e.g. identity coverage, product mix), so transactions within a day are not independent draws [D; DR-001]. A transaction-level binomial interval would be anti-conservative. |
 | **Dependence between days** | Days are autocorrelated (daily-volume lag-1 autocorrelation 0.75 over days 1–182; 0.27 within V2 [D]). The CI therefore uses a **moving-block bootstrap over days** [REF-037]: blocks of ℓ consecutive Test days are resampled with replacement to 28 days, the pooled ratio is recomputed, B = 10,000 bootstrap replicates, percentile 90 % interval. |
 | **Block length** | **ℓ (block length) = 3 days, primary.** This follows the n^(1/3) and n^(1/4) orders for variance and one-sided distribution estimation (≈ 3.0 and 2.3 for n = 28, where n = number of Test days) [REF-064]. Those are asymptotic orders with unknown constants, so ℓ is pre-specified rather than estimated from Test data. **Sensitivity:** ℓ = 1 (independent days) and ℓ = 7 (weekly). |
-| **Entity clustering** | Within-day entity clustering is absorbed by the day unit. Cross-day recurrence is partly absorbed by the blocks. Because H3 involves **no labels**, the label-propagation dependence that affects H1/H2 [DR-001] does not apply to H3. The primary bootstrap unit for H1/H2 remains an open protocol item. |
+| **Entity clustering** | Within-day entity clustering is absorbed by the day unit. Cross-day recurrence is partly absorbed by the blocks. Because H3 involves **no labels**, the label-propagation dependence that affects H1/H2 [DR-001] does not apply to H3. At the time of this record, the primary bootstrap unit for H1/H2 remained an open protocol item. *Current status: resolved by [DR-006](DR-006-bootstrap-inference-strategy.md) (two-way pigeonhole bootstrap over relative days × fine pseudo-entities). H3's day-level moving-block bootstrap is unchanged.* |
 | **Threshold ties** | τ₂ is the score of the transaction ranked ⌈0.02 × N_V2⌉ in descending V2 order (N_V2 = number of V2 transactions; ⌈ · ⌉ = round up), and transactions are flagged if score ≥ τ₂. The realised V2 rate r_V2 (share of V2 transactions with score ≥ τ₂) is reported. If tied scores make r_V2 differ from 0.02 by more than 1 % relative, this is reported and discussed, but the H3 target remains 0.02. |
 | **Not propagated** | Sampling uncertainty in τ₂ from V2 (binomial standard error, SE, of the V2 rate ≈ 0.05 percentage points, pp) is not added, because H3 is conditional on the deployed threshold. Variation across calibration origins is addressed by the development-only rolling-origin supplement, not by H3. |
 

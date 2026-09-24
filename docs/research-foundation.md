@@ -164,20 +164,20 @@ Resampling methods (SMOTE, the Synthetic Minority Over-sampling Technique; over-
 
 ### Decision policies
 
-Candidate policies:
+Decision policies, as defined in the [protocol](protocol.md):
 
 - R0: default probability threshold 0.5;
 - R1: validation-selected F1-optimal threshold;
-- R2: validation-selected capacity-quantile threshold;
+- R2: validation-selected capacity-rate threshold;
 - R3: fixed daily top-K review policy;
 - R4: calibrated cost-aware capped review policy.
 
 ### Review-capacity scenarios
 
-Candidate capacity scenarios:
+Capacity scenarios, fixed in [DR-002](decisions/DR-002-review-capacity-definition.md):
 
 - 1%
-- 2% — planned primary scenario
+- 2% — primary scenario
 - 5%
 - 10%
 
@@ -330,19 +330,18 @@ The declared grid is ρ ∈ {2, 5, 10, 20, 50, 100, 200, 500, 1000}, with exact 
 
 ## False-Negative Analysis
 
-False-negative analysis will be exploratory and pre-declared before final test evaluation.
-
-Candidate slices include:
+False-negative analysis is exploratory, descriptive and non-causal. Its slices are pre-declared in the [protocol](protocol.md) before final test evaluation:
 
 - identity information present / absent;
-- product category;
-- card characteristics;
-- device information;
+- product category (`ProductCD`);
+- card characteristics (`card4` and `card6`);
+- device information (`DeviceType`, including missing);
 - transaction-amount bands;
-- temporal sub-period;
-- score band.
+- temporal sub-period (relative week within Test);
+- score band;
+- recurring vs new pseudo-entity (whether the transaction's heuristic entity already had a Train-period fraud label).
 
-Subgroups with insufficient fraud counts will not be interpreted independently.
+Slices with fewer than about 100 frauds are pooled or reported descriptively only, not interpreted independently.
 
 ## Research Contribution
 
@@ -409,6 +408,7 @@ REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022,
 | Symbol / abbreviation | Meaning |
 |---|---|
 | c | Review-capacity share (1 %, 2 %, 5 % or 10 %) |
+| `card4`, `card6`, `DeviceType`, `ProductCD` | Dataset columns used as false-negative slices (card attributes, device type, product code) |
 | C_FP | Extra false-alert/customer-friction cost of reviewing a legitimate transaction (sensitivity only) |
 | C_miss | Assumed cost of missing a fraud |
 | C_R | Assumed cost of reviewing one transaction |
@@ -431,7 +431,7 @@ REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022,
 | PR-AUC | Precision–Recall Area Under the Curve |
 | Precision@Capacity | Share of reviewed transactions that are fraud at a given capacity |
 | r | Realised Test alert rate of the V2-selected 2 % threshold |
-| R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-quantile (rate) threshold; daily top-K; calibrated cost-aware capped policy |
+| R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |
 | R^f,w | Pooled Test Recall@2% of family f with weighting w |
 | Recall@2%, Recall@Capacity | Share of frauds reviewed at 2 % (a given) review capacity |
 | REF-NNN | Reference identifier in `references.md` |
