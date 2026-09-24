@@ -209,8 +209,8 @@ The final test set must not be used to select:
 
 The final statistical plan will prioritise:
 
-- joint paired bootstrap confidence intervals over all four model × weighting configurations that respect fraud clustering and temporal dependence, using heuristic entity-cluster or day-block resampling (the exact unit is still open) [REF-036, REF-037];
-- exact McNemar testing as a secondary, descriptive check for cell-level paired fraud-capture differences [REF-035];
+- joint paired bootstrap confidence intervals over all four model × weighting configurations. The primary method is a two-way (pigeonhole) bootstrap over relative days × heuristic pseudo-entities, because both day-level and cross-day entity dependence are present. Sensitivity analyses use an Owen-corrected variance and a key-free day-block bootstrap ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)) [REF-036, REF-037, REF-068, REF-070];
+- exact McNemar testing as a secondary, descriptive check for cell-level paired fraud-capture differences. It is not confirmatory, because clustering can inflate its size [REF-035, REF-071];
 - effect sizes, with practical interpretation against the SESOI of 2 percentage points [REF-066];
 - Holm correction over the confirmatory family {H1, H2, H3} [REF-029];
 - equivalence testing (TOST) for H2 (intersection-union, SESOI = 2 pp) and H3 (Δ = 0.004, ±20 % relative) [REF-030, REF-061, REF-062].
@@ -297,11 +297,12 @@ The value lies in the controlled combination:
 - [DR-002 — Review-capacity definition](decisions/DR-002-review-capacity-definition.md)
 - [DR-003 — RQ2 / H3: policy-transfer fidelity](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)
 - [DR-005 — SESOI and H1/H2 inference plan](decisions/DR-005-sesoi-and-h1-h2-inference.md)
+- [DR-006 — Bootstrap inference strategy for H1 and H2](decisions/DR-006-bootstrap-inference-strategy.md)
 
 ## References
 
 Full entries and verification status are in [`references.md`](references.md).
 
-REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-041\*, REF-046\*, REF-061, REF-062, REF-064, REF-066.
+REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-041\*, REF-046\*, REF-061, REF-062, REF-064, REF-066, REF-068, REF-070, REF-071.
 
 \* Partially verified.
