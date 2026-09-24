@@ -52,11 +52,9 @@ The confirmatory hypotheses are H1–H3. A subscript ₀ marks the null hypothes
 
 Defined per [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md). Recall@2% (the share of Test frauds reviewed at 2 % review capacity) is evaluated under policy R3 (daily top-K: review the K highest-scoring transactions each relative day, with fixed daily review budget K = 56). All four model × weighting configurations are scored on the same Test frauds. The paired model-family main effect is:
 
-```text
-        1
-δ_M  =  - · [ (R^Cat,u − R^LGB,u)  +  (R^Cat,b − R^LGB,b) ]
-        2
-```
+$$
+\delta_M = \frac{1}{2}\left[ \left(R^{\mathrm{Cat},u} - R^{\mathrm{LGB},u}\right) + \left(R^{\mathrm{Cat},b} - R^{\mathrm{LGB},b}\right) \right]
+$$
 
 where:
 
@@ -83,9 +81,9 @@ The model × weighting interaction and the two cell contrasts are reported descr
 
 Defined per [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md). The paired weighting effect within model family f ∈ {LightGBM, CatBoost} is:
 
-```text
-δ_W,f  =  R^f,b − R^f,u
-```
+$$
+\delta_{W,f} = R^{f,b} - R^{f,u}
+$$
 
 where `δ_W,f` = balanced-minus-unweighted Recall@2% in family f. It is positive when balanced weighting helps that family.
 
@@ -103,11 +101,9 @@ H2 is an **equivalence** hypothesis, because the literature expects class weight
 
 Defined per [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). τ₂ is the score threshold selected on Validation 2 (V2, relative days 127–154) so that 2 % of V2 transactions are flagged (policy R2, the capacity-rate threshold). The realised Test alert rate at τ₂, pooled over Test days, is:
 
-```text
-       Σ_d n_d
-r  =  ---------
-       Σ_d N_d
-```
+$$
+r = \frac{\sum_d n_d}{\sum_d N_d}
+$$
 
 where:
 
@@ -124,13 +120,14 @@ r is the share of all Test transactions that the transferred threshold flags. Δ
 **Equivalence tolerance.**
 - Δ is a **relative tolerance of 20 % of the 2 % target**:
 
-  ```text
-  Δ = 0.20 × 0.02
-    = 0.004
-
-  equivalence band = (0.02 − Δ, 0.02 + Δ)
-                   = (1.6 %, 2.4 %)
-  ```
+  $$
+  \begin{aligned}
+  \Delta &= 0.20 \times 0.02 \\
+  &= 0.004 \\[6pt]
+  \text{equivalence band} &= (0.02 - \Delta,\ 0.02 + \Delta) \\
+  &= (1.6\%,\ 2.4\%)
+  \end{aligned}
+  $$
 
   At K = 56 this is ±11 reviews per day.
 - It was fixed before any Test access (Issue #7).
@@ -170,9 +167,9 @@ Primary labelled source files:
 - **Join:** left join transaction ← identity on `TransactionID`; one-to-one, row-preserving.
 - **Temporal ordering variable:** `TransactionDT`, a relative time delta in seconds from an undisclosed reference point [REF-047]. Each transaction is assigned a relative day, covering days 1–182:
 
-  ```text
-  relative day = ⌊ TransactionDT / 86,400 ⌋
-  ```
+  $$
+  \text{relative day} = \left\lfloor \frac{\texttt{TransactionDT}}{86{,}400} \right\rfloor
+  $$
 
   where `86,400` = seconds per day and `⌊ · ⌋` = rounding down to a whole number (`//` in Python). **No calendar dates are inferred.**
 
@@ -246,9 +243,9 @@ Primary comparison:
 **Implementation.**
 - Weighting is **explicit** and computed **from Train only**. Each fraud row receives the sample weight below; legitimate rows receive 1:
 
-  ```text
-  w_pos = n_neg / n_pos  ≈  28.5   (in Train)
-  ```
+  $$
+  w_{\mathrm{pos}} = \frac{n_{\mathrm{neg}}}{n_{\mathrm{pos}}} \approx 28.5 \quad (\text{in Train})
+  $$
 
   where `w_pos` = weight of each fraud (positive-class) row, `n_neg` = number of legitimate Train transactions and `n_pos` = number of fraud Train transactions.
 - The same weights are applied to both libraries, rather than each library's own "balanced" switch.
@@ -265,9 +262,9 @@ Defined in [DR-002](decisions/DR-002-review-capacity-definition.md).
 - **Capacity grid:** 1 %, **2 % (primary)**, 5 %, 10 %. These are **simulated research scenarios**, not real institutional capacities.
 - **Fixed daily budget:**
 
-  ```text
-  K = round( c × mean daily transaction volume in V2 )
-  ```
+  $$
+  K = \operatorname{round}\left( c \times \text{mean daily transaction volume in V2} \right)
+  $$
 
   where `K` = fixed daily review budget and `c` = review-capacity share. This gives K = 28 / **56** / 139 / 278 reviews per relative day for c = 1 / 2 / 5 / 10 %.
 - **Capacity ÷ prevalence** is reported with every result. At 2 % it is 0.59 (binding regime); at 5 % and 10 % it is above 1 (slack regime).
@@ -278,11 +275,9 @@ Prior art for capacity-constrained fraud evaluation exists [REF-006, REF-004, RE
 - the **oracle recall ceiling** (≈ 0.6 at 2 % in V2);
 - **normalised recall**, computed per day and pooled:
 
-  ```text
-                          TP_d
-  normalised recall_d = -------------
-                         min(K, F_d)
-  ```
+  $$
+  \text{normalised recall}_d = \frac{\mathrm{TP}_d}{\min(K, F_d)}
+  $$
 
   where `TP_d` (true positives) = frauds reviewed on day d and `F_d` = frauds on day d. It compares the frauds reviewed with the most any policy could review.
 
@@ -331,11 +326,12 @@ Review transaction i if its calibrated probability p̂_i (the Platt-scaled fraud
 
 **Primary threshold** (review cost and missed-fraud cost only):
 
-```text
-p* = C_R / C_miss
-
-p* = 1 / ρ
-```
+$$
+\begin{aligned}
+p^* &= \frac{C_R}{C_{\mathrm{miss}}} \\
+&= \frac{1}{\rho}
+\end{aligned}
+$$
 
 where:
 
@@ -348,13 +344,13 @@ A transaction is reviewed when its calibrated fraud probability is at least one 
 
 **Sensitivity: with a false-alert cost.** If an extra false-alert (customer-friction) cost C_FP per reviewed legitimate transaction is included:
 
-```text
-p* = (C_R + C_FP) / (C_miss + C_FP)
-
-p* = 1 / ρ′
-
-ρ′ = (C_miss + C_FP) / (C_R + C_FP)
-```
+$$
+\begin{aligned}
+p^* &= \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}} \\
+&= \frac{1}{\rho'} \\[6pt]
+\rho' &= \frac{C_{\mathrm{miss}} + C_{\mathrm{FP}}}{C_R + C_{\mathrm{FP}}}
+\end{aligned}
+$$
 
 where:
 
@@ -397,11 +393,12 @@ Amount-weighted results will have wide uncertainty: the top 20 % of development 
 - all cost values are **simulated scenario assumptions** [REF-039];
 - **primary cost model**, in units of one review cost, for policy π:
 
-  ```text
-  J_π(ρ) = N_π + ρ · FN_π
-
-  ρ = C_miss / C_R
-  ```
+  $$
+  \begin{aligned}
+  J_\pi(\rho) &= N_\pi + \rho \cdot \mathrm{FN}_\pi \\
+  \rho &= \frac{C_{\mathrm{miss}}}{C_R}
+  \end{aligned}
+  $$
 
   where:
 
@@ -415,11 +412,12 @@ Amount-weighted results will have wide uncertainty: the top 20 % of development 
 - **saturation ratio** ρ_sat: the smallest ratio at which R4 uses the full budget on every day (label-free; also computed on V2 before Test);
 - **break-even ratio** ρ_BE, the largest ratio at which R4's scenario cost is strictly below R3's:
 
-  ```text
-  ΔJ(ρ) = J_R4(ρ) − J_R3(ρ)
-
-  ρ_BE = sup { ρ ∈ (1, 1000] : ΔJ(ρ) < 0 }
-  ```
+  $$
+  \begin{aligned}
+  \Delta J(\rho) &= J_{\mathrm{R4}}(\rho) - J_{\mathrm{R3}}(\rho) \\
+  \rho_{\mathrm{BE}} &= \sup \lbrace \rho \in (1, 1000] : \Delta J(\rho) < 0 \rbrace
+  \end{aligned}
+  $$
 
   where:
 
@@ -452,9 +450,9 @@ No assumed value will be presented as an actual institutional banking cost.
 - **Pre-declared sensitivity analyses (not confirmatory):**
   - S1: Owen-corrected two-way variance with Wald intervals:
 
-    ```text
-    SE² = V_pigeonhole − 2 · V_naive
-    ```
+    $$
+    \mathrm{SE}^2 = V_{\mathrm{pigeonhole}} - 2 \cdot V_{\mathrm{naive}}
+    $$
 
     where `SE` = corrected standard error, `V_pigeonhole` = variance across pigeonhole replicates and `V_naive` = variance from a fraud-level independent bootstrap;
   - S2: a key-free day-level moving-block bootstrap (ℓ = 3 days) that preserves each day's top-K exactly [REF-037, REF-064].

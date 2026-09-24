@@ -83,9 +83,9 @@ Expected raw files:
 
 Current temporal structure ([DR-001](docs/decisions/DR-001-temporal-split-strategy.md)). Each transaction is assigned a relative day:
 
-```text
-relative day = ⌊ TransactionDT / 86,400 ⌋
-```
+$$
+\text{relative day} = \left\lfloor \frac{\texttt{TransactionDT}}{86{,}400} \right\rfloor
+$$
 
 where:
 
@@ -111,9 +111,9 @@ Defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze).
 - **Models:** LightGBM, CatBoost.
 - **Class weighting:** unweighted; balanced class weighting, implemented as explicit sample weights computed from Train only. Each fraud row receives the weight
 
-  ```text
-  w_pos = n_neg / n_pos
-  ```
+  $$
+  w_{\mathrm{pos}} = \frac{n_{\mathrm{neg}}}{n_{\mathrm{pos}}}
+  $$
 
   where:
 
@@ -123,9 +123,9 @@ Defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze).
 
 - **Review-capacity scenarios:** 1 %, **2 % (primary)**, 5 %, 10 %. These are simulated research scenarios, not real institutional capacities. Each capacity share c is turned into a fixed daily review budget ([DR-002](docs/decisions/DR-002-review-capacity-definition.md)):
 
-  ```text
-  K = round( c × mean daily transaction volume in V2 )
-  ```
+  $$
+  K = \operatorname{round}\left( c \times \text{mean daily transaction volume in V2} \right)
+  $$
 
   where:
 
@@ -161,7 +161,7 @@ When a methodological decision changes:
 
 ## Documentation and notation standard
 
-These rules apply to **all Markdown work** in this repository: `README.md`, `AGENTS.md`, `docs/`, `docs/decisions/`, and Markdown cells in new notebooks. They were introduced by GitHub Issue #17. They govern presentation only and never change methodology.
+These rules apply to **all Markdown work** in this repository: `README.md`, `AGENTS.md`, `docs/`, `docs/decisions/`, and Markdown cells in new notebooks. They were introduced by GitHub Issue #17; the LaTeX display-math format for equations was added by Issue #21. They govern presentation only and never change methodology.
 
 ### 1. Define every symbol at first use in each document
 
@@ -174,27 +174,50 @@ These rules apply to **all Markdown work** in this repository: `README.md`, `AGE
 - Expand technical acronyms at first use in each document, e.g. Smallest Effect Size Of Interest (SESOI), Two One-Sided Tests (TOST), Confidence Interval (CI). After first use the acronym may be used alone.
 - Do not assume the reader remembers a definition from another file. **Each Markdown document must be understandable on its own.**
 
-### 2. Do not present important equations inline
+### 2. Show important equations as LaTeX display math
 
-- Show important equations as separate **display equations** in a fenced `text` block, never as long expressions inside prose.
-- Use a human-readable academic layout, as for standard metrics such as the Mean Absolute Error (MAE) or Root Mean Squared Error (RMSE). A fraction may be written on one line or as numerator over denominator:
+- **Use LaTeX display math for important equations**, so they render like standard academic mathematics (for example the Mean Absolute Error, MAE, or Root Mean Squared Error, RMSE). Put each standalone equation between `$$` delimiters on their own lines:
 
-  ```text
-         C_R + C_FP
-  p* = ---------------
-        C_miss + C_FP
+  ```md
+  $$
+  p^* = \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}}
+  $$
   ```
 
-- For derivations, show **one meaningful algebraic step per line**.
-- Short references to an already-displayed quantity (e.g. "p* = 1/ρ, as defined above") may stay inline.
+  which renders as:
+
+  $$
+  p^* = \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}}
+  $$
+
+- **For multi-step derivations, use an aligned block** with **one meaningful algebraic step per line**:
+
+  ```md
+  $$
+  \begin{aligned}
+  p^* &= \frac{C_R + C_{\mathrm{FP}}}{(C_R + C_{\mathrm{FP}}) + C_{\mathrm{miss}} - C_R} \\
+      &= \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}} \\
+      &= \frac{1}{\rho'}
+  \end{aligned}
+  $$
+  ```
+
+- **Do not write long equations inline** in normal prose. Short references to an already-displayed quantity (e.g. "p* = 1/ρ, as defined above") may stay inline.
+- **Do not use fenced plain-text (`text`) blocks for important equations** when LaTeX display math can represent them clearly. Plain-text blocks remain appropriate for workflows, diagrams and file listings.
+- **Preserve mathematical meaning exactly** when converting an equation between formats: same symbols, same operations, same values.
+- Rendering conventions that avoid known GitHub rendering problems:
+  - leave a blank line before and after each `$$ … $$` block, and indent it with its list item when it belongs to one;
+  - write multi-letter subscripts and labels in upright text: `C_{\mathrm{miss}}`, `\rho_{\mathrm{BE}}`, `\text{relative day}`;
+  - write set braces as `\lbrace … \rbrace` and percent signs as `\%`;
+  - keep symbols in `where:` blocks and symbol tables in the same plain-text form used in prose (e.g. `C_miss`), so they can be searched.
 
 ### 3. Add a local `where:` block after important equations
 
 Immediately below an important equation, define the symbols it uses:
 
-```text
-J_π(ρ) = N_π + ρ · FN_π
-```
+$$
+J_\pi(\rho) = N_\pi + \rho \cdot \mathrm{FN}_\pi
+$$
 
 where:
 
@@ -294,7 +317,7 @@ This project uses **ChatGPT** and **Claude** as AI assistants. They support:
 | DR / DR-NNN | Decision Record, numbered NNN |
 | [D], [L], [G], [I] | Evidence tags: dataset, literature, University guidance, inference |
 | K | Fixed daily review budget (reviews per relative day) |
-| MAE, RMSE | Mean Absolute Error, Root Mean Squared Error (layout examples only) |
+| MAE, RMSE | Mean Absolute Error, Root Mean Squared Error (named as examples of standard academic equations) |
 | n_neg, n_pos | Numbers of legitimate and fraud transactions in Train |
 | PR | Pull request |
 | R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |

@@ -41,11 +41,9 @@ Neither is a verified customer, card or account identifier.
 
 The upper-bound design effect is:
 
-```text
-        Σ_g m_g²
-DE  =  ----------
-        Σ_g m_g
-```
+$$
+\mathrm{DE} = \frac{\sum_g m_g^2}{\sum_g m_g}
+$$
 
 where:
 
@@ -84,15 +82,12 @@ The more frauds concentrate in large clusters, the larger DE becomes; DE = 1 whe
   - When dependence runs along two **non-nested** dimensions, inference must account for both [REF-070].
   - For crossed, unbalanced random-effects data, **resampling rows and columns independently** (the pigeonhole bootstrap) is mean-consistent. It is **mildly conservative** [REF-068]:
 
-    ```text
-                     (ν_A + 2)·σ²_A  +  (ν_B + 2)·σ²_B  +  3·σ²_E
-    V_pigeonhole    ≈ ---------------------------------------------
-                                          N
-
-                     ν_A·σ²_A  +  ν_B·σ²_B  +  σ²_E
-    true variance   = ---------------------------------
-                                    N
-    ```
+    $$
+    \begin{aligned}
+    V_{\mathrm{pigeonhole}} &\approx \frac{(\nu_A + 2)\,\sigma_A^2 + (\nu_B + 2)\,\sigma_B^2 + 3\,\sigma_E^2}{N} \\[6pt]
+    \text{true variance} &= \frac{\nu_A\,\sigma_A^2 + \nu_B\,\sigma_B^2 + \sigma_E^2}{N}
+    \end{aligned}
+    $$
 
     where:
 
@@ -141,11 +136,12 @@ The more frauds concentrate in large clusters, the larger DE becomes; DE = 1 whe
 
 - **S1 — Owen-corrected two-way variance** [REF-068]:
 
-  ```text
-  SE² = V_pigeonhole − 2 · V_naive
-
-  Wald interval = δ̂ ± z · SE
-  ```
+  $$
+  \begin{aligned}
+  \mathrm{SE}^2 &= V_{\mathrm{pigeonhole}} - 2 \cdot V_{\mathrm{naive}} \\
+  \text{Wald interval} &= \hat{\delta} \pm z \cdot \mathrm{SE}
+  \end{aligned}
+  $$
 
   where:
 
@@ -172,11 +168,12 @@ For each bootstrap replicate b = 1, …, B (B = number of replicates):
 
 1. Draw day multiplicities over the 28 Test days, and, independently, entity multiplicities over the G fraud entities in Test:
 
-   ```text
-   (a_1, …, a_28) ~ Multinomial( 28;  1/28, …, 1/28 )
-
-   (b_1, …, b_G)  ~ Multinomial( G;   1/G,  …, 1/G  )
-   ```
+   $$
+   \begin{aligned}
+   (a_1, \dots, a_{28}) &\sim \operatorname{Multinomial}\left(28;\ \tfrac{1}{28}, \dots, \tfrac{1}{28}\right) \\
+   (b_1, \dots, b_G) &\sim \operatorname{Multinomial}\left(G;\ \tfrac{1}{G}, \dots, \tfrac{1}{G}\right)
+   \end{aligned}
+   $$
 
    where:
 
@@ -186,31 +183,28 @@ For each bootstrap replicate b = 1, …, B (B = number of replicates):
 
 2. Weight each fraud by the product of its day's and its entity's multiplicities:
 
-   ```text
-   w_i = a_d(i) · b_e(i)
-   ```
+   $$
+   w_i = a_{d(i)} \cdot b_{e(i)}
+   $$
 
    where `d(i)` and `e(i)` are the day and the entity of fraud i.
 
 3. For **every** configuration m, using the **same** weights, compute the replicate recall:
 
-   ```text
-           Σ_i w_i · c_m,i
-   R*_m = -----------------
-             Σ_i w_i
-   ```
+   $$
+   R^*_m = \frac{\sum_i w_i \cdot c_{m,i}}{\sum_i w_i}
+   $$
 
    where `c_m,i` = 1 if fraud i is among its day's top K under configuration m, else 0 (the capture indicator), and `Σ_i` sums over Test frauds.
 
 4. Compute the replicate estimands:
 
-   ```text
-            1
-   δ*_M  =  - · [ (R*_Cat-u − R*_LGB-u)  +  (R*_Cat-b − R*_LGB-b) ]
-            2
-
-   δ*_W,f  =  R*_f-b − R*_f-u        for f ∈ {LGB, Cat}
-   ```
+   $$
+   \begin{aligned}
+   \delta^*_M &= \frac{1}{2}\left[ \left(R^*_{\mathrm{Cat\text{-}u}} - R^*_{\mathrm{LGB\text{-}u}}\right) + \left(R^*_{\mathrm{Cat\text{-}b}} - R^*_{\mathrm{LGB\text{-}b}}\right) \right] \\
+   \delta^*_{W,f} &= R^*_{f\text{-}b} - R^*_{f\text{-}u} \qquad \text{for } f \in \lbrace \mathrm{LGB}, \mathrm{Cat} \rbrace
+   \end{aligned}
+   $$
 
    where δ*_M and δ*_W,f are the model-family main effect and the weighting effect in family f, computed in this replicate. The descriptive contrasts and the interaction are computed in the same way.
 
@@ -240,20 +234,20 @@ For each bootstrap replicate b = 1, …, B (B = number of replicates):
 
 - **H1 (difference).** The two-sided bootstrap p-value is the percentile-interval inversion:
 
-  ```text
-  p_H1 = 2 · min( P*(δ*_M ≤ 0),  P*(δ*_M ≥ 0) )
-  ```
+  $$
+  p_{\mathrm{H1}} = 2 \cdot \min\left( P^*(\delta^*_M \le 0),\ P^*(\delta^*_M \ge 0) \right)
+  $$
 
   where `P*( · )` = the proportion of bootstrap replicates satisfying the condition. The 90 % percentile interval gives DR-005's five-way practical interpretation against ±0.02 (± the Smallest Effect Size Of Interest, SESOI).
 - **H2 (intersection-union TOST).** For each family f, the two one-sided p-values and the H2 p-value are:
 
-  ```text
-  p_a,f = P*( δ*_W,f ≤ −0.02 )
-
-  p_b,f = P*( δ*_W,f ≥ +0.02 )
-
-  p_H2  = max over f ∈ {LGB, Cat} of  max( p_a,f , p_b,f )
-  ```
+  $$
+  \begin{aligned}
+  p_{a,f} &= P^*\left(\delta^*_{W,f} \le -0.02\right) \\
+  p_{b,f} &= P^*\left(\delta^*_{W,f} \ge +0.02\right) \\
+  p_{\mathrm{H2}} &= \max_{f \in \lbrace \mathrm{LGB}, \mathrm{Cat} \rbrace} \max\left(p_{a,f},\ p_{b,f}\right)
+  \end{aligned}
+  $$
 
   where p_a,f and p_b,f test the lower and upper equivalence bounds in family f. H2 needs all four one-sided tests to reject. This is equivalent to requiring the (1 − 2α_H2) percentile intervals for both δ_W,LGB and δ_W,Cat to lie inside (−0.02, +0.02) [REF-061, REF-062]. **TOST uses the bootstrap-derived intervals**, because no closed-form interval accounts for the crossed dependence.
 - **Multiplicity.** Holm over {H1, H2, H3} is unchanged ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).

@@ -31,9 +31,9 @@ The working protocol left four things open (open item 4):
 
 - **[L]** For a two-class decision with cost matrix entries c(predicted, actual), the expected-cost-minimising rule predicts class 1 if and only if P(class 1 | x) ≥ p*, where x is the example's features and [REF-008, Eq. 2]:
 
-  ```text
-  p* = (c₁₀ − c₀₀) / (c₁₀ − c₀₀ + c₀₁ − c₁₁)
-  ```
+  $$
+  p^* = \frac{c_{10} - c_{00}}{c_{10} - c_{00} + c_{01} - c_{11}}
+  $$
 
   where:
 
@@ -47,9 +47,9 @@ The working protocol left four things open (open item 4):
   - Elkan also warns that every cost must be measured from the **same baseline**, otherwise the matrix is economically incoherent. He recommends fitting the classifier on the data as given and then applying the cost threshold to its probability estimates [REF-008].
 - **[L]** **Fraud-specific cost matrix.** Höppner et al. use: false positive cost = true positive cost = a fixed investigation cost c_f (the cardholder is contacted in both cases), false negative cost = the transaction amount A_i, true negative cost = 0. The optimal threshold for transaction i is then:
 
-  ```text
-  t*_i = c_f / A_i
-  ```
+  $$
+  t^*_i = \frac{c_f}{A_i}
+  $$
 
   where:
 
@@ -88,11 +88,12 @@ Assumptions (all simulated, all stated):
 
 **Direct derivation.** For a transaction with calibrated fraud probability p̂, the expected cost of each action is:
 
-```text
-E[cost | not reviewed] = p̂ · C_miss
-
-E[cost | reviewed]     = C_R + (1 − p̂) · C_FP
-```
+$$
+\begin{aligned}
+E[\text{cost} \mid \text{not reviewed}] &= \hat{p} \cdot C_{\mathrm{miss}} \\
+E[\text{cost} \mid \text{reviewed}] &= C_R + (1 - \hat{p}) \cdot C_{\mathrm{FP}}
+\end{aligned}
+$$
 
 where:
 
@@ -106,26 +107,27 @@ Not reviewing costs C_miss only if the transaction is fraud. Reviewing always co
 
 Review when reviewing is no more expensive in expectation:
 
-```text
-C_R + (1 − p̂) · C_FP  ≤  p̂ · C_miss
-
-C_R + C_FP − p̂ · C_FP  ≤  p̂ · C_miss
-
-C_R + C_FP  ≤  p̂ · (C_miss + C_FP)
-
-p̂  ≥  (C_R + C_FP) / (C_miss + C_FP)
-```
+$$
+\begin{aligned}
+C_R + (1 - \hat{p}) \cdot C_{\mathrm{FP}} &\le \hat{p} \cdot C_{\mathrm{miss}} \\
+C_R + C_{\mathrm{FP}} - \hat{p} \cdot C_{\mathrm{FP}} &\le \hat{p} \cdot C_{\mathrm{miss}} \\
+C_R + C_{\mathrm{FP}} &\le \hat{p} \cdot (C_{\mathrm{miss}} + C_{\mathrm{FP}}) \\
+\hat{p} &\ge \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}}
+\end{aligned}
+$$
 
 The right-hand side of the last line is the threshold p*.
 
 **Check against Elkan's formula.** In Elkan's notation (class 1 = review/fraud), the cost matrix entries are:
 
-```text
-c₀₀ = 0             (legitimate, not reviewed)
-c₀₁ = C_miss        (fraud, not reviewed)
-c₁₀ = C_R + C_FP    (legitimate, reviewed)
-c₁₁ = C_R           (fraud, reviewed)
-```
+$$
+\begin{aligned}
+c_{00} &= 0 && \text{(legitimate, not reviewed)} \\
+c_{01} &= C_{\mathrm{miss}} && \text{(fraud, not reviewed)} \\
+c_{10} &= C_R + C_{\mathrm{FP}} && \text{(legitimate, reviewed)} \\
+c_{11} &= C_R && \text{(fraud, reviewed)}
+\end{aligned}
+$$
 
 where:
 
@@ -133,15 +135,14 @@ where:
 
 Substituting into REF-008 Eq. 2, step by step:
 
-```text
-p* = (c₁₀ − c₀₀) / (c₁₀ − c₀₀ + c₀₁ − c₁₁)
-
-p* = (C_R + C_FP) / ((C_R + C_FP) + C_miss − C_R)
-
-p* = (C_R + C_FP) / (C_miss + C_FP)
-
-p* = 1 / ρ′
-```
+$$
+\begin{aligned}
+p^* &= \frac{c_{10} - c_{00}}{c_{10} - c_{00} + c_{01} - c_{11}} \\
+&= \frac{C_R + C_{\mathrm{FP}}}{(C_R + C_{\mathrm{FP}}) + C_{\mathrm{miss}} - C_R} \\
+&= \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}} \\
+&= \frac{1}{\rho'}
+\end{aligned}
+$$
 
 where:
 
@@ -152,11 +153,12 @@ The two routes agree. The threshold is the reciprocal of the effective cost rati
 
 **Primary case (no false-alert cost).** When C_FP = 0:
 
-```text
-p* = C_R / C_miss
-
-p* = 1 / ρ
-```
+$$
+\begin{aligned}
+p^* &= \frac{C_R}{C_{\mathrm{miss}}} \\
+&= \frac{1}{\rho}
+\end{aligned}
+$$
 
 where:
 
@@ -167,9 +169,9 @@ A transaction is reviewed when its calibrated fraud probability is at least one 
 **Verdict [I].** Both equations in the protocol are **correct under A1–A5**. They depend critically on A4.
 - If C_R were wrongly charged only on false alerts, the threshold would become the following. That is a different and incorrect rule under the stated assumptions:
 
-  ```text
-  p*_wrong = C_R / (C_R + C_miss)
-  ```
+  $$
+  p^*_{\mathrm{wrong}} = \frac{C_R}{C_R + C_{\mathrm{miss}}}
+  $$
 
   where:
 
@@ -177,9 +179,9 @@ A transaction is reviewed when its calibrated fraud probability is at least one 
 
 - Elkan's reasonableness conditions reduce to:
 
-  ```text
-  C_miss > C_R,   i.e.   ρ > 1
-  ```
+  $$
+  C_{\mathrm{miss}} > C_R, \qquad \text{i.e.} \qquad \rho > 1
+  $$
 
   For ρ ≤ 1 the threshold is p* ≥ 1. Reviewing can then never reduce expected cost, even for a transaction that is certainly fraud, so R4 reviews nothing.
 
@@ -187,9 +189,9 @@ A transaction is reviewed when its calibrated fraud probability is at least one 
 
 On each day, R4's rule is equivalent to maximising the total expected net benefit of reviewing over at most K_c transactions. The expected net benefit of reviewing transaction i is:
 
-```text
-b_i = p̂_i · (C_miss + C_FP) − (C_R + C_FP)
-```
+$$
+b_i = \hat{p}_i \cdot (C_{\mathrm{miss}} + C_{\mathrm{FP}}) - (C_R + C_{\mathrm{FP}})
+$$
 
 where:
 
@@ -202,9 +204,9 @@ b_i is the expected cost avoided by reviewing transaction i, minus the expected 
 - b_i increases with p̂_i, so the optimum is: take transactions in descending p̂ order while b_i ≥ 0, up to K_c.
 - Platt scaling is monotone, so descending p̂ is the same order as descending raw score. Hence:
 
-```text
-R4_d(ρ) = { i ∈ R3_d : p̂_i ≥ p* }
-```
+$$
+\mathrm{R4}_d(\rho) = \lbrace i \in \mathrm{R3}_d : \hat{p}_i \ge p^* \rbrace
+$$
 
 where:
 
@@ -225,11 +227,12 @@ This was checked numerically on synthetic data (brute-force search over all subs
 
 Define the scenario cost of policy π, in units of C_R (all costs divided by C_R):
 
-```text
-J_π(ρ, φ) = N_π + φ · FP_π + ρ · FN_π
-
-FP_π = N_π − TP_π
-```
+$$
+\begin{aligned}
+J_\pi(\rho, \varphi) &= N_\pi + \varphi \cdot \mathrm{FP}_\pi + \rho \cdot \mathrm{FN}_\pi \\
+\mathrm{FP}_\pi &= N_\pi - \mathrm{TP}_\pi
+\end{aligned}
+$$
 
 where:
 
@@ -242,13 +245,13 @@ The scenario cost counts one unit per review, φ units per reviewed legitimate t
 
 **Difference between R4 and R3, step by step.** Compared with R3, R4 makes u fewer reviews. Of these, f are frauds and (u − f) are legitimate. R4 therefore also misses f more frauds:
 
-```text
-J_R4 − J_R3 = −u − φ · (u − f) + ρ · f
-
-J_R4 − J_R3 = (ρ + φ) · f − (1 + φ) · u
-
-J_R4 − J_R3 = (1 + φ) · (ρ′ · f − u)
-```
+$$
+\begin{aligned}
+J_{\mathrm{R4}} - J_{\mathrm{R3}} &= -u - \varphi \cdot (u - f) + \rho \cdot f \\
+&= (\rho + \varphi) \cdot f - (1 + \varphi) \cdot u \\
+&= (1 + \varphi) \cdot (\rho' \cdot f - u)
+\end{aligned}
+$$
 
 where:
 
@@ -258,18 +261,18 @@ where:
 
 The effective cost ratio, written in terms of ρ and φ, is:
 
-```text
-ρ′ = (ρ + φ) / (1 + φ)
-```
+$$
+\rho' = \frac{\rho + \varphi}{1 + \varphi}
+$$
 
 This is the same ρ′ = (C_miss + C_FP) / (C_R + C_FP) defined above, after dividing numerator and denominator by C_R. The factor (1 + φ) is positive, so it never changes which policy is cheaper.
 
 **Consequence [I].** Comparing R4 with R3 depends on the three costs **only through ρ′**, up to a positive scale factor.
 - The C_FP model therefore adds no new decision behaviour. It relabels the ratio axis. A break-even ratio ρ_BE found with C_FP = 0 corresponds, under a given φ, to:
 
-  ```text
-  ρ = (1 + φ) · ρ_BE − φ
-  ```
+  $$
+  \rho = (1 + \varphi) \cdot \rho_{\mathrm{BE}} - \varphi
+  $$
 
   where:
 
@@ -283,11 +286,12 @@ This is the same ρ′ = (C_miss + C_FP) / (C_R + C_FP) defined above, after div
 
 ### 1. Primary cost model: A (review cost and missed-fraud cost only)
 
-```text
-J_π(ρ) = N_π + ρ · FN_π
-
-p* = 1 / ρ
-```
+$$
+\begin{aligned}
+J_\pi(\rho) &= N_\pi + \rho \cdot \mathrm{FN}_\pi \\
+p^* &= \frac{1}{\rho}
+\end{aligned}
+$$
 
 where:
 
@@ -325,11 +329,12 @@ Assessment of the candidate {1, 2, 5, 10, 20, 50, 100}:
 
 **Lower bound on the saturation ratio [I].** Let F̄_d be the expected number of frauds on day d. Under calibration, the day's calibrated probabilities sum to F̄_d, and the K_c-th largest of them cannot exceed the average of the top K_c:
 
-```text
-p̂_(K_c),d  ≤  (1 / K_c) · Σ_{top K_c} p̂_i  ≤  F̄_d / K_c
-
-ρ_sat  =  1 / min_d p̂_(K_c),d  ≳  K_c / F̄_d  ≈  c / prev_V2
-```
+$$
+\begin{aligned}
+\hat{p}_{(K_c),d} &\le \frac{1}{K_c} \sum_{\text{top } K_c} \hat{p}_i \le \frac{\bar{F}_d}{K_c} \\[6pt]
+\rho_{\mathrm{sat}} &= \frac{1}{\min_d \hat{p}_{(K_c),d}} \gtrsim \frac{K_c}{\bar{F}_d} \approx \frac{c}{\mathrm{prev}_{\mathrm{V2}}}
+\end{aligned}
+$$
 
 where:
 
@@ -343,9 +348,9 @@ R4 cannot fill a budget larger than the expected fraud count unless the ratio is
 
 **Reference ratio.** The ratio at which p* equals V2 fraud prevalence prev_V2 = 3.39 % [D] is marked on every figure:
 
-```text
-ρ_ref = 1 / prev_V2 ≈ 29.5
-```
+$$
+\rho_{\mathrm{ref}} = \frac{1}{\mathrm{prev}_{\mathrm{V2}}} \approx 29.5
+$$
 
 At this ratio the review threshold equals the base rate. Below it, reviewing an average transaction costs more than it saves.
 
@@ -356,9 +361,9 @@ High ratios are included to show where the policies merge, **not because they ar
 For each capacity c, configuration m and ratio ρ:
 - **R4 queue** on day d:
 
-  ```text
-  R4_d(ρ) = { i ∈ R3_d : p̂_i ≥ 1 / ρ }
-  ```
+  $$
+  \mathrm{R4}_d(\rho) = \left\lbrace i \in \mathrm{R3}_d : \hat{p}_i \ge \frac{1}{\rho} \right\rbrace
+  $$
 
   where:
 
@@ -377,9 +382,9 @@ For each capacity c, configuration m and ratio ρ:
 
 Over the 28 Test days, the **unused reviews** are:
 
-```text
-u(ρ) = Σ_d ( K_c − |R4_d(ρ)| )
-```
+$$
+u(\rho) = \sum_d \left( K_c - \left\lvert \mathrm{R4}_d(\rho) \right\rvert \right)
+$$
 
 where:
 
@@ -391,9 +396,9 @@ This is the number of review slots that R4 leaves empty, summed over days. It ne
 
 The **frauds forgone** are:
 
-```text
-f(ρ) = Σ_d  Σ_{i ∈ R3_d \ R4_d(ρ)}  y_i
-```
+$$
+f(\rho) = \sum_d \ \sum_{i \in \mathrm{R3}_d \setminus \mathrm{R4}_d(\rho)} y_i
+$$
 
 where:
 
@@ -404,15 +409,14 @@ This is the number of frauds among the transactions that R3 reviews but R4 does 
 
 The **scenario-cost difference**, step by step (primary model, φ = 0):
 
-```text
-ΔJ(ρ) = J_R4(ρ) − J_R3(ρ)
-
-ΔJ(ρ) = (N_R4 − N_R3) + ρ · (FN_R4 − FN_R3)
-
-ΔJ(ρ) = −u(ρ) + ρ · f(ρ)
-
-ΔJ(ρ) = ρ · f(ρ) − u(ρ)
-```
+$$
+\begin{aligned}
+\Delta J(\rho) &= J_{\mathrm{R4}}(\rho) - J_{\mathrm{R3}}(\rho) \\
+&= (N_{\mathrm{R4}} - N_{\mathrm{R3}}) + \rho \cdot (\mathrm{FN}_{\mathrm{R4}} - \mathrm{FN}_{\mathrm{R3}}) \\
+&= -u(\rho) + \rho \cdot f(\rho) \\
+&= \rho \cdot f(\rho) - u(\rho)
+\end{aligned}
+$$
 
 where:
 
@@ -426,9 +430,9 @@ The literal question, *at what ratio do R4 and R3 have equal cost?*, is degenera
 
 **(a) Saturation ratio (label-free):**
 
-```text
-ρ_sat,c,m = 1 / min_d p̂_(K_c),d
-```
+$$
+\rho_{\mathrm{sat},c,m} = \frac{1}{\min_d \hat{p}_{(K_c),d}}
+$$
 
 where:
 
@@ -445,9 +449,9 @@ The saturation ratio is set by the day whose last budgeted transaction has the l
 
 **(b) Break-even ratio (label-based) — the headline RQ3 output:**
 
-```text
-ρ_BE,c,m = sup { ρ ∈ (1, 1000] : ΔJ_c,m(ρ) < 0 }
-```
+$$
+\rho_{\mathrm{BE},c,m} = \sup \lbrace \rho \in (1, 1000] : \Delta J_{c,m}(\rho) < 0 \rbrace
+$$
 
 where:
 
@@ -461,11 +465,12 @@ It is the **largest assumed ratio at which the cost-aware policy is strictly che
 - R4's decisions change only at the finitely many ratios ρ = 1/p̂_i.
 - Between two consecutive change points, u and f are constant and ΔJ is linear in ρ. Any zero crossing inside a segment is therefore exact:
 
-  ```text
-  ρ · f − u = 0
-
-  ρ = u / f
-  ```
+  $$
+  \begin{aligned}
+  \rho \cdot f - u &= 0 \\
+  \rho &= \frac{u}{f}
+  \end{aligned}
+  $$
 
   Within a segment, the policies cost the same at the ratio equal to unused reviews divided by frauds forgone.
 - ΔJ is therefore computed exactly on the whole range. **Interpolation between grid points is not used.**
@@ -485,11 +490,12 @@ It is the **largest assumed ratio at which the cost-aware policy is strictly che
 
 **Fixed-policy break-even (supporting).** Fix the R4 queue built at a grid ratio ρ₀, and ask at which true ratio that fixed queue and R3 would cost the same:
 
-```text
-ρ_fixed(ρ₀) = u(ρ₀) / f(ρ₀)
-
-ρ_fixed(ρ₀) = 1 / ( f(ρ₀) / u(ρ₀) )
-```
+$$
+\begin{aligned}
+\rho_{\mathrm{fixed}}(\rho_0) &= \frac{u(\rho_0)}{f(\rho_0)} \\
+&= \frac{1}{f(\rho_0) / u(\rho_0)}
+\end{aligned}
+$$
 
 where:
 
@@ -501,13 +507,13 @@ This break-even is the reciprocal of the fraud rate among the unused reviews. It
 
 R4 at ρ₀ beats R3 at its own ratio exactly when:
 
-```text
-ρ₀ · f(ρ₀) − u(ρ₀) < 0
-
-f(ρ₀) / u(ρ₀) < 1 / ρ₀
-
-f(ρ₀) / u(ρ₀) < p*(ρ₀)
-```
+$$
+\begin{aligned}
+\rho_0 \cdot f(\rho_0) - u(\rho_0) &< 0 \\
+\frac{f(\rho_0)}{u(\rho_0)} &< \frac{1}{\rho_0} \\
+\frac{f(\rho_0)}{u(\rho_0)} &< p^*(\rho_0)
+\end{aligned}
+$$
 
 In words, R4 wins if the reviews it left unused contained frauds at a lower rate than the threshold it assumed.
 

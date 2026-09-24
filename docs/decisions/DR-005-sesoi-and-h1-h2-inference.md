@@ -40,13 +40,12 @@ Rᶠʷ (also written R^f,w) is the pooled Test Recall@2 % of model family f ∈ 
 
 The two confirmatory estimands, displayed:
 
-```text
-        1
-δ_M  =  - · [ (R^Cat,u − R^LGB,u)  +  (R^Cat,b − R^LGB,b) ]
-        2
-
-δ_W,f  =  R^f,b − R^f,u        for f ∈ {LGB, Cat}
-```
+$$
+\begin{aligned}
+\delta_M &= \frac{1}{2}\left[ \left(R^{\mathrm{Cat},u} - R^{\mathrm{LGB},u}\right) + \left(R^{\mathrm{Cat},b} - R^{\mathrm{LGB},b}\right) \right] \\
+\delta_{W,f} &= R^{f,b} - R^{f,u} \qquad \text{for } f \in \lbrace \mathrm{LGB}, \mathrm{Cat} \rbrace
+\end{aligned}
+$$
 
 where:
 
@@ -128,11 +127,9 @@ Under fixed K, every extra fraud captured replaces a non-fraud in the queue, so 
 
 The standard error (SE) of a paired recall difference is approximately:
 
-```text
-             p_disc × DE
-SE  ≈  √(  -------------  )
-                  F
-```
+$$
+\mathrm{SE} \approx \sqrt{\frac{p_{\mathrm{disc}} \times \mathrm{DE}}{F}}
+$$
 
 where:
 
@@ -187,9 +184,9 @@ The TOST power figures are for a single contrast. H2's intersection-union test o
 
 The H1 bootstrap p-value is:
 
-```text
-p_H1 = 2 · min( P*(δ*_M ≤ 0),  P*(δ*_M ≥ 0) )
-```
+$$
+p_{\mathrm{H1}} = 2 \cdot \min\left( P^*(\delta^*_M \le 0),\ P^*(\delta^*_M \ge 0) \right)
+$$
 
 where:
 
