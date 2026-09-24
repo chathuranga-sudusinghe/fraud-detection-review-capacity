@@ -47,17 +47,21 @@ RQ3 is evaluated **across the capacity grid** (1 %, 2 %, 5 %, 10 %). Its main ou
 
 ### H1 — Model-family effect
 
-**H1₀:** There is no difference in Recall@2% review capacity between CatBoost and LightGBM on the temporal test period.
+**H1₀:** Averaged over the unweighted and balanced-weighting conditions, CatBoost and LightGBM do not differ in Recall@2% on the Test period (δ_M = 0).
 
-**H1₁:** There is a difference in Recall@2% review capacity between CatBoost and LightGBM on the temporal test period.
+**H1₁:** Averaged over the unweighted and balanced-weighting conditions, CatBoost and LightGBM differ in Recall@2% on the Test period (δ_M ≠ 0).
+
+H1 is a two-sided difference test. It is not a winner-selection test. Its 90 % CI is also interpreted against the smallest effect size of interest (SESOI) of ±2 percentage points, to distinguish practically meaningful, negligible and inconclusive differences ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)).
 
 ### H2 — Class-weighting effect
 
-**H2₀:** Class weighting does not change Recall@2% review capacity relative to the corresponding unweighted model.
+**H2₀:** For at least one model family (LightGBM or CatBoost), balanced class weighting changes Recall@2% by 2 percentage points or more relative to the corresponding unweighted model (|δ_W,f| ≥ 0.02 for at least one f).
 
-**H2₁:** Class weighting changes Recall@2% review capacity relative to the corresponding unweighted model.
+**H2₁:** For both LightGBM and CatBoost, balanced class weighting changes Recall@2% by less than 2 percentage points relative to the corresponding unweighted model (|δ_W,f| < 0.02 for both f).
 
-Smallest effects of interest for H1 and H2 must be declared before protocol freeze. An equivalence test for H2 may be added only once its SESOI is justified [REF-030].
+H2 is an equivalence hypothesis, tested by an intersection-union TOST in both model families [REF-061, REF-062]. This prevents a non-significant difference being read as "no effect" [REF-030].
+
+**SESOI = 2 percentage points of Recall@2%** (≈ 53 frauds per 28 days, or ≈ 2 per day, at identical review workload). It was fixed before any Test access. No fraud-domain standard exists, so it is a pre-specified researcher judgement based on operational meaning and on the design's resolution ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)).
 
 ### H3 — Alert-rate transfer fidelity
 
@@ -205,11 +209,11 @@ The final test set must not be used to select:
 
 The final statistical plan will prioritise:
 
-- paired bootstrap confidence intervals that respect fraud clustering and temporal dependence, using heuristic entity-cluster or day-block resampling [REF-036, REF-037];
-- exact McNemar testing as a secondary check for paired fraud-capture differences [REF-035];
-- effect sizes;
-- Holm correction for pre-specified confirmatory comparisons [REF-029];
-- equivalence testing (TOST) for H3 (Δ = 0.004, ±20 % relative), and for class weighting only if a justified smallest effect size of interest is defined [REF-030, REF-061].
+- joint paired bootstrap confidence intervals over all four model × weighting configurations that respect fraud clustering and temporal dependence, using heuristic entity-cluster or day-block resampling (the exact unit is still open) [REF-036, REF-037];
+- exact McNemar testing as a secondary, descriptive check for cell-level paired fraud-capture differences [REF-035];
+- effect sizes, with practical interpretation against the SESOI of 2 percentage points [REF-066];
+- Holm correction over the confirmatory family {H1, H2, H3} [REF-029];
+- equivalence testing (TOST) for H2 (intersection-union, SESOI = 2 pp) and H3 (Δ = 0.004, ±20 % relative) [REF-030, REF-061, REF-062].
 
 Statistical significance will not be treated as equivalent to practical importance.
 
@@ -292,11 +296,12 @@ The value lies in the controlled combination:
 - [DR-001 — Temporal split strategy](decisions/DR-001-temporal-split-strategy.md)
 - [DR-002 — Review-capacity definition](decisions/DR-002-review-capacity-definition.md)
 - [DR-003 — RQ2 / H3: policy-transfer fidelity](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)
+- [DR-005 — SESOI and H1/H2 inference plan](decisions/DR-005-sesoi-and-h1-h2-inference.md)
 
 ## References
 
 Full entries and verification status are in [`references.md`](references.md).
 
-REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-041\*, REF-046\*, REF-061, REF-062, REF-064.
+REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-041\*, REF-046\*, REF-061, REF-062, REF-064, REF-066.
 
 \* Partially verified.
