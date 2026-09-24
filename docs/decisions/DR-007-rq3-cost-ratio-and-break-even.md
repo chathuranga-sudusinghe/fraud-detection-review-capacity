@@ -13,7 +13,7 @@ Research question 3 (**RQ3**) asks:
 
 > **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
 
-It compares two decision policies at each review-capacity scenario c ∈ {1 %, 2 %, 5 %, 10 %} ([DR-002](DR-002-review-capacity-definition.md)):
+It compares two decision policies at each review-capacity scenario c (share of transactions that can be reviewed) ∈ {1 %, 2 %, 5 %, 10 %} ([DR-002](DR-002-review-capacity-definition.md)):
 - **R3 (daily top-K):** review the K_c highest-scoring transactions on each relative day. K_c is the fixed daily review budget (28 / 56 / 139 / 278).
 - **R4 (calibrated cost-aware capped policy):** review a transaction only if its calibrated fraud probability reaches a cost-derived threshold, and never more than K_c per day.
 
@@ -25,52 +25,11 @@ The working protocol left four things open (open item 4):
 
 **R3 and R4 are research evaluation policies, not the rules of any company or bank. Every cost value in this record is a simulated research assumption.** Nothing here estimates a real banking cost, loss or saving.
 
-## Notation
-
-Every symbol used in this record:
-
-| Symbol | Meaning |
-|---|---|
-| c | Review-capacity scenario (share of transactions), c ∈ {1 %, 2 %, 5 %, 10 %} |
-| K_c | Fixed daily review budget for scenario c, in reviews per relative day ([DR-002](DR-002-review-capacity-definition.md)) |
-| d | A Test relative day, d ∈ {155, …, 182} (28 days) |
-| m | A model configuration: LightGBM or CatBoost, each unweighted or with balanced class weighting (four configurations) |
-| s_i | Raw model score of transaction i (used for ranking) |
-| p̂_i | Calibrated fraud probability of transaction i: the Platt-scaled score, with the calibrator fitted on Validation 2 (V2, relative days 127–154) |
-| y_i | Fraud label of transaction i (1 = fraud, 0 = legitimate) |
-| F | Number of frauds in the evaluation period |
-| C_R | **Review cost**: the cost of manually reviewing one transaction, charged on every review whatever the outcome. Interpreted as the *marginal, avoidable* cost of a review slot (see Assumption A6) |
-| C_miss | **Missed-fraud cost**: the cost of a fraud that is not reviewed, relative to the same fraud being reviewed and caught |
-| C_FP | **False-alert (customer-friction) cost**: an extra cost of reviewing a legitimate transaction, on top of C_R |
-| ρ | **Miss-to-review cost ratio**, ρ = C_miss / C_R. The single scenario parameter of RQ3 |
-| φ | False-alert-to-review cost ratio, φ = C_FP / C_R (sensitivity analysis only) |
-| ρ′ | **Effective cost ratio**, ρ′ = (C_miss + C_FP) / (C_R + C_FP). Equals ρ when C_FP = 0 |
-| p* | Cost-derived probability threshold used by R4 |
-| N_π, TP_π, FN_π, FP_π | For policy π over the evaluation period: number of reviews; frauds reviewed (true positives); frauds not reviewed (false negatives, F − TP_π); legitimate transactions reviewed (false positives, N_π − TP_π) |
-| J_π(ρ) | **Scenario cost** of policy π, in units of one review cost (defined below) |
-| u(ρ) | **Unused reviews**: reviews made by R3 but not by R4, N_R3 − N_R4 |
-| f(ρ) | **Frauds forgone**: frauds reviewed by R3 but not by R4, TP_R3 − TP_R4 |
-| ΔJ(ρ) | Scenario-cost difference J_R4 − J_R3 (negative = R4 cheaper) |
-| ρ_sat | **Saturation ratio**: the smallest ratio at which R4 uses all K_c reviews on every day (defined below) |
-| ρ_BE | **Break-even ratio** (defined below) |
-| R3_d, R4_d(ρ) | Sets of transactions reviewed on day d by R3 (the K_c highest raw scores) and by R4 at ratio ρ |
-| p̂_(K_c),d | Calibrated probability of the K_c-th ranked transaction on day d |
-| b_i | Expected net benefit of reviewing transaction i |
-| G | Tabulated ratio grid {2, 5, 10, 20, 50, 100, 200, 500, 1000} |
-| ρ₀ | A grid ratio at which an R4 queue is built (used for the fixed-policy break-even) |
-| π_V2 | Fraud prevalence in V2 (3.39 %) |
-| cᵢⱼ | Elkan's cost-matrix entry: cost of predicting (acting as) class i when the actual class is j [REF-008] |
-| c_f, A_i, t*_i | In Höppner et al. [REF-073]: fixed investigation cost per alert; amount of transaction i; optimal threshold for transaction i |
-| p*_wrong | Threshold that would result if C_R were charged only on reviewed legitimate transactions (shown only as the incorrect variant) |
-| ρ_fixed(ρ₀) | Fixed-policy break-even: the true ratio at which the R4 queue built at ratio ρ₀ and R3 cost the same (defined below) |
-| ρ_ref | Reference ratio 1 / π_V2, at which p* equals V2 fraud prevalence π_V2 |
-| F̄_d | Expected number of frauds on day d (used only in the saturation-ratio bound) |
-
 ## Literature findings
 
 ### Cost-derived thresholds from calibrated probabilities
 
-- **[L]** For a two-class decision with cost matrix entries c(predicted, actual), the expected-cost-minimising rule predicts class 1 if and only if P(class 1 | x) ≥ p*, where [REF-008, Eq. 2]:
+- **[L]** For a two-class decision with cost matrix entries c(predicted, actual), the expected-cost-minimising rule predicts class 1 if and only if P(class 1 | x) ≥ p*, where x is the example's features and [REF-008, Eq. 2]:
 
   ```text
   p* = (c₁₀ − c₀₀) / (c₁₀ − c₀₀ + c₀₁ − c₁₁)
@@ -107,7 +66,7 @@ Every symbol used in this record:
   - Provost & Fawcett name fraud detection as a domain where "costs change based on workforce and reimbursement issues".
   - They treat the fixed-workforce problem ("the system should present the best possible set of K cases") as a separate decision criterion. This is R3's criterion [REF-039].
 - **[L]** **Cost curves** plot normalised expected cost against a probability-cost operating condition. Each fixed classifier is a straight line, and "the intersection point of the two lines is the value … where [the two classifiers] perform identically" [REF-040]. That is the classical break-even point. Drummond & Holte also put bootstrap confidence intervals on cost lines [REF-040].
-- **[L]** **Decision curve analysis** (medical prediction) plots the *net benefit* of a model against the threshold probability. The threshold is taken to encode how the decision-maker weighs false positives against false negatives [REF-072]. The ratio is described as an "exchange rate", for example "the maximum number of patients a doctor would recommend for biopsy to find one cancer". Because it is subjective, net benefit is plotted across "a range of reasonable exchange rates" [REF-075]. This is the same logic as RQ3's ratio grid. Here, ρ is the largest number of reviews worth spending to find one fraud.
+- **[L]** **Decision curve analysis** (medical prediction) plots the *net benefit* of a model against the threshold probability. The threshold is taken to encode how the decision-maker weighs false positives against false negatives [REF-072]. The ratio is described as an "exchange rate", for example "the maximum number of patients a doctor would recommend for biopsy to find one cancer". Because it is subjective, net benefit is plotted across "a range of reasonable exchange rates" [REF-075]. This is the same logic as RQ3's ratio grid. Here ρ (the miss-to-review cost ratio: assumed cost of missing a fraud ÷ cost of one review) is the largest number of reviews worth spending to find one fraud.
 - **[L]** **Calibration drives decision value.** In simulation, "miscalibration always reduced Net Benefit". Harm, meaning a result worse than the default strategies, arose when a model **under-estimated risk at a threshold below the event rate**, or over-estimated risk at a threshold above it [REF-074].
 
 ### Break-even analysis in fraud detection
@@ -140,7 +99,8 @@ where:
 - `p̂` = calibrated probability that the transaction is fraud;
 - `C_R` = cost of reviewing one transaction;
 - `C_miss` = cost of missing a fraud;
-- `C_FP` = additional false-alert/customer-friction cost for reviewing a legitimate transaction.
+- `C_FP` = additional false-alert/customer-friction cost for reviewing a legitimate transaction;
+- `E[cost | action]` = expected cost of taking that action.
 
 Not reviewing costs C_miss only if the transaction is fraud. Reviewing always costs C_R, plus C_FP if the transaction turns out to be legitimate.
 
@@ -368,7 +328,7 @@ Assessment of the candidate {1, 2, 5, 10, 20, 50, 100}:
 ```text
 p̂_(K_c),d  ≤  (1 / K_c) · Σ_{top K_c} p̂_i  ≤  F̄_d / K_c
 
-ρ_sat  =  1 / min_d p̂_(K_c),d  ≳  K_c / F̄_d  ≈  c / π_V2
+ρ_sat  =  1 / min_d p̂_(K_c),d  ≳  K_c / F̄_d  ≈  c / prev_V2
 ```
 
 where:
@@ -377,14 +337,14 @@ where:
 - `Σ_{top K_c} p̂_i` = sum of the calibrated probabilities of the day's K_c highest-ranked transactions;
 - `F̄_d` = expected number of frauds on day d;
 - `ρ_sat` = saturation ratio (defined in §4);
-- `c` = capacity share; `K_c` = daily review budget; `π_V2` = V2 fraud prevalence (3.39 %).
+- `c` = capacity share; `K_c` = daily review budget; `prev_V2` = fraud prevalence in Validation 2 (V2, relative days 127–154), 3.39 %.
 
 R4 cannot fill a budget larger than the expected fraud count unless the ratio is at least about capacity ÷ prevalence. Realistic saturation ratios are expected to be much higher than this bound.
 
-**Reference ratio.** The ratio at which p* equals V2 fraud prevalence π_V2 = 3.39 % [D] is marked on every figure:
+**Reference ratio.** The ratio at which p* equals V2 fraud prevalence prev_V2 = 3.39 % [D] is marked on every figure:
 
 ```text
-ρ_ref = 1 / π_V2 ≈ 29.5
+ρ_ref = 1 / prev_V2 ≈ 29.5
 ```
 
 At this ratio the review threshold equals the base rate. Below it, reviewing an average transaction costs more than it saves.
@@ -572,7 +532,7 @@ In words, R4 wins if the reviews it left unused contained frauds at a lower rate
 
 - **The amount analysis is an evaluation-only sensitivity analysis.** R3 and R4 decisions stay count-based (the threshold uses ρ). No amount-aware policy is added: a transaction-specific threshold C_R / A_i [REF-073] would be a **new decision policy** and would need its own GitHub Issue.
 - **Reported quantities [D]:**
-  - `TransactionAmt` is in USD per the organiser [REF-048].
+  - `TransactionAmt` (the dataset's transaction amount) is in United States dollars (USD) per the organiser [REF-048].
   - Amount-weighted recall of R3 and R4.
   - **Fraud value exposed**: Σ amount of unreviewed frauds, for each policy.
   - **Fraud value forgone** by R4: Σ amount of the frauds among the unused reviews.
@@ -582,7 +542,7 @@ In words, R4 wins if the reviews it left unused contained frauds at a lower rate
 
 ### 7. Statistical treatment
 
-**RQ3 remains estimation and sensitivity analysis. No confirmatory hypothesis is added. H1, H2, H3, the SESOI (smallest effect size of interest), the Holm family and the H1/H2 bootstrap ([DR-006](DR-006-bootstrap-inference-strategy.md)) are unchanged.**
+**RQ3 remains estimation and sensitivity analysis. No confirmatory hypothesis is added. The confirmatory hypotheses H1 (model family), H2 (class weighting) and H3 (alert-rate transfer), the SESOI (smallest effect size of interest), the Holm family and the H1/H2 bootstrap ([DR-006](DR-006-bootstrap-inference-strategy.md)) are unchanged.**
 
 Why [I]:
 - ρ is an assumption, not a population parameter. A test at each ratio would test a family of assumption-conditional nulls.
@@ -591,7 +551,7 @@ Why [I]:
 
 Uncertainty reporting (descriptive):
 - **Grid-point intervals.** For each (c, m, ρ ∈ G): 95 % percentile confidence intervals (CIs) for ΔJ, relative ΔJ, u, f and the amount measures.
-  - Method: a **day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000)**, the same key-free machinery as H3 and sensitivity analysis S2.
+  - Method: a **day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000)**, the same key-free machinery as H3 and sensitivity analysis S2 of DR-006 (the key-free day-block bootstrap).
   - Whole days are resampled, so each day's R3 and R4 queues stay exactly intact. R3 and R4 are paired within each replicate.
   - **Limitation:** this does not capture cross-day entity dependence of frauds, so intervals for f may be too narrow ([DR-006](DR-006-bootstrap-inference-strategy.md) evidence). As a sensitivity check, the interval for frauds forgone f (a recall difference between R3 and R4) is also computed with the DR-006 two-way pigeonhole bootstrap.
 - **Regime map.** Each (c, m, ρ ∈ G) cell is labelled:
@@ -627,7 +587,7 @@ Reported for every capacity c, configuration m and grid ratio ρ ∈ G, plus exa
 | Frauds forgone f; fraud rate among unused reviews f/u | §4 | Dataset-supported, label-based [D] |
 | Declined-set calibration | f/u vs mean p̂ vs p* | Dataset-supported [D] |
 | Amount-weighted recall; fraud value exposed; fraud value forgone; forgone value per unused review | §6 (USD, exposure proxy) | Dataset-supported proxy [D] |
-| Scenario cost J_R3, J_R4 | Review-cost units, total and per Test day; no-review reference J = ρ · F | **Scenario-derived** |
+| Scenario cost J_R3, J_R4 | Review-cost units, total and per Test day; no-review reference J = ρ · F, where F = number of Test frauds | **Scenario-derived** |
 | ΔJ and relative ΔJ = ΔJ / J_R3 | With 95 % CIs at grid points | **Scenario-derived** |
 | Break-even ratio ρ_BE and its classification | §4(b) | **Scenario-derived** |
 | Fixed-policy break-even ρ_fixed = u/f | §4 | **Scenario-derived** |
@@ -636,7 +596,7 @@ Reported for every capacity c, configuration m and grid ratio ρ ∈ G, plus exa
 | ρ grid, φ values, C_R = 1 unit, assumptions A1–A6 | — | **Purely assumed parameters** |
 
 **Figures:**
-- **Cost-difference curve:** relative ΔJ against log ρ, one panel per capacity, one line per configuration, with ρ_sat, ρ_BE and 1/π_V2 marked.
+- **Cost-difference curve:** relative ΔJ against log ρ, one panel per capacity, one line per configuration, with ρ_sat, ρ_BE and 1/prev_V2 marked.
 - **Utilisation curve:** R4 utilisation against log ρ.
 
 The cost-difference plot follows the cost-curve idea of plotting performance across operating conditions [REF-040, REF-072]. It is not a formal Drummond–Holte cost curve, which assumes uncapacitated classifiers and normalises costs differently.
@@ -661,7 +621,7 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 - R4's threshold is written as p* = 1/ρ, with review at p̂ ≥ p* and ranking by raw score.
 - The Test evaluation must save, for every configuration and Test transaction: raw score, Platt p̂, isotonic p̂ and relative day, plus labels and amounts once the Test is unsealed. These are needed to compute exact ΔJ curves.
 - ρ_sat is computed on V2 **before** the Test evaluation, as a pre-registered expectation of where R4 and R3 will merge.
-- H1, H2, H3, the SESOI, Δ, the capacity grid, the calibration plan and DR-006 are unchanged.
+- H1, H2, H3, the SESOI, the H3 equivalence tolerance Δ, the capacity grid, the calibration plan and DR-006 are unchanged.
 
 ## Threats and limitations
 
@@ -674,7 +634,7 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 - **R4's advantage depends on calibration transfer** from V2 to Test. Prevalence and composition shift between periods [D], so calibration may degrade.
 - **ρ_BE is sensitive to a few marginal transactions** and has no CI. The grid-point intervals are the main uncertainty statement.
 - **The day-block intervals may be too narrow** for fraud counts (cross-day entity dependence, [DR-006](DR-006-bootstrap-inference-strategy.md)). The pigeonhole check on f partly addresses this.
-- **Labels are chargeback-derived** and miss unreported fraud [REF-048], so f and FN undercount true fraud.
+- **Labels are chargeback-derived** and miss unreported fraud [REF-048], so f and FN (false negatives) undercount true fraud.
 - **Literature read in part.**
   - REF-072, REF-074 and REF-075 were read at abstract level.
   - REF-073 was read in full in its arXiv version.
@@ -687,3 +647,62 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 REF-004, REF-005, REF-006, REF-007, REF-008, REF-038, REF-039, REF-040, REF-048\*, REF-072, REF-073, REF-074, REF-075 — see [`../references.md`](../references.md).
 
 \* Partially verified.
+
+## Symbols and notation
+
+Complete reference for every symbol used in this record. Each symbol is also defined where it first appears.
+
+| Symbol | Meaning |
+|---|---|
+| c | Review-capacity scenario (share of transactions), c ∈ {1 %, 2 %, 5 %, 10 %} |
+| K_c | Fixed daily review budget for scenario c, in reviews per relative day ([DR-002](DR-002-review-capacity-definition.md)) |
+| d | A Test relative day, d ∈ {155, …, 182} (28 days) |
+| m | A model configuration: LightGBM or CatBoost, each unweighted or with balanced class weighting (four configurations) |
+| s_i | Raw model score of transaction i (used for ranking) |
+| p̂_i | Calibrated fraud probability of transaction i: the Platt-scaled score, with the calibrator fitted on Validation 2 (V2, relative days 127–154) |
+| y_i | Fraud label of transaction i (1 = fraud, 0 = legitimate) |
+| F | Number of frauds in the evaluation period |
+| C_R | **Review cost**: the cost of manually reviewing one transaction, charged on every review whatever the outcome. Interpreted as the *marginal, avoidable* cost of a review slot (see Assumption A6) |
+| C_miss | **Missed-fraud cost**: the cost of a fraud that is not reviewed, relative to the same fraud being reviewed and caught |
+| C_FP | **False-alert (customer-friction) cost**: an extra cost of reviewing a legitimate transaction, on top of C_R |
+| ρ | **Miss-to-review cost ratio**, ρ = C_miss / C_R. The single scenario parameter of RQ3 |
+| φ | False-alert-to-review cost ratio, φ = C_FP / C_R (sensitivity analysis only) |
+| ρ′ | **Effective cost ratio**, ρ′ = (C_miss + C_FP) / (C_R + C_FP). Equals ρ when C_FP = 0 |
+| p* | Cost-derived probability threshold used by R4 |
+| N_π, TP_π, FN_π (FN), FP_π | For policy π over the evaluation period: number of reviews; frauds reviewed (true positives); frauds not reviewed (false negatives, F − TP_π); legitimate transactions reviewed (false positives, N_π − TP_π) |
+| J_π(ρ) | **Scenario cost** of policy π, in units of one review cost (defined in the text) |
+| u(ρ) | **Unused reviews**: reviews made by R3 but not by R4, N_R3 − N_R4 |
+| f(ρ) | **Frauds forgone**: frauds reviewed by R3 but not by R4, TP_R3 − TP_R4 |
+| ΔJ(ρ) | Scenario-cost difference J_R4 − J_R3 (negative = R4 cheaper) |
+| ρ_sat | **Saturation ratio**: the smallest ratio at which R4 uses all K_c reviews on every day (defined in the text) |
+| ρ_BE | **Break-even ratio** (defined in the text) |
+| R3_d, R4_d(ρ) | Sets of transactions reviewed on day d by R3 (the K_c highest raw scores) and by R4 at ratio ρ |
+| p̂_(K_c),d | Calibrated probability of the K_c-th ranked transaction on day d |
+| b_i | Expected net benefit of reviewing transaction i |
+| G | Tabulated ratio grid {2, 5, 10, 20, 50, 100, 200, 500, 1000} |
+| ρ₀ | A grid ratio at which an R4 queue is built (used for the fixed-policy break-even) |
+| prev_V2 | Fraud prevalence in V2 (3.39 % of V2 transactions are fraud) |
+| cᵢⱼ | Elkan's cost-matrix entry: cost of predicting (acting as) class i when the actual class is j [REF-008] |
+| c_f, A_i, t*_i | In Höppner et al. [REF-073]: fixed investigation cost per alert; amount of transaction i; optimal threshold for transaction i |
+| p*_wrong | Threshold that would result if C_R were charged only on reviewed legitimate transactions (shown only as the incorrect variant) |
+| ρ_fixed(ρ₀) | Fixed-policy break-even: the true ratio at which the R4 queue built at ratio ρ₀ and R3 cost the same (defined in the text) |
+| ρ_ref | Reference ratio 1 / prev_V2, at which p* equals V2 fraud prevalence prev_V2 |
+| F̄_d | Expected number of frauds on day d (used only in the saturation-ratio bound) |
+| [D], [L], [I] | Evidence tags: dataset observation, literature, inference |
+| A1–A6 | The six modelling assumptions of the derivation (perfect verification; additive per-transaction costs; common baseline; C_R on every review; calibration; unused capacity has value) |
+| AUC, ROC | Area Under the Curve; Receiver Operating Characteristic |
+| B | Number of bootstrap replicates (10,000) |
+| CI | Confidence interval |
+| Δ | H3 equivalence tolerance on the alert rate (defined in DR-003; unchanged here) |
+| E[cost \| action] | Expected cost of an action (review or not review) |
+| H1, H2, H3 | Confirmatory hypotheses of the protocol: model family; class weighting; alert-rate transfer |
+| ℓ | Block length of the day-level moving-block bootstrap (3 days) |
+| log | Logarithm (log scale for ρ) |
+| R3, R4 | Decision policies: daily top-K review; calibrated cost-aware capped review |
+| RQ3 | Research question 3 (cost-aware capacity use) |
+| S2 | Sensitivity analysis S2 of DR-006: key-free day-level moving-block bootstrap |
+| SESOI | Smallest Effect Size Of Interest |
+| sup | Supremum: the largest value (least upper bound) of a set |
+| USD | United States dollars |
+| x | Feature vector of a transaction, in P(class 1 \| x) |
+| Σ_d | Sum over the 28 Test days |

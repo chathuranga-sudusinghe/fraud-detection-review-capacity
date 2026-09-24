@@ -18,7 +18,7 @@ This document establishes the literature-review structure for the project. It is
 The literature review will establish:
 
 1. why transaction fraud detection is a difficult imbalanced-classification problem;
-2. why accuracy and ROC-AUC alone are insufficient for operational fraud detection;
+2. why accuracy and ROC-AUC (Receiver Operating Characteristic Area Under the Curve) alone are insufficient for operational fraud detection;
 3. how LightGBM, CatBoost, and related gradient-boosting methods have been used for fraud detection;
 4. how class weighting and cost-sensitive learning address asymmetric fraud-detection errors;
 5. why decision-threshold selection is a separate problem from model training;
@@ -35,6 +35,8 @@ The literature review will establish:
 > **Under constrained daily review capacity, how do model family, class weighting, and score-to-review decision policies affect fraud capture, review workload, and cost-sensitive outcomes on temporally unseen transaction data?**
 
 ### Supporting Questions
+
+The supporting research questions are numbered RQ1–RQ3.
 
 **RQ1**
 
@@ -76,10 +78,10 @@ Expected argument:
 Metrics to review critically:
 
 - ROC-AUC;
-- PR-AUC / Average Precision;
+- PR-AUC (Precision–Recall Area Under the Curve) / Average Precision;
 - precision;
 - recall / sensitivity;
-- F1-score;
+- F1-score (harmonic mean of precision and recall);
 - false-negative rate;
 - false-positive rate;
 - confusion-matrix counts;
@@ -119,11 +121,11 @@ XGBoost and other models may appear in the literature as comparison context, but
 Approaches to review:
 
 - class weighting;
-- `scale_pos_weight`;
+- `scale_pos_weight` (a library parameter that up-weights the positive, fraud, class);
 - weighted loss functions;
 - under-sampling;
 - over-sampling;
-- SMOTE and synthetic minority generation;
+- SMOTE (Synthetic Minority Over-sampling Technique) and synthetic minority generation;
 - threshold adjustment;
 - cost-sensitive decision rules.
 
@@ -200,19 +202,23 @@ The study intends to distinguish capacity constraints from explicit cost sensiti
 A generic cost model may take the form:
 
 ```text
-Total Cost =
-    C_FN × False Negatives
-  + C_FP × False Positives
-  + C_R  × Reviewed Transactions
+Total Cost  =  C_miss × FN
+            +  C_FP   × FP
+            +  C_R    × N_rev
 ```
 
-Where:
+where:
 
-- `C_FN` = assumed relative cost of missed fraud;
-- `C_FP` = assumed relative cost of unnecessary intervention;
-- `C_R` = assumed review/investigation cost.
+- `C_miss` = assumed relative cost of a missed fraud (written C_FN in some sources);
+- `FN` = number of false negatives (frauds not reviewed);
+- `C_FP` = assumed relative cost of unnecessary intervention (a false positive), charged in addition to the review cost C_R;
+- `FP` = number of false positives (legitimate transactions reviewed);
+- `C_R` = assumed review/investigation cost per reviewed transaction;
+- `N_rev` = number of reviewed transactions.
 
-Because the IEEE-CIS dataset does not provide verified institutional investigation costs, the study should use **scenario-based cost ratios and sensitivity analysis**, not claim real bank cost values.
+Every review costs C_R; a reviewed legitimate transaction costs C_FP more, and each missed fraud costs C_miss.
+
+Because the IEEE-CIS (IEEE Computational Intelligence Society) Fraud Detection dataset does not provide verified institutional investigation costs, the study should use **scenario-based cost ratios and sensitivity analysis**, not claim real bank cost values.
 
 Expected argument:
 
@@ -303,7 +309,7 @@ Expected argument:
 The real-world system concept is:
 
 ```text
-ML model
+ML (machine learning) model
    ↓
 risk score
    ↓
@@ -534,7 +540,7 @@ The final research-gap statement must be revised after the complete literature s
 1. Build a literature evidence matrix.
 2. Collect approximately 20–30 high-relevance academic sources, prioritising quality over volume.
 3. Identify foundational and recent papers for each core theme.
-4. Verify full bibliographic details and DOI for every retained source.
+4. Verify full bibliographic details and DOI (Digital Object Identifier) for every retained source.
 5. Separate background sources from directly comparable empirical studies.
 6. Refine the research gap after the evidence matrix is complete.
 7. Only then convert this working document into dissertation-style critical synthesis.
@@ -544,3 +550,25 @@ The final research-gap statement must be revised after the complete literature s
 **Literature-review foundation established.**
 
 This file defines the review scope and initial evidence base. It is not yet the final dissertation literature review.
+
+## Symbols and notation
+
+| Symbol / abbreviation | Meaning |
+|---|---|
+| ACM, IEEE | Association for Computing Machinery; Institute of Electrical and Electronics Engineers (publishers / databases) |
+| C_FP | Assumed relative cost of unnecessary intervention (a false positive), in addition to C_R |
+| C_miss | Assumed relative cost of a missed fraud (C_FN in some sources) |
+| C_R | Assumed review/investigation cost per reviewed transaction |
+| DOI | Digital Object Identifier |
+| ECE | Expected Calibration Error |
+| F1 | Harmonic mean of precision and recall |
+| FN, FP | False negatives (frauds not reviewed); false positives (legitimate transactions reviewed) |
+| HITL | Human-in-the-Loop |
+| IEEE-CIS | IEEE Computational Intelligence Society (dataset organiser) |
+| ML | Machine learning |
+| N_rev | Number of reviewed transactions |
+| PR-AUC | Precision–Recall Area Under the Curve |
+| ROC-AUC | Receiver Operating Characteristic Area Under the Curve |
+| RQ1–RQ3 | Research questions 1–3 |
+| SMOTE | Synthetic Minority Over-sampling Technique |
+| `scale_pos_weight` | Library parameter that up-weights the positive (fraud) class |

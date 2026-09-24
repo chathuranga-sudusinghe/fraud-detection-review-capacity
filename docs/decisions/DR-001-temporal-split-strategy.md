@@ -12,7 +12,7 @@
 The study needs a leakage-safe temporal evaluation. Three things must be separated in time:
 - model fitting;
 - model selection (tuning, early stopping);
-- decision-policy selection (thresholds, calibration, capacity budget).
+- decision-policy selection (score thresholds, probability calibration, daily review budget).
 
 Performance is then measured once, on a later untouched period. `TransactionDT` is a time offset in seconds from an **undisclosed** reference point [REF-047]. Only *relative* days can be used, and no calendar interpretation is possible.
 
@@ -20,13 +20,25 @@ The split had to be chosen **before** any target-driven analysis, so that the fi
 
 ## Decision
 
-Use a chronological, day-aligned split, with relative day = `TransactionDT // 86,400`:
+Use a chronological, day-aligned split. Each transaction is assigned a relative day:
+
+```text
+relative day = ⌊ TransactionDT / 86,400 ⌋
+```
+
+where:
+
+- `TransactionDT` = time offset in seconds from the undisclosed reference point;
+- `86,400` = number of seconds in one day;
+- `⌊ · ⌋` = rounding down to a whole number (integer division, `//` in Python).
+
+The partitions are:
 
 | Partition | Relative days | Days | Rows | % rows | Role |
 |---|---|---|---|---|---|
 | **Train** | 1–105 | 105 | 368,632 | 62.4 | Model fitting. **Models are not refit** on later partitions. |
-| **V1** | 106–126 | 21 | 65,544 | 11.1 | Hyper-parameter selection and early stopping **only** |
-| **V2** | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for R4); threshold selection (R1, R2); daily budget K ([DR-002](DR-002-review-capacity-definition.md)) |
+| **V1** (Validation 1) | 106–126 | 21 | 65,544 | 11.1 | Hyper-parameter selection and early stopping **only** |
+| **V2** (Validation 2) | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for policy R4, the calibrated cost-aware capped policy); threshold selection (R1, the F1-optimal threshold; R2, the capacity-rate threshold); fixed daily review budget K ([DR-002](DR-002-review-capacity-definition.md)) |
 | **Test** | 155–182 | 28 | 78,542 | 13.3 | **Sealed.** One confirmatory evaluation after the protocol freeze |
 
 - **No temporal gap in the primary design.**
@@ -34,7 +46,7 @@ Use a chronological, day-aligned split, with relative day = `TransactionDT // 86
 
 Reproducibility anchors, from the notebook (§4.3):
 
-| Partition | `TransactionDT` range (s) | SHA-256 of sorted `TransactionID`s (first 16 hex) |
+| Partition | `TransactionDT` range (s = seconds) | SHA-256 (Secure Hash Algorithm, 256-bit) of sorted `TransactionID`s (first 16 hexadecimal characters) |
 |---|---|---|
 | Train | 86,400 – 9,158,384 | `f3c088aa2f952738` |
 | V1 | 9,158,441 – 10,972,793 | `cb1325d41dae02a3` |
@@ -46,7 +58,7 @@ Reproducibility anchors, from the notebook (§4.3):
 **Temporal structure [D].**
 - 590,540 transactions span relative days 1–182, with every day present.
 - Rows are sorted by `TransactionDT`, and `TransactionID` is monotone in time.
-- Mean volume is 3,245 per day, with a coefficient of variation of 0.26.
+- Mean volume is 3,245 per day, with a coefficient of variation (standard deviation ÷ mean) of 0.26.
 - Days 1–28 average about 4,500 per day; later 4-week blocks average about 2,700–3,300 per day.
 - The lag-7 autocorrelation of daily volume (0.50) is weaker than lag-1 (0.75), so the weekly cycle is weak.
 
@@ -58,7 +70,7 @@ Reproducibility anchors, from the notebook (§4.3):
 **Drift between partitions [D].**
 - The V1 → V2 base-rate shift is −0.23 on the log-odds scale.
 - Identity coverage falls from 27.1 % (Train) to 20.7 % (V1) and 17.5 % (V2).
-- Most feature-level shift (PSI) occurs between Train and the validation periods, not between V1 and V2.
+- Most feature-level shift, measured by the Population Stability Index (PSI), occurs between Train and the validation periods, not between V1 and V2.
 
 **Entity-level label dependence [D].** About 16.9 % of V2 frauds come from heuristic pseudo-entities that already had a Train fraud label. Transactions from those entities are 68 % fraud, versus 0.06 % for pseudo-entities seen in Train without fraud.
 
@@ -71,7 +83,7 @@ Reproducibility anchors, from the notebook (§4.3):
 
 | Alternative | Why not chosen |
 |---|---|
-| Random or stratified split, or k-fold CV | Label propagation across linked transactions [REF-048] and the observed entity recurrence [D] would inflate all metrics [REF-026, REF-027]. |
+| Random or stratified split, or k-fold cross-validation (CV) | Label propagation across linked transactions [REF-048] and the observed entity recurrence [D] would inflate all metrics [REF-026, REF-027]. |
 | **B**: as chosen, plus a 7-day gap (Train 1–98, V1 99–119, V2 120–147, gap 148–154, Test 155–182) | Loses 21,443 rows (3.6 %). The dataset contains no label-report dates, so any gap length is arbitrary [D]. Without refitting, training data already ends 49 days before Test. |
 | **C**: 35-day Test (Train 1–91, V1 92–119, V2 120–147, Test 148–182) | About 27 % more Test rows (an approximately 11 % smaller detectable effect), but Train shrinks to 54.2 % and V1 grows beyond what early stopping needs. |
 | Two-way split (Train / Test) with thresholds chosen on Train or Test | Thresholds would be selected on in-sample or test data, which is leakage. |
@@ -80,16 +92,16 @@ Reproducibility anchors, from the notebook (§4.3):
 ## Rationale
 
 1. **Train as large as possible, including the early high-volume regime.** The model then sees the full range of volumes.
-2. **V2 has the same length as Test (28 days) and near-identical volume.** Threshold and budget transfer (RQ2) is then a like-for-like comparison.
+2. **V2 has the same length as Test (28 days) and near-identical volume.** Threshold and budget transfer (research question RQ2) is then a like-for-like comparison.
 3. **V1 and V2 have different jobs.** Early stopping makes V1 scores optimistic. V2 supplies out-of-sample scores for policy selection and calibration, and is closer in time to Test.
-4. **Calibration on V2, not V1.** V1's prevalence (4.22 %) differs from V2's (3.39 %), and V1 is used for early stopping. Calibration matters only for R4 (and the descriptive R0); monotone calibrators do not change the ranking used by R1–R3 [I; REF-015, REF-016].
+4. **Calibration on V2, not V1.** V1's prevalence (4.22 %) differs from V2's (3.39 %), and V1 is used for early stopping. Calibration matters only for R4 (and the descriptive R0, the default 0.5 threshold). Monotone calibrators do not change the ranking used by R1–R3 (R3 is the daily top-K policy) [I; REF-015, REF-016].
 5. **No primary gap.** Its purpose would be to simulate label latency [REF-005, REF-046], but its length cannot be grounded in this dataset. Because models are not refit, the Train → Test separation is already 49 days.
 
 ## Consequences
 
 - Development data total 511,998 rows and 17,889 frauds. Test has 78,542 rows (sealed).
 - Projected Test frauds, assuming V2 prevalence, are about 2,660. This is a projection, not an observation, and it drives the power discussion in the protocol.
-- Daily-level Test statistics rest on **n = 28 days**.
+- Daily-level Test statistics rest on **n = 28 days** (n = number of Test relative days).
 - **RQ2 observes only one V2 → Test transfer event.** A small, development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only) is recommended to show whether transfer failure is systematic. It must not replace the single confirmatory Test evaluation.
 - **Label-latency sensitivity.** Label-dependent policy choices (R1 threshold; R4 calibrator) are repeated using only V2 days 127–147. This costs no Test access.
 - If the protocol is ever changed to **refit** on Train+V1(+V2), this decision must be revisited and a gap reconsidered.
@@ -105,3 +117,28 @@ Reproducibility anchors, from the notebook (§4.3):
 ## References
 
 REF-004, REF-005, REF-015, REF-016, REF-023, REF-024, REF-025, REF-026, REF-027, REF-046, REF-047, REF-048 — see [`../references.md`](../references.md).
+
+## Symbols and notation
+
+| Symbol / abbreviation | Meaning |
+|---|---|
+| [D], [L], [I] | Evidence tags: dataset observation, literature, inference |
+| CV | Cross-validation (in "k-fold CV"); k is the number of folds |
+| DR | Decision Record |
+| `isFraud` | Binary fraud label (1 = fraud, 0 = legitimate) |
+| K | Fixed daily review budget (reviews per relative day), defined in DR-002 |
+| n | Number of Test relative days (28) |
+| PSI | Population Stability Index (a measure of distribution shift) |
+| R0 | Decision policy: default probability threshold 0.5 (descriptive only) |
+| R1 | Decision policy: F1-optimal threshold chosen on V2 |
+| R2 | Decision policy: capacity-rate threshold chosen on V2 |
+| R3 | Decision policy: daily top-K review |
+| R4 | Decision policy: calibrated cost-aware capped review |
+| REF-NNN | Reference identifier in `docs/references.md` |
+| RQ2 | Research question 2 (policy-transfer fidelity) |
+| s | Seconds |
+| SHA-256 | Secure Hash Algorithm, 256-bit |
+| `TransactionDT` | Time offset in seconds from an undisclosed reference point |
+| `TransactionID` | Transaction identifier (monotone in time) |
+| V1, V2 | Validation 1 (relative days 106–126); Validation 2 (relative days 127–154) |
+| ⌊ · ⌋ | Round down to a whole number (integer division) |

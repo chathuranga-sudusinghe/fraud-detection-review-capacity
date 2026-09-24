@@ -11,7 +11,7 @@
 
 This is a single-student MSc research project. Its credibility depends on being able to show *when* and *why* each methodological choice was made, and that no choice was influenced by the sealed Test period (relative days 155–182; [DR-001](DR-001-temporal-split-strategy.md)).
 
-Work is carried out by the student with the help of two AI assistants, **ChatGPT** and **Claude**. They are used for:
+Work is carried out by the student with the help of two artificial intelligence (AI) assistants, **ChatGPT** and **Claude**. They are used for:
 - research planning;
 - methodological review;
 - literature discovery and verification;
@@ -52,7 +52,7 @@ GitHub Issue
 2. **Branch.** One issue-specific branch per issue, e.g. `docs/issue-6-agent-workflow`. No direct commits to `main`.
 3. **Work.** Only the changes the issue requires.
 4. **Review.** The student reviews all changes, including AI-generated ones, against the issue's acceptance criteria and, where relevant, against the dataset, literature or University guidance.
-5. **Pull request.** The description links the issue with a closing keyword.
+5. **Pull request (PR).** The description links the issue with a closing keyword.
 6. **Merge** into `main` after review.
 7. **Automatic closure.** GitHub closes the linked issue when the PR is merged.
 

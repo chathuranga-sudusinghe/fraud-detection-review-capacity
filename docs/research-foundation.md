@@ -19,13 +19,15 @@ In operational settings, review resources are limited. Therefore, a useful fraud
 
 Temporal change can alter score distributions, fraud prevalence, feature distributions, and realised alert volume. This creates a research problem at the boundary between predictive ranking and operational decision policy.
 
-In the IEEE-CIS development data, fraud prevalence is about 3.5 %, an imbalance ratio of about 28 : 1. This is described as **imbalanced / low-prevalence**, not "severely" imbalanced: that label is conventionally reserved for ratios of about 100 : 1 and above [REF-002, REF-001]. The practical difficulty comes from low prevalence combined with temporal drift and a review budget that, at 2 % capacity, is smaller than the daily number of frauds ([DR-002](decisions/DR-002-review-capacity-definition.md)).
+In the IEEE-CIS (IEEE Computational Intelligence Society) Fraud Detection development data, fraud prevalence is about 3.5 %, an imbalance ratio (legitimate : fraud) of about 28 : 1. This is described as **imbalanced / low-prevalence**, not "severely" imbalanced: that label is conventionally reserved for ratios of about 100 : 1 and above [REF-002, REF-001]. The practical difficulty comes from low prevalence combined with temporal drift and a review budget that, at 2 % capacity, is smaller than the daily number of frauds ([DR-002](decisions/DR-002-review-capacity-definition.md)).
 
 ## Main Research Question
 
 > **Under constrained daily review capacity, how do model family, class weighting, and score-to-review decision policies affect fraud capture, review workload, and cost-sensitive outcomes on temporally unseen transaction data?**
 
 ## Supporting Research Questions
+
+The supporting research questions are numbered RQ1–RQ3.
 
 ### RQ1
 
@@ -41,35 +43,84 @@ Revised after the feasibility audit ([DR-003](decisions/DR-003-rq2-h3-policy-tra
 
 > **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
 
-RQ3 is evaluated **across the capacity grid** (1 %, 2 %, 5 %, 10 %). Its main output is the **break-even miss-to-review cost ratio at each capacity**: the largest assumed ratio ρ = C_miss / C_R (cost of a missed fraud ÷ cost of one review) at which the cost-aware policy is strictly cheaper than filling capacity. It is reported with the saturation ratio, above which the two policies are identical ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)). At 2 % the budget is below the daily fraud count, so the cost-aware policy is expected to coincide with filling capacity above a low ratio. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md)).
+RQ3 is evaluated **across the capacity grid** (1 %, 2 %, 5 %, 10 %). Its main output is the **break-even miss-to-review cost ratio at each capacity**: the largest assumed miss-to-review cost ratio ρ (cost of a missed fraud C_miss ÷ cost of one review C_R) at which the cost-aware policy is strictly cheaper than filling capacity. It is reported with the saturation ratio, above which the two policies are identical ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)). At 2 % the budget is below the daily fraud count, so the cost-aware policy is expected to coincide with filling capacity above a low ratio. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md)).
 
 ## Confirmatory Hypotheses
 
+The confirmatory hypotheses are H1–H3. A subscript ₀ marks the null hypothesis and ₁ the alternative. Recall@2% is the share of Test frauds reviewed when 2 % of transactions can be reviewed each day.
+
 ### H1 — Model-family effect
+
+H1 concerns the model-family main effect:
+
+```text
+        1
+δ_M  =  - · [ (R^Cat,u − R^LGB,u)  +  (R^Cat,b − R^LGB,b) ]
+        2
+```
+
+where:
+
+- `δ_M` = CatBoost-minus-LightGBM difference in Recall@2%, averaged over the two weighting conditions;
+- `R^f,w` = pooled Test Recall@2% of model family f ∈ {LGB (LightGBM), Cat (CatBoost)} with weighting w ∈ {u (unweighted), b (balanced)}.
 
 **H1₀:** Averaged over the unweighted and balanced-weighting conditions, CatBoost and LightGBM do not differ in Recall@2% on the Test period (δ_M = 0).
 
 **H1₁:** Averaged over the unweighted and balanced-weighting conditions, CatBoost and LightGBM differ in Recall@2% on the Test period (δ_M ≠ 0).
 
-H1 is a two-sided difference test. It is not a winner-selection test. Its 90 % CI is also interpreted against the smallest effect size of interest (SESOI) of ±2 percentage points, to distinguish practically meaningful, negligible and inconclusive differences ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)).
+H1 is a two-sided difference test. It is not a winner-selection test. Its 90 % confidence interval (CI) is also interpreted against the smallest effect size of interest (SESOI) of ±2 percentage points, to distinguish practically meaningful, negligible and inconclusive differences ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)).
 
 ### H2 — Class-weighting effect
+
+H2 concerns the weighting effect within each model family f:
+
+```text
+δ_W,f  =  R^f,b − R^f,u        for f ∈ {LGB, Cat}
+```
+
+where `δ_W,f` = balanced-minus-unweighted Recall@2% in family f.
 
 **H2₀:** For at least one model family (LightGBM or CatBoost), balanced class weighting changes Recall@2% by 2 percentage points or more relative to the corresponding unweighted model (|δ_W,f| ≥ 0.02 for at least one f).
 
 **H2₁:** For both LightGBM and CatBoost, balanced class weighting changes Recall@2% by less than 2 percentage points relative to the corresponding unweighted model (|δ_W,f| < 0.02 for both f).
 
-H2 is an equivalence hypothesis, tested by an intersection-union TOST in both model families [REF-061, REF-062]. This prevents a non-significant difference being read as "no effect" [REF-030].
+H2 is an equivalence hypothesis, tested by an intersection-union TOST (Two One-Sided Tests) in both model families [REF-061, REF-062]. This prevents a non-significant difference being read as "no effect" [REF-030].
 
 **SESOI = 2 percentage points of Recall@2%** (≈ 53 frauds per 28 days, or ≈ 2 per day, at identical review workload). It was fixed before any Test access. No fraud-domain standard exists, so it is a pre-specified researcher judgement based on operational meaning and on the design's resolution ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)).
 
 ### H3 — Alert-rate transfer fidelity
 
+H3 concerns the realised alert rate r of the score threshold selected on Validation 2 (V2, relative days 127–154) to flag 2 % of transactions, applied unchanged to the Test period:
+
+```text
+       Σ_d n_d
+r  =  ---------
+       Σ_d N_d
+```
+
+where:
+
+- `d` = a Test relative day;
+- `n_d` = number of transactions on day d flagged by the threshold;
+- `N_d` = total number of transactions on day d;
+- `Σ_d` = sum over the 28 Test days.
+
+Δ (the equivalence tolerance) bounds the deviation of r from 0.02: r preserves the target when it deviates by less than Δ.
+
 **H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ, where Δ = 0.004, i.e. ±20% of the target).
 
 **H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ, where Δ = 0.004, i.e. ±20% of the target).
 
-Here r is the realised alert rate pooled over the Test period. Δ = 0.004 is a relative tolerance of 20 % of the target, giving the band (1.6 %, 2.4 %). It was fixed before any Test access. No literature standard exists for this tolerance, so the magnitude is a pre-specified researcher judgement, anchored in development-period workload variation ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with two one-sided tests (TOST), using a day-level moving-block bootstrap confidence interval [REF-061, REF-062, REF-064]. Fidelity to the fixed daily budget (daily review count vs K, overflow and underuse days) is a separate descriptive operational outcome, not a hypothesis.
+Δ is a relative tolerance of 20 % of the target:
+
+```text
+Δ = 0.20 × 0.02
+  = 0.004
+
+equivalence band = (0.02 − Δ, 0.02 + Δ)
+                 = (1.6 %, 2.4 %)
+```
+ It was fixed before any Test access. No literature standard exists for this tolerance, so the magnitude is a pre-specified researcher judgement, anchored in development-period workload variation ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with TOST, using a day-level moving-block bootstrap confidence interval [REF-061, REF-062, REF-064]. Fidelity to the fixed daily budget (daily review count vs K, the fixed daily review budget; overflow and underuse days) is a separate descriptive operational outcome, not a hypothesis.
 
 RQ3 will primarily be evaluated through cost-ratio sensitivity analysis and break-even analysis across the capacity grid rather than a separate omnibus hypothesis test.
 
@@ -101,9 +152,15 @@ A simple L2-regularised Logistic Regression model may be included only as a refe
 ### Class weighting
 
 - unweighted
-- balanced weighting: explicit sample weights, w_pos = n_neg / n_pos computed from Train only
+- balanced weighting: explicit sample weights computed from Train only. Each fraud row receives the weight
 
-Resampling methods (SMOTE, over- and under-sampling) are excluded [REF-019, REF-020, REF-022].
+  ```text
+  w_pos = n_neg / n_pos
+  ```
+
+  where `w_pos` = weight of each fraud (positive-class) row, `n_neg` = number of legitimate Train transactions and `n_pos` = number of fraud Train transactions. Legitimate rows keep weight 1.
+
+Resampling methods (SMOTE, the Synthetic Minority Over-sampling Technique; over- and under-sampling) are excluded [REF-019, REF-020, REF-022].
 
 ### Decision policies
 
@@ -124,15 +181,21 @@ Candidate capacity scenarios:
 - 5%
 - 10%
 
-These are simulated research scenarios. They must not be represented as real institutional review capacities. Each rate c is turned into a fixed daily budget K = round(c × mean daily volume in V2), giving 28 / 56 / 139 / 278 reviews per relative day ([DR-002](decisions/DR-002-review-capacity-definition.md)).
+These are simulated research scenarios. They must not be represented as real institutional review capacities. Each capacity share c is turned into a fixed daily review budget ([DR-002](decisions/DR-002-review-capacity-definition.md)):
+
+```text
+K = round( c × mean daily transaction volume in V2 )
+```
+
+where `K` = fixed daily review budget and `c` = review-capacity share. This gives 28 / 56 / 139 / 278 reviews per relative day.
 
 ## Primary and Secondary Outcomes
 
 ### Primary outcome
 
-- Recall@2% review capacity (daily top-K, K = 56), reported with its oracle ceiling (≈ 0.6) and normalised recall
+- Recall@2% review capacity (daily top-K, K = 56), reported with its oracle ceiling (≈ 0.6, the recall of a perfect ranker) and normalised recall (frauds reviewed ÷ the most that could be reviewed each day)
 
-Precision@Capacity is a rescaling of Recall@Capacity under fixed K. It is reported descriptively, not as independent confirmatory evidence.
+Precision@Capacity (share of reviewed transactions that are fraud) is a rescaling of Recall@Capacity (share of frauds reviewed) under fixed K. It is reported descriptively, not as independent confirmatory evidence.
 
 ### Secondary outcomes
 
@@ -144,8 +207,8 @@ Precision@Capacity is a rescaling of Recall@Capacity under fixed K. It is report
 - review utilisation
 - realised workload
 - percentage of periods exceeding capacity
-- Average Precision / PR-AUC
-- ROC-AUC
+- Average Precision / PR-AUC (Precision–Recall Area Under the Curve)
+- ROC-AUC (Receiver Operating Characteristic Area Under the Curve)
 - scenario cost
 - calibration metrics where relevant
 
@@ -212,8 +275,8 @@ The final statistical plan will prioritise:
 - joint paired bootstrap confidence intervals over all four model × weighting configurations. The primary method is a two-way (pigeonhole) bootstrap over relative days × heuristic pseudo-entities, because both day-level and cross-day entity dependence are present. Sensitivity analyses use an Owen-corrected variance and a key-free day-block bootstrap ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)) [REF-036, REF-037, REF-068, REF-070];
 - exact McNemar testing as a secondary, descriptive check for cell-level paired fraud-capture differences. It is not confirmatory, because clustering can inflate its size [REF-035, REF-071];
 - effect sizes, with practical interpretation against the SESOI of 2 percentage points [REF-066];
-- Holm correction over the confirmatory family {H1, H2, H3} [REF-029];
-- equivalence testing (TOST) for H2 (intersection-union, SESOI = 2 pp) and H3 (Δ = 0.004, ±20 % relative) [REF-030, REF-061, REF-062].
+- Holm (sequentially rejective multiple-testing) correction over the confirmatory family {H1, H2, H3} [REF-029];
+- equivalence testing (TOST) for H2 (intersection-union, SESOI = 2 percentage points, pp) and H3 (Δ = 0.004, ±20 % relative) [REF-030, REF-061, REF-062].
 
 Statistical significance will not be treated as equivalent to practical importance.
 
@@ -340,3 +403,45 @@ Full entries and verification status are in [`references.md`](references.md).
 REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-041\*, REF-046\*, REF-061, REF-062, REF-064, REF-066, REF-068, REF-070, REF-071, REF-072, REF-073.
 
 \* Partially verified.
+
+## Symbols and notation
+
+| Symbol / abbreviation | Meaning |
+|---|---|
+| c | Review-capacity share (1 %, 2 %, 5 % or 10 %) |
+| C_FP | Extra false-alert/customer-friction cost of reviewing a legitimate transaction (sensitivity only) |
+| C_miss | Assumed cost of missing a fraud |
+| C_R | Assumed cost of reviewing one transaction |
+| Cat, LGB | CatBoost, LightGBM |
+| CI | Confidence interval |
+| d | A Test relative day |
+| Δ | H3 equivalence tolerance on r (0.004) |
+| δ_M | Model-family main effect in Recall@2% (H1) |
+| δ_W,f | Weighting effect in model family f (H2) |
+| DR | Decision Record |
+| f, w | Model family (LGB or Cat); weighting (u unweighted, b balanced) |
+| H1, H2, H3 | Confirmatory hypotheses; subscript ₀ = null, ₁ = alternative |
+| IEEE-CIS | IEEE Computational Intelligence Society (dataset organiser) |
+| K | Fixed daily review budget (reviews per relative day) |
+| n_d | Number of Test transactions on day d flagged by the V2-selected 2 % threshold |
+| N_d | Total number of transactions on day d |
+| n_neg, n_pos | Numbers of legitimate and fraud transactions in Train |
+| p* | Cost-derived probability threshold used by R4 |
+| pp | Percentage points |
+| PR-AUC | Precision–Recall Area Under the Curve |
+| Precision@Capacity | Share of reviewed transactions that are fraud at a given capacity |
+| r | Realised Test alert rate of the V2-selected 2 % threshold |
+| R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-quantile (rate) threshold; daily top-K; calibrated cost-aware capped policy |
+| R^f,w | Pooled Test Recall@2% of family f with weighting w |
+| Recall@2%, Recall@Capacity | Share of frauds reviewed at 2 % (a given) review capacity |
+| REF-NNN | Reference identifier in `references.md` |
+| ρ | Miss-to-review cost ratio, C_miss / C_R |
+| ρ′ | Effective cost ratio, (C_miss + C_FP) / (C_R + C_FP) |
+| ROC-AUC | Receiver Operating Characteristic Area Under the Curve |
+| RQ1–RQ3 | Research questions 1–3 |
+| SESOI | Smallest Effect Size Of Interest (2 percentage points of Recall@2%) |
+| SMOTE | Synthetic Minority Over-sampling Technique |
+| Σ_d | Sum over Test days |
+| TOST | Two One-Sided Tests |
+| V1, V2 | Validation 1 (relative days 106–126); Validation 2 (relative days 127–154) |
+| w_pos | Sample weight of each fraud row under balanced weighting |

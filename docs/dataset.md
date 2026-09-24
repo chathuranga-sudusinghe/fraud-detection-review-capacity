@@ -36,14 +36,14 @@ For this MSc study, the labelled Kaggle training data will be used to construct 
 
 ## Key Dataset Characteristics
 
-- Binary target: `isFraud`
+- Binary target: `isFraud` (1 = fraud, 0 = legitimate)
 - Transaction and identity tables joined by `TransactionID`
 - Not every transaction has corresponding identity information
 - `TransactionDT` is a time delta from an undisclosed reference datetime rather than an absolute timestamp
 - The dataset contains substantial class imbalance
 - Many feature meanings are masked or partially anonymised
 
-These properties are directly relevant to the research questions on class imbalance (low prevalence, ≈ 28 : 1 in development data; see [references](references.md) REF-002), temporal evaluation, decision thresholds, false-negative risk, and constrained review capacity.
+These properties are directly relevant to the research questions on class imbalance (low prevalence: ≈ 28 legitimate transactions per fraud, a 28 : 1 ratio, in development data; see [references](references.md) REF-002), temporal evaluation, decision thresholds, false-negative risk, and constrained review capacity.
 
 ## Local Research Data
 
@@ -144,3 +144,13 @@ Local Parquet copies are derivative storage formats and should not be described 
 **Dataset source documented.**
 
 Next dataset-governance task: create a reproducible dataset manifest with checksums and summary statistics before the frozen experimental split is generated.
+
+## Symbols and notation
+
+| Symbol / abbreviation | Meaning |
+|---|---|
+| 28 : 1 | Imbalance ratio: legitimate transactions per fraud in development data |
+| IEEE-CIS | IEEE Computational Intelligence Society |
+| `isFraud` | Binary target: 1 = fraud, 0 = legitimate |
+| `TransactionDT` | Time offset from an undisclosed reference point (seconds) |
+| `TransactionID` | Key joining the transaction and identity tables |
