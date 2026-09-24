@@ -41,7 +41,7 @@ Revised after the feasibility audit ([DR-003](decisions/DR-003-rq2-h3-policy-tra
 
 > **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
 
-RQ3 is evaluated **across the capacity grid** (1 %, 2 %, 5 %, 10 %). Its main output is the **break-even miss-to-review cost ratio at each capacity**. At 2 % the budget is below the daily fraud count, so the cost-aware policy is expected to coincide with filling capacity for most plausible ratios. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md)).
+RQ3 is evaluated **across the capacity grid** (1 %, 2 %, 5 %, 10 %). Its main output is the **break-even miss-to-review cost ratio at each capacity**: the largest assumed ratio ρ = C_miss / C_R (cost of a missed fraud ÷ cost of one review) at which the cost-aware policy is strictly cheaper than filling capacity. It is reported with the saturation ratio, above which the two policies are identical ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)). At 2 % the budget is below the daily fraud count, so the cost-aware policy is expected to coincide with filling capacity above a low ratio. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md)).
 
 ## Confirmatory Hypotheses
 
@@ -221,16 +221,49 @@ Statistical significance will not be treated as equivalent to practical importan
 
 The research will use scenario-based cost analysis rather than unsupported claims about real banking costs.
 
-A candidate formulation is:
+The primary formulation ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)) counts cost in units of one review:
 
 ```text
-Total Cost =
-    review cost
-  + additional false-alert/customer-friction cost
-  + missed-fraud cost
+Scenario cost = number of reviews + ρ × number of frauds not reviewed
+ρ = C_miss / C_R   (assumed missed-fraud cost ÷ assumed review cost)
 ```
 
-All cost ratios will be declared as illustrative research scenarios and analysed using sensitivity and break-even analysis.
+where:
+
+- `ρ` = miss-to-review cost ratio;
+- `C_miss` = assumed cost of missing a fraud;
+- `C_R` = assumed cost of reviewing one transaction.
+
+The scenario cost counts one unit per review and ρ units per missed fraud.
+
+The cost-aware policy R4 reviews a transaction from the daily top-K queue only if its calibrated fraud probability reaches the threshold [REF-008, REF-073]:
+
+```text
+p* = C_R / C_miss
+
+p* = 1 / ρ
+```
+
+where:
+
+- `p*` = cost-derived probability threshold used by R4.
+
+A transaction is reviewed when at least one review in ρ is expected to find a fraud.
+
+An additional false-alert / customer-friction cost C_FP is a sensitivity analysis only. For the R4-versus-R3 comparison it is equivalent to replacing ρ by the effective ratio:
+
+```text
+ρ′ = (C_miss + C_FP) / (C_R + C_FP)
+```
+
+where:
+
+- `ρ′` = effective cost ratio;
+- `C_FP` = additional false-alert/customer-friction cost for reviewing a legitimate transaction.
+
+With C_FP included, the threshold becomes p* = 1 / ρ′, so the same analysis applies with a relabelled ratio axis.
+
+The declared grid is ρ ∈ {2, 5, 10, 20, 50, 100, 200, 500, 1000}, with exact curves over (1, 1000]. All cost ratios are illustrative research scenarios, not real banking costs, and are analysed using sensitivity and break-even analysis [REF-039, REF-040, REF-072]. `TransactionAmt` is used only for exposure-proxy sensitivity outcomes (amount-weighted recall, fraud value exposed), never as a realised loss.
 
 ## False-Negative Analysis
 
@@ -298,11 +331,12 @@ The value lies in the controlled combination:
 - [DR-003 — RQ2 / H3: policy-transfer fidelity](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)
 - [DR-005 — SESOI and H1/H2 inference plan](decisions/DR-005-sesoi-and-h1-h2-inference.md)
 - [DR-006 — Bootstrap inference strategy for H1 and H2](decisions/DR-006-bootstrap-inference-strategy.md)
+- [DR-007 — RQ3 cost-ratio grid and break-even rule](decisions/DR-007-rq3-cost-ratio-and-break-even.md)
 
 ## References
 
 Full entries and verification status are in [`references.md`](references.md).
 
-REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-041\*, REF-046\*, REF-061, REF-062, REF-064, REF-066, REF-068, REF-070, REF-071.
+REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-041\*, REF-046\*, REF-061, REF-062, REF-064, REF-066, REF-068, REF-070, REF-071, REF-072, REF-073.
 
 \* Partially verified.

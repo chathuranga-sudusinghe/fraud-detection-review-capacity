@@ -38,8 +38,8 @@ Revised per [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). The p
 
 **Scope (revised):**
 - RQ3 is evaluated **across the whole capacity grid (1 %, 2 %, 5 %, 10 %)**, not at 2 % alone.
-- Its **main output is the break-even miss-to-review cost ratio at each capacity**, supported by cost curves [REF-039, REF-040].
-- At 2 % the budget is below the daily fraud count on every validation day, so the cost-aware policy is expected to coincide with daily top-K for most plausible ratios. The informative contrasts are expected at 5 % and 10 % and at low ratios ([DR-002](decisions/DR-002-review-capacity-definition.md)).
+- Its **main output is the break-even miss-to-review cost ratio ρ_BE at each capacity and for each model configuration**, reported with the saturation ratio ρ_sat and exact cost-difference curves [REF-039, REF-040, REF-072]. Definitions, grid and outputs are fixed in [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md).
+- At 2 % the budget is below the daily fraud count on every validation day. The cost-aware policy is expected to coincide with daily top-K above a low saturation ratio, so RQ3 at 2 % is informative only at low ratios. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md), [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)).
 - RQ3 is analysed by estimation and sensitivity analysis, not by a separate significance test.
 
 ## Confirmatory Hypotheses
@@ -253,9 +253,44 @@ Purpose: ranking-quality benchmark at full capacity, used for H1/H2. Note that i
 
 ### R4 — Calibrated cost-aware capped policy
 
-Review transaction i if its calibrated probability p_i exceeds the analytic cost threshold, capped at K per day (highest p_i first) [REF-008]:
-- p* = C_R / C_miss if only review cost and missed-fraud cost are modelled;
-- p* = (C_R + C_FP) / (C_miss + C_FP) if an additional false-alert friction cost C_FP is included.
+Review transaction i if its calibrated probability p̂_i is at least the analytic cost threshold p*, capped at K per day [REF-008, REF-073]. Defined in [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md), where the derivation is shown step by step.
+
+**Primary threshold** (review cost and missed-fraud cost only):
+
+```text
+p* = C_R / C_miss
+
+p* = 1 / ρ
+```
+
+where:
+
+- `p*` = cost-derived probability threshold; transaction i is reviewed if its calibrated probability p̂_i ≥ p*;
+- `C_R` = cost of reviewing one transaction, charged on every review;
+- `C_miss` = cost of missing a fraud (an unreviewed fraud);
+- `ρ` = C_miss / C_R, the miss-to-review cost ratio.
+
+A transaction is reviewed when its calibrated fraud probability is at least one divided by the miss-to-review cost ratio.
+
+**Sensitivity: with a false-alert cost.** If an extra false-alert (customer-friction) cost C_FP per reviewed legitimate transaction is included:
+
+```text
+p* = (C_R + C_FP) / (C_miss + C_FP)
+
+p* = 1 / ρ′
+
+ρ′ = (C_miss + C_FP) / (C_R + C_FP)
+```
+
+where:
+
+- `C_FP` = additional false-alert/customer-friction cost for reviewing a legitimate transaction;
+- `ρ′` = effective cost ratio, which equals ρ when C_FP = 0.
+
+The threshold keeps the same form, with the effective ratio ρ′ in place of ρ. The R4-vs-R3 comparison depends on costs only through ρ′, so C_FP is handled as a relabelling of the ratio axis (sensitivity only).
+
+- Both equations follow from the expected-cost rule [REF-008] under the assumptions listed in DR-007: perfect verification, per-transaction costs, C_R on every review, and calibrated probabilities.
+- **Queue:** R4 reviews the transactions of R3's daily queue (ranked by raw score, same tie rule) whose p̂_i ≥ p*. R4 is therefore always a subset of R3, and can only leave capacity unused.
 
 The threshold is **derived, not tuned**.
 
@@ -284,11 +319,46 @@ The analysis separates:
 
 Amount-weighted results will have wide uncertainty: the top 20 % of development frauds by amount carry 62 % of fraud value [D].
 
-**Assumed quantities:**
-- all cost values are **scenario assumptions** [REF-039];
-- miss-to-review ratios C_miss / C_R are evaluated over a declared grid (open item);
-- results are summarised as **break-even ratios per capacity** and cost curves [REF-040];
-- amount-dependent miss costs may be used as a sensitivity scenario [REF-007].
+**Assumed quantities** ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)):
+- all cost values are **simulated scenario assumptions** [REF-039];
+- **primary cost model**, in units of one review cost, for policy π:
+
+  ```text
+  J_π(ρ) = N_π + ρ · FN_π
+
+  ρ = C_miss / C_R
+  ```
+
+  where:
+
+  - `J_π(ρ)` = scenario cost of policy π (R3 or R4), in units of one review cost;
+  - `N_π` = number of reviews; `FN_π` = number of frauds not reviewed;
+  - `ρ` = C_miss / C_R, the miss-to-review cost ratio.
+
+  The scenario cost counts one unit per review and ρ units per missed fraud;
+- C_FP enters **only as a sensitivity analysis**: break-even ratios are converted for φ = C_FP / C_R ∈ {1, 5};
+- **ratio grid:** ρ ∈ {2, 5, 10, 20, 50, 100, 200, 500, 1000} (log 1–2–5 spacing; same grid at every capacity). Curves are evaluated exactly over ρ ∈ (1, 1000] without interpolation. ρ ≤ 1 is excluded because reviewing can then never reduce expected cost [REF-008];
+- **saturation ratio** ρ_sat: the smallest ratio at which R4 uses the full budget on every day (label-free; also computed on V2 before Test);
+- **break-even ratio** ρ_BE, the largest ratio at which R4's scenario cost is strictly below R3's:
+
+  ```text
+  ΔJ(ρ) = J_R4(ρ) − J_R3(ρ)
+
+  ρ_BE = sup { ρ ∈ (1, 1000] : ΔJ(ρ) < 0 }
+  ```
+
+  where:
+
+  - `ΔJ(ρ)` = scenario-cost difference between R4 and R3 at ratio ρ;
+  - `sup` = supremum: the largest value (least upper bound) of the set;
+  - `(1, 1000]` = continuous analysis range of ρ.
+
+  ΔJ is negative when the cost-aware policy is cheaper than filling capacity. ρ_BE is reported per capacity and configuration, with ties, censoring and non-monotone cases as defined in DR-007;
+- amount-dependent miss costs are **not** used to change decisions. Amount enters only as an evaluation-only sensitivity analysis (amount-weighted recall, fraud value exposed, fraud value forgone), labelled as exposure proxies, never as loss or saving [REF-073].
+
+**Uncertainty (descriptive).** 95 % percentile intervals at grid ratios come from a day-level moving-block bootstrap (ℓ = 3, B = 10,000, R3 and R4 paired). A DR-006 pigeonhole check is applied to frauds forgone. ρ_sat and ρ_BE are point estimates.
+
+**Calibration dependence.** Under calibrated probabilities, R4 cannot be worse than R3 in expectation. An observed loss for R4 is read as a calibration-transfer finding [REF-074], and is checked with isotonic calibration and a declined-set calibration diagnostic.
 
 No assumed value will be presented as an actual institutional banking cost.
 
@@ -387,7 +457,7 @@ AI assistance used in this project must be declared in the AI Reflection (AIR) r
 | 1 | ~~Justify and freeze the H3 tolerance Δ~~ | **Resolved (Issue #7), pending supervisor review:** Δ = 0.004 (±20 % relative); TOST with a day-level moving-block bootstrap ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)) |
 | 2 | ~~Justify and freeze the SESOI for H1 and H2~~ | **Resolved (Issue #8), pending supervisor review:** SESOI = 2 pp of Recall@2%; H1 difference test with practical interpretation; H2 intersection-union TOST ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)) |
 | 3 | ~~Decide the primary clustered-bootstrap unit for H1/H2~~ | **Resolved (Issue #14), pending supervisor review:** two-way pigeonhole bootstrap (relative day × fine pseudo-entity), with S1 (Owen-corrected variance) and S2 (day blocks, ℓ = 3) as sensitivity analyses ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)). (H3: day blocks, ℓ = 3; DR-003.) |
-| 4 | **Declare the cost-ratio grid for RQ3** | e.g. C_miss / C_R ∈ {1, 2, 5, 10, 20, 50, 100} as a candidate; whether C_FP is included; precise break-even definition |
+| 4 | ~~Declare the cost-ratio grid for RQ3~~ | **Resolved (Issue #13), pending supervisor review:** primary cost model with review and missed-fraud costs only (C_FP as a sensitivity relabelling); ρ ∈ {2, 5, 10, 20, 50, 100, 200, 500, 1000} with exact curves over (1, 1000]; saturation and break-even ratios per capacity and configuration ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)) |
 | 5 | **Finalise the feature-category declaration** | Exact columns declared categorical for both libraries; confirm the excluded columns |
 | 6 | **Declare the overflow rule** for R0/R1/R2 | Report-only vs truncate-to-top-K |
 | 7 | **Declare the H3 configuration(s)** | Which model × weighting configuration(s) H3 is tested on. The multiplicity family is defined in DR-005 as Holm over {H1, H2, H3}, with each additional H3 configuration adding a family member. |
@@ -417,11 +487,12 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-003 — RQ2 / H3: policy-transfer fidelity](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)
 - [DR-005 — SESOI and H1/H2 inference plan](decisions/DR-005-sesoi-and-h1-h2-inference.md)
 - [DR-006 — Bootstrap inference strategy for H1 and H2](decisions/DR-006-bootstrap-inference-strategy.md)
+- [DR-007 — RQ3 cost-ratio grid and break-even rule](decisions/DR-007-rq3-cost-ratio-and-break-even.md)
 
 ## References
 
 Full entries and verification status are in [`docs/references.md`](references.md).
 
-REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071.
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071, REF-072, REF-073, REF-074, REF-075.
 
 \* Partially verified. † Unverified; open item.
