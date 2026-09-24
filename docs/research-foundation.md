@@ -146,6 +146,17 @@ To quantify how predictive ranking quality and score-to-review decision policies
 
 A simple L2-regularised Logistic Regression model may be included only as a reference baseline if justified by the final methodology.
 
+### Feature set
+
+Both model families receive the same 431 raw input columns ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md); [`config/features.yaml`](../config/features.yaml)):
+
+- 49 categorical columns, exactly the organiser's published list;
+- 382 numeric columns;
+- `TransactionID` (row identifier) and raw `TransactionDT` (time offset in seconds) excluded;
+- the target `isFraud` never used as an input.
+
+No feature engineering, target encoding or entity identifiers are added. Missing numeric values are handled natively by each library; missing categorical values share one explicit label in both.
+
 ### Class weighting
 
 - unweighted
@@ -394,6 +405,7 @@ The value lies in the controlled combination:
 - [DR-005 — SESOI and H1/H2 inference plan](decisions/DR-005-sesoi-and-h1-h2-inference.md)
 - [DR-006 — Bootstrap inference strategy for H1 and H2](decisions/DR-006-bootstrap-inference-strategy.md)
 - [DR-007 — RQ3 cost-ratio grid and break-even rule](decisions/DR-007-rq3-cost-ratio-and-break-even.md)
+- [DR-008 — Feature declaration and model-input policy](decisions/DR-008-feature-declaration-and-model-input-policy.md)
 
 ## References
 
@@ -413,6 +425,8 @@ REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022,
 | C_miss | Assumed cost of missing a fraud |
 | C_R | Assumed cost of reviewing one transaction |
 | Cat, LGB | CatBoost, LightGBM |
+| `isFraud` | Target: 1 = fraud, 0 = legitimate |
+| `TransactionDT`, `TransactionID` | Raw time offset and row identifier (excluded from model input) |
 | CI | Confidence interval |
 | d | A Test relative day |
 | Δ | H3 equivalence tolerance on r (0.004) |

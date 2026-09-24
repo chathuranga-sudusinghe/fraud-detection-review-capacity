@@ -36,6 +36,8 @@ For this MSc study, the labelled Kaggle training data will be used to construct 
 
 ## Key Dataset Characteristics
 
+A column-by-column data dictionary (meanings, observed types, missingness and model-input roles) is in the [feature catalog](feature-catalog.md).
+
 - Binary target: `isFraud` (1 = fraud, 0 = legitimate)
 - Transaction and identity tables joined by `TransactionID`
 - Not every transaction has corresponding identity information

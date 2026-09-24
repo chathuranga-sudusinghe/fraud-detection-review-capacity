@@ -2,7 +2,7 @@
 
 Master list of every source used by this research project. Other documents cite sources by **Reference ID** (e.g. `REF-005`), so each claim can be traced back to this register when writing the dissertation.
 
-**Last verification pass:** 23 September 2026 (REF-001–REF-060); 24 September 2026 (REF-061–REF-065, Issue #7; REF-066–REF-067, Issue #8; REF-068–REF-071, Issue #14; REF-072–REF-075, Issue #13).
+**Last verification pass:** 23 September 2026 (REF-001–REF-060); 24 September 2026 (REF-061–REF-065, Issue #7; REF-066–REF-067, Issue #8; REF-068–REF-071, Issue #14; REF-072–REF-075, Issue #13; REF-076–REF-077 and REF-047/REF-048 notes, Issue #23).
 
 ## Verification status
 
@@ -97,8 +97,8 @@ Initial evidence base: the reference list of `notebooks/01_dataset_feasibility_a
 
 | ID | Citation | DOI / URL | Type | Used for | Status | Note |
 |---|---|---|---|---|---|---|
-| REF-047 | IEEE Computational Intelligence Society & Vesta Corporation (2019) *IEEE-CIS Fraud Detection* [competition data]. Kaggle. | https://www.kaggle.com/competitions/ieee-fraud-detection/data | Dataset / organiser documentation | Dataset source; `isFraud` target; `TransactionDT` as a relative time delta; table structure | Partially verified | The raw files are held locally (SHA-256 values in the feasibility notebook, §2.1). **The data page requires a Kaggle login and was not read directly in this pass.** |
-| REF-048 | Vesta Corporation (2019) 'Data Description (Details and Discussion)', IEEE-CIS Fraud Detection competition discussion forum, thread 101203. Kaggle. | https://www.kaggle.com/c/ieee-fraud-detection/discussion/101203 | Organiser forum post (not peer-reviewed) | Labelling rule: chargeback, plus linked later transactions labelled fraud, 120-day window; amounts in USD; feature-group descriptions | Partially verified | The labelling rule was confirmed from search-result extracts of this thread. **Read the full post while logged in and record the exact quotations before relying on it in the dissertation.** |
+| REF-047 | IEEE Computational Intelligence Society & Vesta Corporation (2019) *IEEE-CIS Fraud Detection* [competition data]. Kaggle. | https://www.kaggle.com/competitions/ieee-fraud-detection/data | Dataset / organiser documentation | Dataset source; `isFraud` target; `TransactionDT` as a relative time delta; table structure; **organiser's categorical-feature lists** (DR-008; [feature catalog](feature-catalog.md)) | Partially verified | The raw files are held locally (SHA-256 values in the feasibility notebook, §2.1). The live data page requires a Kaggle login. Issue #23: the data-description text (categorical lists for the transaction and identity tables; the `TransactionDT` timedelta note) was read in the Internet Archive snapshot of https://www.kaggle.com/c/ieee-fraud-detection/ dated 16 September 2019 (web.archive.org/web/20190916072652). Organiser attribution on the page itself was not re-checked. |
+| REF-048 | Vesta Corporation (2019) 'Data Description (Details and Discussion)', IEEE-CIS Fraud Detection competition discussion forum, thread 101203. Kaggle. | https://www.kaggle.com/c/ieee-fraud-detection/discussion/101203 | Organiser forum post (not peer-reviewed) | Labelling rule: chargeback, plus linked later transactions labelled fraud, 120-day window; amounts in USD; feature-group descriptions ([feature catalog](feature-catalog.md)) | Partially verified | The labelling rule was confirmed from search-result extracts of this thread. Issue #23: thread metadata confirmed through Kaggle's public forum application programming interface (API) (title as cited; author display name "Lynn@Vesta"; posted 24 July 2019). **The post body still requires a login: read it and record the exact quotations before relying on it in the dissertation.** |
 | REF-049 | Kaggle (2019) *IEEE-CIS Fraud Detection — Competition Rules*. | https://www.kaggle.com/competitions/ieee-fraud-detection/rules | Data-use terms | Permitted use of the competition data for academic research; redistribution limits | **Unverified** | Not accessed (login required). **Open item before protocol freeze.** |
 
 ## 4. University of Greenwich guidance
@@ -118,6 +118,8 @@ All accessed 23 September 2026.
 
 | ID | Citation | DOI / URL | Type | Used for | Status | Note |
 |---|---|---|---|---|---|---|
+| REF-076 | LightGBM developers (n.d.) *LightGBM documentation*, sections 'Advanced Topics' (Missing Value Handle; Categorical Feature Support) and 'Parameters' (categorical_feature, use_missing, zero_as_missing, max_cat_to_onehot, max_cat_threshold, cat_l2, cat_smooth, min_data_per_group). Read the Docs, stable release. | https://lightgbm.readthedocs.io/en/stable/Advanced-Topics.html ; https://lightgbm.readthedocs.io/en/stable/Parameters.html | Software documentation | Categorical input rules (non-negative integer codes; negative values = missing; pandas categoricals aligned to training categories; unseen categories treated as missing at prediction); native missing-value handling; high-cardinality guidance; categorical-regularisation parameters (DR-008) | Verified | Both pages read (accessed 24 September 2026). The "stable" pages correspond to the current 4.x release; the project environment has LightGBM 4.7.0, in which the unseen-category behaviour was reproduced on synthetic data (added for Issue #23) |
+| REF-077 | CatBoost developers (n.d.) *CatBoost documentation*, pages 'Missing values processing' and 'Categorical features'. | https://catboost.ai/docs/en/concepts/algorithm-missing-values-processing ; https://catboost.ai/docs/en/features/categorical-features | Software documentation | Numeric missing values handled natively (default `nan_mode = Min`); no special missing-value processing for categorical features; one-hot preprocessing discouraged (DR-008) | Verified | Both pages read (accessed 24 September 2026). The pages do **not** state the accepted value types for categorical features; that requirement (integer or string; no float or NaN) was established from the error message of the installed CatBoost 1.2.10 on synthetic data, not from the documentation (added for Issue #23) |
 | REF-065 | European Medicines Agency, Committee for Medicinal Products for Human Use (2010) *Guideline on the investigation of bioequivalence*, CPMP/EWP/QWP/1401/98 Rev. 1/Corr\*\*. London, 20 January 2010; effective 1 August 2010. | https://www.ema.europa.eu/en/documents/scientific-guideline/guideline-investigation-bioequivalence-rev1_en.pdf | Regulatory guideline | Precedent that equivalence margins for positive quantities are defined relative to a reference (the 90 % CI of the test/reference ratio must lie within 80.00–125.00 %). **Used for the form of the H3 margin only, not its magnitude** | Verified | PDF read; the 80.00–125.00 % acceptance interval and the 90 % CI rule were confirmed in the text (added for Issue #7) |
 
 Practitioner web pages (e.g. vendor blogs, unreviewed Kaggle notebooks) and non-peer-reviewed preprints are deliberately excluded.
@@ -176,8 +178,10 @@ The notebook text itself is unaffected: it already flags L46/L47 for verificatio
 | DR-NNN | Decision Record NNN in `decisions/` |
 | F1 | Harmonic mean of precision and recall |
 | H1, H2, H3 | Confirmatory hypotheses: model family; class weighting; alert-rate transfer fidelity |
+| API | Application programming interface |
 | HTTP 403 | Web-server response meaning access was refused |
 | ML | Machine learning |
+| NaN | Not-a-number: the missing-value marker for numeric data |
 | n | Length of the series in the block-length orders n^(1/3), n^(1/4) (REF-064) |
 | p* | Cost-derived probability threshold (REF-008, DR-007) |
 | PMID | PubMed identifier |
