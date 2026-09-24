@@ -32,7 +32,7 @@ GitHub Issue
   → automatic issue closure
 ```
 
-- Put **`Closes #<issue-number>`** or **`Fixes #<issue-number>`** in the pull-request description. GitHub then closes the issue automatically on merge. This only happens when the PR targets the default branch (`main`).
+- Put **`Closes #<issue-number>`** or **`Fixes #<issue-number>`** in the pull-request (PR) description. GitHub then closes the issue automatically on merge. This only happens when the PR targets the default branch (`main`).
 - **Work only on the active issue.** Do not make unrelated changes outside it. If you notice something else that needs fixing, record it in a new issue or in your report rather than fixing it in passing.
 - **Exception:** tiny typo-only fixes (spelling, punctuation, broken formatting) that do not change meaning may be made without an issue.
 - **A GitHub Issue is always required first** for any change affecting:
@@ -56,8 +56,8 @@ GitHub Issue
 - **Do not create future-looking aggregates.** Any count, frequency or entity aggregate must use Train-only fitting or past-only windows.
 - **Do not use manual target encoding.** Categorical handling is native to each library.
 - **`TransactionID` and raw `TransactionDT` are not model features.**
-- **Record methodological decisions** in [`docs/decisions/`](docs/decisions/README.md) as Decision Records (`DR-NNN-…`).
-- **Update [`docs/references.md`](docs/references.md)** whenever external evidence is introduced. Give each source a `REF-NNN` ID and an honest verification status: *Verified*, *Partially verified* or *Unverified*. Never upgrade a status without checking.
+- **Record methodological decisions** in [`docs/decisions/`](docs/decisions/README.md) as Decision Records (DR; files named `DR-NNN-…`).
+- **Update [`docs/references.md`](docs/references.md)** whenever external evidence is introduced. Give each source a `REF-NNN` ID (reference identifier) and an honest verification status: *Verified*, *Partially verified* or *Unverified*. Never upgrade a status without checking.
 - **Never invent** citations, dataset facts, University requirements or methodological claims. If something cannot be verified, say so and mark it as unverified.
 - **Always distinguish the source of a claim:**
 
@@ -81,13 +81,25 @@ Expected raw files:
 
 **Raw data must remain local and must never be committed.** `.gitignore` already excludes `data/raw/*`. Do not weaken that rule. Do not commit derived data files (e.g. Parquet copies or processed splits) either.
 
-Current temporal structure ([DR-001](docs/decisions/DR-001-temporal-split-strategy.md)). Relative day = `TransactionDT // 86,400`; no calendar dates are inferred.
+Current temporal structure ([DR-001](docs/decisions/DR-001-temporal-split-strategy.md)). Each transaction is assigned a relative day:
+
+```text
+relative day = ⌊ TransactionDT / 86,400 ⌋
+```
+
+where:
+
+- `TransactionDT` = the dataset's time offset in seconds from an undisclosed reference point;
+- `86,400` = number of seconds in one day;
+- `⌊ · ⌋` = rounding down to a whole number (integer division, `//` in Python).
+
+No calendar dates are inferred.
 
 | Partition | Relative days | Role |
 |---|---|---|
 | Train | 1–105 | Model fitting (no refit) |
-| V1 | 106–126 | Hyper-parameter tuning and early stopping |
-| V2 | 127–154 | Calibration (R4), threshold selection, daily review budget K |
+| V1 (Validation 1) | 106–126 | Hyper-parameter tuning and early stopping |
+| V2 (Validation 2) | 127–154 | Calibration (for policy R4), threshold selection, daily review budget K |
 | Test | 155–182 | **Sealed.** One confirmatory evaluation after protocol freeze |
 
 ---
@@ -97,11 +109,33 @@ Current temporal structure ([DR-001](docs/decisions/DR-001-temporal-split-strate
 Defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze).
 
 - **Models:** LightGBM, CatBoost.
-- **Class weighting:** unweighted; balanced class weighting, implemented as explicit sample weights w_pos = n_neg / n_pos computed from Train only.
-- **Review-capacity scenarios:** 1 %, **2 % (primary)**, 5 %, 10 %. These are simulated research scenarios, not real institutional capacities. Each is turned into a fixed daily budget K = round(c × mean daily volume in V2) ([DR-002](docs/decisions/DR-002-review-capacity-definition.md)).
-- **Decision policies:** R0–R4 as defined in the protocol.
+- **Class weighting:** unweighted; balanced class weighting, implemented as explicit sample weights computed from Train only. Each fraud row receives the weight
 
-**Do not add** new model families, resampling methods (e.g. SMOTE, over- or under-sampling) or feature-engineering studies unless an explicit GitHub Issue changes the protocol.
+  ```text
+  w_pos = n_neg / n_pos
+  ```
+
+  where:
+
+  - `w_pos` = sample weight given to each fraud (positive-class) row; legitimate rows keep weight 1;
+  - `n_neg` = number of legitimate transactions in Train;
+  - `n_pos` = number of fraud transactions in Train.
+
+- **Review-capacity scenarios:** 1 %, **2 % (primary)**, 5 %, 10 %. These are simulated research scenarios, not real institutional capacities. Each capacity share c is turned into a fixed daily review budget ([DR-002](docs/decisions/DR-002-review-capacity-definition.md)):
+
+  ```text
+  K = round( c × mean daily transaction volume in V2 )
+  ```
+
+  where:
+
+  - `K` = fixed daily review budget (reviews per relative day);
+  - `c` = review-capacity share (1 %, 2 %, 5 % or 10 %);
+  - `V2` = Validation 2, relative days 127–154.
+
+- **Decision policies:** R0–R4 as defined in the protocol: R0 (default 0.5 threshold), R1 (F1-optimal threshold), R2 (capacity-rate threshold), R3 (daily top-K review) and R4 (calibrated cost-aware capped policy).
+
+**Do not add** new model families, resampling methods (e.g. SMOTE, the Synthetic Minority Over-sampling Technique, or other over- or under-sampling) or feature-engineering studies unless an explicit GitHub Issue changes the protocol.
 
 ---
 
@@ -122,6 +156,77 @@ When a methodological decision changes:
 1. update the relevant research document(s);
 2. create a new Decision Record, or update an existing one's status (e.g. *Superseded by DR-NNN*). Never renumber or delete records;
 3. update `docs/references.md` where required.
+
+---
+
+## Documentation and notation standard
+
+These rules apply to **all Markdown work** in this repository: `README.md`, `AGENTS.md`, `docs/`, `docs/decisions/`, and Markdown cells in new notebooks. They were introduced by GitHub Issue #17. They govern presentation only and never change methodology.
+
+### 1. Define every symbol at first use in each document
+
+- When a mathematical symbol, variable, abbreviation or compact notation first appears in a Markdown file, define it **at that location**.
+- Prefer a short human-readable meaning in parentheses where natural, for example:
+  - `ρ` (miss-to-review cost ratio);
+  - `K` (fixed daily review budget);
+  - `p*` (cost-derived probability threshold);
+  - `C_R` (cost of reviewing one transaction).
+- Expand technical acronyms at first use in each document, e.g. Smallest Effect Size Of Interest (SESOI), Two One-Sided Tests (TOST), Confidence Interval (CI). After first use the acronym may be used alone.
+- Do not assume the reader remembers a definition from another file. **Each Markdown document must be understandable on its own.**
+
+### 2. Do not present important equations inline
+
+- Show important equations as separate **display equations** in a fenced `text` block, never as long expressions inside prose.
+- Use a human-readable academic layout, as for standard metrics such as the Mean Absolute Error (MAE) or Root Mean Squared Error (RMSE). A fraction may be written on one line or as numerator over denominator:
+
+  ```text
+         C_R + C_FP
+  p* = ---------------
+        C_miss + C_FP
+  ```
+
+- For derivations, show **one meaningful algebraic step per line**.
+- Short references to an already-displayed quantity (e.g. "p* = 1/ρ, as defined above") may stay inline.
+
+### 3. Add a local `where:` block after important equations
+
+Immediately below an important equation, define the symbols it uses:
+
+```text
+J_π(ρ) = N_π + ρ · FN_π
+```
+
+where:
+
+- `J_π(ρ)` = scenario cost of policy π;
+- `N_π` = number of reviewed transactions;
+- `ρ` = miss-to-review cost ratio;
+- `FN_π` = number of missed fraud transactions.
+
+Do not repeat the same definitions after every algebraic step in the same local section.
+
+### 4. End each document with a complete symbol table
+
+- Every Markdown file that uses mathematical notation ends with a final content section headed **`## Symbols and notation`**.
+- Every symbol, variable and abbreviation used in that document appears in that table.
+- Do **not** place the full table near the beginning of a document. It is a reference index, not the introduction.
+
+### 5. Keep notation consistent
+
+- A symbol keeps the same meaning throughout a document and, where practical, across the repository.
+- If a symbol is used inconsistently and fixing it could affect methodology, **report the conflict** (in the active issue or a new one) instead of silently changing it.
+
+### 6. Human readability takes priority
+
+A reader should never need to scroll to another section or open another document to understand an equation. Preferred pattern:
+
+```text
+first use with short meaning
+  → displayed equation
+  → local where: explanation
+  → prose interpretation
+  → final complete symbol table
+```
 
 ---
 
@@ -176,3 +281,29 @@ This project uses **ChatGPT** and **Claude** as AI assistants. They support:
 - commit or push unless explicitly instructed.
 
 **The student remains responsible** for the final research design, implementation, analysis, interpretation and submission.
+
+---
+
+## Symbols and notation
+
+| Symbol / abbreviation | Meaning |
+|---|---|
+| AIR | AI Reflection: the University of Greenwich declaration of AI use |
+| c | Review-capacity share (1 %, 2 %, 5 % or 10 % of transactions) |
+| CI | Confidence Interval |
+| DR / DR-NNN | Decision Record, numbered NNN |
+| [D], [L], [G], [I] | Evidence tags: dataset, literature, University guidance, inference |
+| K | Fixed daily review budget (reviews per relative day) |
+| MAE, RMSE | Mean Absolute Error, Root Mean Squared Error (layout examples only) |
+| n_neg, n_pos | Numbers of legitimate and fraud transactions in Train |
+| PR | Pull request |
+| R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |
+| REF-NNN | Reference identifier in `docs/references.md` |
+| SESOI | Smallest Effect Size Of Interest |
+| SMOTE | Synthetic Minority Over-sampling Technique |
+| TOST | Two One-Sided Tests |
+| `TransactionDT` | Dataset time offset in seconds from an undisclosed reference point |
+| V1, V2 | Validation 1 (relative days 106–126) and Validation 2 (relative days 127–154) |
+| w_pos | Sample weight for each fraud row under balanced class weighting, n_neg / n_pos |
+| ⌊ · ⌋ | Round down to a whole number (integer division) |
+| ρ, p*, C_R, C_FP, C_miss, J_π, π, N_π, FN_π | Used only as layout examples in the notation standard: miss-to-review cost ratio; cost-derived probability threshold; cost of reviewing one transaction; extra false-alert cost of reviewing a legitimate transaction; cost of missing a fraud; scenario cost of policy π; a decision policy; number of reviews; number of missed frauds |

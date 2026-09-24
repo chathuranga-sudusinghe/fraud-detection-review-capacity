@@ -16,6 +16,8 @@ MSc Data Science research project on temporally validated fraud-alert prioritisa
 
 ## Supporting Research Questions
 
+The supporting research questions are numbered RQ1–RQ3.
+
 ### RQ1
 
 > **How do LightGBM and CatBoost, with and without class weighting, differ in fraud capture at fixed review capacity on a later temporal test period?**
@@ -29,6 +31,8 @@ MSc Data Science research project on temporally validated fraud-alert prioritisa
 > **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
 
 ## Confirmatory Hypotheses
+
+The confirmatory hypotheses are H1–H3. A subscript ₀ marks the null hypothesis and ₁ the alternative. Recall@2% review capacity is the share of fraudulent transactions that are reviewed when 2 % of transactions can be reviewed.
 
 ### H1 — Model-family effect
 
@@ -52,7 +56,7 @@ RQ3 is primarily estimation and sensitivity analysis rather than a separate sign
 
 ## Dataset
 
-This study uses the **IEEE-CIS Fraud Detection** dataset.
+This study uses the **IEEE-CIS Fraud Detection** dataset (IEEE-CIS = IEEE Computational Intelligence Society, the competition co-organiser).
 
 Official source:
 
@@ -71,7 +75,7 @@ The research focuses on:
 - class weighting;
 - fixed review capacity;
 - score-to-review decision policies;
-- Recall@Capacity and Precision@Capacity;
+- Recall@Capacity and Precision@Capacity (share of frauds reviewed, and share of reviewed transactions that are fraud, at a fixed review capacity);
 - workload fidelity;
 - cost-sensitive decision analysis;
 - probability calibration where required;
@@ -85,7 +89,7 @@ The research models a capacity-constrained alert-triage workflow:
 ```text
 Transaction
     ↓
-ML fraud-risk score
+ML (machine learning) fraud-risk score
     ↓
 Decision policy
     ↓
@@ -121,3 +125,14 @@ Planned next:
 **Research direction revised and protocol established.**
 
 The next stage is to resolve the ethics route, complete the evidence matrix, and validate the dataset/split protocol before any confirmatory experiments are run.
+
+## Symbols and notation
+
+| Symbol / abbreviation | Meaning |
+|---|---|
+| H1, H2, H3 | Confirmatory hypotheses; subscript ₀ = null hypothesis, ₁ = alternative |
+| IEEE-CIS | IEEE Computational Intelligence Society |
+| ML | Machine learning |
+| Precision@Capacity | Share of reviewed transactions that are fraud at a fixed review capacity |
+| Recall@2%, Recall@Capacity | Share of frauds reviewed at 2 % (a fixed) review capacity |
+| RQ1–RQ3 | Research questions 1–3 |
