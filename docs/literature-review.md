@@ -203,11 +203,13 @@ The study intends to distinguish capacity constraints from explicit cost sensiti
 
 A generic cost model may take the form:
 
-```text
-Total Cost  =  C_miss × FN
-            +  C_FP   × FP
-            +  C_R    × N_rev
-```
+$$
+\begin{aligned}
+\text{Total Cost} &= C_{\mathrm{miss}} \times \mathrm{FN} \\
+&\quad + C_{\mathrm{FP}} \times \mathrm{FP} \\
+&\quad + C_R \times N_{\mathrm{rev}}
+\end{aligned}
+$$
 
 where:
 

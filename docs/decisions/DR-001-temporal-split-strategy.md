@@ -22,9 +22,9 @@ The split had to be chosen **before** any target-driven analysis, so that the fi
 
 Use a chronological, day-aligned split. Each transaction is assigned a relative day:
 
-```text
-relative day = ⌊ TransactionDT / 86,400 ⌋
-```
+$$
+\text{relative day} = \left\lfloor \frac{\texttt{TransactionDT}}{86{,}400} \right\rfloor
+$$
 
 where:
 

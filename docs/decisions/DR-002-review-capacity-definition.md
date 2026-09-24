@@ -19,9 +19,9 @@ The research studies fraud detection when only a limited number of transactions 
 2. **These are simulated research scenarios.** They are not claimed to be the capacity of any real bank or payment provider, and must be described that way in every document.
 3. **Fixed daily review budget:**
 
-   ```text
-   K_c = round( c × mean daily transaction volume in V2 )
-   ```
+   $$
+   K_c = \operatorname{round}\left( c \times \text{mean daily transaction volume in V2} \right)
+   $$
 
    where:
 
@@ -44,11 +44,9 @@ The research studies fraud detection when only a limited number of transactions 
 
    The **oracle recall ceiling** is the recall of a perfect ranker:
 
-   ```text
-                            Σ_d min(K, F_d)
-   oracle recall ceiling = -----------------
-                               Σ_d F_d
-   ```
+   $$
+   \text{oracle recall ceiling} = \frac{\sum_d \min(K, F_d)}{\sum_d F_d}
+   $$
 
    where:
 
@@ -61,20 +59,16 @@ The research studies fraud detection when only a limited number of transactions 
 
    **Normalised recall** compares the frauds actually reviewed with that daily maximum:
 
-   ```text
-                           TP_d
-   normalised recall_d = -------------
-                          min(K, F_d)
-   ```
+   $$
+   \text{normalised recall}_d = \frac{\mathrm{TP}_d}{\min(K, F_d)}
+   $$
 
    where `TP_d` (true positives) = number of frauds reviewed on day d. It is computed per day and pooled.
 6. **Recall@K and Precision@K are not independent evidence.** On a fixed evaluation period both K and the fraud total F are fixed, so:
 
-   ```text
-                               F
-   Precision@K = Recall@K × -------
-                             N_rev
-   ```
+   $$
+   \text{Precision@}K = \text{Recall@}K \times \frac{F}{N_{\mathrm{rev}}}
+   $$
 
    where:
 

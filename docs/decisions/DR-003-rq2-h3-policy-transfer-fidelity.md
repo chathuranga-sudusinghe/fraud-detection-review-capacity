@@ -37,11 +37,9 @@ The old point-null H3 is **uninformative**. With about 78,500 Test transactions,
 - τ₂ (the 2 % rate threshold) is the score threshold chosen on V2 so that 2 % of V2 transactions have score ≥ τ₂. This is decision policy R2 (the capacity-rate threshold).
 - The **realised alert rate** r is the proportion of Test transactions with score ≥ τ₂, pooled over the 28 Test days:
 
-  ```text
-        Σ_d n_d
-  r = -----------
-        Σ_d N_d
-  ```
+  $$
+  r = \frac{\sum_d n_d}{\sum_d N_d}
+  $$
 
   where:
 
@@ -54,14 +52,15 @@ The old point-null H3 is **uninformative**. With about 78,500 Test transactions,
 
 - The **equivalence band** is built from the tolerance Δ (the equivalence tolerance: r preserves the target when it deviates from 2 % by less than Δ):
 
-  ```text
-  Δ = 0.20 × 0.02
-    = 0.004
-
-  equivalence band = (0.02 − Δ, 0.02 + Δ)
-                   = (0.016, 0.024)
-                   = (1.6 %, 2.4 %)
-  ```
+  $$
+  \begin{aligned}
+  \Delta &= 0.20 \times 0.02 \\
+  &= 0.004 \\[6pt]
+  \text{equivalence band} &= (0.02 - \Delta,\ 0.02 + \Delta) \\
+  &= (0.016,\ 0.024) \\
+  &= (1.6\%,\ 2.4\%)
+  \end{aligned}
+  $$
 
   Δ is a **relative tolerance of 20 % of the target rate**. See [Equivalence tolerance Δ](#equivalence-tolerance-δ-issue-7).
 
@@ -95,11 +94,12 @@ For each Test relative day d, with N_d the day's transaction volume, n_d the num
 
 The rate / volume decomposition is:
 
-```text
-log( n_d / K )  ≈  log( r_d / 0.02 )  +  log( N_d / N̄_V2 )
-
-r_d = n_d / N_d
-```
+$$
+\begin{aligned}
+\log\left(\frac{n_d}{K}\right) &\approx \log\left(\frac{r_d}{0.02}\right) + \log\left(\frac{N_d}{\bar{N}_{\mathrm{V2}}}\right) \\
+r_d &= \frac{n_d}{N_d}
+\end{aligned}
+$$
 
 where:
 

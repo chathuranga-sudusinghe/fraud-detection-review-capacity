@@ -53,11 +53,9 @@ The confirmatory hypotheses are H1–H3. A subscript ₀ marks the null hypothes
 
 H1 concerns the model-family main effect:
 
-```text
-        1
-δ_M  =  - · [ (R^Cat,u − R^LGB,u)  +  (R^Cat,b − R^LGB,b) ]
-        2
-```
+$$
+\delta_M = \frac{1}{2}\left[ \left(R^{\mathrm{Cat},u} - R^{\mathrm{LGB},u}\right) + \left(R^{\mathrm{Cat},b} - R^{\mathrm{LGB},b}\right) \right]
+$$
 
 where:
 
@@ -74,9 +72,9 @@ H1 is a two-sided difference test. It is not a winner-selection test. Its 90 % c
 
 H2 concerns the weighting effect within each model family f:
 
-```text
-δ_W,f  =  R^f,b − R^f,u        for f ∈ {LGB, Cat}
-```
+$$
+\delta_{W,f} = R^{f,b} - R^{f,u} \qquad \text{for } f \in \lbrace \mathrm{LGB}, \mathrm{Cat} \rbrace
+$$
 
 where `δ_W,f` = balanced-minus-unweighted Recall@2% in family f.
 
@@ -92,11 +90,9 @@ H2 is an equivalence hypothesis, tested by an intersection-union TOST (Two One-S
 
 H3 concerns the realised alert rate r of the score threshold selected on Validation 2 (V2, relative days 127–154) to flag 2 % of transactions, applied unchanged to the Test period:
 
-```text
-       Σ_d n_d
-r  =  ---------
-       Σ_d N_d
-```
+$$
+r = \frac{\sum_d n_d}{\sum_d N_d}
+$$
 
 where:
 
@@ -113,13 +109,14 @@ where:
 
 Δ is a relative tolerance of 20 % of the target:
 
-```text
-Δ = 0.20 × 0.02
-  = 0.004
-
-equivalence band = (0.02 − Δ, 0.02 + Δ)
-                 = (1.6 %, 2.4 %)
-```
+$$
+\begin{aligned}
+\Delta &= 0.20 \times 0.02 \\
+&= 0.004 \\[6pt]
+\text{equivalence band} &= (0.02 - \Delta,\ 0.02 + \Delta) \\
+&= (1.6\%,\ 2.4\%)
+\end{aligned}
+$$
  It was fixed before any Test access. No literature standard exists for this tolerance, so the magnitude is a pre-specified researcher judgement, anchored in development-period workload variation ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with TOST, using a day-level moving-block bootstrap confidence interval [REF-061, REF-062, REF-064]. Fidelity to the fixed daily budget (daily review count vs K, the fixed daily review budget; overflow and underuse days) is a separate descriptive operational outcome, not a hypothesis.
 
 RQ3 will primarily be evaluated through cost-ratio sensitivity analysis and break-even analysis across the capacity grid rather than a separate omnibus hypothesis test.
@@ -154,9 +151,9 @@ A simple L2-regularised Logistic Regression model may be included only as a refe
 - unweighted
 - balanced weighting: explicit sample weights computed from Train only. Each fraud row receives the weight
 
-  ```text
-  w_pos = n_neg / n_pos
-  ```
+  $$
+  w_{\mathrm{pos}} = \frac{n_{\mathrm{neg}}}{n_{\mathrm{pos}}}
+  $$
 
   where `w_pos` = weight of each fraud (positive-class) row, `n_neg` = number of legitimate Train transactions and `n_pos` = number of fraud Train transactions. Legitimate rows keep weight 1.
 
@@ -183,9 +180,9 @@ Capacity scenarios, fixed in [DR-002](decisions/DR-002-review-capacity-definitio
 
 These are simulated research scenarios. They must not be represented as real institutional review capacities. Each capacity share c is turned into a fixed daily review budget ([DR-002](decisions/DR-002-review-capacity-definition.md)):
 
-```text
-K = round( c × mean daily transaction volume in V2 )
-```
+$$
+K = \operatorname{round}\left( c \times \text{mean daily transaction volume in V2} \right)
+$$
 
 where `K` = fixed daily review budget and `c` = review-capacity share. This gives 28 / 56 / 139 / 278 reviews per relative day.
 
@@ -286,10 +283,12 @@ The research will use scenario-based cost analysis rather than unsupported claim
 
 The primary formulation ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)) counts cost in units of one review:
 
-```text
-Scenario cost = number of reviews + ρ × number of frauds not reviewed
-ρ = C_miss / C_R   (assumed missed-fraud cost ÷ assumed review cost)
-```
+$$
+\begin{aligned}
+\text{Scenario cost} &= \text{number of reviews} + \rho \times \text{number of frauds not reviewed} \\
+\rho &= \frac{C_{\mathrm{miss}}}{C_R}
+\end{aligned}
+$$
 
 where:
 
@@ -301,11 +300,12 @@ The scenario cost counts one unit per review and ρ units per missed fraud.
 
 The cost-aware policy R4 reviews a transaction from the daily top-K queue only if its calibrated fraud probability reaches the threshold [REF-008, REF-073]:
 
-```text
-p* = C_R / C_miss
-
-p* = 1 / ρ
-```
+$$
+\begin{aligned}
+p^* &= \frac{C_R}{C_{\mathrm{miss}}} \\
+&= \frac{1}{\rho}
+\end{aligned}
+$$
 
 where:
 
@@ -315,9 +315,9 @@ A transaction is reviewed when at least one review in ρ is expected to find a f
 
 An additional false-alert / customer-friction cost C_FP is a sensitivity analysis only. For the R4-versus-R3 comparison it is equivalent to replacing ρ by the effective ratio:
 
-```text
-ρ′ = (C_miss + C_FP) / (C_R + C_FP)
-```
+$$
+\rho' = \frac{C_{\mathrm{miss}} + C_{\mathrm{FP}}}{C_R + C_{\mathrm{FP}}}
+$$
 
 where:
 
