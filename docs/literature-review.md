@@ -44,7 +44,9 @@ The supporting research questions are numbered RQ1–RQ3.
 
 **RQ2**
 
-> When score thresholds selected on validation data are applied to a later period, how accurately do they preserve the intended review workload, and what effect does workload drift have on missed fraud?
+> When a score threshold selected on validation data is transferred to a later temporal period, how well does it preserve the intended alert rate, and how does the resulting daily review workload compare with the fixed review budget?
+
+RQ2 was revised by [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md) to separate alert-rate drift (model and data) from daily-volume variation.
 
 **RQ3**
 
@@ -180,14 +182,14 @@ Literature should be searched for:
 
 The project will model human-review capacity computationally rather than recruit human participants.
 
-Candidate experimental capacities may include:
+The experimental capacities, fixed in [DR-002](decisions/DR-002-review-capacity-definition.md), are:
 
 - 1%;
-- 2%;
+- 2% (primary);
 - 5%;
 - 10%
 
-of transactions, subject to final methodology justification.
+of transactions. They are simulated research scenarios, not real institutional capacities.
 
 Expected argument:
 

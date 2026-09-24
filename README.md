@@ -24,7 +24,9 @@ The supporting research questions are numbered RQ1–RQ3.
 
 ### RQ2
 
-> **When score thresholds selected on validation data are applied to a later period, how accurately do they preserve the intended review workload, and what effect does workload drift have on missed fraud?**
+> **When a score threshold selected on validation data is transferred to a later temporal period, how well does it preserve the intended alert rate, and how does the resulting daily review workload compare with the fixed review budget?**
+
+Revised per [DR-003](docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
 
 ### RQ3
 
@@ -32,27 +34,36 @@ The supporting research questions are numbered RQ1–RQ3.
 
 ## Confirmatory Hypotheses
 
-The confirmatory hypotheses are H1–H3. A subscript ₀ marks the null hypothesis and ₁ the alternative. Recall@2% review capacity is the share of fraudulent transactions that are reviewed when 2 % of transactions can be reviewed.
+The confirmatory hypotheses are H1–H3, worded exactly as in the [research protocol](docs/protocol.md). A subscript ₀ marks the null hypothesis and ₁ the alternative. Recall@2% is the share of Test-period frauds that are reviewed when 2 % of transactions can be reviewed each day (daily top-K review: the K highest-scoring transactions are reviewed, where K is the fixed daily review budget).
+
+Symbols used below (full definitions and equations are in the protocol):
+
+- `δ_M` = model-family main effect: the CatBoost-minus-LightGBM difference in Recall@2%, averaged over the unweighted and balanced-weighting conditions;
+- `δ_W,f` = weighting effect in model family f: balanced-minus-unweighted Recall@2%;
+- `r` = realised Test alert rate of the validation-selected 2 % threshold;
+- `Δ` = H3 equivalence tolerance on r (0.004, i.e. ±20 % of the 2 % target).
 
 ### H1 — Model-family effect
 
-**H1₀:** There is no difference in Recall@2% review capacity between CatBoost and LightGBM on the temporal test period.
+**H1₀:** Averaged over the unweighted and balanced-weighting conditions, CatBoost and LightGBM do not differ in Recall@2% on the Test period (δ_M = 0).
 
-**H1₁:** There is a difference in Recall@2% review capacity between CatBoost and LightGBM on the temporal test period.
+**H1₁:** Averaged over the unweighted and balanced-weighting conditions, CatBoost and LightGBM differ in Recall@2% on the Test period (δ_M ≠ 0).
 
 ### H2 — Class-weighting effect
 
-**H2₀:** Class weighting does not change Recall@2% review capacity relative to the corresponding unweighted model.
+**H2₀:** For at least one model family (LightGBM or CatBoost), balanced class weighting changes Recall@2% by 2 percentage points or more relative to the corresponding unweighted model (|δ_W,f| ≥ 0.02 for at least one f).
 
-**H2₁:** Class weighting changes Recall@2% review capacity relative to the corresponding unweighted model.
+**H2₁:** For both LightGBM and CatBoost, balanced class weighting changes Recall@2% by less than 2 percentage points relative to the corresponding unweighted model (|δ_W,f| < 0.02 for both f).
 
-### H3 — Policy-transfer effect
+### H3 — Alert-rate transfer fidelity
 
-**H3₀:** A validation-selected 2% review threshold preserves the intended review workload on the later temporal test period.
+**H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ, where Δ = 0.004, i.e. ±20% of the target).
 
-**H3₁:** A validation-selected 2% review threshold does not preserve the intended review workload on the later temporal test period.
+**H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ, where Δ = 0.004, i.e. ±20% of the target).
 
-RQ3 is primarily estimation and sensitivity analysis rather than a separate significance-testing exercise.
+H1 is a two-sided difference test. H2 and H3 are equivalence hypotheses tested with Two One-Sided Tests (TOST). The Smallest Effect Size Of Interest (SESOI) for H1 and H2 is 2 percentage points of Recall@2% ([DR-005](docs/decisions/DR-005-sesoi-and-h1-h2-inference.md)); Δ is justified in [DR-003](docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). Uncertainty for H1/H2 uses the two-way bootstrap of [DR-006](docs/decisions/DR-006-bootstrap-inference-strategy.md).
+
+RQ3 is primarily estimation and sensitivity analysis rather than a separate significance-testing exercise. Its cost-ratio grid and break-even rule are defined in [DR-007](docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md).
 
 ## Dataset
 
@@ -108,6 +119,8 @@ Human review is represented as an exogenous capacity constraint. The research do
 - [Research protocol](docs/protocol.md)
 - [Literature review foundation](docs/literature-review.md)
 - [Dataset documentation](docs/dataset.md)
+- [Methodology Decision Records](docs/decisions/README.md)
+- [Reference register](docs/references.md)
 
 Planned next:
 
@@ -130,9 +143,17 @@ The next stage is to resolve the ethics route, complete the evidence matrix, and
 
 | Symbol / abbreviation | Meaning |
 |---|---|
+| Δ | H3 equivalence tolerance on r (0.004 = ±20 % of the 2 % target) |
+| δ_M | Model-family main effect in Recall@2% (CatBoost minus LightGBM, averaged over weighting) |
+| δ_W,f | Weighting effect in model family f (balanced minus unweighted Recall@2%) |
+| f | A model family (LightGBM or CatBoost) |
 | H1, H2, H3 | Confirmatory hypotheses; subscript ₀ = null hypothesis, ₁ = alternative |
+| K | Fixed daily review budget (reviews per day) |
 | IEEE-CIS | IEEE Computational Intelligence Society |
 | ML | Machine learning |
 | Precision@Capacity | Share of reviewed transactions that are fraud at a fixed review capacity |
+| r | Realised Test alert rate of the validation-selected 2 % threshold |
 | Recall@2%, Recall@Capacity | Share of frauds reviewed at 2 % (a fixed) review capacity |
 | RQ1–RQ3 | Research questions 1–3 |
+| SESOI | Smallest Effect Size Of Interest |
+| TOST | Two One-Sided Tests |

@@ -2,10 +2,10 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze). SESOI fixed at 2 percentage points of Recall@2 % by Issue #8, pending supervisor review. The primary bootstrap unit remains open (protocol open item 3). |
+| Status | Accepted (pre-freeze). SESOI fixed at 2 percentage points of Recall@2 % by Issue #8, pending supervisor review. At the time of this record the primary bootstrap unit remained open (protocol open item 3). **Current status:** resolved by [DR-006](DR-006-bootstrap-inference-strategy.md) (Issue #14). |
 | Date | 2026-09-24 |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§6–7, 15; development-period (V2) projections; equivalence-testing and practical-significance literature |
-| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
+| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md) (later: resolves the bootstrap unit left open here), [protocol](../protocol.md) |
 
 ## Context
 
@@ -176,7 +176,7 @@ The TOST power figures are for a single contrast. H2's intersection-union test o
 |---|---|
 | **Estimands** | δ_M (H1); δ_W,LGB and δ_W,Cat (H2); interaction and cell contrasts (descriptive). All are paired differences in pooled Test Recall@2 % under R3, K = 56. |
 | **Primary uncertainty method** | **Joint paired bootstrap.** Each replicate resamples the same units for all four configurations, preserving the pairing, and recomputes every estimand. B (number of bootstrap replicates) = 10,000; percentile CIs [REF-044]. |
-| **Clustering / resampling unit** | **Not fixed by this decision; protocol open item 3 remains open.** Candidates: (a) heuristic pseudo-entity clusters, resampling frauds' capture indicators by cluster with daily top-K membership fixed from the realised rankings [REF-036]; (b) moving blocks of relative days (whole days resampled; top-K recomputed within day) [REF-037, REF-064]. Transaction-level or fraud-level resampling that assumes independence is **not** acceptable as primary. The SESOI decision does not depend on this choice: the power scenarios above bracket DE = 1–4. |
+| **Clustering / resampling unit** | **Not fixed by this decision; protocol open item 3 remained open at the time of this record.** *Current status: resolved by [DR-006](DR-006-bootstrap-inference-strategy.md), which adopts a two-way (pigeonhole) bootstrap over relative days × fine pseudo-entities as primary, with an Owen-corrected variance and a day-level moving-block bootstrap as sensitivity analyses.* Candidates considered here: (a) heuristic pseudo-entity clusters, resampling frauds' capture indicators by cluster with daily top-K membership fixed from the realised rankings [REF-036]; (b) moving blocks of relative days (whole days resampled; top-K recomputed within day) [REF-037, REF-064]. Transaction-level or fraud-level resampling that assumes independence is **not** acceptable as primary. The SESOI decision does not depend on this choice: the power scenarios above bracket DE = 1–4. |
 | **CI types** | 95 % CI for difference estimates (H1, descriptive contrasts). 90 % CI for practical interpretation against ±SESOI (H1). (1 − 2α_H2) CIs for the H2 TOST decision. |
 | **p-values** | H1: two-sided bootstrap p-value p_H1 for δ_M = 0 (displayed below the table). H2: p_H2 = max of the four one-sided bootstrap p-values (intersection-union). H3: as defined in DR-003. |
 | **Role of McNemar** | **Secondary and descriptive only.** An exact McNemar test [REF-035, REF-028] is reported for each of the four cell-level paired contrasts. It assumes independent frauds, which the clustering evidence contradicts, so it is **not** in the confirmatory family. |
@@ -214,7 +214,7 @@ It doubles the smaller tail of the bootstrap distribution beyond zero, giving a 
 ## Consequences
 
 - Protocol open item 2 (SESOI) is resolved, pending supervisor review.
-- Open item 3 (primary bootstrap unit for H1/H2) **remains open**.
+- Open item 3 (primary bootstrap unit for H1/H2) **remained open** at the time of this record. *Current status: resolved by [DR-006](DR-006-bootstrap-inference-strategy.md) (Issue #14), pending supervisor review.*
 - The multiplicity structure for {H1, H2, H3} is now defined. Open item 7 is narrowed to *which* configuration(s) H3 is tested on.
 - All four configurations must be scored on identical Test data, and the paired bootstrap must resample jointly across them.
 - Results may be inconclusive for H1 and/or H2. The write-up must pre-commit to reporting them neutrally.
