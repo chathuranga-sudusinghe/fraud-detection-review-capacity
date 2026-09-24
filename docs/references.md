@@ -2,7 +2,7 @@
 
 Master list of every source used by this research project. Other documents cite sources by **Reference ID** (e.g. `REF-005`), so each claim can be traced back to this register when writing the dissertation.
 
-**Last verification pass:** 23 September 2026 (REF-001–REF-060); 24 September 2026 (REF-061–REF-065, Issue #7).
+**Last verification pass:** 23 September 2026 (REF-001–REF-060); 24 September 2026 (REF-061–REF-065, Issue #7; REF-066–REF-067, Issue #8).
 
 ## Verification status
 
@@ -66,6 +66,8 @@ Initial evidence base: the reference list of `notebooks/01_dataset_feasibility_a
 | REF-062 | Berger, R.L. & Hsu, J.C. (1996) 'Bioequivalence trials, intersection-union tests and equivalence confidence sets', *Statistical Science*, 11(4), pp. 283–319. | doi:10.1214/ss/1032280304 | Journal article | TOST as an intersection-union test (each one-sided test at α; no α split); link to equivalence confidence sets (H3) | Verified | Crossref (volume, issue, DOI) and Semantic Scholar (pages) (added for Issue #7) |
 | REF-063 | Lakens, D., Scheel, A.M. & Isager, P.M. (2018) 'Equivalence testing for psychological research: a tutorial', *Advances in Methods and Practices in Psychological Science*, 1(2), pp. 259–269. | doi:10.1177/2515245918770963 | Journal article (tutorial) | Equivalence bounds as a smallest effect size of interest (SESOI) that the researcher must justify (H3; H2 SESOI) | Verified | Crossref. **Only the abstract was read; the full text returned HTTP 403.** Cite only for the TOST/SESOI framing stated in the abstract until the full text is checked (added for Issue #7) |
 | REF-064 | Hall, P., Horowitz, J.L. & Jing, B.-Y. (1995) 'On blocking rules for the bootstrap with dependent data', *Biometrika*, 82(3), pp. 561–574. | doi:10.1093/biomet/82.3.561 | Journal article | Order of the optimal block length (n^(1/3) for variance, n^(1/4) for one-sided distribution estimation); H3 block-length choice | Verified | Crossref; the block-length orders are confirmed from the abstract and summary (added for Issue #7) |
+| REF-066 | Jaeschke, R., Singer, J. & Guyatt, G.H. (1989) 'Measurement of health status: ascertaining the minimal clinically important difference', *Controlled Clinical Trials*, 10(4), pp. 407–415. | doi:10.1016/0197-2456(89)90005-6 | Journal article | Origin of the minimal clinically important difference: a practically meaningful difference defined by its consequences rather than by statistical significance. Principle adapted for the H1/H2 SESOI (no clinical value used) | Verified | Crossref; the definition was confirmed from secondary quotations of the paper. Full text not read (added for Issue #8) |
+| REF-067 | Benavoli, A., Corani, G., Demšar, J. & Zaffalon, M. (2017) 'Time for a change: a tutorial for comparing multiple classifiers through Bayesian analysis', *Journal of Machine Learning Research*, 18(77), pp. 1–36. | https://www.jmlr.org/papers/v18/16-305.html | Journal article (tutorial) | ML precedent for an analyst-chosen region of practical equivalence (±0.01 accuracy) when comparing classifiers; critique of significance without magnitude. **Not** used as the source of the SESOI value | Verified | JMLR PDF read; the ±0.01 accuracy ROPE was confirmed in the text (added for Issue #8) |
 
 ### 1.1 Studies using the IEEE-CIS dataset (prior-work context)
 

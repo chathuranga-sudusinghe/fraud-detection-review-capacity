@@ -46,17 +46,35 @@ Revised per [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). The p
 
 ### H1 — Model-family effect
 
-- **H1₀:** ΔRecall@2% (CatBoost − LightGBM) = 0.
-- **H1₁:** ΔRecall@2% (CatBoost − LightGBM) ≠ 0.
+Defined per [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md). Recall@2% is evaluated under policy R3 (daily top-K, K = 56), and all four model × weighting configurations are scored on the same Test frauds. δ_M = ½[(R^Cat,u − R^LGB,u) + (R^Cat,b − R^LGB,b)] is the paired model-family main effect.
 
-Recall@2% is evaluated under policy R3 (daily top-K, K = 56). A smallest effect size of interest (SESOI) must be declared before freeze, so that a non-significant result can be interpreted (open item).
+- **H1₀:** Averaged over the unweighted and balanced-weighting conditions, CatBoost and LightGBM do not differ in Recall@2% on the Test period (δ_M = 0).
+- **H1₁:** Averaged over the unweighted and balanced-weighting conditions, CatBoost and LightGBM differ in Recall@2% on the Test period (δ_M ≠ 0).
+
+**Smallest effect size of interest (SESOI) = 2 percentage points of Recall@2%.** At the projected ≈ 2,660 Test frauds this is ≈ 53 frauds per 28 days, or ≈ 2 per day, at identical review workload (≈ 3.4 pp Precision@K).
+
+H1 remains a two-sided **difference** test; it is not a winner-selection test. The 90 % CI for δ_M is additionally interpreted against ±0.02. This interpretation is pre-specified but not a separate confirmatory test, and has five possible outcomes:
+- a practically meaningful difference;
+- a difference of uncertain practical size;
+- a detectable but negligible difference;
+- data compatible only with negligible differences;
+- inconclusive.
+
+The model × weighting interaction and the two cell contrasts are reported descriptively.
 
 ### H2 — Class-weighting effect
 
-- **H2₀:** ΔRecall@2% (weighted − unweighted) = 0.
-- **H2₁:** ΔRecall@2% (weighted − unweighted) ≠ 0.
+Defined per [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md). δ_W,f = R^f,b − R^f,u is the paired weighting effect within model family f ∈ {LightGBM, CatBoost}.
 
-Literature suggests that class weighting mainly distorts calibration and has little effect on ranking [REF-019, REF-020], so a null result is plausible. An **equivalence test (TOST)** [REF-030] may be added for H2 **only after a SESOI has been justified and fixed** before the freeze. Without a fixed SESOI, a non-significant H2 result must be reported as inconclusive, not as "no effect".
+- **H2₀:** For at least one model family (LightGBM or CatBoost), balanced class weighting changes Recall@2% by 2 percentage points or more relative to the corresponding unweighted model (|δ_W,f| ≥ 0.02 for at least one f).
+- **H2₁:** For both LightGBM and CatBoost, balanced class weighting changes Recall@2% by less than 2 percentage points relative to the corresponding unweighted model (|δ_W,f| < 0.02 for both f).
+
+H2 is an **equivalence** hypothesis, because the literature expects class weighting mainly to distort calibration rather than ranking [REF-019, REF-020]. The substantive question is therefore whether weighting matters *materially*. A non-significant difference must never be read as "no effect" [REF-030, REF-063].
+
+**Test.**
+- An intersection-union TOST [REF-061, REF-062]. H2₁ is concluded only if the (1 − 2α_H2) CIs for **both** δ_W,LGB and δ_W,Cat lie inside (−0.02, +0.02), where α_H2 is the Holm-assigned level.
+- Equivalence is required in each family, rather than for the averaged effect, so that opposite effects cannot cancel.
+- The two-sided difference CIs are also reported descriptively.
 
 ### H3 — Alert-rate transfer fidelity
 
@@ -276,22 +294,28 @@ No assumed value will be presented as an actual institutional banking cost.
 
 ## Statistical Plan
 
-**Primary confirmatory comparison:** Recall@2% (H1, H2), plus H3 as specified above.
+**Primary confirmatory comparison:** Recall@2% (H1, H2), plus H3 as specified above. The H1/H2 inference plan is defined in [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md).
 
 **Uncertainty must be cluster- or day-block-aware.** Fraud labels cluster by entity: V2 frauds average ≈ 2 per heuristic pseudo-entity, with an upper-bound design effect ≈ 4.3 [D]. Days are autocorrelated. Transaction-level resampling would therefore understate uncertainty.
 
-- **Primary (H1, H2):** paired bootstrap 95 % CIs, resampling either heuristic pseudo-entity clusters [REF-036] or day blocks [REF-037, REF-044]. The exact unit is an open item. H3 uses the day-level moving-block bootstrap specified above, because its outcome does not depend on labels.
-- **Secondary:** exact McNemar test on paired fraud-capture differences [REF-035, REF-028]. It assumes independent frauds and is reported as a secondary check only.
-- **Effect sizes** with CIs.
-- **Holm correction** across the pre-specified confirmatory tests [REF-029].
-- **TOST equivalence** for H3, with Δ = 0.004 (±20 % relative) and a day-level moving-block bootstrap [REF-061, REF-062, REF-064]. Optionally also for H2, once its SESOI is fixed [REF-030, REF-063].
+- **Primary (H1, H2):** a **joint paired bootstrap** over all four configurations (B = 10,000, percentile CIs) [REF-044], resampling either heuristic pseudo-entity clusters [REF-036] or day blocks [REF-037, REF-064]. **The exact unit is still an open item.** Resampling that assumes independent transactions or frauds is not acceptable as primary. H3 uses the day-level moving-block bootstrap specified above, because its outcome does not depend on labels.
+- **H1:** two-sided bootstrap p-value for δ_M = 0, plus the pre-specified practical interpretation of the 90 % CI against ±SESOI (DR-005).
+- **H2:** intersection-union TOST with SESOI = 0.02; p_H2 = the maximum of the four one-sided p-values [REF-061, REF-062].
+- **H3:** TOST with Δ = 0.004 (±20 % relative) and a day-level moving-block bootstrap [REF-061, REF-062, REF-064].
+- **Multiplicity:** **Holm** at family-wise α = 0.05 over the confirmatory family {H1, H2, H3} [REF-029]. If H3 is tested on more than one configuration (open item 7), each H3 test is an additional family member.
+- **Secondary:** exact McNemar tests on the four cell-level paired contrasts [REF-035, REF-028]. They assume independent frauds and are descriptive only, **not** in the Holm family.
+- **Effect sizes** with CIs, in pp, frauds per 28 days and per day, Precision@K equivalent and normalised recall. Sensitivity: H1/H2 interpretations are also shown against SESOIs of 1, 3 and 5 pp (not confirmatory).
 - **Secondary outcomes** use estimation with confidence intervals, not additional hypothesis tests. Proportions use Wilson intervals [REF-034] where a bootstrap is not required.
 
 **Power (projection, not Test data).** About 2,660 Test frauds are projected from V2 prevalence. The minimum detectable paired difference in Recall@2% is roughly:
 - 1.2–2.8 percentage points if frauds are treated as independent;
 - 2–5.6 percentage points under design effects of 2–4.
 
-H1 and H2 are therefore powered only for moderate effects.
+At the SESOI of 2 pp, under central assumptions (≈ 10 % of frauds discordant between configurations, design effect ≈ 2):
+- power is ≈ 0.47–0.64 for the H1 difference test;
+- power is ≈ 0.14–0.49 for a single-contrast equivalence test.
+
+It is higher under lower discordance or clustering, and lower otherwise (see [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)). H1 and H2 are therefore powered only for moderate effects. **Inconclusive results are a pre-declared, legitimate outcome** and will be reported neutrally.
 
 Statistical significance will not be treated as equivalent to practical importance.
 
@@ -349,12 +373,12 @@ AI assistance used in this project must be declared in the AI Reflection (AIR) r
 | # | Item | Notes |
 |---|---|---|
 | 1 | ~~Justify and freeze the H3 tolerance Δ~~ | **Resolved (Issue #7), pending supervisor review:** Δ = 0.004 (±20 % relative); TOST with a day-level moving-block bootstrap ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)) |
-| 2 | **Justify and freeze the SESOI for H1 and H2** | Needed to interpret non-significant results; enables TOST for H2 |
-| 3 | **Decide the primary clustered-bootstrap unit** for H1/H2 | Heuristic pseudo-entity clusters vs day blocks (block length); the other as sensitivity. (H3 is already specified: day blocks, ℓ = 3; DR-003.) |
+| 2 | ~~Justify and freeze the SESOI for H1 and H2~~ | **Resolved (Issue #8), pending supervisor review:** SESOI = 2 pp of Recall@2%; H1 difference test with practical interpretation; H2 intersection-union TOST ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)) |
+| 3 | **Decide the primary clustered-bootstrap unit** for H1/H2 | Heuristic pseudo-entity clusters vs day blocks (block length); the other as sensitivity. Must be a joint paired bootstrap over all four configurations (DR-005). (H3 is already specified: day blocks, ℓ = 3; DR-003.) |
 | 4 | **Declare the cost-ratio grid for RQ3** | e.g. C_miss / C_R ∈ {1, 2, 5, 10, 20, 50, 100} as a candidate; whether C_FP is included; precise break-even definition |
 | 5 | **Finalise the feature-category declaration** | Exact columns declared categorical for both libraries; confirm the excluded columns |
 | 6 | **Declare the overflow rule** for R0/R1/R2 | Report-only vs truncate-to-top-K |
-| 7 | **Declare the H3 configuration(s) and multiplicity family** | Which model × weighting configuration(s) H3 is tested on; Holm family membership |
+| 7 | **Declare the H3 configuration(s)** | Which model × weighting configuration(s) H3 is tested on. The multiplicity family is defined in DR-005 as Holm over {H1, H2, H3}, with each additional H3 configuration adding a family member. |
 | 8 | **Resolve the University of Greenwich ethics route in writing** | Research Ethics Policy §1.3.4 (criminal subject matter) [REF-050, REF-051] |
 | 9 | **Verify the Kaggle / IEEE-CIS data-use terms** | REF-049 unverified |
 | 10 | **Verify all currently unverified or partially verified references** | REF-016, REF-037, REF-041, REF-042, REF-045, REF-046, REF-047, REF-048, REF-049, REF-055, REF-056–REF-060 |
@@ -379,11 +403,12 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-001 — Temporal split strategy](decisions/DR-001-temporal-split-strategy.md)
 - [DR-002 — Review-capacity definition](decisions/DR-002-review-capacity-definition.md)
 - [DR-003 — RQ2 / H3: policy-transfer fidelity](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)
+- [DR-005 — SESOI and H1/H2 inference plan](decisions/DR-005-sesoi-and-h1-h2-inference.md)
 
 ## References
 
 Full entries and verification status are in [`docs/references.md`](references.md).
 
-REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065.
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067.
 
 \* Partially verified. † Unverified; open item.
