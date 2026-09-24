@@ -147,6 +147,7 @@ Important files:
 - [`docs/research-foundation.md`](docs/research-foundation.md)
 - [`docs/protocol.md`](docs/protocol.md)
 - [`docs/dataset.md`](docs/dataset.md)
+- [`docs/feature-catalog.md`](docs/feature-catalog.md) — column-by-column data dictionary; model-input roles are machine-readable in [`config/features.yaml`](config/features.yaml)
 - [`docs/literature-review.md`](docs/literature-review.md)
 - [`docs/references.md`](docs/references.md)
 - [`docs/decisions/`](docs/decisions/README.md)

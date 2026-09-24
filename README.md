@@ -119,6 +119,7 @@ Human review is represented as an exogenous capacity constraint. The research do
 - [Research protocol](docs/protocol.md)
 - [Literature review foundation](docs/literature-review.md)
 - [Dataset documentation](docs/dataset.md)
+- [Feature catalog](docs/feature-catalog.md)
 - [Methodology Decision Records](docs/decisions/README.md)
 - [Reference register](docs/references.md)
 

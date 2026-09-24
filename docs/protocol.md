@@ -219,7 +219,7 @@ Analytic baselines (always reported):
 
 **Parity controls.** Both libraries receive:
 - the same features;
-- the same declared categorical columns;
+- the same declared categorical columns ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md));
 - the same tuning budget and search procedure on V1;
 - the same early-stopping rule.
 
@@ -232,7 +232,15 @@ This ensures the comparison reflects model family, not preprocessing.
 - **No future-looking aggregate features.** Any frequency, count or entity-level aggregate would have to be computed from Train only or with past-only windows. None is planned for the primary design.
 - **No manual target encoding.** Categorical handling is native to each library: CatBoost ordered target statistics [REF-012]; LightGBM categorical splits [REF-011].
 - **No engineered entity identifiers as features.** Heuristic keys such as card + address + implied account-start day are used **only** for audit and slicing.
-- The exact list of columns declared categorical is still open. Several nominal variables (`card1`–`card3`, `card5`, `addr1`, `addr2`, many `id_*`) are stored as numbers, so the declaration must be explicit.
+- **Feature declaration** ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md); machine-readable in [`config/features.yaml`](../config/features.yaml); column-by-column reference in the [feature catalog](feature-catalog.md)). Of the 434 joined columns:
+  - 1 is the target (`isFraud`) and 2 are excluded (`TransactionID`, `TransactionDT`);
+  - **49 are categorical**, exactly the organiser's published list [REF-047]: `ProductCD`, `card1`–`card6`, `addr1`, `addr2`, `P_emaildomain`, `R_emaildomain`, `M1`–`M9`, `DeviceType`, `DeviceInfo`, `id_12`–`id_38`. This includes the numeric-coded fields `card1`–`card3`, `card5`, `addr1`, `addr2` and 12 `id_*` codes;
+  - **382 are numeric**: every other column (`TransactionAmt`, `dist1`, `dist2`, `C1`–`C14`, `D1`–`D15`, the `V1`–`V339` feature columns, `id_01`–`id_11`).
+- **Model input parity.** Both libraries receive the same 431 columns, built from one canonical frame:
+  - categorical values are written as text labels, with missing values labelled `"__MISSING__"`;
+  - numeric values stay `float64` with native missing-value handling;
+  - LightGBM receives pandas categoricals whose categories are fixed from Train only, and CatBoost receives the text labels directly [REF-076, REF-077];
+  - no imputation, scaling, rare-level grouping or high-cardinality exclusion is applied.
 
 ## Class-Imbalance Treatment
 
@@ -536,7 +544,7 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | 2 | ~~Justify and freeze the SESOI for H1 and H2~~ | **Resolved (Issue #8), pending supervisor review:** SESOI = 2 pp of Recall@2%; H1 difference test with practical interpretation; H2 intersection-union TOST ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)) |
 | 3 | ~~Decide the primary clustered-bootstrap unit for H1/H2~~ | **Resolved (Issue #14), pending supervisor review:** two-way pigeonhole bootstrap (relative day × fine pseudo-entity), with S1 (Owen-corrected variance) and S2 (day blocks, ℓ = 3) as sensitivity analyses ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)). (H3: day blocks, ℓ = 3; DR-003.) |
 | 4 | ~~Declare the cost-ratio grid for RQ3~~ | **Resolved (Issue #13), pending supervisor review:** primary cost model with review and missed-fraud costs only (C_FP as a sensitivity relabelling); ρ ∈ {2, 5, 10, 20, 50, 100, 200, 500, 1000} with exact curves over (1, 1000]; saturation and break-even ratios per capacity and configuration ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)) |
-| 5 | **Finalise the feature-category declaration** | Exact columns declared categorical for both libraries; confirm the excluded columns |
+| 5 | ~~Finalise the feature-category declaration~~ | **Resolved (Issue #23), pending supervisor review:** 49 categorical (organiser list), 382 numeric, 2 excluded (`TransactionID`, `TransactionDT`); canonical text labels with `"__MISSING__"` for categorical missing values; Train-fixed categories for LightGBM ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md)) |
 | 6 | **Declare the overflow rule** for R0/R1/R2 | Report-only vs truncate-to-top-K |
 | 7 | **Declare the H3 configuration(s)** | Which model × weighting configuration(s) H3 is tested on. The multiplicity family is defined in DR-005 as Holm over {H1, H2, H3}, with each additional H3 configuration adding a family member. |
 | 8 | **Resolve the University of Greenwich ethics route in writing** | Research Ethics Policy §1.3.4 (criminal subject matter) [REF-050, REF-051] |
@@ -566,12 +574,13 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-005 — SESOI and H1/H2 inference plan](decisions/DR-005-sesoi-and-h1-h2-inference.md)
 - [DR-006 — Bootstrap inference strategy for H1 and H2](decisions/DR-006-bootstrap-inference-strategy.md)
 - [DR-007 — RQ3 cost-ratio grid and break-even rule](decisions/DR-007-rq3-cost-ratio-and-break-even.md)
+- [DR-008 — Feature declaration and model-input policy](decisions/DR-008-feature-declaration-and-model-input-policy.md)
 
 ## References
 
 Full entries and verification status are in [`docs/references.md`](references.md).
 
-REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071, REF-072, REF-073, REF-074, REF-075.
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049†, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071, REF-072, REF-073, REF-074, REF-075, REF-076, REF-077.
 
 \* Partially verified. † Unverified; open item.
 
@@ -597,8 +606,10 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | δ_M | Model-family main effect (H1 estimand) |
 | δ_W,f | Weighting effect in model family f (H2 estimands) |
 | ΔJ(ρ) | Scenario-cost difference J_R4 − J_R3 (negative = R4 cheaper) |
+| `__MISSING__` | Explicit label given to a missing categorical value (both libraries) |
 | DR | Decision Record |
 | F1 | Harmonic mean of precision and recall |
+| `float64` | 64-bit floating-point numeric type |
 | F_d | Number of frauds on day d |
 | f, w | Model family (LGB or Cat); weighting (u unweighted, b balanced) |
 | FN, FN_π | False negatives: frauds not reviewed (by policy π) |
@@ -643,5 +654,10 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | USD | United States dollars |
 | V_naive, V_pigeonhole | Variance from a fraud-level independent bootstrap; variance across pigeonhole replicates |
 | V1, V2 | Validation 1 (relative days 106–126); Validation 2 (relative days 127–154) |
+| `V1`–`V339` | Organiser-engineered numeric **feature columns** (not the V1/V2 validation partitions) |
+| `ProductCD`, `card1`–`card6`, `addr1`, `addr2`, `P_emaildomain`, `R_emaildomain`, `M1`–`M9`, `DeviceType`, `DeviceInfo`, `id_01`–`id_38` | Raw dataset columns; `id_12`–`id_38` and the others listed here except `id_01`–`id_11` are categorical (DR-008) |
+| `TransactionAmt`, `dist1`, `dist2`, `C1`–`C14`, `D1`–`D15` | Raw numeric dataset columns (amount, distances, counts, time deltas) |
+| `TransactionID` | Row identifier and join key (excluded from model input) |
+| `isFraud` | Target: 1 = fraud, 0 = legitimate |
 | w_pos | Sample weight of each fraud row under balanced weighting, n_neg / n_pos |
 | ⌊ · ⌋ | Round down to a whole number |
