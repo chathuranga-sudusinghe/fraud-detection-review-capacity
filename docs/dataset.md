@@ -71,9 +71,29 @@ train_identity.parquet
 
 Parquet files are derivative storage formats only; they are not a separate dataset source.
 
+## Data-Use Terms
+
+The competition data are used under the official IEEE-CIS Fraud Detection Competition Rules, Section 7 [REF-049]. The student reports having accepted these Rules on their Kaggle account (Issue #25). This acceptance is recorded as the student's report; it was not independently checked.
+
+### What the Competition Rules require
+
+- **Permitted use (Section 7A).** The Rules state: "You may access and use the Competition Data for non-commercial purposes only, including for participating in the Competition and on Kaggle.com forums, and for academic research and education." This non-commercial MSc study is academic research and education.
+- **Data security and sharing (Section 7B).** The Rules state: "You agree to use reasonable and suitable measures to prevent persons who have not formally agreed to these Rules from gaining access to the Competition Data. You agree not to transmit, duplicate, publish, redistribute or otherwise provide or make available the Competition Data to any party not participating in the Competition." Any unauthorised access must be reported to Kaggle.
+- **Winner licence is not a data licence.** The Rules' open-source licence requirement applies only to *winning Submissions and their source code*. It gives no right to share or redistribute the Competition Data.
+
+Section 7B therefore requires keeping the Competition Data from persons who have not formally agreed to the Rules, and from any party not participating in the Competition. It does not say which other people, if any, the data may be shared with. **The Rules do not explicitly address** row-level data derived from the Competition Data, or aggregate statistics computed from it.
+
+### Project policy (stricter than the Rules) [I]
+
+This project adopts the following rules. Where they go beyond the Competition Rules, that is a deliberate, conservative project choice, not a Kaggle requirement:
+
+- **Raw competition files** (`data/raw/`) stay on the student's local machine and are never committed, published or uploaded. **They are not sent to anyone, including supervisors or examiners, even if that person has accepted the Rules.** The project does not rely on any sharing that the Rules might permit. A reader who needs the data obtains it from Kaggle by accepting the Rules themselves.
+- **Row-level derived data** (e.g. Parquet copies, processed splits, per-transaction scores or predictions, feature extracts) is handled exactly like raw data. It can still reproduce Competition Data row by row, so the project treats it as covered by Section 7B. This is the project's interpretation.
+- **Aggregate results** (counts, rates, metrics, figures), together with code, documentation, column names, schema information and file checksums, may be kept in the repository and published. The Rules neither permit nor forbid aggregate statistics explicitly; publishing them is standard research practice and is the project's interpretation, not an explicit permission.
+
 ## Version-Control Policy
 
-Raw and generated datasets must not be committed to GitHub.
+Raw and generated datasets must not be committed to GitHub. This is a project policy that supports compliance with Section 7B of the Competition Rules ([Data-Use Terms](#data-use-terms)).
 
 The repository `.gitignore` keeps only the directory structure while excluding raw, interim, processed, and external datasets.
 
@@ -128,7 +148,7 @@ This project uses secondary competition data and does not require recruitment of
 However, the final ethics position must follow current University of Greenwich guidance and supervisor / Faculty Research Ethics Committee requirements. The project concerns fraud, financial transactions, and automated decision support, so the ethics assessment should explicitly consider:
 
 - the status and anonymisation of the secondary data;
-- permitted use under Kaggle competition rules;
+- permitted use under Kaggle competition rules (verified: non-commercial academic research and education, Section 7A; no sharing with anyone who has not agreed to the Rules, Section 7B; the stricter project policy is in [Data-Use Terms](#data-use-terms));
 - privacy and re-identification risk;
 - false-positive and false-negative harms;
 - bias and fairness;
@@ -152,9 +172,12 @@ Next dataset-governance task: create a reproducible dataset manifest with checks
 | Symbol / abbreviation | Meaning |
 |---|---|
 | 28 : 1 | Imbalance ratio: legitimate transactions per fraud in development data |
+| Competition Data | The data made available on the competition website, as defined in the Competition Rules, Section 7 |
 | IEEE-CIS | IEEE Computational Intelligence Society |
+| [I] | Evidence tag: inference or recommendation |
 | `isFraud` | Binary target: 1 = fraud, 0 = legitimate |
 | `TransactionDT` | Time offset from an undisclosed reference point (seconds) |
 | `TransactionID` | Key joining the transaction and identity tables |
+| REF-NNN | Reference identifier in `references.md` |
 | Relative day | `TransactionDT` expressed in whole days from the undisclosed reference point |
 | Validation 1, Validation 2 | Development partitions: relative days 106–126 and 127–154 |
