@@ -30,16 +30,18 @@ This folder records methodology decisions: what was decided, on what evidence, w
 | [DR-006](DR-006-bootstrap-inference-strategy.md) | Bootstrap inference strategy for H1 and H2 | Accepted (pre-freeze) | 2026-09-24 | Primary: two-way pigeonhole bootstrap (relative day × fine pseudo-entity); sensitivity: Owen-corrected variance and day-block bootstrap (block length ℓ = 3 days); percentile confidence intervals (CIs), B = 10,000 bootstrap replicates |
 | [DR-007](DR-007-rq3-cost-ratio-and-break-even.md) | RQ3 cost-ratio grid and break-even rule | Accepted (pre-freeze) | 2026-09-24 | Primary cost model (review + missed-fraud cost; the extra false-alert cost C_FP as a sensitivity relabelling); miss-to-review cost-ratio grid ρ ∈ {2, …, 1000}, exact curves over (1, 1000]; saturation and break-even ratios per capacity and configuration; amount outcomes as exposure proxies |
 | [DR-008](DR-008-feature-declaration-and-model-input-policy.md) | Feature declaration and model-input policy | Accepted (pre-freeze) | 2026-09-24 | 49 categorical columns (organiser list), 382 numeric, 2 excluded (`TransactionID`, `TransactionDT`); one canonical input for LightGBM and CatBoost; missing categorical label; high-cardinality policy; `config/features.yaml` |
+| [DR-009](DR-009-overflow-handling-for-threshold-policies.md) | Overflow handling for threshold-based policies R0, R1 and R2 | Accepted (pre-freeze) | 2026-09-25 | Report-only overflow rule: R0–R2 evaluated uncapped; alert demand A, overflow O, unused capacity U and load ratio L defined against the daily budget K; truncation to top-K rejected (it reproduces R3); overflow frauds not counted as missed or false negatives; downstream overflow handling out of scope |
 
 ## Source of evidence
 
-DR-001 to DR-003 draw on [`notebooks/01_dataset_feasibility_audit.ipynb`](../../notebooks/01_dataset_feasibility_audit.ipynb). Its conclusion was *"Suitable with methodological changes."* DR-004 is a project-governance decision (GitHub Issue #6). DR-005 (Issue #8) draws on the notebook's power projections and the equivalence-testing literature. DR-006 (Issue #14) draws on development-period (V2) dependence diagnostics and the clustered-bootstrap literature. DR-007 (Issue #13) draws on a decision-theoretic derivation and the cost-sensitive, cost-curve and decision-curve literature; it uses no new dataset computations. DR-008 (Issue #23) draws on the raw-file schema, development-period values (target never loaded), the organiser's data description and the LightGBM and CatBoost documentation.
+DR-001 to DR-003 draw on [`notebooks/01_dataset_feasibility_audit.ipynb`](../../notebooks/01_dataset_feasibility_audit.ipynb). Its conclusion was *"Suitable with methodological changes."* DR-004 is a project-governance decision (GitHub Issue #6). DR-005 (Issue #8) draws on the notebook's power projections and the equivalence-testing literature. DR-006 (Issue #14) draws on development-period (V2) dependence diagnostics and the clustered-bootstrap literature. DR-007 (Issue #13) draws on a decision-theoretic derivation and the cost-sensitive, cost-curve and decision-curve literature; it uses no new dataset computations. DR-008 (Issue #23) draws on the raw-file schema, development-period values (target never loaded), the organiser's data description and the LightGBM and CatBoost documentation. DR-009 (Issue #27) draws on the protocol's policy definitions, earlier Decision Records and an algebraic argument; it uses no labels or model scores.
 
 ## Symbols and notation
 
 | Symbol / abbreviation | Meaning |
 |---|---|
 | [D], [L], [G], [I] | Evidence tags: dataset observation; literature; University of Greenwich guidance; inference |
+| A, O, U, L | Alert demand, overflow, unused capacity and load ratio of the threshold policies (DR-009) |
 | B | Number of bootstrap replicates |
 | C_FP | Extra false-alert (customer-friction) cost of reviewing a legitimate transaction |
 | CI | Confidence interval |
@@ -52,6 +54,7 @@ DR-001 to DR-003 draw on [`notebooks/01_dataset_feasibility_audit.ipynb`](../../
 | Recall@2% | Share of frauds reviewed at the 2 % review capacity |
 | REF-NNN | Reference identifier in `../references.md` |
 | ρ | Miss-to-review cost ratio: assumed cost of a missed fraud ÷ cost of one review |
+| R0–R3 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K |
 | RQ2, RQ3 | Research questions 2 (policy-transfer fidelity) and 3 (cost-aware capacity use) |
 | SESOI | Smallest Effect Size Of Interest |
 | V1, V2 | Validation 1 (relative days 106–126); Validation 2 (relative days 127–154) |

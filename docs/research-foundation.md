@@ -117,7 +117,7 @@ $$
 &= (1.6\%,\ 2.4\%)
 \end{aligned}
 $$
- It was fixed before any Test access. No literature standard exists for this tolerance, so the magnitude is a pre-specified researcher judgement, anchored in development-period workload variation ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with TOST, using a day-level moving-block bootstrap confidence interval [REF-061, REF-062, REF-064]. Fidelity to the fixed daily budget (daily review count vs K, the fixed daily review budget; overflow and underuse days) is a separate descriptive operational outcome, not a hypothesis.
+ It was fixed before any Test access. No literature standard exists for this tolerance, so the magnitude is a pre-specified researcher judgement, anchored in development-period workload variation ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with TOST, using a day-level moving-block bootstrap confidence interval [REF-061, REF-062, REF-064]. Fidelity to the fixed daily budget (daily threshold-generated alert demand vs K, the fixed daily review budget; overflow and unused capacity) is a separate descriptive operational outcome, not a hypothesis. Threshold alerts are never truncated to K, and alerts in excess of K are not counted as missed frauds ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)).
 
 RQ3 will primarily be evaluated through cost-ratio sensitivity analysis and break-even analysis across the capacity grid rather than a separate omnibus hypothesis test.
 
@@ -212,9 +212,9 @@ Precision@Capacity (share of reviewed transactions that are fraud) is a rescalin
 - false negatives at capacity
 - frauds detected per 1,000 reviews
 - lift over random review
-- review utilisation
-- realised workload
-- percentage of periods exceeding capacity
+- review utilisation (capped policies R3 and R4)
+- threshold-generated alert demand (R0–R2)
+- overflow and unused capacity relative to K, and percentage of days above and below K (R0–R2; [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md))
 - Average Precision / PR-AUC (Precision–Recall Area Under the Curve)
 - ROC-AUC (Receiver Operating Characteristic Area Under the Curve)
 - scenario cost
@@ -406,6 +406,7 @@ The value lies in the controlled combination:
 - [DR-006 — Bootstrap inference strategy for H1 and H2](decisions/DR-006-bootstrap-inference-strategy.md)
 - [DR-007 — RQ3 cost-ratio grid and break-even rule](decisions/DR-007-rq3-cost-ratio-and-break-even.md)
 - [DR-008 — Feature declaration and model-input policy](decisions/DR-008-feature-declaration-and-model-input-policy.md)
+- [DR-009 — Overflow handling for threshold-based policies R0, R1 and R2](decisions/DR-009-overflow-handling-for-threshold-policies.md)
 
 ## References
 
