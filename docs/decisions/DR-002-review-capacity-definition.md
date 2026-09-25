@@ -108,7 +108,7 @@ The research studies fraud detection when only a limited number of transactions 
 
 - **Primary metric:** Recall@2 %, evaluated under the daily top-K policy R3 (review the K highest-scoring transactions each day) with K = 56. It is interpreted against the ≈ 0.6 ceiling and reported with normalised recall.
 - **Research question RQ3 must be evaluated across the capacity grid.** In the binding regime, the marginal (K-th) reviewed transaction is likely to have a high fraud probability. A cost-aware policy (R4, the calibrated cost-aware capped policy) will then rarely leave budget unused, and R4 will often coincide with R3. The informative contrasts are expected at 5 % and 10 % and at low miss-to-review cost ratios [I]. The **main RQ3 output is the break-even miss-to-review cost ratio for each capacity** [REF-008, REF-039, REF-040].
-- Policies that are not capped (R0, the default 0.5 threshold; R1, the F1-optimal threshold; R2, the capacity-rate threshold) can exceed K on a given day. The protocol must declare an **overflow rule**: either report the overflow, or truncate to the top-K of the flagged transactions.
+- Policies that are not capped (R0, the default 0.5 threshold; R1, the F1-optimal threshold; R2, the capacity-rate threshold) can exceed K on a given day. The protocol must declare an **overflow rule**: either report the overflow, or truncate to the top-K of the flagged transactions. *Current status: resolved by [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (Issue #27): report-only. R0–R2 are evaluated uncapped, and their alert demand is compared with K. Truncation was rejected because it reproduces R3 on every overflow day.*
 - Review effort is counted **per transaction**.
 
 ## Threats and limitations
