@@ -232,9 +232,7 @@ The rate component answers the research question, *does a validation-selected op
 
 ## References
 
-REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-036, REF-037\*, REF-038, REF-044, REF-061, REF-062, REF-063, REF-064, REF-065 — see [`../references.md`](../references.md).
-
-\* Partially verified (page range pending).
+REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-036, REF-037, REF-038, REF-044, REF-061, REF-062, REF-063, REF-064, REF-065 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 

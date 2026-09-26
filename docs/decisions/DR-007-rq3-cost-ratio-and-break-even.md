@@ -538,7 +538,7 @@ In words, R4 wins if the reviews it left unused contained frauds at a lower rate
 
 - **The amount analysis is an evaluation-only sensitivity analysis.** R3 and R4 decisions stay count-based (the threshold uses ρ). No amount-aware policy is added: a transaction-specific threshold C_R / A_i [REF-073] would be a **new decision policy** and would need its own GitHub Issue.
 - **Reported quantities [D]:**
-  - `TransactionAmt` (the dataset's transaction amount) is in United States dollars (USD) per the organiser [REF-048].
+  - `TransactionAmt` (the dataset's transaction amount) is in United States dollars (USD) per the organiser [REF-048, partially verified].
   - Amount-weighted recall of R3 and R4.
   - **Fraud value exposed**: Σ amount of unreviewed frauds, for each policy.
   - **Fraud value forgone** by R4: Σ amount of the frauds among the unused reviews.
@@ -640,7 +640,7 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 - **R4's advantage depends on calibration transfer** from V2 to Test. Prevalence and composition shift between periods [D], so calibration may degrade.
 - **ρ_BE is sensitive to a few marginal transactions** and has no CI. The grid-point intervals are the main uncertainty statement.
 - **The day-block intervals may be too narrow** for fraud counts (cross-day entity dependence, [DR-006](DR-006-bootstrap-inference-strategy.md)). The pigeonhole check on f partly addresses this.
-- **Labels are chargeback-derived** and miss unreported fraud [REF-048], so f and FN (false negatives) undercount true fraud.
+- **Labels are chargeback-derived** and miss unreported fraud [REF-048, partially verified], so f and FN (false negatives) undercount true fraud.
 - **Literature read in part.**
   - REF-072, REF-074 and REF-075 were read at abstract level.
   - REF-073 was read in full in its arXiv version.

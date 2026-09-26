@@ -272,9 +272,7 @@ For each bootstrap replicate b = 1, …, B (B = number of replicates):
 
 ## References
 
-REF-028, REF-035, REF-036, REF-037\*, REF-044, REF-061, REF-062, REF-064, REF-068, REF-069, REF-070, REF-071 — see [`../references.md`](../references.md).
-
-\* Partially verified (page range pending).
+REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068, REF-069, REF-070, REF-071 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 

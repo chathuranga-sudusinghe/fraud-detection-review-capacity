@@ -226,9 +226,7 @@ It doubles the smaller tail of the bootstrap distribution beyond zero, giving a 
 
 ## References
 
-REF-004, REF-005, REF-006, REF-019, REF-020, REF-028, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-044, REF-061, REF-062, REF-063, REF-064, REF-066, REF-067 — see [`../references.md`](../references.md).
-
-\* Partially verified (page range pending).
+REF-004, REF-005, REF-006, REF-019, REF-020, REF-028, REF-029, REF-030, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-063, REF-064, REF-066, REF-067 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 

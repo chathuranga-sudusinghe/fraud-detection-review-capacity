@@ -83,7 +83,7 @@ Reproducibility anchors, from the notebook (§4.3):
 
 | Alternative | Why not chosen |
 |---|---|
-| Random or stratified split, or k-fold cross-validation (CV) | Label propagation across linked transactions [REF-048] and the observed entity recurrence [D] would inflate all metrics [REF-026, REF-027]. |
+| Random or stratified split, or k-fold cross-validation (CV) | Label propagation across linked transactions [REF-048, partially verified] and the observed entity recurrence [D] would inflate all metrics [REF-026, REF-027]. |
 | **B**: as chosen, plus a 7-day gap (Train 1–98, V1 99–119, V2 120–147, gap 148–154, Test 155–182) | Loses 21,443 rows (3.6 %). The dataset contains no label-report dates, so any gap length is arbitrary [D]. Without refitting, training data already ends 49 days before Test. |
 | **C**: 35-day Test (Train 1–91, V1 92–119, V2 120–147, Test 148–182) | About 27 % more Test rows (an approximately 11 % smaller detectable effect), but Train shrinks to 54.2 % and V1 grows beyond what early stopping needs. |
 | Two-way split (Train / Test) with thresholds chosen on Train or Test | Thresholds would be selected on in-sample or test data, which is leakage. |
@@ -108,7 +108,7 @@ Reproducibility anchors, from the notebook (§4.3):
 
 ## Threats and limitations
 
-- **Unavoidable optimism from entity-level label dependence.** A temporally split model can still recognise entities that already carry fraud labels. That is realistic only if those labels would have been available at scoring time, and the dataset has no report dates [REF-048; D].
+- **Unavoidable optimism from entity-level label dependence.** A temporally split model can still recognise entities that already carry fraud labels. That is realistic only if those labels would have been available at scoring time, and the dataset has no report dates [REF-048, partially verified; D].
 - **Episodic prevalence.** Weekly fraud rates range from 2.1 % to 5.1 %, so a single 4-week Test window may be atypical.
 - **Relative time only.** No seasonal or calendar claims are possible.
 - **The relative-day boundary falls during active hours** (the activity trough is 8–9 hours after it). This affects which transactions compete in the same daily top-K queue, but not model comparisons.

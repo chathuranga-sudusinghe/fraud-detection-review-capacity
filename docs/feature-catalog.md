@@ -609,7 +609,7 @@ Group description: identity information, i.e. network connection information (e.
 
 ## References
 
-REF-047\*, REF-048\* — see [`references.md`](references.md). Model-input policy: [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md).
+REF-047, REF-048\* — see [`references.md`](references.md). Model-input policy: [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md).
 
 \* Partially verified.
 

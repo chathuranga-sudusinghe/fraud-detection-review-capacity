@@ -347,77 +347,82 @@ Important research boundary:
 
 The following sources form an initial evidence set and must be checked in full before being relied on in the final dissertation.
 
+**Verification status (Issue #33).** Each source below was confirmed to exist, and its bibliographic details were completed from Crossref, the publisher's Digital Object Identifier (DOI) registration. Full entries are in [`references.md`](references.md). The full texts could not be read from the verification environment, so each "Checked relevance" list contains only points stated in the abstract. For REF-060, Issue #33 review: the official ScienceDirect publisher abstract was checked on 26 September 2026. Automated access from the verification environment was refused (HTTP 403). Points in earlier drafts of this section that could not be confirmed have been removed, and inferences are marked **[I]**.
+
 ### 4.1 Systematic Review of Credit-Card Fraud Detection
 
-**Credit card fraud detection in the era of disruptive technologies: A systematic review**  
-Journal of King Saud University - Computer and Information Sciences, 2023.
+**Cherif, A., Badhib, A., Ammar, H., Alshehri, S., Kalkatawi, M. & Imine, A. (2023) 'Credit card fraud detection in the era of disruptive technologies: a systematic review'**\
+*Journal of King Saud University – Computer and Information Sciences*, 35(1), pp. 145–174. doi:10.1016/j.jksuci.2022.11.008 [REF-056].
 
-Initial relevance:
+Checked relevance (abstract):
 
-- reviews fraud-detection research from 2015–2021;
-- identifies class imbalance as a central challenge;
-- discusses under-sampling, over-sampling, cost-sensitive learning, and machine-learning approaches;
-- provides background evidence for the problem formulation.
+- reviews 40 credit-card fraud-detection studies published from 2015 to 2021;
+- categorises them by topic, including the class-imbalance problem and feature engineering, and by machine-learning technology (traditional and deep learning);
+- provides background for the problem formulation **[I]**.
 
 ---
 
 ### 4.2 Threshold Optimisation Under Imbalance
 
-**Threshold optimization and random undersampling for imbalanced credit card data**  
-Journal of Big Data, 2023.
+**Leevy, J.L., Johnson, J.M., Hancock, J. & Khoshgoftaar, T.M. (2023) 'Threshold optimization and random undersampling for imbalanced credit card data'**\
+*Journal of Big Data*, 10, 58. doi:10.1186/s40537-023-00738-z [REF-057].
 
-Initial relevance:
+Checked relevance (abstract):
 
-- explicitly studies threshold optimisation;
-- compares several threshold-selection approaches;
-- evaluates threshold-dependent and threshold-independent metrics;
-- supports the separation of classifier training from operating-threshold selection.
+- studies output thresholding as a way to address class imbalance without changing the dataset or the learner;
+- evaluates four threshold-optimisation techniques with eight threshold-dependent and two threshold-agnostic metrics;
+- reports the best optimal-threshold results without random undersampling;
+- uses the public Credit Card Fraud Detection Dataset, not IEEE-CIS;
+- is consistent with treating threshold selection as a step separate from classifier training **[I]**.
 
 ---
 
 ### 4.3 Recent Cost-Sensitive and Calibrated Fraud Detection
 
-**TEMPLAR fraud: a verifier-grounded, calibrated and cost-sensitive framework for transaction fraud detection**  
-Discover Data, 2026.
+**Hossain, M.S., Akter, S., Chy, K.S., Islam, M.A., Shahiduzzaman, M., Kabtia, M., Sourav, M.S.A. & Raihan, D.I. (2026) 'TEMPLAR fraud a verifier grounded calibrated and cost sensitive framework for transaction fraud detection'**\
+*Discover Data*, 4, 20. doi:10.1007/s44248-026-00117-y [REF-058].
 
-Initial relevance:
+Checked relevance (abstract):
 
-- frames fraud detection around class imbalance, temporal behaviour, and asymmetric error costs;
-- includes calibration;
-- applies cost-sensitive thresholding;
-- reports temporal future-slice evaluation;
-- reinforces the value of validation-selected operating policies.
+- frames transaction fraud detection around class imbalance, temporal drift and asymmetric error costs;
+- includes probability calibration (one-dimensional optimal-transport calibration);
+- applies validation-selected cost-sensitive thresholding;
+- evaluates on IEEE-CIS and BAF Base (a bank-account fraud dataset) with chronological train/validation/test splits and temporal future-slice evaluation;
+- reinforces the value of validation-selected operating policies **[I]**.
 
-This source is recent and particularly relevant, but its methods and assumptions must be critically compared with the narrower MSc research scope.
+This source is recent and particularly relevant, but its methods and assumptions must be critically compared with the narrower MSc research scope. It is further evidence that temporal evaluation on IEEE-CIS is not new.
 
 ---
 
 ### 4.4 Recent Explainable Fraud-Detection Research
 
-**Explainable ensemble machine learning for financial transaction fraud detection: Insights from XGBoost and deep neural networks**  
-2026.
+**Anh Luong, N.D. & Xie, S. (2026) 'Explainable ensemble machine learning for financial transaction fraud detection: insights from XGBoost and deep neural networks'**\
+*The Journal of Finance and Data Science*, 12, 100195. doi:10.1016/j.jfds.2026.100195 [REF-059].
 
-Initial relevance:
+Checked relevance (abstract):
 
-- considers extreme class imbalance;
-- evaluates class weighting and threshold optimisation;
-- explicitly selects thresholds using validation data before final evaluation;
-- reinforces the use of precision, recall, F1, ROC-AUC, and PR-AUC rather than accuracy alone.
+- addresses extreme class imbalance;
+- evaluates focal loss, class weighting and threshold optimisation;
+- combines an Extreme Gradient Boosting (XGBoost) model with a deep neural network, with SHAP-based (SHapley Additive exPlanations) interpretability;
+- describes its data only as "a real-world transaction dataset".
+
+Whether thresholds are selected on validation data, and which metrics are reported, has **not** been checked.
 
 ---
 
 ### 4.5 Recent Risk-Control-Oriented Research
 
-**DISCO: Decoupling representation learning and risk control for reliable credit card fraud detection**  
-Decision Support Systems, 2026.
+**Zhu, R., Zhang, X., Wang, T., Liao, J., Chung, S.-H. & Zhang, X. (2026) 'DISCO: decoupling representation learning and risk control for reliable credit card fraud detection'**\
+*Decision Support Systems*, 208, 114717. doi:10.1016/j.dss.2026.114717 [REF-060].
 
-Initial relevance:
+Checked relevance (publisher abstract; full text not read):
 
-- distinguishes predictive representation from downstream risk control;
-- explicitly focuses on operational trade-offs;
-- provides contemporary evidence that fraud detection should not be evaluated purely as a classifier-selection problem.
+- separates representation learning from risk-controlled decision-making;
+- uses deep metric learning for representation learning;
+- uses conformal risk control to provide a statistical guarantee on the false-negative rate;
+- discusses operational trade-offs / operational efficiency.
 
-This study uses a different modelling approach from the present project and therefore serves primarily as conceptual and methodological context.
+It is related-work context only. No result, dataset or detail beyond the abstract is attributed to it.
 
 ---
 
@@ -559,7 +564,9 @@ This file defines the review scope and initial evidence base. It is not yet the 
 
 | Symbol / abbreviation | Meaning |
 |---|---|
+| [I] | Evidence tag: inference or recommendation (not a statement from the source) |
 | ACM, IEEE | Association for Computing Machinery; Institute of Electrical and Electronics Engineers (publishers / databases) |
+| BAF Base | Bank Account Fraud dataset suite, base variant |
 | C_FP | Assumed relative cost of unnecessary intervention (a false positive), in addition to C_R |
 | C_miss | Assumed relative cost of a missed fraud (C_FN in some sources) |
 | C_R | Assumed review/investigation cost per reviewed transaction |
@@ -573,6 +580,9 @@ This file defines the review scope and initial evidence base. It is not yet the 
 | N_rev | Number of reviewed transactions |
 | PR-AUC | Precision–Recall Area Under the Curve |
 | ROC-AUC | Receiver Operating Characteristic Area Under the Curve |
+| REF-NNN | Reference identifier in `references.md` |
 | RQ1–RQ3 | Research questions 1–3 |
+| SHAP | SHapley Additive exPlanations (a feature-attribution method) |
 | SMOTE | Synthetic Minority Over-sampling Technique |
 | `scale_pos_weight` | Library parameter that up-weights the positive (fraud) class |
+| XGBoost | Extreme Gradient Boosting library |
