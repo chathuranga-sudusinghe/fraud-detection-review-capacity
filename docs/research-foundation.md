@@ -377,7 +377,7 @@ cost-sensitive outcome
 
 The study does not claim a novel fraud-detection algorithm. It also claims **no novelty** for any of the following, each of which has established prior work:
 - capacity-constrained evaluation itself [REF-006, REF-004, REF-005, REF-046];
-- temporal evaluation itself, including on this dataset [REF-023, REF-041 (partially verified)];
+- temporal evaluation itself, including chronological evaluation on this dataset [REF-023, REF-041, REF-058]. REF-041 and REF-058 are cited only to show that chronological train/validation/test evaluation of IEEE-CIS already exists; their designs, models and research questions differ from this study's;
 - cost-sensitive thresholding itself [REF-008, REF-039].
 
 The value lies in the controlled combination:
@@ -414,9 +414,7 @@ The value lies in the controlled combination:
 
 Full entries and verification status are in [`references.md`](references.md).
 
-REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-041\*, REF-046\*, REF-061, REF-062, REF-064, REF-066, REF-068, REF-070, REF-071, REF-072, REF-073.
-
-\* Partially verified.
+REF-001, REF-002, REF-004, REF-005, REF-006, REF-008, REF-019, REF-020, REF-022, REF-023, REF-029, REF-030, REF-035, REF-036, REF-037, REF-039, REF-040, REF-041, REF-046, REF-058, REF-061, REF-062, REF-064, REF-066, REF-068, REF-070, REF-071, REF-072, REF-073.
 
 ## Symbols and notation
 

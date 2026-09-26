@@ -434,7 +434,7 @@ The analysis separates:
 
 **Data-supported quantities [D]:**
 - count of frauds captured and missed;
-- amount-weighted recall (`TransactionAmt`, in United States dollars, USD, per the organiser [REF-048]);
+- amount-weighted recall (`TransactionAmt`, in United States dollars, USD, per the organiser [REF-048, partially verified]);
 - fraud value exposed (Σ amount of missed fraud) as a proxy for loss exposure.
 
 Amount-weighted results will have wide uncertainty: the top 20 % of development frauds by amount carry 62 % of fraud value [D].
@@ -591,7 +591,7 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | 7 | ~~Declare the H3 configuration(s)~~ | **Resolved (Issue #29), pending supervisor review:** H3 is confirmatory for a single *H3 configuration*, selected by a frozen development-only rule: highest pooled V2 Recall@2% under R3 (K = 56); tie-break V2 PR-AUC, then LGB-u, Cat-u, LGB-b, Cat-b. The selection is committed before the Test period is unsealed. Holm family stays {H1, H2, H3}, three members. The other three configurations' H3 results are descriptive only. This also defines the rolling-origin supplement's primary configuration ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)). |
 | 8 | **Resolve the University of Greenwich ethics route in writing** | Research Ethics Policy §1.3.4 (criminal subject matter) [REF-050, REF-051] |
 | 9 | ~~Verify the Kaggle / IEEE-CIS data-use terms~~ | **Resolved (Issue #25):** the official Competition Rules permit non-commercial use "for academic research and education" (Section 7A) and prohibit transmitting, publishing or redistributing the Competition Data to non-participants (Section 7B) [REF-049]. Stricter project policy: raw and row-level derived data stay local and are not shared ([`dataset.md`](dataset.md#data-use-terms)). The University ethics route (item 8) remains open. |
-| 10 | **Verify all currently unverified or partially verified references** | REF-016, REF-037, REF-041, REF-042, REF-045, REF-046, REF-047, REF-048, REF-055, REF-056–REF-060 |
+| 10 | ~~Verify all currently unverified or partially verified references~~ | **Resolved (Issue #33), pending review:** verification pass complete. Now Verified: REF-016 (title and year corrected to the MIT Press chapter), REF-037, REF-041, REF-046, REF-047 and REF-056–REF-060 (bibliographic records completed; literature-review claims narrowed to the checked abstracts). Remaining Partially verified, with bounded use: REF-042 (series volume number and text unchecked; context only), REF-045 (print year and PSI page unchecked; notebook heuristic only), REF-048 (forum post body needs a Kaggle login; every use marked "partially verified"). REF-055 remains Unverified and is tracked by open item 11 ([`references.md`](references.md)). |
 | 11 | **Obtain the COMP1885 module handbook** | Marking criteria, required structure, AI-use tier [REF-055] |
 | 12 | **Create the dataset manifest** | SHA-256 (Secure Hash Algorithm, 256-bit) values and partition hashes from the feasibility notebook |
 
@@ -624,7 +624,7 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 
 Full entries and verification status are in [`docs/references.md`](references.md).
 
-REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016\*, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037\*, REF-039, REF-040, REF-043, REF-044, REF-046\*, REF-047\*, REF-048\*, REF-049, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071, REF-072, REF-073, REF-074, REF-075, REF-076, REF-077.
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037, REF-039, REF-040, REF-043, REF-044, REF-046, REF-047, REF-048\*, REF-049, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071, REF-072, REF-073, REF-074, REF-075, REF-076, REF-077.
 
 \* Partially verified.
 

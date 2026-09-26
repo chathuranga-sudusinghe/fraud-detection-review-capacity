@@ -261,7 +261,7 @@ The human-readable counterpart is the [feature catalog](../feature-catalog.md). 
 
 ## References
 
-REF-012, REF-047\*, REF-048\*, REF-076, REF-077 — see [`../references.md`](../references.md).
+REF-012, REF-047, REF-048\*, REF-076, REF-077 — see [`../references.md`](../references.md).
 
 \* Partially verified.
 
