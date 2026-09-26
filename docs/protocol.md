@@ -112,7 +112,7 @@ where:
 - `N_d` = total number of transactions on day d;
 - `Σ_d` = sum over the 28 Test days.
 
-r is the share of all Test transactions that the transferred threshold flags. Δ in the hypotheses below is the equivalence tolerance on r.
+r is the share of all Test transactions that the transferred threshold flags. **In confirmatory H3, r, n_d and τ₂ refer only to the rule-selected H3 configuration** (defined under *Configuration* below; [DR-010](decisions/DR-010-h3-confirmatory-configuration.md)), i.e. r = r^f*,w*. r is not pooled or averaged across the four configurations. Δ in the hypotheses below is the equivalence tolerance on r.
 
 - **H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ, where Δ = 0.004, i.e. ±20% of the target).
 - **H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ, where Δ = 0.004, i.e. ±20% of the target).
@@ -139,8 +139,26 @@ r is the share of all Test transactions that the transferred threshold flags. Δ
 - TOST at significance level α = 0.05 [REF-061, REF-062, REF-030]: H3₁ is concluded only if the 90 % CI for r lies entirely inside (0.016, 0.024).
 - A CI overlapping a bound is **inconclusive**.
 - The CI comes from a **moving-block bootstrap over Test days**: block length 3 days, B = 10,000 bootstrap replicates, percentile interval [REF-037, REF-064]. Sensitivity block lengths are 1 and 7 days.
-- Inference is conditional on the deployed model and τ₂.
+- Inference is conditional on the H3 configuration's trained model and its τ₂.
 - Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded.
+
+**Configuration** ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)). H3 is confirmatory for **one** model × weighting configuration, the *H3 configuration*: the configuration with the highest pooled V2 Recall@2% under R3 (K = 56):
+
+$$
+(f^*, w^*) = \underset{(f,\,w)}{\operatorname{arg\,max}} \; R^{f,w}_{\mathrm{V2}}
+$$
+
+where:
+
+- `(f*, w*)` = the H3 configuration;
+- `R^f,w_V2` = pooled V2 Recall@2% under R3 of model family f with weighting w (defined as for R^f,w under H1, but on V2);
+- `arg max` = the configuration at which the quantity is largest.
+
+- **Tie-break** (only for exactly equal V2 fraud counts captured): higher V2 PR-AUC (Precision–Recall Area Under the Curve), then the fixed order LGB-u, Cat-u, LGB-b, Cat-b.
+- The rule uses Train, V1 and V2 only. The four V2 recall values and the selected configuration are committed to the repository **before the Test period is unsealed**, and are final.
+- The H3 configuration is a pre-specified, validation-selected deployment proxy: it is chosen on held-out development data by a criterion that does not directly optimise H3 alert-rate transfer. It does not model any particular organisation's model-selection process, it is not evidence for H1 or H2, and it is not described as the "best" model.
+- A confirmatory H3 conclusion applies to the H3 configuration only.
+- For the other three configurations, r and its 90 % CI are reported **descriptively**: they are outside the Holm family and no equivalence conclusion is drawn from them.
 
 The old point-null H3 ("the threshold preserves the intended workload") is withdrawn.
 
@@ -190,15 +208,15 @@ Chronological, day-aligned split, frozen from transaction volume only, before an
 |---|---|---|---|
 | Train | 1–105 | 368,632 | Model fitting. **No refit** on later data. |
 | Validation 1 (V1) | 106–126 | 65,544 | Hyper-parameter tuning and early stopping only |
-| Validation 2 (V2) | 127–154 | 77,822 | Probability calibration (for R4, the calibrated cost-aware policy); threshold selection (R1, the F1-optimal threshold; R2); daily budget K |
+| Validation 2 (V2) | 127–154 | 77,822 | Probability calibration (for R4, the calibrated cost-aware policy); threshold selection (R1, the F1-optimal threshold; R2); daily budget K; selection of the H3 configuration ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)) |
 | Gap | — | — | **None in the primary design** |
 | Final Test | 155–182 | 78,542 | **Sealed.** One confirmatory evaluation |
 
 Partition hashes and `TransactionDT` bounds are recorded in [DR-001](decisions/DR-001-temporal-split-strategy.md).
 
 **Supplementary analyses** (exploratory; development data only; no Test access):
-- **Label-latency sensitivity:** repeat label-dependent choices (R1 threshold, R4 calibrator) using only V2 days 127–147.
-- **Rolling-origin supplement for RQ2:** several V2-like → next-28-day transfers inside days 1–154, on the primary configuration only [REF-024, REF-025, REF-046].
+- **Label-latency sensitivity:** repeat label-dependent choices (R1 threshold, R4 calibrator) using only V2 days 127–147. Also report which configuration the H3 selection rule would choose on those days (descriptive; the H3 configuration is not changed; [DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
+- **Rolling-origin supplement for RQ2:** several V2-like → next-28-day transfers inside days 1–154, on the primary configuration only [REF-024, REF-025, REF-046]. The primary configuration is the H3 configuration's model family and weighting ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
 
 ## Models
 
@@ -493,8 +511,8 @@ No assumed value will be presented as an actual institutional banking cost.
 - H3 uses the day-level moving-block bootstrap specified above, because its outcome does not depend on labels.
 - **H1:** two-sided bootstrap p-value for δ_M = 0, plus the pre-specified practical interpretation of the 90 % CI against ±SESOI (DR-005).
 - **H2:** intersection-union TOST with SESOI = 0.02; p_H2 = the maximum of the four one-sided p-values [REF-061, REF-062].
-- **H3:** TOST with Δ = 0.004 (±20 % relative) and a day-level moving-block bootstrap [REF-061, REF-062, REF-064].
-- **Multiplicity:** **Holm** (sequentially rejective multiple-testing procedure) at family-wise α = 0.05 over the confirmatory family {H1, H2, H3} [REF-029]. If H3 is tested on more than one configuration (open item 7), each H3 test is an additional family member.
+- **H3:** TOST with Δ = 0.004 (±20 % relative) and a day-level moving-block bootstrap [REF-061, REF-062, REF-064], on the H3 configuration only ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
+- **Multiplicity:** **Holm** (sequentially rejective multiple-testing procedure) at family-wise α = 0.05 over the confirmatory family {H1, H2, H3} [REF-029]: three members, with H3 tested once, on the H3 configuration. The ordered p-values are compared with 0.05 / 3 ≈ 0.0167, 0.05 / 2 = 0.025 and 0.05. H3 results for the other three configurations are descriptive and outside the family (DR-010).
 - **Secondary:** exact McNemar tests on the four cell-level paired contrasts [REF-035, REF-028]. They assume independent frauds, and under intracluster correlation their size can greatly exceed the nominal level [REF-071]. They are descriptive only, **not** in the Holm family.
 - **Effect sizes** with CIs, in pp, frauds per 28 days and per day, Precision@K equivalent and normalised recall. Sensitivity: H1/H2 interpretations are also shown against SESOIs of 1, 3 and 5 pp (not confirmatory).
 - **Secondary outcomes** use estimation with confidence intervals, not additional hypothesis tests. Proportions use Wilson intervals [REF-034] where a bootstrap is not required.
@@ -570,7 +588,7 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | 4 | ~~Declare the cost-ratio grid for RQ3~~ | **Resolved (Issue #13), pending supervisor review:** primary cost model with review and missed-fraud costs only (C_FP as a sensitivity relabelling); ρ ∈ {2, 5, 10, 20, 50, 100, 200, 500, 1000} with exact curves over (1, 1000]; saturation and break-even ratios per capacity and configuration ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)) |
 | 5 | ~~Finalise the feature-category declaration~~ | **Resolved (Issue #23), pending supervisor review:** 49 categorical (organiser list), 382 numeric, 2 excluded (`TransactionID`, `TransactionDT`); canonical text labels with `"__MISSING__"` for categorical missing values; Train-fixed categories for LightGBM ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md)) |
 | 6 | ~~Declare the overflow rule for R0/R1/R2~~ | **Resolved (Issue #27), pending supervisor review:** report-only. R0, R1 and R2 are evaluated as uncapped threshold policies; all threshold-generated alerts are counted as review demand A_d and are never truncated to K. Daily overflow O_d = max(A_d − K_c, 0), unused capacity U_d = max(K_c − A_d, 0) and load ratio A_d / K_c are reported descriptively. Truncation is rejected because the top-K of threshold-flagged transactions reproduces R3 on every overflow day. Flagged frauds in excess demand are not counted as missed or as false negatives; downstream handling of overflow is outside the research scope ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)). |
-| 7 | **Declare the H3 configuration(s)** | Which model × weighting configuration(s) H3 is tested on. The multiplicity family is defined in DR-005 as Holm over {H1, H2, H3}, with each additional H3 configuration adding a family member. |
+| 7 | ~~Declare the H3 configuration(s)~~ | **Resolved (Issue #29), pending supervisor review:** H3 is confirmatory for a single *H3 configuration*, selected by a frozen development-only rule: highest pooled V2 Recall@2% under R3 (K = 56); tie-break V2 PR-AUC, then LGB-u, Cat-u, LGB-b, Cat-b. The selection is committed before the Test period is unsealed. Holm family stays {H1, H2, H3}, three members. The other three configurations' H3 results are descriptive only. This also defines the rolling-origin supplement's primary configuration ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)). |
 | 8 | **Resolve the University of Greenwich ethics route in writing** | Research Ethics Policy §1.3.4 (criminal subject matter) [REF-050, REF-051] |
 | 9 | ~~Verify the Kaggle / IEEE-CIS data-use terms~~ | **Resolved (Issue #25):** the official Competition Rules permit non-commercial use "for academic research and education" (Section 7A) and prohibit transmitting, publishing or redistributing the Competition Data to non-participants (Section 7B) [REF-049]. Stricter project policy: raw and row-level derived data stay local and are not shared ([`dataset.md`](dataset.md#data-use-terms)). The University ethics route (item 8) remains open. |
 | 10 | **Verify all currently unverified or partially verified references** | REF-016, REF-037, REF-041, REF-042, REF-045, REF-046, REF-047, REF-048, REF-055, REF-056–REF-060 |
@@ -600,6 +618,7 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-007 — RQ3 cost-ratio grid and break-even rule](decisions/DR-007-rq3-cost-ratio-and-break-even.md)
 - [DR-008 — Feature declaration and model-input policy](decisions/DR-008-feature-declaration-and-model-input-policy.md)
 - [DR-009 — Overflow handling for threshold-based policies R0, R1 and R2](decisions/DR-009-overflow-handling-for-threshold-policies.md)
+- [DR-010 — Confirmatory configuration for H3](decisions/DR-010-h3-confirmatory-configuration.md)
 
 ## References
 
@@ -624,6 +643,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | K_c | Fixed daily review budget for capacity scenario c (K when the scenario is clear) |
 | α | Significance level (family-wise 0.05) |
 | α_H2 | Significance level assigned to H2 by Holm's procedure |
+| arg max | The argument (here, configuration) at which a quantity is largest |
 | AI, AIR | Artificial intelligence; AI Reflection (University of Greenwich AI-use declaration) |
 | B | Number of bootstrap replicates (10,000) |
 | c | Review-capacity share (1 %, 2 %, 5 % or 10 %) |
@@ -643,12 +663,14 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | `float64` | 64-bit floating-point numeric type |
 | F_d | Number of frauds on day d |
 | f, w | Model family (LGB or Cat); weighting (u unweighted, b balanced) |
+| (f*, w*) | H3 configuration: highest pooled V2 Recall@2% under R3 (DR-010) |
+| LGB-u, Cat-u, LGB-b, Cat-b | The four model × weighting configurations (family-weighting) |
 | FN, FN_π | False negatives: frauds not reviewed (by policy π) |
 | H1, H2, H3 | Confirmatory hypotheses: model family; class weighting; alert-rate transfer fidelity. Subscript ₀ = null, ₁ = alternative |
 | J_π(ρ) | Scenario cost of policy π, in units of one review cost |
 | K | Fixed daily review budget (28 / 56 / 139 / 278 reviews per relative day) |
 | ℓ | Block length of a moving-block bootstrap, in days |
-| n_d | Number of transactions on day d with score ≥ τ₂ |
+| n_d | Number of transactions on day d with score ≥ τ₂ (for confirmatory H3, the H3 configuration's score and τ₂) |
 | N_d | Total number of transactions on day d (volume; not to be confused with N_π) |
 | n_neg, n_pos | Numbers of legitimate and fraud transactions in Train |
 | N_π | Number of reviews made by policy π |
@@ -660,9 +682,11 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | pp | Percentage points |
 | PR-AUC | Precision–Recall Area Under the Curve |
 | Precision@K | Share of reviewed transactions that are fraud |
-| r | Realised Test alert rate at τ₂, pooled over Test days |
+| r | Realised Test alert rate at τ₂, pooled over Test days; in confirmatory H3, r = r^f*,w* (H3 configuration only) |
+| r^f*,w* | Realised Test alert rate of the H3 configuration at its own τ₂ (DR-010) |
 | R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |
 | R^f,w | Pooled Test Recall@2% of family f with weighting w |
+| R^f,w_V2 | Pooled V2 Recall@2% under R3 of family f with weighting w (H3 configuration selection) |
 | Recall@K, Recall@2% | Share of all frauds reviewed under budget K (at 2 % capacity) |
 | REF-NNN | Reference identifier in `docs/references.md` |
 | ρ | Miss-to-review cost ratio, C_miss / C_R |

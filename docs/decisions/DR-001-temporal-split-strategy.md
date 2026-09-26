@@ -102,7 +102,7 @@ Reproducibility anchors, from the notebook (§4.3):
 - Development data total 511,998 rows and 17,889 frauds. Test has 78,542 rows (sealed).
 - Projected Test frauds, assuming V2 prevalence, are about 2,660. This is a projection, not an observation, and it drives the power discussion in the protocol.
 - Daily-level Test statistics rest on **n = 28 days** (n = number of Test relative days).
-- **RQ2 observes only one V2 → Test transfer event.** A small, development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only) is recommended to show whether transfer failure is systematic. It must not replace the single confirmatory Test evaluation.
+- **RQ2 observes only one V2 → Test transfer event.** A small, development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only) is recommended to show whether transfer failure is systematic. It must not replace the single confirmatory Test evaluation. *Current status: the primary configuration is defined by [DR-010](DR-010-h3-confirmatory-configuration.md) (Issue #29) as the H3 configuration's model family and weighting, selected on V2. That selection is an additional V2 role not listed in the partition table above.*
 - **Label-latency sensitivity.** Label-dependent policy choices (R1 threshold; R4 calibrator) are repeated using only V2 days 127–147. This costs no Test access.
 - If the protocol is ever changed to **refit** on Train+V1(+V2), this decision must be revisited and a gap reconsidered.
 
