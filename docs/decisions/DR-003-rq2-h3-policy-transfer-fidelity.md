@@ -2,10 +2,10 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze). Δ fixed at 0.004 (±20 % relative) by Issue #7, pending supervisor review. |
+| Status | Accepted (pre-freeze). Δ fixed at 0.004 (±20 % relative) by Issue #7, pending supervisor review. H3 configuration declared by [DR-010](DR-010-h3-confirmatory-configuration.md) (Issue #29). |
 | Date | 2026-09-23; Δ added 2026-09-24 (Issue #7) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
-| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (later: multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (later: H1/H2 bootstrap unit), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (later: overflow rule and workload definitions), [protocol](../protocol.md) |
+| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (later: multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (later: H1/H2 bootstrap unit), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (later: overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (later: H3 configuration), [protocol](../protocol.md) |
 
 ## Context
 
@@ -75,8 +75,8 @@ The old point-null H3 is **uninformative**. With about 78,500 Test transactions,
 - how H3 enters the multiplicity plan with hypotheses H1 (model family) and H2 (class weighting) [REF-029].
 
 *Current status of these two items:*
-- *The configuration(s) on which H3 is tested remain open (protocol open item 7).*
-- *The multiplicity plan was subsequently defined by [DR-005](DR-005-sesoi-and-h1-h2-inference.md): Holm's procedure at family-wise α = 0.05 over {H1, H2, H3}, with each additional H3 configuration adding a family member.*
+- *~~The configuration(s) on which H3 is tested remain open (protocol open item 7).~~ Resolved by [DR-010](DR-010-h3-confirmatory-configuration.md) (Issue #29): H3 is confirmatory for a single H3 configuration, the one with the highest pooled V2 Recall@2% under R3 (policy R3, daily top-K; K = 56), selected before the Test period is unsealed. The other three configurations' H3 results are descriptive only.*
+- *The multiplicity plan was subsequently defined by [DR-005](DR-005-sesoi-and-h1-h2-inference.md): Holm's procedure at family-wise α = 0.05 over {H1, H2, H3}, with each additional H3 configuration adding a family member. Under DR-010 H3 is tested once, so the family has three members.*
 
 ### Daily-budget fidelity — a separate operational outcome (not a confirmatory hypothesis)
 

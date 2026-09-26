@@ -99,7 +99,7 @@ No calendar dates are inferred.
 |---|---|---|
 | Train | 1–105 | Model fitting (no refit) |
 | V1 (Validation 1) | 106–126 | Hyper-parameter tuning and early stopping |
-| V2 (Validation 2) | 127–154 | Calibration (for policy R4), threshold selection, daily review budget K |
+| V2 (Validation 2) | 127–154 | Calibration (for policy R4), threshold selection, daily review budget K, selection of the H3 configuration ([DR-010](docs/decisions/DR-010-h3-confirmatory-configuration.md)) |
 | Test | 155–182 | **Sealed.** One confirmatory evaluation after protocol freeze |
 
 ---

@@ -40,7 +40,7 @@ Symbols used below (full definitions and equations are in the protocol):
 
 - `δ_M` = model-family main effect: the CatBoost-minus-LightGBM difference in Recall@2%, averaged over the unweighted and balanced-weighting conditions;
 - `δ_W,f` = weighting effect in model family f: balanced-minus-unweighted Recall@2%;
-- `r` = realised Test alert rate of the validation-selected 2 % threshold;
+- `r` = realised Test alert rate of the validation-selected 2 % threshold. For confirmatory H3 this is the threshold of one rule-selected H3 configuration, chosen before Test access ([DR-010](docs/decisions/DR-010-h3-confirmatory-configuration.md));
 - `Δ` = H3 equivalence tolerance on r (0.004, i.e. ±20 % of the 2 % target).
 
 ### H1 — Model-family effect
@@ -61,7 +61,7 @@ Symbols used below (full definitions and equations are in the protocol):
 
 **H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ, where Δ = 0.004, i.e. ±20% of the target).
 
-H1 is a two-sided difference test. H2 and H3 are equivalence hypotheses tested with Two One-Sided Tests (TOST). The Smallest Effect Size Of Interest (SESOI) for H1 and H2 is 2 percentage points of Recall@2% ([DR-005](docs/decisions/DR-005-sesoi-and-h1-h2-inference.md)); Δ is justified in [DR-003](docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). Uncertainty for H1/H2 uses the two-way bootstrap of [DR-006](docs/decisions/DR-006-bootstrap-inference-strategy.md).
+H1 is a two-sided difference test. H2 and H3 are equivalence hypotheses tested with Two One-Sided Tests (TOST). The Smallest Effect Size Of Interest (SESOI) for H1 and H2 is 2 percentage points of Recall@2% ([DR-005](docs/decisions/DR-005-sesoi-and-h1-h2-inference.md)); Δ is justified in [DR-003](docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). H3 is evaluated confirmatorily on one model × weighting configuration, selected on Validation 2 by a frozen rule before Test access ([DR-010](docs/decisions/DR-010-h3-confirmatory-configuration.md)); the other three are reported descriptively. Uncertainty for H1/H2 uses the two-way bootstrap of [DR-006](docs/decisions/DR-006-bootstrap-inference-strategy.md).
 
 RQ3 is primarily estimation and sensitivity analysis rather than a separate significance-testing exercise. Its cost-ratio grid and break-even rule are defined in [DR-007](docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md).
 
@@ -153,7 +153,7 @@ The next stage is to resolve the ethics route, complete the evidence matrix, and
 | IEEE-CIS | IEEE Computational Intelligence Society |
 | ML | Machine learning |
 | Precision@Capacity | Share of reviewed transactions that are fraud at a fixed review capacity |
-| r | Realised Test alert rate of the validation-selected 2 % threshold |
+| r | Realised Test alert rate of the validation-selected 2 % threshold (confirmatory H3: the rule-selected H3 configuration only) |
 | Recall@2%, Recall@Capacity | Share of frauds reviewed at 2 % (a fixed) review capacity |
 | RQ1–RQ3 | Research questions 1–3 |
 | SESOI | Smallest Effect Size Of Interest |

@@ -117,7 +117,8 @@ $$
 &= (1.6\%,\ 2.4\%)
 \end{aligned}
 $$
- It was fixed before any Test access. No literature standard exists for this tolerance, so the magnitude is a pre-specified researcher judgement, anchored in development-period workload variation ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with TOST, using a day-level moving-block bootstrap confidence interval [REF-061, REF-062, REF-064]. Fidelity to the fixed daily budget (daily threshold-generated alert demand vs K, the fixed daily review budget; overflow and unused capacity) is a separate descriptive operational outcome, not a hypothesis. Threshold alerts are never truncated to K, and alerts in excess of K are not counted as missed frauds ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)).
+
+It was fixed before any Test access. No literature standard exists for this tolerance, so the magnitude is a pre-specified researcher judgement, anchored in development-period workload variation ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)). H3 is tested with TOST, using a day-level moving-block bootstrap confidence interval [REF-061, REF-062, REF-064]. It is confirmatory for one model × weighting configuration only: the one with the highest Recall@2% on V2 under the daily top-K policy, selected by a frozen rule before any Test access. H3 results for the other three configurations are descriptive ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)). Fidelity to the fixed daily budget (daily threshold-generated alert demand vs K, the fixed daily review budget; overflow and unused capacity) is a separate descriptive operational outcome, not a hypothesis. Threshold alerts are never truncated to K, and alerts in excess of K are not counted as missed frauds ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)).
 
 RQ3 will primarily be evaluated through cost-ratio sensitivity analysis and break-even analysis across the capacity grid rather than a separate omnibus hypothesis test.
 
@@ -283,7 +284,7 @@ The final statistical plan will prioritise:
 - joint paired bootstrap confidence intervals over all four model × weighting configurations. The primary method is a two-way (pigeonhole) bootstrap over relative days × heuristic pseudo-entities, because both day-level and cross-day entity dependence are present. Sensitivity analyses use an Owen-corrected variance and a key-free day-block bootstrap ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)) [REF-036, REF-037, REF-068, REF-070];
 - exact McNemar testing as a secondary, descriptive check for cell-level paired fraud-capture differences. It is not confirmatory, because clustering can inflate its size [REF-035, REF-071];
 - effect sizes, with practical interpretation against the SESOI of 2 percentage points [REF-066];
-- Holm (sequentially rejective multiple-testing) correction over the confirmatory family {H1, H2, H3} [REF-029];
+- Holm (sequentially rejective multiple-testing) correction over the confirmatory family {H1, H2, H3}, three members, with H3 tested once on the rule-selected configuration [REF-029]; [DR-010](decisions/DR-010-h3-confirmatory-configuration.md);
 - equivalence testing (TOST) for H2 (intersection-union, SESOI = 2 percentage points, pp) and H3 (Δ = 0.004, ±20 % relative) [REF-030, REF-061, REF-062].
 
 Statistical significance will not be treated as equivalent to practical importance.
@@ -407,6 +408,7 @@ The value lies in the controlled combination:
 - [DR-007 — RQ3 cost-ratio grid and break-even rule](decisions/DR-007-rq3-cost-ratio-and-break-even.md)
 - [DR-008 — Feature declaration and model-input policy](decisions/DR-008-feature-declaration-and-model-input-policy.md)
 - [DR-009 — Overflow handling for threshold-based policies R0, R1 and R2](decisions/DR-009-overflow-handling-for-threshold-policies.md)
+- [DR-010 — Confirmatory configuration for H3](decisions/DR-010-h3-confirmatory-configuration.md)
 
 ## References
 
