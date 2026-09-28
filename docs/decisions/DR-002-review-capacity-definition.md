@@ -85,7 +85,7 @@ The research studies fraud detection when only a limited number of transactions 
 - **[D]** At 2 %, K = 56 is **below the daily fraud count on every V2 day** (100 % of days). The pooled oracle recall ceiling at 2 % is **≈ 0.595**, while oracle precision can reach 1.0.
 - **[D]** At 5 % and 10 %, K exceeds the daily fraud count on every V2 day. Recall can then reach 1.0, but the oracle precision ceiling falls to ≈ 0.68 and ≈ 0.34.
 - **[D]** Random review has precision equal to prevalence (≈ 0.034), so maximum lift over random (precision ÷ prevalence) is ≈ 29.5 in the binding regime.
-- **[L]** Evaluating fraud detection given a maximum number of investigations, or a fixed number of alerts, is established practice [REF-006, REF-004, REF-005, REF-046]. Top-quantile accuracy has a formal basis [REF-033], and top-k evaluation under resource limits is used outside fraud as well [REF-032]. **This study therefore claims no novelty for capacity-constrained evaluation itself.**
+- **[L]** Evaluating fraud detection given a maximum number of investigations, or a fixed number of alerts, is established practice [REF-006, REF-004, REF-005, REF-046]. Temporal evaluation of capacity-constrained top-K review policies on IEEE-CIS also exists [REF-078]. Top-quantile accuracy has a formal basis [REF-033], and top-k evaluation under resource limits is used outside fraud as well [REF-032]. **This study therefore claims no novelty for capacity-constrained evaluation itself.**
 
 ## Alternatives considered
 
@@ -119,7 +119,7 @@ The research studies fraud detection when only a limited number of transactions 
 
 ## References
 
-REF-004, REF-005, REF-006, REF-008, REF-032, REF-033, REF-039, REF-040, REF-046 — see [`../references.md`](../references.md).
+REF-004, REF-005, REF-006, REF-008, REF-032, REF-033, REF-039, REF-040, REF-046, REF-078 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 

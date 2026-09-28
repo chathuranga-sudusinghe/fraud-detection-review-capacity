@@ -424,6 +424,23 @@ Checked relevance (publisher abstract; full text not read):
 
 It is related-work context only. No result, dataset or detail beyond the abstract is attributed to it.
 
+### 4.6 Closest Comparators and the Remaining Gap (Issue #35)
+
+Issue #35 compared the study with the closest work found, to answer the supervisor's request that novelty be shown against existing studies. Full entries and verification notes are in [`references.md`](references.md); the table below states only what the checked text supports. Symbols used: K (the fixed daily review budget), R2 (the static capacity-rate threshold chosen on Validation 2, V2), R3 (daily top-K review), R4 (the calibrated cost-aware capped policy), H3 (the alert-rate transfer hypothesis), ρ_BE (break-even cost ratio) and ρ_sat (saturation cost ratio).
+
+| Source | What it already establishes | Overlap with this study | What it does not establish | Checked |
+|---|---|---|---|---|
+| **Zhang et al. (2026)** [REF-078], closest comparator | On IEEE-CIS, separate model-fitting, validation, policy-selection and future periods; capacity-constrained top-K review; transfer of a historical review *rate*; a Platt-calibrated cost threshold compared with full-capacity review; tight capacity (3 %) compresses the policies, slack capacity (10 %) separates them; cost-coefficient sweeps; regret against a retrospective oracle | Four-period temporal design; top-K and full-capacity review (R3); a calibrated cost threshold of the same form as R4's; binding-versus-slack comparison (RQ3) | No target-rate transfer of a static score threshold; no alert-rate fidelity or equivalence test; capacity scales with period size rather than a fixed daily K; sources of workload displacement explicitly left unseparated; descriptive uncertainty (training seeds) | Full text (accepted author version) |
+| **Elbadraoui et al. (2026)** [REF-080] | A validation-selected cost-optimal threshold applied unchanged to a chronologically later test period; a cost-ratio sweep | Threshold transfer from validation to a later period; cost-ratio sensitivity (RQ3) | Any review-capacity constraint; full-capacity comparison; target alert rate or alert-rate fidelity; equivalence testing; break-even ratios | Full text |
+| **Mazumder (2026)** [REF-079], bounded comparator | An F2-maximising threshold selected on validation under an alert-rate ceiling and applied unchanged to test | Capacity-constrained threshold selection before transfer | The later alert rate is not reported or tested; no equivalence test or decomposition; synthetic anti-money-laundering (AML) data; unreconciled split description and several internal inconsistencies, so it is cited only as an example | Full text |
+| **Shen and Kurshan (2020)** [REF-081] | Static alert thresholds do not account for alert-processing capacity (dropped alerts); adaptive threshold selection under capacity | Motivation for measuring threshold-generated demand against capacity | Content known from a secondary abstract only | Abstract (secondary source) |
+| **Vanderschueren et al. (2024)** [REF-082] | Limited, stochastic investigation capacity built into the learning objective (learning to rank) | Capacity-aware review decisions | A method proposal, not an evaluation of static thresholds over time | Abstract (arXiv) |
+| **Alves et al. (2024)** [REF-083] | Cost-sensitive allocation of fraud cases between a model and several analysts under individual workload limits | Human capacity and cost in fraud review | Uses synthetic analysts and models reviewer error; this study assumes one pooled budget and perfect verification | Abstract (OpenReview) |
+| **Capacity-constrained evaluation** [REF-006, REF-004, REF-046, REF-084] | Evaluation of the highest-ranked alerts at an investigator-limited depth; daily precision top-k; daily investigation budgets | Daily top-K review (R3) and capacity-based metrics | Transfer fidelity of a threshold's alert rate | Register entries |
+| **Chronological IEEE-CIS evaluation** [REF-041, REF-058] | Chronological evaluation on this dataset; validation-selected cost-sensitive thresholding (REF-058) | Temporal design on IEEE-CIS | Review capacity; alert-rate fidelity | Publisher abstracts |
+
+**Consequences for the research gap.** In the studies reviewed, capacity-constrained review, chronological evaluation, validation-selected and cost-sensitive thresholds, calibrated cost-threshold policies, binding-versus-slack capacity effects and cost-ratio sweeps are all established, so none is claimed as novel. The remaining gap is narrower (Section 8): whether a *static* validation-selected score threshold preserves its intended alert rate on later data, and how its demand compares with a *fixed daily* review budget. RQ3 is positioned as a replication-plus-extension of Zhang et al. (2026).
+
 ---
 
 ## 5. Search Strategy
@@ -515,32 +532,22 @@ A literature evidence matrix should be created later so that studies can be comp
 
 ---
 
-## 8. Preliminary Research Gap
+## 8. Research Gap
 
-A preliminary gap supported by the initial literature review is:
+This section replaces the preliminary gap statement drafted before the closest-work comparison (Issue #35, Section 4.6).
 
-> Fraud-detection studies frequently compare predictive models using global discrimination or threshold-based classification metrics, while operational fraud detection also requires converting model scores into review decisions under class imbalance, asymmetric error costs, and limited investigation resources. Although class weighting, threshold optimisation, calibration, and cost-sensitive approaches are individually well represented in the literature, there remains value in a controlled empirical study that jointly examines model family and decision-threshold strategy under explicit human-review capacity constraints, while preserving temporal evaluation, untouched test data, statistical uncertainty, and false-negative analysis.
+**What is not claimed as novel.** In the studies reviewed, the following are established: fraud-detection algorithms; chronological and temporal evaluation, including on IEEE-CIS [REF-041, REF-058]; capacity-constrained fraud evaluation and top-K review [REF-006, REF-004, REF-046, REF-084]; validation-selected thresholds applied unchanged to later data [REF-058, REF-079, REF-080]; temporal transfer of review policies under capacity [REF-078]; cost-sensitive thresholding and calibrated cost-threshold policies [REF-008, REF-078]; binding-versus-slack capacity effects [REF-078]; cost-ratio sweeps [REF-078, REF-080]; and capacity-aware threshold selection or allocation [REF-081, REF-082, REF-083]. The study proposes no new algorithm, decision method, cost framework or temporal protocol.
 
-The MSc project will therefore focus on:
+**The remaining gap.** Zhang et al. (2026) transfer a historical review *rate*, which preserves the review fraction by construction, and compare workload rules against a retrospective oracle. Mazumder (2026) constrains the alert rate only when the threshold is selected. Elbadraoui et al. (2026) transfer a cost-optimal threshold without any capacity constraint. In the studies reviewed, the alert rate produced by a *static* validation-selected score threshold is not formally tested against its intended target on later data, and workload deviations from a fixed daily review budget are not separated into alert-rate drift and volume variation; Zhang et al. note that attributing workload displacement would require further controlled comparison. The remaining gap is therefore narrower than the one drafted earlier.
 
-```text
-model choice
-        ×
-decision-threshold strategy
-        ×
-class-imbalance treatment
-        ×
-human-review capacity
-        ↓
-fraud capture
-false-negative risk
-precision
-review workload
-cost-sensitive outcome
-statistical uncertainty
-```
+**Contribution.** The contribution is a pre-specified confirmatory empirical evaluation of whether a static, validation-selected score threshold preserves its intended alert rate on later IEEE-CIS data. It has two distinct parts:
 
-The final research-gap statement must be revised after the complete literature search. It must not claim novelty beyond what the reviewed evidence supports.
+1. **H3 (confirmatory):** a formal equivalence test of the realised alert rate of the Validation-2-selected 2 % threshold against its 2 % target, within a pre-specified margin of ±20 %.
+2. **Daily-budget fidelity (descriptive, not a hypothesis):** threshold-generated demand compared with a fixed daily review budget K (overflow, unused capacity, load), with the deviation separated into an alert-rate component and a volume component.
+
+This study extends prior work in two further, secondary ways. RQ1 (H1, H2) provides confirmatory, dependence-aware comparisons of LightGBM and CatBoost with and without class weighting at fixed daily capacity; these are empirical comparisons, not novelty claims. RQ3 replicates and extends Zhang et al.'s binding-versus-slack finding under a fixed daily cap, summarised as break-even (ρ_BE) and saturation (ρ_sat) cost ratios; this is an alternative operationalisation, not the main gap.
+
+**Limits.** The conclusions are limited to one benchmark, one validation-to-test transfer and simulated capacity and cost assumptions. The comparison rests on the studies reviewed; a University-database search (for example Scopus or Web of Science) should confirm it before the dissertation is written.
 
 ---
 
@@ -551,7 +558,7 @@ The final research-gap statement must be revised after the complete literature s
 3. Identify foundational and recent papers for each core theme.
 4. Verify full bibliographic details and DOI (Digital Object Identifier) for every retained source.
 5. Separate background sources from directly comparable empirical studies.
-6. Refine the research gap after the evidence matrix is complete.
+6. ~~Refine the research gap after the evidence matrix is complete.~~ Refined by Issue #35 (Sections 4.6 and 8); re-check it after the University-database search.
 7. Only then convert this working document into dissertation-style critical synthesis.
 
 ## Status
@@ -566,6 +573,7 @@ This file defines the review scope and initial evidence base. It is not yet the 
 |---|---|
 | [I] | Evidence tag: inference or recommendation (not a statement from the source) |
 | ACM, IEEE | Association for Computing Machinery; Institute of Electrical and Electronics Engineers (publishers / databases) |
+| AML | Anti-money laundering |
 | BAF Base | Bank Account Fraud dataset suite, base variant |
 | C_FP | Assumed relative cost of unnecessary intervention (a false positive), in addition to C_R |
 | C_miss | Assumed relative cost of a missed fraud (C_FN in some sources) |
@@ -573,16 +581,22 @@ This file defines the review scope and initial evidence base. It is not yet the 
 | DOI | Digital Object Identifier |
 | ECE | Expected Calibration Error |
 | F1 | Harmonic mean of precision and recall |
+| F2 | Weighted harmonic mean of precision and recall that weights recall twice as heavily |
 | FN, FP | False negatives (frauds not reviewed); false positives (legitimate transactions reviewed) |
+| H1, H2, H3 | Confirmatory hypotheses: model family; class weighting; alert-rate transfer fidelity |
 | HITL | Human-in-the-Loop |
 | IEEE-CIS | IEEE Computational Intelligence Society (dataset organiser) |
+| K | Fixed daily review budget (reviews per relative day) |
 | ML | Machine learning |
 | N_rev | Number of reviewed transactions |
 | PR-AUC | Precision–Recall Area Under the Curve |
+| R2, R3, R4 | Decision policies: capacity-rate threshold chosen on V2; daily top-K review; calibrated cost-aware capped policy |
 | ROC-AUC | Receiver Operating Characteristic Area Under the Curve |
 | REF-NNN | Reference identifier in `references.md` |
 | RQ1–RQ3 | Research questions 1–3 |
+| ρ_BE, ρ_sat | Break-even and saturation miss-to-review cost ratios (RQ3) |
 | SHAP | SHapley Additive exPlanations (a feature-attribution method) |
 | SMOTE | Synthetic Minority Over-sampling Technique |
+| V2 | Validation 2 (relative days 127–154) |
 | `scale_pos_weight` | Library parameter that up-weights the positive (fraud) class |
 | XGBoost | Extreme Gradient Boosting library |

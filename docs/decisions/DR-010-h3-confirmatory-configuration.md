@@ -147,7 +147,7 @@ The existing non-confirmatory H3 sensitivity analyses (ℓ = 1 and 7 days; toler
 
 ## Rationale
 
-A single, rule-selected configuration gives H3 a clear meaning (does the V2-selected threshold of a pre-specified, validation-selected deployment proxy survive temporal shift?), keeps the pre-registered family of three confirmatory tests and avoids a more stringent Holm procedure, and is fixed by a rule that uses no Test information and does not target the H3 outcome. Reporting the other three configurations descriptively keeps the configuration dependence visible without spending α on it.
+A single, rule-selected configuration gives H3 a clear meaning (does the V2-selected threshold of a pre-specified, validation-selected deployment proxy survive temporal shift?), keeps the pre-specified family of three confirmatory tests and avoids a more stringent Holm procedure, and is fixed by a rule that uses no Test information and does not target the H3 outcome. Reporting the other three configurations descriptively keeps the configuration dependence visible without spending α on it.
 
 ## Consequences
 

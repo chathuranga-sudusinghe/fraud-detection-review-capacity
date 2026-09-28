@@ -43,6 +43,7 @@ Revised per [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md). The p
 - Its **main output is the break-even miss-to-review cost ratio ρ_BE at each capacity and for each model configuration**. ρ_BE is the largest assumed ratio of missed-fraud cost to review cost at which the cost-aware policy is cheaper than filling capacity. It is reported with the saturation ratio ρ_sat (the ratio above which the cost-aware policy fills the budget every day) and exact cost-difference curves [REF-039, REF-040, REF-072]. Definitions, grid and outputs are fixed in [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md).
 - At 2 % the budget is below the daily fraud count on every validation day. The cost-aware policy is expected to coincide with daily top-K review (reviewing the K highest-scoring transactions each day, K = fixed daily review budget) above a low saturation ratio, so RQ3 at 2 % is informative only at low ratios. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md), [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)).
 - RQ3 is analysed by estimation and sensitivity analysis, not by a separate significance test.
+- **Positioning (Issue #35).** Zhang et al. [REF-078] already show, on IEEE-CIS, that a calibrated cost-threshold policy and full-capacity review are largely compressed toward the same capacity ceiling when capacity is tight and diverge when capacity is slack. RQ3 replicates and extends this pattern under this study's fixed daily capacity design, summarised as break-even and saturation ratios. It is not the study's main research gap.
 
 ## Confirmatory Hypotheses
 
@@ -295,7 +296,7 @@ Defined in [DR-002](decisions/DR-002-review-capacity-definition.md).
   where `K` = fixed daily review budget and `c` = review-capacity share. This gives K = 28 / **56** / 139 / 278 reviews per relative day for c = 1 / 2 / 5 / 10 %.
 - **Capacity ÷ prevalence** is reported with every result. At 2 % it is 0.59 (binding regime); at 5 % and 10 % it is above 1 (slack regime).
 
-Prior art for capacity-constrained fraud evaluation exists [REF-006, REF-004, REF-005, REF-046]. No novelty is claimed for it.
+Prior art for capacity-constrained fraud evaluation exists [REF-006, REF-004, REF-005, REF-046, REF-084], including capacity-aware threshold selection and allocation [REF-081, REF-082, REF-083] and temporal evaluation of capacity-constrained top-K review policies on IEEE-CIS [REF-078]. No novelty is claimed for it.
 
 **Primary metric:** Recall@2% under R3 (daily top-K, K = 56), pooled over the Test days. Reported with:
 - the **oracle recall ceiling** (≈ 0.6 at 2 % in V2);
@@ -624,7 +625,7 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 
 Full entries and verification status are in [`docs/references.md`](references.md).
 
-REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037, REF-039, REF-040, REF-043, REF-044, REF-046, REF-047, REF-048\*, REF-049, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071, REF-072, REF-073, REF-074, REF-075, REF-076, REF-077.
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037, REF-039, REF-040, REF-043, REF-044, REF-046, REF-047, REF-048\*, REF-049, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071, REF-072, REF-073, REF-074, REF-075, REF-076, REF-077, REF-078, REF-081\*, REF-082, REF-083, REF-084.
 
 \* Partially verified.
 
