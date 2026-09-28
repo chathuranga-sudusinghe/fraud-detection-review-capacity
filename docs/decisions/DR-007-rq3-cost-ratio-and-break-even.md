@@ -71,7 +71,13 @@ The working protocol left four things open (open item 4):
 
 ### Break-even analysis in fraud detection
 
-- **[L]** No verified source prescribes a cost-ratio grid or a break-even rule for capacity-constrained fraud review. The fraud literature supplies the cost-matrix structure [REF-006, REF-073] and the capacity framing [REF-004, REF-005, REF-006]. The grid and break-even rule below apply the general methods above and are **researcher decisions [I]**.
+- **[L]** No verified source prescribes this project's specific cost-ratio grid or break-even rule for capacity-constrained fraud review. The fraud literature supplies the cost-matrix structure [REF-006, REF-073] and the capacity framing [REF-004, REF-005, REF-006]. The grid and break-even rule below apply the general methods above and are **researcher decisions [I]**.
+
+*Current-status note (Issue #35):*
+- *[L] Zhang et al. [REF-078] already show, on IEEE-CIS with a separate policy-selection period, the binding-versus-slack pattern this record anticipates: at a tight capacity ceiling their calibrated cost-threshold queue was clipped to the ceiling in almost every run, while at a slack ceiling full-capacity review cost markedly more than the calibrated threshold.*
+- *Their calibrated rule overlaps strongly with R4: a Platt-calibrated probability compared with a cost-derived threshold of the same form as p\* = (C_R + C_FP) / (C_miss + C_FP), capped at the review ceiling. Their ceiling applies per evaluation period rather than per day, and they report regret against a retrospective oracle rather than break-even ratios.*
+- *ρ_BE and ρ_sat are therefore framed as an extension and alternative operationalisation of that pattern under a fixed daily cap, not as a primary novelty claim.*
+- *The decisions in this record are unchanged.*
 - **[L]** The protocol cites REF-007 for amount-dependent costs. Its author copy could not be read in this pass (access restricted), so the amount-dependent cost structure is supported here by REF-073, which was read in full (arXiv version).
 
 ## Derivation and validity of the current equations
@@ -626,7 +632,7 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 - Protocol open item 4 is resolved, pending supervisor review.
 - R4's threshold is written as p* = 1/ρ, with review at p̂ ≥ p* and ranking by raw score.
 - The Test evaluation must save, for every configuration and Test transaction: raw score, Platt p̂, isotonic p̂ and relative day, plus labels and amounts once the Test is unsealed. These are needed to compute exact ΔJ curves.
-- ρ_sat is computed on V2 **before** the Test evaluation, as a pre-registered expectation of where R4 and R3 will merge.
+- ρ_sat is computed on V2 **before** the Test evaluation, as a pre-specified expectation of where R4 and R3 will merge.
 - H1, H2, H3, the SESOI, the H3 equivalence tolerance Δ, the capacity grid, the calibration plan and DR-006 are unchanged.
 
 ## Threats and limitations
@@ -650,7 +656,7 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 
 ## References
 
-REF-004, REF-005, REF-006, REF-007, REF-008, REF-038, REF-039, REF-040, REF-048\*, REF-072, REF-073, REF-074, REF-075 — see [`../references.md`](../references.md).
+REF-004, REF-005, REF-006, REF-007, REF-008, REF-038, REF-039, REF-040, REF-048\*, REF-072, REF-073, REF-074, REF-075, REF-078 — see [`../references.md`](../references.md).
 
 \* Partially verified.
 
