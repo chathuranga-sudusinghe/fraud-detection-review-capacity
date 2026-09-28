@@ -400,7 +400,7 @@ The conclusions are limited to one benchmark, one validation-to-test transfer an
 
 ## Next Research Tasks
 
-1. Resolve and document the University ethics route.
+1. ~~Resolve and document the University ethics route.~~ Documented (Issue #31): topic approval was received; a separate explicit ethics-route determination was requested but not provided. The project proceeds under the available University guidance and its data-governance controls, without claiming formal ethics approval or exemption ([`protocol.md`](protocol.md#ethics)).
 2. Complete the literature evidence matrix and verify the outstanding references in [`references.md`](references.md).
 3. ~~Verify the raw dataset profile and candidate temporal split.~~ Done: see the feasibility audit notebook and [DR-001](decisions/DR-001-temporal-split-strategy.md).
 4. Resolve the open items listed in [`protocol.md`](protocol.md#open-items-before-protocol-freeze), then freeze `docs/protocol.md`.
