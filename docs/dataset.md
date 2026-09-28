@@ -155,6 +155,8 @@ However, the final ethics position must follow current University of Greenwich g
 - human oversight;
 - responsible interpretation of model outputs.
 
+**Current status (Issue #31).** Topic approval was received; a separate explicit ethics-route determination was requested but not provided. The project proceeds under the available University of Greenwich guidance and the data-governance controls above, without claiming formal ethics approval, exemption or an ethics identifier (see [`protocol.md`](protocol.md#ethics)).
+
 ## Citation / Attribution
 
 The dissertation and repository should cite the official IEEE-CIS Fraud Detection competition source and any associated academic or organiser documentation used to describe the dataset.

@@ -138,7 +138,7 @@ Planned next:
 
 **Research direction revised and protocol established.**
 
-The next stage is to resolve the ethics route, complete the evidence matrix, and validate the dataset/split protocol before any confirmatory experiments are run.
+The ethics and governance status is documented in the [protocol](docs/protocol.md#ethics): topic approval was received, and no separate explicit ethics-route determination was provided despite the request; no formal ethics approval or exemption is claimed. The next stage is to complete the evidence matrix and validate the dataset/split protocol before any confirmatory experiments are run.
 
 ## Symbols and notation
 
