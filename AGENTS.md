@@ -265,6 +265,80 @@ first use with short meaning
 
 ---
 
+## Research experiment ordering
+
+Research work on this project follows the order below. A later step does not start until the earlier steps it depends on are complete and reviewed. The methodological content of each step is defined in [`docs/protocol.md`](docs/protocol.md) and the [Decision Records](docs/decisions/README.md); this section fixes only the order.
+
+1. Inspect and understand the dataset only within the access allowed by the current protocol (see [Research integrity rules](#research-integrity-rules)).
+2. Define or confirm the model-input and feature policy.
+3. Review leakage, temporal ordering and prediction-time availability.
+4. Confirm the roles of Train, V1, V2 and Test (see [Dataset](#dataset)).
+5. Define and freeze the relevant:
+   - model rules;
+   - class-weighting rules;
+   - calibration rules;
+   - decision policies;
+   - review-capacity rules;
+   - statistical and inference rules.
+6. Implement and test reusable pipelines.
+7. Review the implementation against `docs/protocol.md` and the applicable Decision Records.
+8. Obtain explicit human approval for the intended experimental run.
+9. The project owner manually runs the consequential Train / V1 / V2 experiments (see [Experiment execution responsibility](#experiment-execution-responsibility)).
+10. Review the resulting evidence before accepting or changing any research decision.
+11. Freeze model-selection and policy-selection decisions before confirmatory Test access.
+12. Perform the final Test evaluation only when the protocol explicitly permits it and all required pre-freeze conditions are satisfied.
+
+In addition:
+
+- **The final Test period remains sealed** until the frozen protocol permits the confirmatory evaluation. The sealed-Test rules in [Research integrity rules](#research-integrity-rules) apply at every step.
+- **Provisional or development outputs are not final confirmatory evidence** unless the methodology explicitly defines them that way.
+- **Coding or running something does not freeze it.** An implementation, model configuration, threshold, capacity rule or analytical choice is frozen only through the protocol and Decision Record process, not because it has been coded or executed.
+
+---
+
+## Experiment execution responsibility
+
+These rules apply to every AI assistant (ChatGPT, Claude, Codex and any future assistant). They govern who runs what; they do **not** override `docs/protocol.md` or any Decision Record.
+
+**AI assistants may support:**
+
+- creating and editing source code;
+- creating and updating documentation;
+- creating and updating tests;
+- implementing experiment runners and reproducible pipelines;
+- repository inspection;
+- static validation;
+- lightweight engineering tests (defined below);
+- preparing exact, reproducible terminal commands.
+
+**AI assistants must not independently execute or authorise:**
+
+- model-training runs;
+- hyperparameter-search runs;
+- full V1 or V2 experimental runs;
+- confirmatory Test-period evaluation;
+- long-running data-analysis jobs;
+- computationally expensive research experiments;
+- any run that may produce evidence used for model selection, hypothesis testing or final research conclusions.
+
+These consequential experiment commands are normally **run manually by the project owner** (the student), after the methodology, the implementation and the experiment protocol have been reviewed and approved.
+
+An AI assistant may prepare the exact terminal command and explain what it will do, but **must stop before running it** unless the project owner explicitly authorises that **specific run**.
+
+Approval to implement code, modify documentation, fix bugs or review methodology does **not** imply approval to execute research experiments.
+
+**Lightweight engineering validation** is allowed when it does not constitute a research experiment, for example:
+
+- linting;
+- type checking;
+- unit tests;
+- import checks;
+- small deterministic tests on synthetic or non-research inputs.
+
+Such checks must not train research models, inspect sealed Test labels or generate confirmatory research evidence.
+
+---
+
 ## Git rules
 
 - **Do not commit directly to `main`.**
@@ -277,7 +351,7 @@ first use with short meaning
 
 ## AI-assisted research workflow
 
-This project uses **ChatGPT** and **Claude** as AI assistants. They support:
+This project uses AI assistants such as **ChatGPT**, **Claude** and **Codex**; these rules apply equally to any future assistant. They support:
 
 - research planning;
 - methodological review;
@@ -296,15 +370,61 @@ This project uses **ChatGPT** and **Claude** as AI assistants. They support:
 3. corrected where necessary;
 4. disclosed according to University of Greenwich requirements (the AI Reflection, AIR; see `REF-053` in [`docs/references.md`](docs/references.md)).
 
+**The student remains responsible** for the final research design, implementation, analysis, interpretation and submission. What AI assistants must not do, and who holds approval authority, is set out in [Human review and approval authority](#human-review-and-approval-authority).
+
+---
+
+## Human review and approval authority
+
+AI assistants are **supporting tools only**. The project owner (the student) holds final authority; human review remains the final control point.
+
+**AI assistants do not have final authority over:**
+
+- research questions;
+- hypotheses;
+- methodology;
+- analytical design;
+- feature and model-input decisions;
+- model choices;
+- class-weighting decisions;
+- calibration decisions;
+- review-capacity definitions;
+- decision-policy definitions;
+- evaluation protocols;
+- metrics;
+- statistical procedures;
+- SESOI values;
+- equivalence margins;
+- bootstrap procedures;
+- interpretation of experimental results;
+- Decision Record changes;
+- acceptance of source-code changes;
+- experiment execution;
+- final Test unsealing and evaluation;
+- commits, pushes, pull requests, merges and releases.
+
+**Typical roles.** These describe usual support, not authority:
+
+- **ChatGPT** may support planning, research synthesis, literature review, methodology review, explanation, drafting, and code and documentation review.
+- **Claude** and **Codex** may support implementation, documentation, tests, repository inspection and the preparation of reproducible commands.
+- Any future assistant follows the same rules.
+
+**No AI assistant may treat its own output, proposal, implementation or analysis as approved because it created it.** A proposal becomes a project decision only after explicit human review and approval.
+
 **AI assistants must not:**
 
 - fabricate references;
 - fabricate results;
-- inspect sealed Test labels before this is permitted;
+- create new research decisions without approval;
+- reinterpret unresolved decisions as settled;
+- silently expand the project scope;
 - change frozen methodology without a GitHub Issue and a Decision Record;
-- commit or push unless explicitly instructed.
+- inspect sealed Test labels before this is permitted;
+- execute consequential experiments without explicit, run-specific approval (see [Experiment execution responsibility](#experiment-execution-responsibility));
+- commit, push, merge or otherwise finalise repository changes without explicit authorisation (see [Git rules](#git-rules));
+- treat AI-generated text, analysis or results as authoritative research evidence without human review.
 
-**The student remains responsible** for the final research design, implementation, analysis, interpretation and submission.
+**When approval is unclear, stop and ask the project owner** rather than assuming approval.
 
 ---
 
