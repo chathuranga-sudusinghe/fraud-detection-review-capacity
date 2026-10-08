@@ -401,14 +401,15 @@ The conclusions are limited to one benchmark, one validation-to-test transfer an
 ## Next Research Tasks
 
 1. ~~Resolve and document the University ethics route.~~ Documented (Issue #31): topic approval was received; a separate explicit ethics-route determination was requested but not provided. The project proceeds under the available University guidance and its data-governance controls, without claiming formal ethics approval or exemption ([`protocol.md`](protocol.md#ethics)).
-2. Complete the literature evidence matrix and verify the outstanding references in [`references.md`](references.md).
+2. Complete the literature evidence matrix. Reference verification was completed in Issue #33; the sources still marked partially verified in [`references.md`](references.md) are used only within their stated bounds.
 3. ~~Verify the raw dataset profile and candidate temporal split.~~ Done: see the feasibility audit notebook and [DR-001](decisions/DR-001-temporal-split-strategy.md).
-4. Resolve the open items listed in [`protocol.md`](protocol.md#open-items-before-protocol-freeze), then freeze `docs/protocol.md`.
-5. Create the dataset manifest.
-6. Implement leakage-safe data and split pipelines.
-7. Run validation-only model development.
-8. Lock the final decision policies.
-9. Run the final test evaluation once.
+4. ~~Complete data understanding of the raw tables and the merged development dataset.~~ Done: [notebooks 02–03](../notebooks/README.md) (Issue #44).
+5. Create the dataset manifest and split-generation code that reproduces the DR-001 partition hashes, without reading Test-period labels.
+6. Define the data validation contract and the remaining training, ranking, calibration and inference rules; resolve the open items listed in [`protocol.md`](protocol.md#open-items-before-protocol-freeze).
+7. Implement and test the reusable data, model and policy pipelines.
+8. Run the approved development experiments: fit on Train, tune and early-stop on Validation 1, calibrate and select thresholds, review budgets and the H3 configuration on Validation 2.
+9. Freeze the selected models, calibrators, thresholds, budgets and H3 configuration, and tag the protocol.
+10. Run the confirmatory Test evaluation once.
 
 ## Decision Records
 

@@ -10,6 +10,17 @@ MSc Data Science research project on temporally validated fraud-alert prioritisa
 
 **Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Gradient-Boosting Models and Decision Policies**
 
+## Start here
+
+**The study in one paragraph.** Fraud teams can review only a limited number of transactions per day, so a fraud model is useful only through the rule that turns its scores into a daily review queue. Using the IEEE-CIS Fraud Detection data (IEEE-CIS = IEEE Computational Intelligence Society), this study trains LightGBM and CatBoost, with and without class weighting, on the earliest period, selects thresholds and review rules on later validation periods, and evaluates them **once** on a sealed final period. The main contribution is a pre-specified test of whether a score threshold chosen on validation data still produces its intended alert rate on later data (research question RQ2, hypothesis H3). The study also compares model families and weighting at fixed capacity (RQ1, hypotheses H1 and H2) and asks when a calibrated cost-aware rule is cheaper than always filling the review budget (RQ3).
+
+**Reading order.**
+
+1. This page: research questions, research path and repository map.
+2. [Research protocol](docs/protocol.md): the full design, open items and freeze conditions.
+3. [Decision Records](docs/decisions/README.md) (DR-001 onwards): why each design choice was made.
+4. [Dataset](docs/dataset.md) and [notebooks](notebooks/README.md): the data, its use terms and the data-understanding evidence.
+
 ## Main Research Question
 
 > **Under constrained daily review capacity, how do model family, class weighting, and score-to-review decision policies affect fraud capture, review workload, and cost-sensitive outcomes on temporally unseen transaction data?**
@@ -34,7 +45,7 @@ Revised per [DR-003](docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
 
 ## Confirmatory Hypotheses
 
-The confirmatory hypotheses are H1–H3, worded exactly as in the [research protocol](docs/protocol.md). A subscript ₀ marks the null hypothesis and ₁ the alternative. Recall@2% is the share of Test-period frauds that are reviewed when 2 % of transactions can be reviewed each day (daily top-K review: the K highest-scoring transactions are reviewed, where K is the fixed daily review budget).
+The confirmatory hypotheses are H1–H3, worded exactly as in the [research protocol](docs/protocol.md). A subscript ₀ marks the null hypothesis and ₁ the alternative. Recall@2% is the share of Test-period frauds that are reviewed under daily top-K review: on each relative day the K highest-scoring transactions are reviewed, with the fixed daily review budget K = 56. "2 %" names the capacity scenario from which K is derived (2 % of mean daily transaction volume in Validation 2; [DR-002](docs/decisions/DR-002-review-capacity-definition.md)); the share actually reviewed on a given day varies with that day's volume.
 
 Symbols used below (full definitions and equations are in the protocol):
 
@@ -65,17 +76,63 @@ H1 is a two-sided difference test. H2 and H3 are equivalence hypotheses tested w
 
 RQ3 is primarily estimation and sensitivity analysis rather than a separate significance-testing exercise. Its cost-ratio grid and break-even rule are defined in [DR-007](docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md).
 
+## Research path
+
+The study is organised along the ten stages of the Foundational Methodology for Data Science published by IBM (International Business Machines Corporation) [REF-085], adapted to a confirmatory research design. This framing is proposed and pending supervisor review; the adaptations below will be recorded in a Decision Record after that review.
+
+- Stages 1–8 carry the research; stages 9 (Deployment) and 10 (Feedback) are kept light.
+- Iteration between stages is allowed only before the protocol freeze, only on the development partitions, and only within each partition's fixed role: Train for model fitting; Validation 1 (V1) for hyperparameter tuning and early stopping; Validation 2 (V2) for calibration, thresholds, the daily review budget and the H3 configuration. V2 results never feed back into hyperparameters or features.
+- The Test evaluation runs once and nothing is refined from it.
+
+| # | Stage (IBM) | In this study | Status | Evidence |
+|---|---|---|---|---|
+| 1 | Business understanding | Research problem, gap, RQ1–RQ3, H1–H3 | Done | [Protocol](docs/protocol.md), [research foundation](docs/research-foundation.md), [literature review](docs/literature-review.md) |
+| 2 | Analytic approach | Predictive (fraud scores), prescriptive (score-to-review policies R0–R4 under capacity: default 0.5 threshold, F1-optimal threshold, capacity-rate threshold, daily top-K, calibrated cost-aware capped policy), inferential (pre-specified tests) | Documented in the protocol; explicit statement pending | [Protocol](docs/protocol.md) |
+| 3 | Data requirements | Data each RQ/H needs, and what the dataset cannot provide (real costs, real capacity, label report dates) | Pending (traceability matrix) | [Dataset](docs/dataset.md) |
+| 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; manifest pending (open item 12) | [Dataset](docs/dataset.md), notebooks 01–02 |
+| 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done | [Notebooks 01–03](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
+| 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split and feature policy done; validation contract and pipeline pending | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md) |
+| 7 | Modeling | LightGBM and CatBoost × unweighted/balanced; training and tuning rules; development runs | Model set defined; training rules pending | [Protocol](docs/protocol.md) |
+| 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after freeze | Design defined; runs after freeze | DR-002, DR-003, DR-005–DR-007, DR-009, DR-010 |
+| 9 | Deployment (light) | Research report; local demonstration application programming interface (API) on synthetic example requests (not IEEE-CIS rows) | Planned | — |
+| 10 | Feedback (light) | Supervisor review; limitations; future work | Ongoing | — |
+
+Two gates separate development from confirmation: **(1)** training, policy and analysis procedures are fixed before the development runs; **(2)** the fitted models, calibrators, thresholds, review budgets and H3 configuration are frozen, and the protocol is tagged, before the Test period is scored.
+
+## Repository map
+
+| Path | Contents |
+|---|---|
+| [`docs/protocol.md`](docs/protocol.md) | Research protocol: design, policies, statistics, open items, freeze conditions |
+| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-010 (methodology) |
+| [`docs/research-foundation.md`](docs/research-foundation.md) | Problem, aims, objectives, contribution |
+| [`docs/literature-review.md`](docs/literature-review.md) | Literature review foundation and research gap |
+| [`docs/references.md`](docs/references.md) | Reference register with verification status |
+| [`docs/dataset.md`](docs/dataset.md) | Dataset source, data-use terms, version-control policy |
+| [`docs/feature-catalog.md`](docs/feature-catalog.md) | Column-by-column data dictionary |
+| [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (431 inputs) |
+| [`notebooks/`](notebooks/README.md) | Data-understanding notebooks 01–03 |
+| [`AGENTS.md`](AGENTS.md) | Working rules for the project and AI-assisted work |
+| `data/raw/` | Local raw data (never committed) |
+
 ## Dataset
 
-This study uses the **IEEE-CIS Fraud Detection** dataset (IEEE-CIS = IEEE Computational Intelligence Society, the competition co-organiser).
+This study uses the **IEEE-CIS Fraud Detection** dataset: real-world e-commerce transactions from Vesta Corporation, published through a Kaggle competition and used as published (no data are generated or simulated by this project; see [data provenance](docs/dataset.md#data-provenance)). The labelled `train_transaction.csv` and `train_identity.csv` files are left-joined on `TransactionID` (590,540 transactions, 434 columns).
 
 Official source:
 
 https://www.kaggle.com/competitions/ieee-fraud-detection/data
 
-The labelled transaction and identity training data will be used to construct a reproducible time-aware experimental protocol.
+The data are split chronologically by relative day (`TransactionDT` in whole days from an undisclosed reference point):
 
-See [Dataset documentation](docs/dataset.md).
+| Partition | Relative days | Rows | Role |
+|---|---|---|---|
+| Train | 1–105 | 368,632 | Model fitting |
+| Validation 1 (V1) | 106–126 | 65,544 | Tuning and early stopping |
+| Validation 2 (V2) | 127–154 | 77,822 | Calibration, thresholds, daily budget K, H3 configuration |
+| Test | 155–182 | 78,542 | **Sealed**; one confirmatory evaluation after protocol freeze |
+
+Development prevalence (days 1–154) is 3.49 % fraud, about 28 legitimate transactions per fraud ([notebook 03](notebooks/03_merged_dataset_inspection.ipynb)). Test prevalence is not computed. See [Dataset documentation](docs/dataset.md) and [DR-001](docs/decisions/DR-001-temporal-split-strategy.md).
 
 ## Research Focus
 
@@ -113,48 +170,43 @@ Final operational action
 
 Human review is represented as an exogenous capacity constraint. The research does not recruit or evaluate human participants.
 
-## Research Documentation
-
-- [Research foundation](docs/research-foundation.md)
-- [Research protocol](docs/protocol.md)
-- [Literature review foundation](docs/literature-review.md)
-- [Dataset documentation](docs/dataset.md)
-- [Feature catalog](docs/feature-catalog.md)
-- [Methodology Decision Records](docs/decisions/README.md)
-- [Reference register](docs/references.md)
-
-Planned next:
-
-- ethics;
-- literature evidence matrix;
-- threats to validity;
-- dataset manifest;
-- split-generation code;
-- model and policy experiments;
-- statistical analysis;
-- final results.
-
 ## Status
 
-**Research direction revised and protocol established.**
+**Research design established; data understanding complete; protocol not yet frozen.**
 
-The ethics and governance status is documented in the [protocol](docs/protocol.md#ethics): topic approval was received, and no separate explicit ethics-route determination was provided despite the request; no formal ethics approval or exemption is claimed. The next stage is to complete the evidence matrix and validate the dataset/split protocol before any confirmatory experiments are run.
+The ethics and governance status is documented in the [protocol](docs/protocol.md#ethics): topic approval was received, and no separate explicit ethics-route determination was provided despite the request; no formal ethics approval or exemption is claimed.
+
+Next steps:
+
+1. Supervisor review of the design and of protocol open items 1–7.
+2. Research path stages 2–4: explicit analytic approach, data-requirements traceability matrix, dataset manifest (open item 12).
+3. Data preparation: validation contract, split reproduction and data pipeline.
+4. Modeling rules: tuning procedure, early stopping, tie handling, seeds, calibration details.
+5. Development runs on Train, V1 and V2; protocol freeze; single Test evaluation; statistical analysis and reporting.
 
 ## Symbols and notation
 
 | Symbol / abbreviation | Meaning |
 |---|---|
 | Δ | H3 equivalence tolerance on r (0.004 = ±20 % of the 2 % target) |
+| API | Application programming interface (local demonstration only) |
 | δ_M | Model-family main effect in Recall@2% (CatBoost minus LightGBM, averaged over weighting) |
 | δ_W,f | Weighting effect in model family f (balanced minus unweighted Recall@2%) |
+| DR-NNN | Decision Record NNN in `docs/decisions/` |
 | f | A model family (LightGBM or CatBoost) |
 | H1, H2, H3 | Confirmatory hypotheses; subscript ₀ = null hypothesis, ₁ = alternative |
-| K | Fixed daily review budget (reviews per day) |
+| IBM | International Business Machines Corporation (author of the methodology framing, REF-085) |
 | IEEE-CIS | IEEE Computational Intelligence Society |
+| K | Fixed daily review budget (reviews per day) |
 | ML | Machine learning |
 | Precision@Capacity | Share of reviewed transactions that are fraud at a fixed review capacity |
 | r | Realised Test alert rate of the validation-selected 2 % threshold (confirmatory H3: the rule-selected H3 configuration only) |
+| R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |
 | Recall@2%, Recall@Capacity | Share of frauds reviewed at 2 % (a fixed) review capacity |
+| REF-NNN | Reference identifier in `docs/references.md` |
+| Relative day | `TransactionDT` divided by 86,400 seconds, rounded down; no calendar date inferred |
 | RQ1–RQ3 | Research questions 1–3 |
 | SESOI | Smallest Effect Size Of Interest |
 | TOST | Two One-Sided Tests |
+| `TransactionDT`, `TransactionID` | Time offset in seconds from an undisclosed reference point; row identifier and join key |
+| V1, V2 | Validation 1 (relative days 106–126); Validation 2 (relative days 127–154) |

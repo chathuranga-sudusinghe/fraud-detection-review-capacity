@@ -17,6 +17,16 @@ Competition organiser context:
 - Task: predict the probability that an online transaction is fraudulent
 - Target: `isFraud`
 
+## Data Provenance
+
+The IEEE-CIS data are **real-world e-commerce transactions** provided by Vesta Corporation through the Kaggle competition [REF-047]. This project neither generates nor simulates them:
+
+- the data are used as published by the organiser; no rows are added, generated or altered;
+- the research questions and hypotheses were designed around the fields the dataset actually provides, and its gaps (no real review capacity, costs or label-report dates) are stated as limitations rather than filled with invented data;
+- the temporal split was chosen from transaction volume alone, without using fraud prevalence or feature–target relationships. Before the split was fixed, a one-off full-data check confirmed that `isFraud` existed, contained only binary values and had no missing values, as disclosed in [DR-001](decisions/DR-001-temporal-split-strategy.md).
+
+In this repository, **"simulated"** refers only to the review-capacity and cost **scenarios** (DR-002, DR-007), and **"synthetic"** only to SMOTE (the Synthetic Minority Over-sampling Technique, excluded from the design), small test fixtures, and example inputs for the demonstration interface.
+
 ## Data Structure
 
 The official competition data are split into transaction and identity tables joined by `TransactionID`.
@@ -38,9 +48,11 @@ For this MSc study, the labelled Kaggle training data will be used to construct 
 
 A column-by-column data dictionary (meanings, observed types, missingness and model-input roles) is in the [feature catalog](feature-catalog.md).
 
-- Binary target: `isFraud` (1 = fraud, 0 = legitimate)
-- Transaction and identity tables joined by `TransactionID`
-- Not every transaction has corresponding identity information
+Data-understanding evidence is in the [notebooks](../notebooks/README.md): notebook 01 (feasibility audit), notebook 02 (schema inventory of each raw table) and notebook 03 (merged development dataset and class imbalance).
+
+- Binary target: `isFraud` (1 = fraud, 0 = legitimate), present only in `train_transaction.csv`
+- Transaction (394 columns) and identity (41 columns) tables joined by `TransactionID`, their only shared column; the left join keeps all 590,540 transactions and yields 434 columns
+- Not every transaction has corresponding identity information: coverage falls from 27.1 % (Train) to 20.7 % (Validation 1) and 17.5 % (Validation 2), and fraud prevalence is much higher where identity information exists (notebook 03)
 - `TransactionDT` is a time delta from an undisclosed reference datetime rather than an absolute timestamp
 - The dataset contains substantial class imbalance
 - Many feature meanings are masked or partially anonymised
@@ -165,9 +177,9 @@ Local Parquet copies are derivative storage formats and should not be described 
 
 ## Status
 
-**Dataset source documented.**
+**Dataset source documented; data understanding complete** (notebooks 01–03).
 
-Next dataset-governance task: create a reproducible dataset manifest with checksums and summary statistics before the frozen experimental split is generated.
+Next dataset-governance task: create a reproducible dataset manifest with checksums and summary statistics, and split-generation code that reproduces the DR-001 partition hashes (protocol open item 12). The SHA-256 checksums of both raw files are already recorded in notebooks 01 and 02.
 
 ## Symbols and notation
 
@@ -175,11 +187,15 @@ Next dataset-governance task: create a reproducible dataset manifest with checks
 |---|---|
 | 28 : 1 | Imbalance ratio: legitimate transactions per fraud in development data |
 | Competition Data | The data made available on the competition website, as defined in the Competition Rules, Section 7 |
+| DR-NNN | Decision Record NNN in `decisions/` |
 | IEEE-CIS | IEEE Computational Intelligence Society |
 | [I] | Evidence tag: inference or recommendation |
 | `isFraud` | Binary target: 1 = fraud, 0 = legitimate |
 | `TransactionDT` | Time offset from an undisclosed reference point (seconds) |
 | `TransactionID` | Key joining the transaction and identity tables |
 | REF-NNN | Reference identifier in `references.md` |
+| SHA-256 | Secure Hash Algorithm, 256-bit (file checksum) |
+| SMOTE | Synthetic Minority Over-sampling Technique (excluded from the design) |
+| Train | Development partition: relative days 1–105 |
 | Relative day | `TransactionDT` expressed in whole days from the undisclosed reference point |
 | Validation 1, Validation 2 | Development partitions: relative days 106–126 and 127–154 |
