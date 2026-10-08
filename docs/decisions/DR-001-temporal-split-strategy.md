@@ -40,6 +40,7 @@ The partitions are:
 | **V1** (Validation 1) | 106–126 | 21 | 65,544 | 11.1 | Hyper-parameter selection and early stopping **only** |
 | **V2** (Validation 2) | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for policy R4, the calibrated cost-aware capped policy); threshold selection (R1, the F1-optimal threshold; R2, the capacity-rate threshold); fixed daily review budget K ([DR-002](DR-002-review-capacity-definition.md)) |
 | **Test** | 155–182 | 28 | 78,542 | 13.3 | **Sealed.** One confirmatory evaluation after the protocol freeze |
+| **Total (full joined dataset)** | 1–182 | 182 | 590,540 | 100.0 | Train + V1 + V2 + Test; mutually exclusive and exhaustive |
 
 - **No temporal gap in the primary design.**
 - **The Test period remains sealed.** Its labels have not been used for any analysis, and must not be until the protocol is frozen and tagged in Git.
@@ -52,6 +53,7 @@ Reproducibility anchors, from the notebook (§4.3):
 | V1 | 9,158,441 – 10,972,793 | `cb1325d41dae02a3` |
 | V2 | 10,972,801 – 13,391,998 | `54edb97bc6b82d4b` |
 | Test | 13,392,056 – 15,811,131 | `9f266b2bdf2da9f1` |
+| All partitions | 86,400 – 15,811,131 | — (per-partition hashes above) |
 
 ## Evidence
 
