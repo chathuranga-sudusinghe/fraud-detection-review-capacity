@@ -20,6 +20,7 @@ Human-readable data dictionary for every column of the joined IEEE-CIS (IEEE Com
 - **The Test period (days 155–182) is sealed.** No Test statistic appears here.
 - **The target `isFraud` was not loaded** for this catalog. Its description comes from the organiser and the feasibility audit.
 - Statistics were produced by a development-only profiling script (not committed) and agree with `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 2.7, 8.
+- The column inventory, table membership and roles are reproduced from the raw headers in [notebook 02](../notebooks/02_raw_table_schema_inventory.ipynb). Group-level missingness of the merged development data is reproduced in [notebook 03](../notebooks/03_merged_dataset_inspection.ipynb) §6.
 
 ### Sources of meaning
 

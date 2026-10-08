@@ -183,7 +183,7 @@ Primary labelled source files:
 - `train_transaction.csv` (590,540 rows)
 - `train_identity.csv` (144,233 rows; 24.4 % of transactions have an identity record)
 
-- **Join:** left join transaction ← identity on `TransactionID`; one-to-one, row-preserving.
+- **Join:** left join transaction ← identity on `TransactionID`; one-to-one, row-preserving. Verified on keys for all 590,540 rows; only `TransactionID` is shared, and `isFraud` exists only in the transaction table ([notebooks 02–03](../notebooks/README.md)).
 - **Temporal ordering variable:** `TransactionDT`, a relative time delta in seconds from an undisclosed reference point [REF-047]. Each transaction is assigned a relative day, covering days 1–182:
 
   $$
@@ -195,7 +195,7 @@ Primary labelled source files:
 The competition test data are not used because their labels are unavailable.
 
 **Class-imbalance terminology.**
-- Development-data prevalence is 3.49 %, an imbalance ratio (legitimate : fraud) of ≈ 28 : 1 [D].
+- Development-data prevalence is 3.49 %, an imbalance ratio (legitimate : fraud) of ≈ 28 : 1 [D]. By partition: Train 3.39 %, V1 4.22 %, V2 3.39 %; Test is not computed ([notebook 03](../notebooks/03_merged_dataset_inspection.ipynb), bar charts; notebook 01 §5).
 - The dataset is described as **imbalanced / low-prevalence**. It is **not** described as "severely" or "highly" imbalanced: that wording is conventionally reserved for majority:minority ratios of about 100 : 1 and above [REF-002, REF-001].
 - Imbalance ratio alone does not determine difficulty [REF-003, REF-043]. Here the difficulty comes from low prevalence combined with temporal drift and a review budget smaller than the daily fraud count.
 

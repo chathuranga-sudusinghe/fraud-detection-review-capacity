@@ -151,6 +151,7 @@ Important files:
 - [`docs/literature-review.md`](docs/literature-review.md)
 - [`docs/references.md`](docs/references.md)
 - [`docs/decisions/`](docs/decisions/README.md)
+- [`notebooks/`](notebooks/README.md) — index of the data-understanding notebooks and the notebook 01 section map
 
 When a methodological decision changes:
 
