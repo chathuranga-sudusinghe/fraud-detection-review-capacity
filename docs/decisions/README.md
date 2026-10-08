@@ -1,16 +1,31 @@
 # Research Methodology Decision Records
 
-This folder records methodology decisions: what was decided, on what evidence, which alternatives were rejected, and what the decision costs. Records are short and permanent. When a decision changes, a new record **supersedes** the old one; the old one is kept and its status updated.
+This folder records methodology decisions: what was decided, on what evidence, which alternatives were rejected, and what the decision costs. Records are short, and their numbers are permanent. How a record changes depends on whether the protocol has been frozen (see [Record maintenance policy](#record-maintenance-policy)).
+
+## Record maintenance policy
+
+| | Before the protocol freeze (current stage) | After the protocol freeze (protocol tagged in Git) |
+|---|---|---|
+| Methodology records (*Proposed*, *Accepted (pre-freeze)*) | Revised **in place** through a GitHub Issue and pull request, so that each record describes the current design only | Not edited (*Frozen*). A change requires a **new record that supersedes** the earlier one, whose status becomes *Superseded by DR-NNN* |
+| Process and governance records (*Accepted*) | Revised in place through a GitHub Issue and pull request | Revised in place through a GitHub Issue and pull request |
+| Revision history | Kept in Git commits, pull requests and issues, not as narrative inside the records | Visible in the records through supersession, and in Git |
+
+At every stage:
+
+- record numbers are permanent: a record is never renumbered, reused or deleted;
+- each record keeps its "Alternatives considered" content: why rejected options were not chosen is research content, not history;
+- status and approval information stays truthful, including anything still pending review;
+- saved evidence, such as executed notebooks, is never altered to match a revised record.
 
 ## Conventions
 
 - **File name:** `DR-NNN-short-kebab-title.md`, numbered sequentially from `DR-001`. Numbers are never reused.
 - **Status values:**
   - *Proposed* — drafted, not yet applied to the protocol.
-  - *Accepted (pre-freeze)* — applied to the working protocol; may still change before the freeze.
-  - *Frozen* — part of the tagged confirmatory protocol.
+  - *Accepted (pre-freeze)* — applied to the working protocol; revised in place if the design changes before the freeze.
+  - *Frozen* — part of the tagged confirmatory protocol; changed only by supersession.
   - *Accepted* — in force; used for process and governance decisions that are not part of the confirmatory protocol (e.g. DR-004).
-  - *Superseded by DR-NNN*.
+  - *Superseded by DR-NNN* — replaced after the freeze by the named record.
 - **Evidence tags** (as in the feasibility notebook):
   - **[D]** observed in the dataset;
   - **[L]** literature, cited by `REF-NNN` from [`../references.md`](../references.md);

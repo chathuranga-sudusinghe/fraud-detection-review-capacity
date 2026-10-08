@@ -70,7 +70,7 @@ GitHub Issue
   - references;
   - code;
   - documentation structure.
-- **Methodological changes** additionally need an update to the relevant research document(s) and a new or updated Decision Record in `docs/decisions/`. Where external evidence is introduced, `docs/references.md` must also be updated.
+- **Methodological changes** additionally need an update to the relevant research document(s) and Decision Record(s) in `docs/decisions/`, following the [record maintenance policy](README.md#record-maintenance-policy): revised in place before the protocol freeze, superseded by a new record after it. Where external evidence is introduced, `docs/references.md` must also be updated.
 - **AI assistants do not commit or push** unless the student explicitly instructs them to for that task.
 
 ## Automatic issue closure via PR keywords
@@ -119,7 +119,7 @@ Tiny **typo-only** fixes may be made without an issue: spelling, punctuation or 
 
 - **This record (DR-004)** documents *why* the workflow was adopted, and the alternatives.
 - **[`AGENTS.md`](../../AGENTS.md)** is the operational rulebook: project scope, workflow steps, research-integrity rules, dataset and Test-sealing rules, current research scope, documentation, coding and Git rules, and the AI-assisted research workflow.
-- Changes to the workflow itself require a new issue. They are recorded either by updating `AGENTS.md` alone, when the rationale is unchanged, or by a new Decision Record that supersedes this one.
+- Changes to the workflow itself require a new issue. They are recorded by updating `AGENTS.md` and, where the rationale changes, this record in place, following the [record maintenance policy](README.md#record-maintenance-policy) for process and governance records.
 
 ## References
 
