@@ -153,11 +153,15 @@ Important files:
 - [`docs/decisions/`](docs/decisions/README.md)
 - [`notebooks/`](notebooks/README.md) — index of the data-understanding notebooks and the notebook 01 section map
 
-When a methodological decision changes:
+When a methodological decision changes, open a GitHub Issue and follow the record-maintenance policy in [`docs/decisions/README.md`](docs/decisions/README.md#record-maintenance-policy):
 
-1. update the relevant research document(s);
-2. create a new Decision Record, or update an existing one's status (e.g. *Superseded by DR-NNN*). Never renumber or delete records;
-3. update `docs/references.md` where required.
+1. **Before the protocol freeze** (the current stage), revise the relevant research documents and Decision Records **in place**, so that they describe the current design only. Do not add narrative about earlier designs; the revision history is kept in Git commits, pull requests and issues.
+2. **After the protocol freeze** (the protocol is tagged in Git), do not edit frozen records. Record any change in a **new Decision Record that supersedes** the earlier one, and set the earlier record's status to *Superseded by DR-NNN*.
+3. At every stage:
+   - Decision Record numbers are permanent: never renumber, reuse or delete a record;
+   - keep each record's "Alternatives considered" content and its truthful status and approval information, including anything still pending review;
+   - leave saved evidence, such as executed notebooks, unchanged;
+   - update `docs/references.md` where external evidence is introduced.
 
 ---
 

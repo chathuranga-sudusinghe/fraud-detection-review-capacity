@@ -249,7 +249,7 @@ The human-readable counterpart is the [feature catalog](../feature-catalog.md). 
 - Protocol open item 5 is resolved, pending supervisor review.
 - The implementation must read [`config/features.yaml`](../../config/features.yaml). It must assert that the loaded columns match the declaration exactly and that numeric-coded categorical values are whole numbers.
 - LightGBM category lists are built from **Train rows only** and stored with the model.
-- Any later change to feature roles requires a new GitHub Issue and a record that supersedes this one.
+- Any later change to feature roles requires a new GitHub Issue. Before the protocol freeze, this record is revised in place; after the freeze, the change requires a record that supersedes this one ([record maintenance policy](README.md#record-maintenance-policy)).
 
 ## Threats and limitations
 
