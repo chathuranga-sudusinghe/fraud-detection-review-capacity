@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted |
-| Date | 2026-09-23 |
+| Date | 2026-09-23; revised 2026-10-09 |
 | Evidence source | Project governance (GitHub Issue #6); GitHub documentation on linking pull requests to issues |
 | Related | [`AGENTS.md`](../../AGENTS.md), [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
@@ -11,7 +11,7 @@
 
 This is a single-student MSc research project. Its credibility depends on being able to show *when* and *why* each methodological choice was made, and that no choice was influenced by the sealed Test period (relative days 155–182; [DR-001](DR-001-temporal-split-strategy.md)).
 
-Work is carried out by the student with the help of two artificial intelligence (AI) assistants, **ChatGPT** and **Claude**. They are used for:
+Work is carried out by the student with the help of artificial intelligence (AI) assistants: **Claude**, **Codex** and **ChatGPT**. They are used for:
 - research planning;
 - methodological review;
 - literature discovery and verification;
@@ -26,7 +26,7 @@ AI assistants can produce large, plausible-looking changes quickly, across many 
 - attributing it to a stated purpose;
 - ensuring it was checked before being accepted.
 
-These risks matter most before the protocol freeze, when research questions, hypotheses and design parameters are still open (see the open items in [`docs/protocol.md`](../protocol.md#open-items-before-protocol-freeze)).
+These risks matter most before the protocol freeze, when research questions, hypotheses and design parameters are still open (see the design items in [`docs/protocol.md`](../protocol.md#design-items-before-protocol-freeze)).
 
 ## Decision
 
@@ -34,7 +34,7 @@ These risks matter most before the protocol freeze, when research questions, hyp
 
 The working rules that put this into practice, for the student and for every AI assistant, are recorded in the root [`AGENTS.md`](../../AGENTS.md).
 
-**ChatGPT and Claude are recorded as the AI-assisted research and implementation tools used in this project.** Their output is never accepted automatically. The student reviews, checks and corrects it, and discloses AI use according to University of Greenwich requirements (AI Reflection, AIR; `REF-053` in [`../references.md`](../references.md)).
+**Claude, Codex and ChatGPT are recorded as the AI-assisted research and implementation tools used in this project.** Their output is never accepted automatically. The student reviews, checks and corrects it, and discloses AI use according to University of Greenwich requirements (AI Reflection, AIR; `REF-053` in [`../references.md`](../references.md)).
 
 ## Workflow
 

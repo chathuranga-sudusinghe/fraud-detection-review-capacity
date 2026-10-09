@@ -1,6 +1,6 @@
 # AGENTS.md — Working Rules for AI-Assisted Work
 
-Stable working rules for **ChatGPT, Claude and any future AI assistant** working in this repository, and for the student directing them. Read this file before making any change.
+Stable working rules for **Claude, Codex, ChatGPT, and any future AI assistant** working in this repository, and for the student directing them. Read this file before making any change.
 
 Rationale for these rules: [DR-004 — GitHub issue-driven workflow](docs/decisions/DR-004-github-issue-driven-workflow.md).
 
@@ -81,59 +81,17 @@ Expected raw files:
 
 **Raw data must remain local and must never be committed.** `.gitignore` already excludes `data/raw/*`. Do not weaken that rule. Do not commit derived data files (e.g. Parquet copies or processed splits) either.
 
-Current temporal structure ([DR-001](docs/decisions/DR-001-temporal-split-strategy.md)). Each transaction is assigned a relative day:
-
-$$
-\text{relative day} = \left\lfloor \frac{\texttt{TransactionDT}}{86{,}400} \right\rfloor
-$$
-
-where:
-
-- `TransactionDT` = the dataset's time offset in seconds from an undisclosed reference point;
-- `86,400` = number of seconds in one day;
-- `⌊ · ⌋` = rounding down to a whole number (integer division, `//` in Python).
-
-No calendar dates are inferred.
-
-| Partition | Relative days | Role |
-|---|---|---|
-| Train | 1–105 | Model fitting (no refit) |
-| V1 (Validation 1) | 106–126 | Hyper-parameter tuning and early stopping |
-| V2 (Validation 2) | 127–154 | Calibration (for policy R4), threshold selection, daily review budget K, selection of the H3 configuration ([DR-010](docs/decisions/DR-010-h3-confirmatory-configuration.md)) |
-| Test | 155–182 | **Sealed.** One confirmatory evaluation after protocol freeze |
+The temporal partitions are defined in [DR-001](docs/decisions/DR-001-temporal-split-strategy.md). Each transaction's relative day is `TransactionDT` (the dataset's time offset in seconds from an undisclosed reference point) divided by 86,400 seconds and rounded down; no calendar dates are inferred. The partitions are Train (relative days 1–105), Validation 1 (V1, 106–126), Validation 2 (V2, 127–154) and Test (155–182, **sealed**). Use each partition only in the role DR-001 assigns to it.
 
 ---
 
 ## Current research scope
 
-Defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze).
+The research design is defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze) and the [Decision Records](docs/decisions/README.md); the definitions are not repeated here. In brief:
 
-- **Models:** two families with two models each ([DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md)): tree-based (LightGBM, CatBoost) and neural (ResNet-style multilayer perceptron, MLP; FT-Transformer). Each is trained unweighted and with balanced class weighting, giving **eight configurations** under one common training procedure.
-- **Class weighting:** unweighted; balanced class weighting, implemented as explicit sample weights computed from Train only and applied in every model's loss. Each fraud row receives the weight
-
-  $$
-  w_{\mathrm{pos}} = \frac{n_{\mathrm{neg}}}{n_{\mathrm{pos}}}
-  $$
-
-  where:
-
-  - `w_pos` = sample weight given to each fraud (positive-class) row; legitimate rows keep weight 1;
-  - `n_neg` = number of legitimate transactions in Train;
-  - `n_pos` = number of fraud transactions in Train.
-
-- **Review-capacity scenarios:** 1 %, **2 % (primary)**, 5 %, 10 %. These are simulated research scenarios, not real institutional capacities. Each capacity share c is turned into a fixed daily review budget ([DR-002](docs/decisions/DR-002-review-capacity-definition.md)):
-
-  $$
-  K = \operatorname{round}\left( c \times \text{mean daily transaction volume in V2} \right)
-  $$
-
-  where:
-
-  - `K` = fixed daily review budget (reviews per relative day);
-  - `c` = review-capacity share (1 %, 2 %, 5 % or 10 %);
-  - `V2` = Validation 2, relative days 127–154.
-
-- **Decision policies:** R0–R4 as defined in the protocol: R0 (default 0.5 threshold), R1 (F1-optimal threshold), R2 (capacity-rate threshold), R3 (daily top-K review) and R4 (calibrated cost-aware capped policy).
+- **Models:** tree-based (LightGBM, CatBoost) and neural (ResNet-style multilayer perceptron, MLP; FT-Transformer), each trained unweighted and with balanced class weighting: eight configurations under one common training procedure ([DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md)).
+- **Review capacity:** simulated scenarios of 1 %, 2 % (primary), 5 % and 10 % of transactions, each turned into a fixed daily review budget K ([DR-002](docs/decisions/DR-002-review-capacity-definition.md)).
+- **Decision policies:** R0–R4, defined in the protocol.
 
 **Do not add** model families beyond DR-011, resampling methods (e.g. SMOTE, the Synthetic Minority Over-sampling Technique, or other over- or under-sampling) or feature-engineering studies unless an explicit GitHub Issue changes the protocol.
 
@@ -153,6 +111,36 @@ Important files:
 - [`docs/decisions/`](docs/decisions/README.md)
 - [`notebooks/`](notebooks/README.md) — index of the data-understanding notebooks and the notebook 01 section map
 
+### Single source of truth
+
+Each piece of content is written in full in **one owner file**. Elsewhere it appears only as:
+
+- a short summary with a link to the owner file (at most a sentence or a one-line list item), which never serves as an independent specification; or
+- the local definition of a symbol that the document uses, as required by [notation rule 1](#1-define-every-symbol-at-first-use-in-each-document).
+
+Saved research evidence (executed notebooks) is exempt: it is never edited to match a later document.
+
+| Content | Owner file |
+|---|---|
+| Title, research questions, hypotheses, analytic approach, data requirements, partition boundaries and roles, models and training procedure, feature policy, class weighting, review capacity, decision policies, calibration, cost model, outcomes, statistical plan, false-negative analysis, leakage controls, ethics status, design items, freeze conditions | [`docs/protocol.md`](docs/protocol.md) |
+| Why each design choice was made: context, evidence, alternatives, consequences | The relevant Decision Record in [`docs/decisions/`](docs/decisions/README.md) |
+| Research problem, aim, objectives and contribution | [`docs/research-foundation.md`](docs/research-foundation.md) |
+| Literature synthesis and research gap | [`docs/literature-review.md`](docs/literature-review.md) |
+| Literature search, screening and selection | [`docs/literature-search-method.md`](docs/literature-search-method.md) |
+| Field-by-field comparison of selected studies | [`docs/literature-evidence-matrix.md`](docs/literature-evidence-matrix.md) |
+| Sources and their verification status | [`docs/references.md`](docs/references.md) |
+| Dataset source, provenance, use terms, version control and manifest | [`docs/dataset.md`](docs/dataset.md) |
+| Column roles (canonical declaration) | [`config/features.yaml`](config/features.yaml); [`docs/feature-catalog.md`](docs/feature-catalog.md) is its human-readable companion and reads every role from it. If the two disagree, `features.yaml` is correct and the catalog is fixed |
+| Orientation, status, research path and repository map | [`README.md`](README.md) |
+| Working rules | This file |
+
+A Decision Record states its decision in full, because the record is the dated evidence of that decision; the protocol carries the same design as the current specification. A difference between them is a defect, not a choice:
+
+- precedence never approves a change: no edit to the protocol or to a record takes effect until it has been reviewed and approved by the project owner through an issue and pull request;
+- before the protocol freeze, a difference is resolved through an issue, and in any case before a run that depends on the affected rule;
+- after the freeze, the tagged protocol and the frozen records are authoritative, and any change follows the supersession process below.
+
+
 When a methodological decision changes, open a GitHub Issue and follow the record-maintenance policy in [`docs/decisions/README.md`](docs/decisions/README.md#record-maintenance-policy):
 
 1. **Before the protocol freeze** (the current stage), revise the relevant research documents and Decision Records **in place**, so that they describe the current design only. Do not add narrative about earlier designs; the revision history is kept in Git commits, pull requests and issues.
@@ -167,7 +155,7 @@ When a methodological decision changes, open a GitHub Issue and follow the recor
 
 ## Documentation and notation standard
 
-These rules apply to **all Markdown work** in this repository: `README.md`, `AGENTS.md`, `docs/`, `docs/decisions/`, and Markdown cells in new notebooks. They were introduced by GitHub Issue #17; the LaTeX display-math format for equations was added by Issue #21. They govern presentation only and never change methodology.
+These rules apply to **all Markdown work** in this repository: `README.md`, `AGENTS.md`, `docs/`, `docs/decisions/`, and Markdown cells in new notebooks. They were introduced by GitHub Issue #17; the LaTeX display-math format for equations was added by Issue #21, and the single-source scope of rule 1 by Issue #57. They govern presentation only and never change methodology.
 
 ### 1. Define every symbol at first use in each document
 
@@ -178,7 +166,8 @@ These rules apply to **all Markdown work** in this repository: `README.md`, `AGE
   - `p*` (cost-derived probability threshold);
   - `C_R` (cost of reviewing one transaction).
 - Expand technical acronyms at first use in each document, e.g. Smallest Effect Size Of Interest (SESOI), Two One-Sided Tests (TOST), Confidence Interval (CI). After first use the acronym may be used alone.
-- Do not assume the reader remembers a definition from another file. **Each Markdown document must be understandable on its own.**
+- Do not assume the reader remembers a symbol's definition from another file. **Every document defines every symbol it uses.**
+- This self-containment applies to **symbols and notation**. Design content (questions, hypotheses, rules, values) is written in full only in its owner file and is linked from elsewhere ([Single source of truth](#single-source-of-truth)).
 
 ### 2. Show important equations as LaTeX display math
 
@@ -303,7 +292,7 @@ In addition:
 
 ## Experiment execution responsibility
 
-These rules apply to every AI assistant (ChatGPT, Claude, Codex and any future assistant). They govern who runs what; they do **not** override `docs/protocol.md` or any Decision Record.
+These rules apply to every AI assistant (Claude, Codex, ChatGPT and any future assistant). They govern who runs what; they do **not** override `docs/protocol.md` or any Decision Record.
 
 **AI assistants may support:**
 
@@ -356,7 +345,7 @@ Such checks must not train research models, inspect sealed Test labels or genera
 
 ## AI-assisted research workflow
 
-This project uses AI assistants such as **ChatGPT**, **Claude** and **Codex**; these rules apply equally to any future assistant. They support:
+This project uses AI assistants such as **Claude**, **Codex** and **ChatGPT**; these rules apply equally to any future assistant. They support:
 
 - research planning;
 - methodological review;
@@ -410,8 +399,8 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 
 **Typical roles.** These describe usual support, not authority:
 
-- **ChatGPT** may support planning, research synthesis, literature review, methodology review, explanation, drafting, and code and documentation review.
-- **Claude** and **Codex** may support implementation, documentation, tests, repository inspection and the preparation of reproducible commands.
+- **Claude** and **Codex** work on the local repository and on GitHub, and may support implementation, documentation, tests, repository inspection and the preparation of reproducible commands.
+- **ChatGPT** reads the GitHub repository only (committed and pushed content), and may support planning, research synthesis, literature review, methodology review, explanation, drafting, and code and documentation review.
 - Any future assistant follows the same rules.
 
 **No AI assistant may treat its own output, proposal, implementation or analysis as approved because it created it.** A proposal becomes a project decision only after explicit human review and approval.
@@ -437,23 +426,21 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 
 | Symbol / abbreviation | Meaning |
 |---|---|
+| AI | Artificial intelligence |
 | AIR | AI Reflection: the University of Greenwich declaration of AI use |
-| c | Review-capacity share (1 %, 2 %, 5 % or 10 % of transactions) |
 | CI | Confidence Interval |
 | DR / DR-NNN | Decision Record, numbered NNN |
 | [D], [L], [G], [I] | Evidence tags: dataset, literature, University guidance, inference |
 | K | Fixed daily review budget (reviews per relative day) |
 | MLP | Multilayer perceptron (ResNet-style MLP: a neural model of DR-011) |
 | MAE, RMSE | Mean Absolute Error, Root Mean Squared Error (named as examples of standard academic equations) |
-| n_neg, n_pos | Numbers of legitimate and fraud transactions in Train |
 | PR | Pull request |
 | R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |
 | REF-NNN | Reference identifier in `docs/references.md` |
 | SESOI | Smallest Effect Size Of Interest |
 | SMOTE | Synthetic Minority Over-sampling Technique |
 | TOST | Two One-Sided Tests |
-| `TransactionDT` | Dataset time offset in seconds from an undisclosed reference point |
+| `TransactionDT`, `TransactionID` | Dataset time offset in seconds from an undisclosed reference point; transaction identifier |
+| Train, Test | Model-fitting partition (relative days 1–105); sealed confirmatory partition (relative days 155–182) |
 | V1, V2 | Validation 1 (relative days 106–126) and Validation 2 (relative days 127–154) |
-| w_pos | Sample weight for each fraud row under balanced class weighting, n_neg / n_pos |
-| ⌊ · ⌋ | Round down to a whole number (integer division) |
-| ρ, p*, C_R, C_FP, C_miss, J_π, π, N_π, FN_π | Used only as layout examples in the notation standard: miss-to-review cost ratio; cost-derived probability threshold; cost of reviewing one transaction; extra false-alert cost of reviewing a legitimate transaction; cost of missing a fraud; scenario cost of policy π; a decision policy; number of reviews; number of missed frauds |
+| ρ, ρ′, ρ_BE, p*, C_R, C_FP, C_miss, J_π, π, N_π, FN_π | Used only as layout examples in the notation standard: miss-to-review cost ratio; effective cost ratio including the false-alert cost; break-even cost ratio; cost-derived probability threshold; cost of reviewing one transaction; extra false-alert cost of reviewing a legitimate transaction; cost of missing a fraud; scenario cost of policy π; a decision policy; number of reviews; number of missed frauds |
