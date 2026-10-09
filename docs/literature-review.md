@@ -343,11 +343,11 @@ Important research boundary:
 
 ---
 
-## 4. Initial Peer-Reviewed Evidence Base
+## 4. Evidence Base
 
-The following sources form an initial evidence set and must be checked in full before being relied on in the final dissertation.
+The evidence was selected by the structured search in [`literature-search-method.md`](literature-search-method.md) and is compared field by field in [`literature-evidence-matrix.md`](literature-evidence-matrix.md). Full citations, the Digital Object Identifier (DOI) of each source and its verification status are in [`references.md`](references.md), which also records whether the full text or only the abstract was read. Each statement below is limited to the text that was read, and inferences are marked **[I]**. Sources read only as abstracts must be read in full before they support a central claim in the dissertation.
 
-**Verification status (Issue #33).** Each source below was confirmed to exist, and its bibliographic details were completed from Crossref, the publisher's Digital Object Identifier (DOI) registration. Full entries are in [`references.md`](references.md). The full texts could not be read from the verification environment, so each "Checked relevance" list contains only points stated in the abstract. For REF-060, Issue #33 review: the official ScienceDirect publisher abstract was checked on 26 September 2026. Automated access from the verification environment was refused (HTTP 403). Points in earlier drafts of this section that could not be confirmed have been removed, and inferences are marked **[I]**.
+Sections 4.1–4.5 cover individual recent studies (abstracts read, except where stated); Section 4.6 compares the closest studies; Sections 4.7–4.9 synthesise the evidence by theme.
 
 ### 4.1 Systematic Review of Credit-Card Fraud Detection
 
@@ -436,73 +436,56 @@ Issue #35 compared the study with the closest work found, to answer the supervis
 | **Shen and Kurshan (2020)** [REF-081] | Static alert thresholds do not account for alert-processing capacity (dropped alerts); adaptive threshold selection under capacity | Motivation for measuring threshold-generated demand against capacity | Content known from a secondary abstract only | Abstract (secondary source) |
 | **Vanderschueren et al. (2024)** [REF-082] | Limited, stochastic investigation capacity built into the learning objective (learning to rank) | Capacity-aware review decisions | A method proposal, not an evaluation of static thresholds over time | Abstract (arXiv) |
 | **Alves et al. (2024)** [REF-083] | Cost-sensitive allocation of fraud cases between a model and several analysts under individual workload limits | Human capacity and cost in fraud review | Uses synthetic analysts and models reviewer error; this study assumes one pooled budget and perfect verification | Abstract (OpenReview) |
-| **Capacity-constrained evaluation** [REF-006, REF-004, REF-046, REF-084] | Evaluation of the highest-ranked alerts at an investigator-limited depth; daily precision top-k; daily investigation budgets | Daily top-K review (R3) and capacity-based metrics | Transfer fidelity of a threshold's alert rate | Register entries |
+| **Capacity-constrained evaluation** [REF-006, REF-004, REF-046, REF-084, REF-005, REF-086] | Evaluation of the highest-ranked alerts at an investigator-limited depth; daily precision top-k with a budget of k = 100 alerts or cards per day on real card streams (REF-005, REF-086) | Daily top-K review (R3) and capacity-based metrics | Transfer fidelity of a threshold's alert rate | Register entries; REF-005 and REF-086 full text |
 | **Chronological IEEE-CIS evaluation** [REF-041, REF-058] | Chronological evaluation on this dataset; validation-selected cost-sensitive thresholding (REF-058) | Temporal design on IEEE-CIS | Review capacity; alert-rate fidelity | Publisher abstracts |
+| **Ali et al. (2025)** [REF-098] | Claims that sequence Transformers and hybrids outperform tree ensembles on IEEE-CIS under chronological splits, with calibration and monetary utility | Tree-vs-neural comparison on IEEE-CIS; chronological evaluation | Any review-capacity constraint; reported split, seeds or uncertainty. Its IEEE-CIS PR-AUC values (0.83–0.91) are far above other reports, so it is cited as weak evidence only | Full text |
+| **Namit et al. (2026)** [REF-099] | Transformer embeddings combined with gradient-boosted trees on IEEE-CIS; Precision@K motivated by limited investigation capacity | Capacity-motivated ranking metric on IEEE-CIS | A temporal holdout (it uses a stratified 80/20 split); a daily budget; uncertainty; test-period results | Full text |
 
 **Consequences for the research gap.** In the studies reviewed, capacity-constrained review, chronological evaluation, validation-selected and cost-sensitive thresholds, calibrated cost-threshold policies, binding-versus-slack capacity effects and cost-ratio sweeps are all established, so none is claimed as novel. The remaining gap is narrower (Section 8): whether a *static* validation-selected score threshold preserves its intended alert rate on later data, and how its demand compares with a *fixed daily* review budget. RQ3 is positioned as a replication-plus-extension of Zhang et al. (2026).
+
+### 4.7 Keeping the Natural Class Imbalance
+
+- **Resampling inflates and distorts results.** A systematic review restricted to studies that keep the original class imbalance reports that much of the literature changes the class distribution through resampling, which may inflate reported performance [REF-094, abstract]. Applying SMOTE (Synthetic Minority Over-sampling Technique) before the train–test split produces deceptively strong results (99.9 % recall) on a public card-fraud dataset, and inadequate temporal validation is listed among the main methodological problems of the field [REF-095].
+- **Resampling costs false alerts.** On a large labelled card dataset, imbalance-handling methods raised sensitivity but produced more false alarms than detected frauds [REF-091]. Under a fixed review budget, false alerts consume review capacity directly **[I]**.
+- **Rebalancing preserves ranking but harms probabilities.** Undersampling changes the training prior: it leaves the ranking of transactions unchanged but distorts the predicted probabilities, which must be corrected before a probability threshold is used [REF-021]. Imbalance corrections worsened calibration without improving discrimination for logistic regression [REF-019], and in simulations across machine-learning algorithms, models without correction had equal or better calibration [REF-020].
+- **Class weighting is not reliably beneficial.** In LightGBM, class balancing alone may not improve results [REF-093]; in a chronological study, a class-weighted random forest had a higher test cost than the unweighted one at cost-optimal thresholds [REF-080].
+
+**Implication [I].** Ranking-based policies (R3) are unaffected by rebalancing, whereas probability-based policies (R4) need calibration on separate data. The evidence supports keeping the natural imbalance, excluding resampling, and testing class weighting rather than assuming it helps (H2).
+
+### 4.8 Tree-Based and Neural Models for Tabular Data
+
+- **General tabular benchmarks.** Gradient-boosted decision trees (GBDTs) remain strong on tabular data [REF-013, REF-014, REF-090]. In the largest comparison found (19 algorithms, 176 datasets), the gap between neural networks and GBDTs is often negligible, light tuning of CatBoost or a ResNet-style network often matters more than the choice of family, and GBDTs handle skewed and heavy-tailed features better [REF-089]. Well-regularised multilayer perceptrons (MLPs) can outperform XGBoost [REF-088].
+- **Strong neural baselines.** A ResNet-style MLP is a strong deep baseline and FT-Transformer (Feature Tokenizer + Transformer) is the best deep model on most of eleven benchmarks, yet neither family is universally superior to GBDTs [REF-087]. FT-Transformer's attention cost grows quadratically with the number of input features, which makes hardware a practical constraint [REF-087].
+- **Fraud-specific evidence is thin.** On IEEE-CIS, Transformer embeddings combined with gradient-boosted trees gave a small gain over tabular LightGBM (PR-AUC 0.31 vs 0.29) under a stratified, non-temporal split [REF-099]; a self-supervised tabular model outperformed XGBoost by 2.14 % AUROC [REF-101, abstract]; CatBoost and a deep network were applied to different user groups rather than compared head-to-head [REF-100, abstract]; and a study claiming Transformer superiority under chronological splits does not report enough detail to be verified [REF-098]. The closest comparator used logistic regression, LightGBM and TabNet [REF-078].
+
+**Implication [I].** No study found compares the two families under one tuning procedure, a chronological holdout and a fixed daily review budget. The general benchmarks suggest that any difference may be small relative to tuning effects, which makes a pre-specified smallest effect size of interest important when interpreting family differences. The choice of model families is set in the protocol.
+
+### 4.9 Review Capacity and Human Review
+
+- In real card-fraud operations, investigators can check only a limited number of alerts each day: k = 100 alerts [REF-086] or k = 100 cards [REF-005] per day. Alert precision among those k is the operational measure, and top-k performance and AUC (Area Under the ROC Curve) can rank models differently [REF-005].
+- Daily top-k metrics vary strongly from day to day because the number of frauds per day varies [REF-005], which supports day-level dependence in the inference plan **[I]**.
+- Alert investigation is "strongly constrained by available human resources", and prioritisation of alerts is needed [REF-096]. The same review quotes an industry study that one-fourth of fraud costs go to manual review [REF-096, secondary figure].
+- Reducing false-positive alerts is valued because it lowers analyst workload [REF-102, abstract].
+- Mainstream evaluation still relies on recall, AUC, precision and F1, without capacity-based metrics [REF-092]; reviews call for cost-aware evaluation [REF-094, abstract].
+
+**Implication [I].** A fixed daily review budget, daily top-K review and capacity-based metrics model the human review step directly; this study does so computationally, without human participants.
 
 ---
 
 ## 5. Search Strategy
 
-The literature search should use combinations of terms such as:
+The search is documented in [`literature-search-method.md`](literature-search-method.md). In summary:
 
-```text
-"transaction fraud detection" AND "class imbalance"
-"credit card fraud detection" AND "cost sensitive"
-"fraud detection" AND "decision threshold"
-"fraud detection" AND "threshold optimization"
-"fraud detection" AND "alert rate"
-"fraud detection" AND "review capacity"
-"fraud detection" AND "investigation budget"
-"fraud detection" AND "human in the loop"
-"fraud detection" AND "false negatives"
-"fraud detection" AND "temporal validation"
-"fraud detection" AND "probability calibration"
-"fraud detection" AND "LightGBM"
-"fraud detection" AND "CatBoost"
-```
-
-Preferred evidence sources:
-
-- peer-reviewed journal articles;
-- peer-reviewed conference papers;
-- systematic reviews;
-- authoritative methodological papers;
-- highly relevant recent work.
-
-Potential databases/search platforms:
-
-- IEEE Xplore;
-- ScienceDirect;
-- SpringerLink;
-- ACM Digital Library;
-- Scopus / Web of Science if available through the University;
-- Google Scholar for discovery only, followed by verification at the publisher/source.
+- **Structured search:** IEEE Xplore (Institute of Electrical and Electronics Engineers digital library), 8 October 2026, five theme queries (class imbalance; review capacity and human-in-the-loop review; drift and thresholds; calibration and cost; IEEE-CIS studies), publication years 2015–2026. It returned 1,540 records, of which 1,328 were unique; all were screened on title, 64 on abstract, and 9 in full text.
+- **Targeted searches and citation follow-up:** tree-based vs neural models for tabular data, systematic reviews under the original class imbalance, evaluation leakage and the cost of manual review, plus follow-up from the closest comparators.
+- **Selection:** 17 sources were added (REF-086–REF-102) to the sources already in the register.
+- **Main limitation:** only one database was searched in a structured way; a cross-publisher search (Scopus or Web of Science) would strengthen the gap statement.
 
 ---
 
 ## 6. Inclusion and Exclusion Criteria
 
-### Include
-
-- research directly related to transaction, payment, or credit-card fraud detection;
-- studies addressing class imbalance;
-- cost-sensitive learning or threshold optimisation;
-- review-capacity, alert-budget, or risk-based decision policies;
-- LightGBM/CatBoost or comparable tabular classifiers where methodologically useful;
-- temporal evaluation;
-- calibration where relevant;
-- HITL decision-support literature relevant to high-stakes classification.
-
-### Exclude or De-prioritise
-
-- papers focused on unrelated fraud domains where the decision problem is materially different;
-- papers reporting only accuracy on highly imbalanced data;
-- purely descriptive articles without reproducible methodology;
-- vendor marketing material;
-- unsourced blog posts;
-- papers included only because they use a fashionable model but do not inform the research questions.
+The full criteria and exclusion codes are in [`literature-search-method.md`](literature-search-method.md), Section 4. In brief, a source is included when it is peer-reviewed (or an authoritative methodological source), concerns transaction, payment or card fraud or a method this study uses directly, and informs a research question, hypothesis or decision policy. Sources are excluded for a materially different fraud domain, a method outside the study's scope, weak evaluation (accuracy alone, resampling before the split, or unreportable design), or lack of peer review.
 
 ---
 
@@ -528,17 +511,17 @@ For each important study, evaluate:
 - limitations;
 - relevance to the present research question.
 
-A literature evidence matrix should be created later so that studies can be compared consistently.
+These fields are recorded for the selected studies in [`literature-evidence-matrix.md`](literature-evidence-matrix.md).
 
 ---
 
 ## 8. Research Gap
 
-This section replaces the preliminary gap statement drafted before the closest-work comparison (Issue #35, Section 4.6).
+The gap is stated against the closest studies (Section 4.6), the thematic evidence (Sections 4.7–4.9) and the design-element comparison in [`literature-evidence-matrix.md`](literature-evidence-matrix.md), Section 3.
 
-**What is not claimed as novel.** In the studies reviewed, the following are established: fraud-detection algorithms; chronological and temporal evaluation, including on IEEE-CIS [REF-041, REF-058]; capacity-constrained fraud evaluation and top-K review [REF-006, REF-004, REF-046, REF-084]; validation-selected thresholds applied unchanged to later data [REF-058, REF-079, REF-080]; temporal transfer of review policies under capacity [REF-078]; cost-sensitive thresholding and calibrated cost-threshold policies [REF-008, REF-078]; binding-versus-slack capacity effects [REF-078]; cost-ratio sweeps [REF-078, REF-080]; and capacity-aware threshold selection or allocation [REF-081, REF-082, REF-083]. The study proposes no new algorithm, decision method, cost framework or temporal protocol.
+**What is not claimed as novel.** In the studies reviewed, the following are established: fraud-detection algorithms; chronological and temporal evaluation, including on IEEE-CIS [REF-041, REF-058]; capacity-constrained fraud evaluation and top-K review, including daily alert budgets on real card streams [REF-006, REF-004, REF-046, REF-084, REF-005, REF-086]; capacity-motivated ranking metrics on IEEE-CIS [REF-099]; validation-selected thresholds applied unchanged to later data [REF-058, REF-079, REF-080]; temporal transfer of review policies under capacity [REF-078]; cost-sensitive thresholding and calibrated cost-threshold policies [REF-008, REF-078]; binding-versus-slack capacity effects [REF-078]; cost-ratio sweeps [REF-078, REF-080]; and capacity-aware threshold selection or allocation [REF-081, REF-082, REF-083]. The study proposes no new algorithm, decision method, cost framework or temporal protocol.
 
-**The remaining gap.** Zhang et al. (2026) transfer a historical review *rate*, which preserves the review fraction by construction, and compare workload rules against a retrospective oracle. Mazumder (2026) constrains the alert rate only when the threshold is selected. Elbadraoui et al. (2026) transfer a cost-optimal threshold without any capacity constraint. In the studies reviewed, the alert rate produced by a *static* validation-selected score threshold is not formally tested against its intended target on later data, and workload deviations from a fixed daily review budget are not separated into alert-rate drift and volume variation; Zhang et al. note that attributing workload displacement would require further controlled comparison. The remaining gap is therefore narrower than the one drafted earlier.
+**The remaining gap.** Zhang et al. (2026) transfer a historical review *rate*, which preserves the review fraction by construction, and compare workload rules against a retrospective oracle. Mazumder (2026) constrains the alert rate only when the threshold is selected. Elbadraoui et al. (2026) transfer a cost-optimal threshold without any capacity constraint. In the studies reviewed, the alert rate produced by a *static* validation-selected score threshold is not formally tested against its intended target on later data, and workload deviations from a fixed daily review budget are not separated into alert-rate drift and volume variation; Zhang et al. note that attributing workload displacement would require further controlled comparison. The structured search (1,328 unique IEEE Xplore records; Section 5) found no study that does either. The studies on IEEE-CIS found by the search either use a non-temporal split [REF-099] or do not report enough detail to be verified [REF-098], and none uses a fixed daily review budget.
 
 **Contribution.** The contribution is a pre-specified confirmatory empirical evaluation of whether a static, validation-selected score threshold preserves its intended alert rate on later IEEE-CIS data. It has two distinct parts:
 
@@ -547,25 +530,13 @@ This section replaces the preliminary gap statement drafted before the closest-w
 
 This study extends prior work in two further, secondary ways. RQ1 (H1, H2) provides confirmatory, dependence-aware comparisons of LightGBM and CatBoost with and without class weighting at fixed daily capacity; these are empirical comparisons, not novelty claims. RQ3 replicates and extends Zhang et al.'s binding-versus-slack finding under a fixed daily cap, summarised as break-even (ρ_BE) and saturation (ρ_sat) cost ratios; this is an alternative operationalisation, not the main gap.
 
-**Limits.** The conclusions are limited to one benchmark, one validation-to-test transfer and simulated capacity and cost assumptions. The comparison rests on the studies reviewed; a University-database search (for example Scopus or Web of Science) should confirm it before the dissertation is written.
+**Limits.** The conclusions are limited to one benchmark, one validation-to-test transfer and simulated capacity and cost assumptions. The comparison rests on the studies reviewed: one database was searched in a structured way, so a cross-publisher search (for example Scopus or Web of Science) would strengthen it before the dissertation is written.
 
 ---
 
-## 9. Next Literature-Review Tasks
-
-1. Build a literature evidence matrix.
-2. Collect approximately 20–30 high-relevance academic sources, prioritising quality over volume.
-3. Identify foundational and recent papers for each core theme.
-4. Verify full bibliographic details and DOI (Digital Object Identifier) for every retained source.
-5. Separate background sources from directly comparable empirical studies.
-6. ~~Refine the research gap after the evidence matrix is complete.~~ Refined by Issue #35 (Sections 4.6 and 8); re-check it after the University-database search.
-7. Only then convert this working document into dissertation-style critical synthesis.
-
 ## Status
 
-**Literature-review foundation established.**
-
-This file defines the review scope and initial evidence base. It is not yet the final dissertation literature review.
+**Evidence base selected.** The search, selection and evidence matrix are documented; the research gap has been re-checked against the selected evidence. This file is not yet the final dissertation literature review.
 
 ## Symbols and notation
 
@@ -574,6 +545,13 @@ This file defines the review scope and initial evidence base. It is not yet the 
 | [I] | Evidence tag: inference or recommendation (not a statement from the source) |
 | ACM, IEEE | Association for Computing Machinery; Institute of Electrical and Electronics Engineers (publishers / databases) |
 | AML | Anti-money laundering |
+| AUC, AUROC | Area under the receiver operating characteristic (ROC) curve |
+| FT-Transformer | Feature Tokenizer + Transformer model for tabular data |
+| GBDT | Gradient-boosted decision trees (e.g. LightGBM, CatBoost, XGBoost) |
+| k | Number of alerts (or cards) investigators can check per day in the cited studies |
+| MLP, ResNet | Multilayer perceptron; residual-network-style MLP |
+| Precision@K | Precision among the K highest-ranked transactions |
+| TabNet | Attention-based deep model for tabular data |
 | BAF Base | Bank Account Fraud dataset suite, base variant |
 | C_FP | Assumed relative cost of unnecessary intervention (a false positive), in addition to C_R |
 | C_miss | Assumed relative cost of a missed fraud (C_FN in some sources) |
