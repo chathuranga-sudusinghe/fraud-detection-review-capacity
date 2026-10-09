@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by Issue #27, pending supervisor review. Resolves protocol open item 6 (overflow rule for R0/R1/R2). |
-| Date | 2026-09-25 |
+| Status | Accepted (pre-freeze) by Issue #27; supervisor review pending. |
+| Date | 2026-09-25; revised 2026-10-09 (Issue #54) |
 | Evidence source | Internal policy definitions in the [protocol](../protocol.md); existing Decision Records [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and [DR-007](DR-007-rq3-cost-ratio-and-break-even.md); an algebraic argument about thresholds and daily top-K selection; the existing label-free daily-volume inspection of the feasibility audit (`notebooks/01_dataset_feasibility_audit.ipynb` §3). No labels or model scores were inspected for this record. No new Test-period data were inspected; this record relies only on previously logged, label-free structural evidence from the feasibility audit. |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-007](DR-007-rq3-cost-ratio-and-break-even.md), [protocol](../protocol.md) |
 
@@ -17,16 +17,13 @@ The study compares five score-to-review decision policies under a fixed daily re
 
 A threshold policy therefore produces a daily **alert demand** that can lie above or below K_c. For example, with K = 56 and 71 threshold-generated alerts, demand exceeds the budget by 15.
 
-This study is MSc research on fraud detection under limited review capacity, not the fraud-operations workflow of a particular organisation.
+This study is research on fraud detection under limited review capacity; it does not model the fraud-operations workflow of a particular organisation.
 
 ## Methodological problem
 
-Protocol open item 6 asked whether R0, R1 and R2 should "report overflow only" or be "truncated to the top-K of the flagged transactions". Earlier wording also assumed a particular operational outcome:
+Two treatments of R0, R1 and R2 are possible: "report overflow only", or "truncate to the top-K of the flagged transactions". Descriptions such as "realised daily review count" for the daily number of threshold alerts, or "frauds missed because of overflow", would also assume a particular operational outcome.
 
-- [DR-002](DR-002-review-capacity-definition.md) posed the same either/or choice.
-- [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) labelled the daily number of threshold alerts a "realised daily review count" and listed "frauds missed because of overflow" as a consequence.
-
-Both phrases assume what happens to alerts beyond K, e.g. that they are never reviewed. **The dataset contains no information on that.** An organisation might carry excess alerts to the next day, add reviewers, escalate them, drop them or process them in arrival order. Any of these is a company-specific operating rule, not a property of the policy or the data.
+Such phrases assume what happens to alerts beyond K, e.g. that they are never reviewed. **The dataset contains no information on that.** An organisation might carry excess alerts to the next day, add reviewers, escalate them, drop them or process them in arrival order. Any of these is a company-specific operating rule, not a property of the policy or the data.
 
 The decision must therefore:
 
@@ -216,7 +213,7 @@ where:
 - `trunc_K(T)` = the K highest-scoring members of T;
 - `R3_d,c` = the set R3 reviews on day d at capacity c.
 
-Equivalently, trunc(T_{d,j}) = R3_{d,c} ∩ T_{d,j}: **R3 capped by a threshold**. That is the same structure as R4, with a non-cost threshold. This holds up to ties at τ_j and at rank K_c, which follow the existing tie rules. The rule assumes the threshold and R3 rank on the same score; a monotone recalibration does not change the ranking.
+Equivalently, trunc(T_{d,j}) = R3_{d,c} ∩ T_{d,j}: **R3 capped by a threshold**. That is the same structure as R4, with a non-cost threshold. This holds up to ties at τ_j and at rank K_c, which follow the existing tie rules. The rule assumes the threshold and R3 rank on the same score; a strictly monotone recalibration does not change the ranking.
 
 Truncation would therefore:
 
@@ -264,15 +261,15 @@ Therefore:
 
 | Area | Effect |
 |---|---|
-| **RQ2** | The primary workload analysis uses uncapped demand A. Overflow, unused capacity and load ratio are defined formally. The rate/volume decomposition is unchanged. |
-| **H3** | **None.** H3 tests the realised alert rate r = Σ_d n_d / Σ_d N_d, which is already uncapped and label-free. Δ = 0.004, the test and the bootstrap are unchanged. |
-| **Workload-fidelity measures** | DR-003's "realised daily review count" is interpreted as **alerts generated (review demand)**. O, U and L are defined as above for each capacity. "Frauds missed because of overflow" is replaced by the bounded quantities in this record. |
+| **RQ2** | The primary workload analysis uses uncapped demand A. Overflow, unused capacity and load ratio are defined formally. The rate/volume decomposition is as defined in DR-003. |
+| **H3** | **None.** H3 tests the realised alert rate r = Σ_d n_d / Σ_d N_d, which is uncapped and label-free. |
+| **Workload-fidelity measures** | DR-003's daily count n_d is **alerts generated (review demand)**. O, U and L are defined as above for each capacity. Fraud consequences of overflow are limited to the bounded quantities in this record. |
 | **R0 / R1 / R2** | Evaluated uncapped. Outcomes: A, O, U, L, and label-based alert-set recall and precision. R0 remains descriptive only and R1 a secondary comparator. |
-| **R3** | **Unchanged.** It reviews min(K_c, N_d) transactions per day: no overflow by construction, and no unused capacity given the audit's minimum daily volume (2,048 ≥ K_c). The primary metric Recall@2 % (daily top-K, K = 56) and H1/H2 are unaffected. |
-| **R4 / RQ3** | **Unchanged.** RQ3 compares only the capped policies R3 and R4. No cost is assigned to overflow, which would require an operational assumption. Unused capacity is already modelled (DR-007, assumption A6 and u(ρ)). |
+| **R3** | It reviews min(K_c, N_d) transactions per day: no overflow by construction, and no unused capacity given the audit's minimum daily volume (2,048 ≥ K_c). The primary metric Recall@2 % (daily top-K, K = 56) and H1/H2 are unaffected. |
+| **R4 / RQ3** | RQ3 compares only the capped policies R3 and R4. No cost is assigned to overflow, which would require an operational assumption. Unused capacity is already modelled (DR-007, assumption A6 and u(ρ)). |
 | **False-negative analysis** | Defined under **R3 at the primary capacity** ("false negatives at capacity"). Flagged frauds in excess demand are never counted as false negatives. This makes explicit what the protocol already implied. |
-| **Statistical plan** | **No new hypothesis.** The Holm family {H1, H2, H3} is unchanged. The label-free summaries of A, O, U and L may carry intervals from the existing day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000 replicates), as for H3 and budget fidelity ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)). Label-based alert-set measures and E are descriptive; any intervals use already-declared bootstrap machinery ([DR-006](DR-006-bootstrap-inference-strategy.md)). |
-| **Capacity grid, K values, split, features, SESOI, cost-ratio grid** | **Unchanged.** |
+| **Statistical plan** | **No new hypothesis.** The Holm family {H1, H2, H3} is not affected. The label-free summaries of A, O, U and L may carry intervals from the existing day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000 replicates), as for H3 and budget fidelity ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)). Label-based alert-set measures and E are descriptive; any intervals use already-declared bootstrap machinery ([DR-006](DR-006-bootstrap-inference-strategy.md)). |
+| **Capacity grid, K values, split, features, SESOI, cost-ratio grid** | Not affected. |
 
 ## Alternatives considered
 
@@ -294,8 +291,7 @@ Therefore:
 
 ## Consequences
 
-- Protocol open item 6 is resolved, pending supervisor review.
-- The Test evaluation must save, for each threshold policy and Test day: A_{d,j}; and, once labels may be used, TP^A_{d,j}. O, U, L and E are derived from these, K_c and the R3 results.
+- The Test evaluation saves, for each threshold policy, configuration and Test day: A_{d,j}; and, once labels may be used, TP^A_{d,j}. O, U, L and E are derived from these, K_c and the R3 results.
 - Result tables keep separate columns for demand (R0–R2) and enforced reviews (R3, R4).
 - Any future study of downstream overflow handling (backlog, escalation, arrival-order processing) requires a new GitHub Issue and Decision Record.
 

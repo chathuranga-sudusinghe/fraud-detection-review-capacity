@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) |
-| Date | 2026-09-23 |
+| Status | Accepted (pre-freeze); supervisor review pending |
+| Date | 2026-09-23; revised 2026-10-09 (Issue #54) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3–4, 5.1, 14, 15 |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
@@ -38,7 +38,7 @@ The partitions are:
 |---|---|---|---|---|---|
 | **Train** | 1–105 | 105 | 368,632 | 62.4 | Model fitting. **Models are not refit** on later partitions. |
 | **V1** (Validation 1) | 106–126 | 21 | 65,544 | 11.1 | Hyper-parameter selection and early stopping **only** |
-| **V2** (Validation 2) | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for policy R4, the calibrated cost-aware capped policy); threshold selection (R1, the F1-optimal threshold; R2, the capacity-rate threshold); fixed daily review budget K ([DR-002](DR-002-review-capacity-definition.md)) |
+| **V2** (Validation 2) | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for policy R4, the calibrated cost-aware capped policy); threshold selection (R1, the F1-optimal threshold; R2, the capacity-rate threshold); fixed daily review budget K ([DR-002](DR-002-review-capacity-definition.md)); selection of the H3 configuration ([DR-010](DR-010-h3-confirmatory-configuration.md)) |
 | **Test** | 155–182 | 28 | 78,542 | 13.3 | **Sealed.** One confirmatory evaluation after the protocol freeze |
 | **Total (full joined dataset)** | 1–182 | 182 | 590,540 | 100.0 | Train + V1 + V2 + Test; mutually exclusive and exhaustive |
 
@@ -96,7 +96,7 @@ Reproducibility anchors, from the notebook (§4.3):
 1. **Train as large as possible, including the early high-volume regime.** The model then sees the full range of volumes.
 2. **V2 has the same length as Test (28 days) and near-identical volume.** Threshold and budget transfer (research question RQ2) is then a like-for-like comparison.
 3. **V1 and V2 have different jobs.** Early stopping makes V1 scores optimistic. V2 supplies out-of-sample scores for policy selection and calibration, and is closer in time to Test.
-4. **Calibration on V2, not V1.** V1's prevalence (4.22 %) differs from V2's (3.39 %), and V1 is used for early stopping. Calibration matters only for R4 (and the descriptive R0, the default 0.5 threshold). Monotone calibrators do not change the ranking used by R1–R3 (R3 is the daily top-K policy) [I; REF-015, REF-016].
+4. **Calibration on V2, not V1.** V1's prevalence (4.22 %) differs from V2's (3.39 %), and V1 is used for early stopping. Calibration matters only for R4 (and the descriptive R0, the default 0.5 threshold). R1–R3 (R3 is the daily top-K policy) rank and threshold on raw model scores, so calibration does not affect them: Platt scaling with a positive slope is strictly monotone and preserves the ranking, while isotonic regression is monotone but can merge scores into ties [I; REF-015, REF-016, REF-017].
 5. **No primary gap.** Its purpose would be to simulate label latency [REF-005, REF-046], but its length cannot be grounded in this dataset. Because models are not refit, the Train → Test separation is already 49 days.
 
 ## Consequences
@@ -104,7 +104,7 @@ Reproducibility anchors, from the notebook (§4.3):
 - Development data total 511,998 rows and 17,889 frauds. Test has 78,542 rows (sealed).
 - Projected Test frauds, assuming V2 prevalence, are about 2,660. This is a projection, not an observation, and it drives the power discussion in the protocol.
 - Daily-level Test statistics rest on **n = 28 days** (n = number of Test relative days).
-- **RQ2 observes only one V2 → Test transfer event.** A small, development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only) is recommended to show whether transfer failure is systematic. It must not replace the single confirmatory Test evaluation. *Current status: the primary configuration is defined by [DR-010](DR-010-h3-confirmatory-configuration.md) (Issue #29) as the H3 configuration's model family and weighting, selected on V2. That selection is an additional V2 role not listed in the partition table above.*
+- **RQ2 observes only one V2 → Test transfer event.** A development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only) shows whether transfer failure is systematic. It does not replace the single confirmatory Test evaluation. The primary configuration is the H3 configuration selected on V2 ([DR-010](DR-010-h3-confirmatory-configuration.md)).
 - **Label-latency sensitivity.** Label-dependent policy choices (R1 threshold; R4 calibrator) are repeated using only V2 days 127–147. This costs no Test access.
 - If the protocol is ever changed to **refit** on Train+V1(+V2), this decision must be revisited and a gap reconsidered.
 
@@ -118,7 +118,7 @@ Reproducibility anchors, from the notebook (§4.3):
 
 ## References
 
-REF-004, REF-005, REF-015, REF-016, REF-023, REF-024, REF-025, REF-026, REF-027, REF-046, REF-047, REF-048 — see [`../references.md`](../references.md).
+REF-004, REF-005, REF-015, REF-016, REF-017, REF-023, REF-024, REF-025, REF-026, REF-027, REF-046, REF-047, REF-048 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 
@@ -136,6 +136,7 @@ REF-004, REF-005, REF-015, REF-016, REF-023, REF-024, REF-025, REF-026, REF-027,
 | R2 | Decision policy: capacity-rate threshold chosen on V2 |
 | R3 | Decision policy: daily top-K review |
 | R4 | Decision policy: calibrated cost-aware capped review |
+| H3 | Confirmatory hypothesis 3: alert-rate transfer fidelity |
 | REF-NNN | Reference identifier in `docs/references.md` |
 | RQ2 | Research question 2 (policy-transfer fidelity) |
 | s | Seconds |

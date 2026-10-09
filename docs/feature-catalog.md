@@ -35,7 +35,7 @@ Human-readable data dictionary for every column of the joined IEEE-CIS (IEEE Com
 | Field | Values |
 |---|---|
 | Interpretation | `identifier`, `temporal`, `target`, `categorical` (with "numeric-coded" when stored as numbers), `numeric`, `ambiguous` |
-| Model input | `include` (one of the 431 inputs given identically to LightGBM and CatBoost) or `exclude` |
+| Model input | `include` (one of the 431 inputs given identically to all four models of DR-011) or `exclude` |
 | Missing (dev) | Share of development rows with no value |
 | Levels in Train | Number of distinct non-missing values in Train rows |
 | Validation 2 values unseen in Train | Share of non-missing Validation 2 values never observed in Train (categorical columns only) |
@@ -52,8 +52,8 @@ Human-readable data dictionary for every column of the joined IEEE-CIS (IEEE Com
 
 **Encoding reminder (DR-008).**
 - Categorical inputs are converted to text labels, and missing categorical values become the label `"__MISSING__"`.
-- Numeric inputs stay `float64`, with missing values left as NaN (not-a-number) and handled natively by each library.
-- No imputation, scaling, grouping or engineered feature is added.
+- Numeric inputs stay `float64`, with missing values left as NaN (not-a-number): handled natively by the tree-based libraries, and represented by a Train-fitted quantile transformation with missingness indicators for the neural networks (proposed, DR-008 §9).
+- The canonical frame and the tree-based models receive no imputation, scaling or grouping. No engineered feature is added for any model.
 
 ## 1. Key, target and time
 
@@ -253,9 +253,9 @@ Group description: identity information, i.e. network connection information (e.
 ## 12. Cross-cutting cautions
 
 - **Masked semantics.** Apart from the target, the key, `TransactionDT`, `TransactionAmt` and the email and device fields, meanings are at most group-level. No field-level meaning is claimed for masked columns.
-- **Structured missingness.** The identity block is missing for about three quarters of rows. The V, D and M groups have shared missingness patterns. Missing values are informative and are handled natively, never imputed (DR-008).
-- **High cardinality.** `card1` (11,870 Train levels), `DeviceInfo` (1,470), `card2`, `id_19`, `id_20`, `id_21`, `id_25`, `addr1` and `id_33` stay categorical in both libraries (DR-008 §7).
-- **Category drift.** `id_13` and `id_31` show large shares of Validation 2 values that were never seen in Train. Under DR-008 they become missing values for LightGBM (the Train-fixed category list maps unseen values to NaN, matching LightGBM's documented default) and new values for CatBoost.
+- **Structured missingness.** The identity block is missing for about three quarters of rows. The V, D and M groups have shared missingness patterns. Missing values are informative: the tree-based models handle them natively, and the neural networks receive a value of 0 together with a missingness indicator for each numeric input with at least one missing Train value (proposed, DR-008 §9).
+- **High cardinality.** `card1` (11,870 Train levels), `DeviceInfo` (1,470), `card2`, `id_19`, `id_20`, `id_21`, `id_25`, `addr1` and `id_33` stay categorical for every model (DR-008 §7).
+- **Category drift.** `id_13` and `id_31` show large shares of Validation 2 values that were never seen in Train. Under DR-008 they become missing values for LightGBM (the Train-fixed category list maps unseen values to NaN, matching LightGBM's documented default), new values for CatBoost, and the `"__MISSING__"` index for the neural networks (proposed, DR-008 §9).
 - **Entity memorisation.** Card, address and time-delta fields together can partly identify recurring entities. This optimism risk is recorded in DR-001 and in the protocol.
 - **Undocumented construction.** The look-back windows of the C, D and V groups are not documented, a stated threat to validity.
 

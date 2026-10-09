@@ -2,16 +2,14 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze). Δ fixed at 0.004 (±20 % relative) by Issue #7, pending supervisor review. H3 configuration declared by [DR-010](DR-010-h3-confirmatory-configuration.md) (Issue #29). |
-| Date | 2026-09-23; Δ added 2026-09-24 (Issue #7) |
+| Status | Accepted (pre-freeze); supervisor review pending. Δ fixed at 0.004 (±20 % relative) by Issue #7; H3 configuration by [DR-010](DR-010-h3-confirmatory-configuration.md); Holm-level H3 decision and zero-alert days in the rate/volume decomposition (Issue #54). |
+| Date | 2026-09-23; Δ added 2026-09-24 (Issue #7); revised 2026-10-09 (Issue #54) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
-| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (later: multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (later: H1/H2 bootstrap unit), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (later: overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (later: H3 configuration), [protocol](../protocol.md) |
+| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (H1/H2 bootstrap), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (H3 configuration), [protocol](../protocol.md) |
 
 ## Context
 
-The previous research question 2 (RQ2) asked how accurately validation-selected thresholds "preserve the intended review workload". Its hypothesis 3 (H3) was a point null ("a validation-selected 2 % review threshold preserves the intended review workload").
-
-The feasibility audit found that this wording **mixes two different mechanisms**:
+Research question 2 (RQ2) concerns what happens when a validation-selected score threshold is applied to later data. A question framed as "does the threshold preserve the intended review workload?", with a point-null hypothesis, **mixes two different mechanisms**, as the feasibility audit shows:
 
 1. **Alert-rate fidelity.** Does the score threshold τ (a model-score cut-off), chosen so that 2 % of Validation 2 (V2, relative days 127–154) transactions exceed it, still flag about 2 % of transactions in a later period? This depends on **score-distribution and composition drift**, i.e. on the model and the data.
 2. **Fixed daily-budget fidelity.** Does the *number* of flagged transactions per day match the fixed daily review budget K (K = 56 reviews per relative day at 2 % capacity; [DR-002](DR-002-review-capacity-definition.md))? This depends on alert-rate drift **and** on **daily volume variation**, which exists whatever the model does.
@@ -23,15 +21,15 @@ The feasibility audit found that this wording **mixes two different mechanisms**
 
 The rate component is therefore a genuine object of study.
 
-The old point-null H3 is **uninformative**. With about 78,500 Test transactions, almost any non-zero deviation from exactly 2 % would be "significant". A non-rejection would not show that the rate is preserved [REF-030].
+A point-null hypothesis on the rate is **uninformative**. With about 78,500 Test transactions, almost any non-zero deviation from exactly 2 % would be "significant", and a non-rejection would not show that the rate is preserved [REF-030].
 
 ## Decision
 
-### Revised RQ2
+### RQ2
 
 > **RQ2: When a score threshold selected on validation data is transferred to a later temporal period, how well does it preserve the intended alert rate, and how does the resulting daily review workload compare with the fixed review budget?**
 
-### Revised H3 — Alert-rate transfer fidelity (equivalence formulation)
+### H3 — Alert-rate transfer fidelity (equivalence formulation)
 
 **Definitions.**
 - τ₂ (the 2 % rate threshold) is the score threshold chosen on V2 so that 2 % of V2 transactions have score ≥ τ₂. This is decision policy R2 (the capacity-rate threshold).
@@ -68,15 +66,11 @@ The old point-null H3 is **uninformative**. With about 78,500 Test transactions,
 >
 > **H3₁:** The realised alert rate under the validation-selected 2% threshold lies within the pre-specified equivalence band around the 2% target (|r − 0.02| < Δ, where Δ = 0.004, i.e. ±20% of the target).
 
-**Test.** Two One-Sided Tests (TOST) at significance level α = 0.05, using a day-level moving-block bootstrap. Details are in [Statistical formulation of H3](#statistical-formulation-of-h3).
+**Test.** Two One-Sided Tests (TOST) using a day-level moving-block bootstrap, decided by the Holm-adjusted p-value of H3 ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). Details are in [Statistical formulation of H3](#statistical-formulation-of-h3).
 
-**Still to specify at freeze:**
-- which model configuration(s) H3 is tested on (e.g. each of the four model × weighting configurations, or a single pre-declared primary one);
-- how H3 enters the multiplicity plan with hypotheses H1 (model family) and H2 (class weighting) [REF-029].
-
-*Current status of these two items:*
-- *~~The configuration(s) on which H3 is tested remain open (protocol open item 7).~~ Resolved by [DR-010](DR-010-h3-confirmatory-configuration.md) (Issue #29): H3 is confirmatory for a single H3 configuration, the one with the highest pooled V2 Recall@2% under R3 (policy R3, daily top-K; K = 56), selected before the Test period is unsealed. The other three configurations' H3 results are descriptive only.*
-- *The multiplicity plan was subsequently defined by [DR-005](DR-005-sesoi-and-h1-h2-inference.md): Holm's procedure at family-wise α = 0.05 over {H1, H2, H3}, with each additional H3 configuration adding a family member. Under DR-010 H3 is tested once, so the family has three members.*
+**Configuration and multiplicity.**
+- H3 is confirmatory for a single *H3 configuration*: the one of the eight model × weighting configurations with the highest pooled V2 Recall@2% under R3 (policy R3, daily top-K; K = 56), selected by a frozen rule before the Test period is unsealed ([DR-010](DR-010-h3-confirmatory-configuration.md)). H3 results for the other seven configurations are descriptive.
+- H3 is one member of the confirmatory family {H1 (model family), H2 (class weighting), H3}, controlled by Holm's procedure at family-wise α = 0.05 [REF-029] ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
 
 ### Daily-budget fidelity — a separate operational outcome (not a confirmatory hypothesis)
 
@@ -84,7 +78,7 @@ For each Test relative day d, with N_d the day's transaction volume, n_d the num
 
 | Statistic | Definition |
 |---|---|
-| Realised daily review count | n_d |
+| Threshold-generated alerts (review demand) | n_d |
 | Deviation from fixed K | n_d − K |
 | Relative deviation | (n_d − K) / K |
 | Absolute deviation | \|n_d − K\|; reported as a mean and maximum over days |
@@ -92,9 +86,7 @@ For each Test relative day d, with N_d the day's transaction volume, n_d the num
 | Days below K (underuse) | % of days with n_d < K; total unused capacity Σ max(0, K − n_d) |
 | Rate / volume decomposition | See the display equation below the table. It separates the *rate* component (model and data drift) from the *volume* component |
 
-*Current-status note (Issue #27, [DR-009](DR-009-overflow-handling-for-threshold-policies.md)):*
-- *Clarification of the first row. The label "Realised daily review count" is the original wording of this record and is kept unchanged. Under DR-009, n_d is interpreted as the number of **threshold-generated alerts**, i.e. review demand. It is not a count of reviews actually performed. DR-009 distinguishes this demand from **actual hard-capacity review**, which is R3's min(K, N_d) reviews per day.*
-- *DR-009 formalises the overflow and unused-capacity sums above as O_d = max(n_d − K, 0) and U_d = max(K − n_d, 0) (in DR-009's notation, A_d,R2 = n_d at 2 %), adds the load ratio n_d / K, and applies the same definitions to R0 and R1.*
+n_d is the number of **threshold-generated alerts**, i.e. review demand; it is not a count of reviews actually performed. Actual hard-capacity review is R3's min(K, N_d) reviews per day. [DR-009](DR-009-overflow-handling-for-threshold-policies.md) formalises the overflow and unused-capacity sums as O_d = max(n_d − K, 0) and U_d = max(K − n_d, 0) (in DR-009's notation, A_d,R2 = n_d at 2 %), adds the load ratio n_d / K, and applies the same definitions to R0 and R1.
 
 The rate / volume decomposition is:
 
@@ -113,8 +105,11 @@ where:
 
 The first term on the right is the *rate* component (model and data drift); the second is the *volume* component, which exists whatever the model does.
 
-These statistics are reported descriptively with bootstrap intervals where appropriate. Secondary descriptive consequences:
-- ~~frauds missed because of overflow, under the declared overflow rule ([DR-002](DR-002-review-capacity-definition.md))~~ *(original wording. Current status: superseded by [DR-009](DR-009-overflow-handling-for-threshold-policies.md). The overflow rule is report-only. Frauds among alerts in excess of K are **not** counted as missed, because the labels do not show what would happen to excess alerts. What may be reported is frauds below the threshold, which are false negatives of the threshold classifier, and, descriptively and conditional on score-priority ordering, "flagged frauds in excess demand".)*
+**Days with no alerts.** On a day with n_d = 0 the logarithm is undefined. Such days are excluded from the logarithmic summary, counted and reported separately, and their deviation from K is attributed entirely to the rate component (r_d = 0). Every relative day has at least 2,048 transactions (feasibility notebook §3), so the volume term is always defined.
+
+These statistics are reported descriptively with bootstrap intervals where appropriate. Secondary descriptive consequences, as bounded by [DR-009](DR-009-overflow-handling-for-threshold-policies.md):
+- frauds below the threshold, which are false negatives of the threshold classifier;
+- descriptively and conditional on score-priority ordering, "flagged frauds in excess demand". Frauds among alerts in excess of K are **not** counted as missed, because the labels do not show what would happen to excess alerts;
 - review capacity left unused on underuse days.
 
 ## Equivalence tolerance Δ (Issue #7)
@@ -186,12 +181,12 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 | **Equivalence bounds** | (0.016, 0.024), i.e. relative deviation r / 0.02 − 1 ∈ (−0.20, +0.20). Open bounds, so a CI endpoint exactly on a bound does **not** support H3₁. |
 | **Null hypothesis H3₀** | r ≤ 0.016 **or** r ≥ 0.024 (\|r − 0.02\| ≥ 0.004) |
 | **Alternative H3₁** | 0.016 < r < 0.024 (\|r − 0.02\| < 0.004) |
-| **Test** | TOST: H0a: r ≤ 0.016 and H0b: r ≥ 0.024 (the two one-sided null hypotheses), each one-sided at α = 0.05. H3₁ is concluded only if both are rejected, i.e. if the **90 % CI lies entirely inside (0.016, 0.024)** [REF-061, REF-062]. TOST p-value = max(p_a, p_b), where p_a and p_b are the p-values of H0a and H0b, for use if H3 enters the Holm family (open item 7). |
-| **CI interpretation** | Inside the band: rate preserved within ±20 %. Entirely outside: rate not preserved. Overlapping a bound: **inconclusive**, which must not be reported as "preserved". |
+| **Test** | TOST: H0a: r ≤ 0.016 and H0b: r ≥ 0.024 (the two one-sided null hypotheses), with one-sided bootstrap p-values p_a = (1 + #{r* ≤ 0.016}) / (B + 1) and p_b = (1 + #{r* ≥ 0.024}) / (B + 1), where r* is r in one bootstrap replicate. p_H3 = max(p_a, p_b) enters Holm's procedure [REF-061, REF-062, REF-029]. H3₁ is concluded only if the **Holm-adjusted p-value of H3 is at most 0.05**. |
+| **CI interpretation** | The 90 % CI is reported in every case. The 90 % CI describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. The unadjusted and the Holm-adjusted p-value are both reported. Inside the band: rate preserved within ±20 %. Entirely outside: rate not preserved. Overlapping a bound: **inconclusive**, which must not be reported as "preserved". |
 | **Analysis unit** | The **relative day**. Flags are deterministic given the score, but a day's scores share that day's transaction composition (e.g. identity coverage, product mix), so transactions within a day are not independent draws [D; DR-001]. A transaction-level binomial interval would be anti-conservative. |
-| **Dependence between days** | Days are autocorrelated (daily-volume lag-1 autocorrelation 0.75 over days 1–182; 0.27 within V2 [D]). The CI therefore uses a **moving-block bootstrap over days** [REF-037]: blocks of ℓ consecutive Test days are resampled with replacement to 28 days, the pooled ratio is recomputed, B = 10,000 bootstrap replicates, percentile 90 % interval. |
+| **Dependence between days** | Days are autocorrelated (daily-volume lag-1 autocorrelation 0.75 over days 1–182; 0.27 within V2 [D]). The CI therefore uses a **moving-block bootstrap over days** [REF-037]: blocks of ℓ consecutive Test days are resampled with replacement to 28 days, the pooled ratio is recomputed, B = 10,000 bootstrap replicates, percentile intervals. |
 | **Block length** | **ℓ (block length) = 3 days, primary.** This follows the n^(1/3) and n^(1/4) orders for variance and one-sided distribution estimation (≈ 3.0 and 2.3 for n = 28, where n = number of Test days) [REF-064]. Those are asymptotic orders with unknown constants, so ℓ is pre-specified rather than estimated from Test data. **Sensitivity:** ℓ = 1 (independent days) and ℓ = 7 (weekly). |
-| **Entity clustering** | Within-day entity clustering is absorbed by the day unit. Cross-day recurrence is partly absorbed by the blocks. Because H3 involves **no labels**, the label-propagation dependence that affects H1/H2 [DR-001] does not apply to H3. At the time of this record, the primary bootstrap unit for H1/H2 remained an open protocol item. *Current status: resolved by [DR-006](DR-006-bootstrap-inference-strategy.md) (two-way pigeonhole bootstrap over relative days × fine pseudo-entities). H3's day-level moving-block bootstrap is unchanged.* |
+| **Entity clustering** | Within-day entity clustering is absorbed by the day unit. Cross-day recurrence is partly absorbed by the blocks. Because H3 involves **no labels**, the label-propagation dependence that affects H1/H2 ([DR-001](DR-001-temporal-split-strategy.md); addressed by the two-way bootstrap of [DR-006](DR-006-bootstrap-inference-strategy.md)) does not apply to H3. |
 | **Threshold ties** | τ₂ is the score of the transaction ranked ⌈0.02 × N_V2⌉ in descending V2 order (N_V2 = number of V2 transactions; ⌈ · ⌉ = round up), and transactions are flagged if score ≥ τ₂. The realised V2 rate r_V2 (share of V2 transactions with score ≥ τ₂) is reported. If tied scores make r_V2 differ from 0.02 by more than 1 % relative, this is reported and discussed, but the H3 target remains 0.02. |
 | **Not propagated** | Sampling uncertainty in τ₂ from V2 (binomial standard error, SE, of the V2 rate ≈ 0.05 percentage points, pp) is not added, because H3 is conditional on the deployed threshold. Variation across calibration origins is addressed by the development-only rolling-origin supplement, not by H3. |
 
@@ -206,10 +201,11 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 
 | Alternative | Why not chosen |
 |---|---|
-| Keep the point-null H3 | Near-certain rejection at this sample size, and a non-rejection proves nothing [REF-030]. It also mixes rate drift with volume drift. |
+| Point-null H3 ("the threshold preserves the intended workload") | Near-certain rejection at this sample size, and a non-rejection proves nothing [REF-030]. It also mixes rate drift with volume drift. |
 | Test daily-budget fidelity as H3 | Budget fidelity is largely driven by volume variation that exists regardless of the model [D]. A hypothesis on it would mostly test the data-generating process, not policy transfer. |
 | Make the rate threshold adapt daily (re-estimate the quantile each day) | That is a different policy, close to R3 (daily top-K). R2 is specifically the *static* validation-selected threshold whose transfer is the object of study. |
-| Leave Δ unfixed until after the Test run | Makes the equivalence test meaningless: bounds chosen after seeing the data can be fitted to the result. Δ was therefore fixed before any Test access (Issue #7, see above). |
+| Leave Δ unfixed until after the Test run | Makes the equivalence test meaningless: bounds chosen after seeing the data can be fitted to the result. Δ is fixed before any Test access. |
+| Decide H3 by the 90 % CI regardless of Holm's procedure | Bypasses the family-wise error control of the confirmatory family, including Holm's stopping rule ([DR-010](DR-010-h3-confirmatory-configuration.md)). |
 
 ## Rationale
 
@@ -217,7 +213,7 @@ The rate component answers the research question, *does a validation-selected op
 
 ## Consequences
 
-- RQ2 no longer includes "what effect does workload drift have on missed fraud" as its main question. Missed-fraud consequences become **secondary descriptive outcomes** of the budget-fidelity analysis. *Current status: bounded by [DR-009](DR-009-overflow-handling-for-threshold-policies.md). Only frauds below the threshold are false negatives; frauds in overflow are reported only as "flagged frauds in excess demand", conditional on score-priority ordering.*
+- Missed-fraud consequences of workload drift are **secondary descriptive outcomes** of the budget-fidelity analysis, bounded by [DR-009](DR-009-overflow-handling-for-threshold-policies.md): only frauds below the threshold are false negatives; frauds in overflow are reported only as "flagged frauds in excess demand", conditional on score-priority ordering.
 - Only one V2 → Test transfer event exists ([DR-001](DR-001-temporal-split-strategy.md)). The **development-only rolling-origin supplement** provides exploratory evidence on how variable transfer is across origins.
 - Label-free: R2's threshold needs V2 scores but no V2 labels, so R2 is not affected by the label-latency sensitivity.
 
@@ -239,13 +235,16 @@ REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-036, REF-037,
 | Symbol / abbreviation | Meaning |
 |---|---|
 | [D], [L], [I] | Evidence tags: dataset observation, literature, inference |
-| α | Significance level of each one-sided test (0.05) |
+| α | Family-wise significance level (0.05) |
+| p̃_H3 | Holm-adjusted p-value of H3 (DR-005); H3₁ is concluded if it is at most 0.05 |
+| #{ · } | Number of bootstrap replicates satisfying a condition |
 | AR(1) | First-order autoregressive model |
 | B | Number of bootstrap replicates (10,000) |
 | CI | Confidence interval |
 | d | A relative day (Test days 155–182 unless stated) |
 | Δ | H3 equivalence tolerance: 0.004 (20 % of the 2 % target) |
 | H1, H2, H3 | Confirmatory hypotheses: model family; class weighting; alert-rate transfer fidelity |
+| R0, R1 | Decision policies: default 0.5 threshold; F1-optimal threshold |
 | H3₀, H3₁ | Null and alternative forms of H3 |
 | H0a, H0b | The two one-sided null hypotheses of the H3 TOST |
 | K | Fixed daily review budget (56 at 2 % capacity) |
@@ -257,7 +256,8 @@ REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-036, REF-037,
 | N_d | Total number of transactions on day d |
 | N_V2 | Number of V2 transactions |
 | N̄_V2 | Mean daily transaction volume in V2 |
-| p_a, p_b | p-values of H0a and H0b |
+| p_a, p_b, p_H3 | p-values of H0a and H0b; H3 TOST p-value max(p_a, p_b) |
+| r* | r in one bootstrap replicate |
 | pp | Percentage points |
 | PSI | Population Stability Index |
 | r | Realised Test alert rate at τ₂, pooled over Test days |
