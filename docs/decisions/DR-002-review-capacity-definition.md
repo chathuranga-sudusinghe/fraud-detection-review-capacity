@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) |
-| Date | 2026-09-23 |
+| Status | Accepted (pre-freeze); supervisor review pending. Pooled normalised recall and days without frauds defined (Issue #54). |
+| Date | 2026-09-23; revised 2026-10-09 (Issue #54) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§6, 7, 11 |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
@@ -63,7 +63,17 @@ The research studies fraud detection when only a limited number of transactions 
    \text{normalised recall}_d = \frac{\mathrm{TP}_d}{\min(K, F_d)}
    $$
 
-   where `TP_d` (true positives) = number of frauds reviewed on day d. It is computed per day and pooled.
+   where `TP_d` (true positives) = number of frauds reviewed on day d.
+
+   The **pooled normalised recall** over an evaluation period, the summary that is reported, is:
+
+   $$
+   \text{pooled normalised recall} = \frac{\sum_d \mathrm{TP}_d}{\sum_d \min(K, F_d)} = \frac{\text{Recall@}K}{\text{oracle recall ceiling}}
+   $$
+
+   It is the share of the achievable frauds that were reviewed: the period's Recall@K divided by its oracle ceiling.
+
+   - **Days without frauds.** On a day with F_d = 0 the per-day ratio is undefined (0/0). Such days contribute 0 to both sums of the pooled measure, so the pooled value is always defined when the period contains at least one fraud. They are excluded from any per-day summary (e.g. a distribution of daily values) and counted separately. Every V2 day has at least 61 frauds [D].
 6. **Recall@K and Precision@K are not independent evidence.** On a fixed evaluation period both K and the fraud total F are fixed, so:
 
    $$
@@ -108,7 +118,7 @@ The research studies fraud detection when only a limited number of transactions 
 
 - **Primary metric:** Recall@2 %, evaluated under the daily top-K policy R3 (review the K highest-scoring transactions each day) with K = 56. It is interpreted against the ≈ 0.6 ceiling and reported with normalised recall.
 - **Research question RQ3 must be evaluated across the capacity grid.** In the binding regime, the marginal (K-th) reviewed transaction is likely to have a high fraud probability. A cost-aware policy (R4, the calibrated cost-aware capped policy) will then rarely leave budget unused, and R4 will often coincide with R3. The informative contrasts are expected at 5 % and 10 % and at low miss-to-review cost ratios [I]. The **main RQ3 output is the break-even miss-to-review cost ratio for each capacity** [REF-008, REF-039, REF-040].
-- Policies that are not capped (R0, the default 0.5 threshold; R1, the F1-optimal threshold; R2, the capacity-rate threshold) can exceed K on a given day. The protocol must declare an **overflow rule**: either report the overflow, or truncate to the top-K of the flagged transactions. *Current status: resolved by [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (Issue #27): report-only. R0–R2 are evaluated uncapped, and their alert demand is compared with K. Truncation was rejected because it reproduces R3 on every overflow day.*
+- Policies that are not capped (R0, the default 0.5 threshold; R1, the F1-optimal threshold; R2, the capacity-rate threshold) can exceed K on a given day. Their **overflow rule** is report-only ([DR-009](DR-009-overflow-handling-for-threshold-policies.md)): R0–R2 are evaluated uncapped, and their alert demand is compared with K. Truncation is rejected because it reproduces R3 on every overflow day.
 - Review effort is counted **per transaction**.
 
 ## Threats and limitations
@@ -135,6 +145,7 @@ REF-004, REF-005, REF-006, REF-008, REF-032, REF-033, REF-039, REF-040, REF-046,
 | min(K, F_d) | Largest number of frauds that could be reviewed on day d |
 | N_rev | Number of reviewed transactions |
 | Precision@K | Share of reviewed transactions that are fraud |
+| pooled normalised recall | Σ_d TP_d / Σ_d min(K, F_d): Recall@K divided by the oracle recall ceiling |
 | R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |
 | Recall@K, Recall@2 % | Share of all frauds reviewed under budget K (at the 2 % capacity) |
 | RQ2, RQ3 | Research questions 2 (policy transfer) and 3 (cost-aware capacity use) |

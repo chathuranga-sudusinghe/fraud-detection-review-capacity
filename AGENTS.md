@@ -12,7 +12,7 @@ If this file conflicts with [`docs/protocol.md`](docs/protocol.md) on a methodol
 
 - **Repository:** `fraud-detection-review-capacity`
 - **Nature:** standalone MSc Data Science research project, University of Greenwich, COMP1885 Individual Project.
-- **Working title:** *Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Gradient-Boosting Models and Decision Policies*
+- **Working title:** *Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Tree-Based and Neural Models and Decision Policies*
 - **Dataset:** IEEE-CIS Fraud Detection labelled training data.
 - **Research basis:** this repository, local project data, University of Greenwich guidance, and verified literature.
 
@@ -108,8 +108,8 @@ No calendar dates are inferred.
 
 Defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze).
 
-- **Models:** LightGBM, CatBoost.
-- **Class weighting:** unweighted; balanced class weighting, implemented as explicit sample weights computed from Train only. Each fraud row receives the weight
+- **Models:** two families with two models each ([DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md)): tree-based (LightGBM, CatBoost) and neural (ResNet-style multilayer perceptron, MLP; FT-Transformer). Each is trained unweighted and with balanced class weighting, giving **eight configurations** under one common training procedure.
+- **Class weighting:** unweighted; balanced class weighting, implemented as explicit sample weights computed from Train only and applied in every model's loss. Each fraud row receives the weight
 
   $$
   w_{\mathrm{pos}} = \frac{n_{\mathrm{neg}}}{n_{\mathrm{pos}}}
@@ -135,7 +135,7 @@ Defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze).
 
 - **Decision policies:** R0–R4 as defined in the protocol: R0 (default 0.5 threshold), R1 (F1-optimal threshold), R2 (capacity-rate threshold), R3 (daily top-K review) and R4 (calibrated cost-aware capped policy).
 
-**Do not add** new model families, resampling methods (e.g. SMOTE, the Synthetic Minority Over-sampling Technique, or other over- or under-sampling) or feature-engineering studies unless an explicit GitHub Issue changes the protocol.
+**Do not add** model families beyond DR-011, resampling methods (e.g. SMOTE, the Synthetic Minority Over-sampling Technique, or other over- or under-sampling) or feature-engineering studies unless an explicit GitHub Issue changes the protocol.
 
 ---
 
@@ -443,6 +443,7 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 | DR / DR-NNN | Decision Record, numbered NNN |
 | [D], [L], [G], [I] | Evidence tags: dataset, literature, University guidance, inference |
 | K | Fixed daily review budget (reviews per relative day) |
+| MLP | Multilayer perceptron (ResNet-style MLP: a neural model of DR-011) |
 | MAE, RMSE | Mean Absolute Error, Root Mean Squared Error (named as examples of standard academic equations) |
 | n_neg, n_pos | Numbers of legitimate and fraud transactions in Train |
 | PR | Pull request |

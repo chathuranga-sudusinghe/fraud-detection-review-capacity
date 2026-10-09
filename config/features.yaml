@@ -5,7 +5,8 @@
 # Source: train_transaction.csv LEFT JOIN train_identity.csv ON TransactionID
 #         (394 + 41 - 1 shared key = 434 joined columns).
 # Every joined column appears in exactly one of: target, excluded, categorical, numeric.
-# Both LightGBM and CatBoost receive the SAME 431 input columns and the SAME 49 categorical columns.
+# All four models (LightGBM, CatBoost, ResNet-style MLP, FT-Transformer; DR-011) receive the SAME 431 input columns
+# and the SAME 49 categorical columns. Family-specific representations are declared under `encoding`.
 # This file declares roles only. It contains no data values and no fitted statistics.
 
 version: 1
@@ -487,14 +488,14 @@ numeric:
 
 encoding:
   categorical_canonical_form:
-    # One canonical representation, built identically for both libraries before any library-specific step.
+    # One canonical representation, built identically for all models before any model-specific step.
     value_type: string
     numeric_codes: "integer-valued codes rendered without a decimal part (e.g. 100.0 -> '100', 1000 -> '1000')"
     string_values: "kept exactly as in the raw data (no case folding, trimming, merging or grouping)"
     missing_token: "__MISSING__"
   numeric:
     dtype: float64
-    missing: "NaN, handled natively by each library; no imputation, scaling, clipping or transformation"
+    missing: "NaN in the canonical frame; handled natively by the tree-based libraries (no imputation, scaling, clipping or transformation); neural representation below"
   lightgbm:
     categorical_dtype: "pandas Categorical; category list = canonical values observed in Train only, reused unchanged for V1, V2 and Test"
     categorical_feature: "the 49 categorical columns above, by name"
@@ -504,3 +505,13 @@ encoding:
     cat_features: "the 49 categorical columns above, by name, as canonical strings"
     unseen_categories: "handled natively by CatBoost"
     numeric_missing: "library default nan_mode = Min"
+  neural:
+    # DR-008 section 9: PROPOSED for the design review (GitHub Issue #54); identical for ResNet-style MLP and FT-Transformer.
+    # Rules apply by input role (categorical / numeric), including any input added later through an approved Issue.
+    status: proposed
+    categorical: "per-input vocabulary of canonical labels observed in Train only; __MISSING__ reserved in every vocabulary; values unseen in Train map to the __MISSING__ index; learned embeddings in the model"
+    category_dropout: "training only: each categorical value replaced by __MISSING__ with probability 0.01 (fixed, not tuned), independently per value and epoch, from the declared training seed; none when scoring"
+    numeric_transform: "quantile transformation to a normal output distribution, fitted per input on non-missing Train values, n_quantiles = max(min(n_Train // 30, 1000), 10) = 1000 (n_Train = number of Train rows), no subsampling; Gaussian noise with std 1e-3 / max(s_i, 1e-3) (s_i = population std, ddof = 0, of the non-missing Train values of input i) added to every numeric Train value for fitting only, fixed seed; transformation applied to the original values (REF-087 Appendix B.2; reference implementation REF-103, pinned commit)"
+    numeric_missing: "0 after the transformation, plus one binary missingness indicator per numeric input with at least one missing Train value"
+    fitting: "vocabularies, transformations and indicator list fitted on Train only, stored with each model, applied unchanged to Validation 1, Validation 2 and Test"
+    pending_training_rules: "noise seed; numeric inputs constant or entirely missing in Train"

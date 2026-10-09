@@ -7,7 +7,7 @@
 **Research repository:** `fraud-detection-review-capacity`
 
 **Working title:**  
-**Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Gradient-Boosting Models and Decision Policies**
+**Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Tree-Based and Neural Models and Decision Policies**
 
 This document establishes the literature-review structure for the project. It is a research working document and will be expanded into the final dissertation literature review after the evidence base has been systematically collected and critically synthesised.
 
@@ -19,7 +19,7 @@ The literature review will establish:
 
 1. why transaction fraud detection is a difficult imbalanced-classification problem;
 2. why accuracy and ROC-AUC (Receiver Operating Characteristic Area Under the Curve) alone are insufficient for operational fraud detection;
-3. how LightGBM, CatBoost, and related gradient-boosting methods have been used for fraud detection;
+3. how tree-based (gradient-boosting) and neural models for tabular data compare, in general and in fraud detection;
 4. how class weighting and cost-sensitive learning address asymmetric fraud-detection errors;
 5. why decision-threshold selection is a separate problem from model training;
 6. how limited review capacity changes the meaning of an effective fraud-detection policy;
@@ -40,13 +40,13 @@ The supporting research questions are numbered RQ1–RQ3.
 
 **RQ1**
 
-> How do LightGBM and CatBoost, with and without class weighting, differ in fraud capture at fixed review capacity on a later temporal test period?
+> How do tree-based and neural model families, with and without class weighting, differ in fraud capture at fixed review capacity on a later temporal test period?
 
 **RQ2**
 
 > When a score threshold selected on validation data is transferred to a later temporal period, how well does it preserve the intended alert rate, and how does the resulting daily review workload compare with the fixed review budget?
 
-RQ2 was revised by [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md) to separate alert-rate drift (model and data) from daily-volume variation.
+RQ2 follows [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md), which separates alert-rate drift (model and data) from daily-volume variation.
 
 **RQ3**
 
@@ -96,12 +96,12 @@ Expected argument:
 
 ---
 
-### 3.3 Gradient-Boosting Models for Fraud Detection
+### 3.3 Tree-Based and Neural Models for Fraud Detection
 
-The primary model families in this study are:
+The model set ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md)) compares two families with two models each:
 
-- LightGBM;
-- CatBoost.
+- tree-based: LightGBM; CatBoost;
+- neural: ResNet-style multilayer perceptron (MLP); FT-Transformer.
 
 Literature should examine:
 
@@ -114,7 +114,7 @@ Literature should examine:
 - computational efficiency;
 - limitations under temporal distribution shift.
 
-XGBoost and other models may appear in the literature as comparison context, but this MSc project will not become a broad model leaderboard.
+XGBoost, TabNet and other models appear in the literature as comparison context; the study compares model families under one common procedure rather than building a broad model leaderboard.
 
 ---
 
@@ -269,7 +269,7 @@ Possible calibration methods:
 - Platt scaling;
 - isotonic regression.
 
-Calibration will only be added to the final methodology if the literature review demonstrates that it materially strengthens the research question.
+Calibration is required for the calibrated cost-aware policy R4, because R4 compares probabilities with an absolute cost-derived threshold [REF-008, REF-073]. Platt scaling is the primary method and isotonic regression a secondary check ([protocol](protocol.md), Calibration).
 
 ---
 
@@ -288,13 +288,13 @@ The review should therefore investigate:
 
 Expected argument:
 
-> A fraud model evaluated only with a random split may overstate real-world generalisation. A time-aware protocol is therefore preferable for the final MSc experiments.
+> A fraud model evaluated only with a random split may overstate real-world generalisation. A time-aware protocol is therefore required for the confirmatory experiments.
 
 ---
 
 ### 3.11 Statistical Uncertainty and Model Comparison
 
-The MSc study should strengthen point-estimate evaluation by reviewing:
+The study strengthens point-estimate evaluation through:
 
 - bootstrap confidence intervals;
 - paired bootstrap comparisons;
@@ -390,7 +390,7 @@ Checked relevance (abstract):
 - evaluates on IEEE-CIS and BAF Base (a bank-account fraud dataset) with chronological train/validation/test splits and temporal future-slice evaluation;
 - reinforces the value of validation-selected operating policies **[I]**.
 
-This source is recent and particularly relevant, but its methods and assumptions must be critically compared with the narrower MSc research scope. It is further evidence that temporal evaluation on IEEE-CIS is not new.
+This source is recent and particularly relevant; its methods and assumptions are compared critically with this study's scope. It is further evidence that temporal evaluation on IEEE-CIS is not new.
 
 ---
 
@@ -458,7 +458,7 @@ Issue #35 compared the study with the closest work found, to answer the supervis
 - **Strong neural baselines.** A ResNet-style MLP is a strong deep baseline and FT-Transformer (Feature Tokenizer + Transformer) is the best deep model on most of eleven benchmarks, yet neither family is universally superior to GBDTs [REF-087]. FT-Transformer's attention cost grows quadratically with the number of input features, which makes hardware a practical constraint [REF-087].
 - **Fraud-specific evidence is thin.** On IEEE-CIS, Transformer embeddings combined with gradient-boosted trees gave a small gain over tabular LightGBM (PR-AUC 0.31 vs 0.29) under a stratified, non-temporal split [REF-099]; a self-supervised tabular model outperformed XGBoost by 2.14 % AUROC [REF-101, abstract]; CatBoost and a deep network were applied to different user groups rather than compared head-to-head [REF-100, abstract]; and a study claiming Transformer superiority under chronological splits does not report enough detail to be verified [REF-098]. The closest comparator used logistic regression, LightGBM and TabNet [REF-078].
 
-**Implication [I].** No study found compares the two families under one tuning procedure, a chronological holdout and a fixed daily review budget. The general benchmarks suggest that any difference may be small relative to tuning effects, which makes a pre-specified smallest effect size of interest important when interpreting family differences. The choice of model families is set in the protocol.
+**Implication [I].** No study found compares the two families under one tuning procedure, a chronological holdout and a fixed daily review budget. The general benchmarks suggest that any difference may be small relative to tuning effects, which makes a pre-specified smallest effect size of interest important when interpreting family differences. The model set follows this evidence ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md)).
 
 ### 4.9 Review Capacity and Human Review
 
@@ -523,14 +523,14 @@ The gap is stated against the closest studies (Section 4.6), the thematic eviden
 
 **The remaining gap.** Zhang et al. (2026) transfer a historical review *rate*, which preserves the review fraction by construction, and compare workload rules against a retrospective oracle. Mazumder (2026) constrains the alert rate only when the threshold is selected. Elbadraoui et al. (2026) transfer a cost-optimal threshold without any capacity constraint. In the studies reviewed, the alert rate produced by a *static* validation-selected score threshold is not formally tested against its intended target on later data, and workload deviations from a fixed daily review budget are not separated into alert-rate drift and volume variation; Zhang et al. note that attributing workload displacement would require further controlled comparison. The structured search (1,328 unique IEEE Xplore records; Section 5) found no study that does either. The studies on IEEE-CIS found by the search either use a non-temporal split [REF-099] or do not report enough detail to be verified [REF-098], and none uses a fixed daily review budget.
 
-**Contribution.** The contribution is a pre-specified confirmatory empirical evaluation of whether a static, validation-selected score threshold preserves its intended alert rate on later IEEE-CIS data. It has two distinct parts:
+**Contribution.** The contribution is an integrated, pre-specified confirmatory evaluation of the path from model family to operational review decision on real chronological data (IEEE-CIS) under a fixed daily review budget. No study reviewed combines its elements ([`literature-evidence-matrix.md`](literature-evidence-matrix.md), Section 3). In order of distinctiveness:
 
-1. **H3 (confirmatory):** a formal equivalence test of the realised alert rate of the Validation-2-selected 2 % threshold against its 2 % target, within a pre-specified margin of ±20 %.
+1. **H3 (confirmatory):** a formal equivalence test of the realised alert rate of the Validation-2-selected 2 % threshold against its 2 % target, within a pre-specified margin of ±20 %, with a descriptive tree-vs-neural comparison of threshold transfer.
 2. **Daily-budget fidelity (descriptive, not a hypothesis):** threshold-generated demand compared with a fixed daily review budget K (overflow, unused capacity, load), with the deviation separated into an alert-rate component and a volume component.
+3. **RQ1 (H1, H2):** a confirmatory, dependence-aware comparison of tree-based and neural model families, and of class weighting, at fixed daily capacity under one common training procedure (Section 4.8). Fraud-specific evidence on this family question is limited and mostly non-temporal; the comparison is an empirical result for these pipelines.
+4. **RQ3:** a replication and extension of Zhang et al.'s binding-versus-slack finding under a fixed daily cap, summarised as break-even (ρ_BE) and saturation (ρ_sat) cost ratios.
 
-This study extends prior work in two further, secondary ways. RQ1 (H1, H2) provides confirmatory, dependence-aware comparisons of LightGBM and CatBoost with and without class weighting at fixed daily capacity; these are empirical comparisons, not novelty claims. RQ3 replicates and extends Zhang et al.'s binding-versus-slack finding under a fixed daily cap, summarised as break-even (ρ_BE) and saturation (ρ_sat) cost ratios; this is an alternative operationalisation, not the main gap.
-
-**Limits.** The conclusions are limited to one benchmark, one validation-to-test transfer and simulated capacity and cost assumptions. The comparison rests on the studies reviewed: one database was searched in a structured way, so a cross-publisher search (for example Scopus or Web of Science) would strengthen it before the dissertation is written.
+**Limits.** The conclusions are bounded by one benchmark, one validation-to-test transfer, the four models studied and simulated capacity and cost assumptions. The comparison rests on the studies reviewed: one database was searched in a structured way, so a cross-publisher search (for example Scopus or Web of Science) would strengthen it before the dissertation is written.
 
 ---
 
@@ -561,7 +561,7 @@ This study extends prior work in two further, secondary ways. RQ1 (H1, H2) provi
 | F1 | Harmonic mean of precision and recall |
 | F2 | Weighted harmonic mean of precision and recall that weights recall twice as heavily |
 | FN, FP | False negatives (frauds not reviewed); false positives (legitimate transactions reviewed) |
-| H1, H2, H3 | Confirmatory hypotheses: model family; class weighting; alert-rate transfer fidelity |
+| H1, H2, H3 | Confirmatory hypotheses: model family (tree-based vs neural); class weighting; alert-rate transfer fidelity |
 | HITL | Human-in-the-Loop |
 | IEEE-CIS | IEEE Computational Intelligence Society (dataset organiser) |
 | K | Fixed daily review budget (reviews per relative day) |

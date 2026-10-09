@@ -2,10 +2,10 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by Issue #13, pending supervisor review. Resolves protocol open item 4 (cost-ratio grid, role of C_FP, break-even definition). |
-| Date | 2026-09-24 |
+| Status | Accepted (pre-freeze) by Issue #13; supervisor review pending. Eight configurations ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)), boundary cases and interpretation of R4 losses (Issue #54). |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54) |
 | Evidence source | Decision-theoretic derivation (checked numerically on synthetic data only); cost-sensitive learning, cost-curve and decision-curve literature; `notebooks/01_dataset_feasibility_audit.ipynb` §§6, 11, 12. **No Test labels, no model scores and no new dataset computations were used.** |
-| Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [protocol](../protocol.md) |
+| Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
 ## Context
 
@@ -17,8 +17,8 @@ It compares two decision policies at each review-capacity scenario c (share of t
 - **R3 (daily top-K):** review the K_c highest-scoring transactions on each relative day. K_c is the fixed daily review budget (28 / 56 / 139 / 278).
 - **R4 (calibrated cost-aware capped policy):** review a transaction only if its calibrated fraud probability reaches a cost-derived threshold, and never more than K_c per day.
 
-The working protocol left four things open (open item 4):
-- the cost-ratio grid (candidate: {1, 2, 5, 10, 20, 50, 100});
+This record fixes four elements:
+- the cost-ratio grid (assessed against the candidate {1, 2, 5, 10, 20, 50, 100});
 - whether a false-alert / customer-friction cost is part of the primary model;
 - the exact break-even definition;
 - how amount-based results are reported.
@@ -73,11 +73,9 @@ The working protocol left four things open (open item 4):
 
 - **[L]** No verified source prescribes this project's specific cost-ratio grid or break-even rule for capacity-constrained fraud review. The fraud literature supplies the cost-matrix structure [REF-006, REF-073] and the capacity framing [REF-004, REF-005, REF-006]. The grid and break-even rule below apply the general methods above and are **researcher decisions [I]**.
 
-*Current-status note (Issue #35):*
-- *[L] Zhang et al. [REF-078] already show, on IEEE-CIS with a separate policy-selection period, the binding-versus-slack pattern this record anticipates: at a tight capacity ceiling their calibrated cost-threshold queue was clipped to the ceiling in almost every run, while at a slack ceiling full-capacity review cost markedly more than the calibrated threshold.*
-- *Their calibrated rule overlaps strongly with R4: a Platt-calibrated probability compared with a cost-derived threshold of the same form as p\* = (C_R + C_FP) / (C_miss + C_FP), capped at the review ceiling. Their ceiling applies per evaluation period rather than per day, and they report regret against a retrospective oracle rather than break-even ratios.*
-- *ρ_BE and ρ_sat are therefore framed as an extension and alternative operationalisation of that pattern under a fixed daily cap, not as a primary novelty claim.*
-- *The decisions in this record are unchanged.*
+- **[L]** Zhang et al. [REF-078] show, on IEEE-CIS with a separate policy-selection period, the binding-versus-slack pattern this record anticipates: at a tight capacity ceiling their calibrated cost-threshold queue was clipped to the ceiling in almost every run, while at a slack ceiling full-capacity review cost markedly more than the calibrated threshold.
+  - Their calibrated rule overlaps strongly with R4: a Platt-calibrated probability compared with a cost-derived threshold of the same form as p\* = (C_R + C_FP) / (C_miss + C_FP), capped at the review ceiling. Their ceiling applies per evaluation period rather than per day, and they report regret against a retrospective oracle rather than break-even ratios.
+  - ρ_BE and ρ_sat are therefore an extension and alternative operationalisation of that pattern under a fixed daily cap, not a primary novelty claim.
 - **[L]** The protocol cites REF-007 for amount-dependent costs. Its author copy could not be read in this pass (access restricted), so the amount-dependent cost structure is supported here by REF-073, which was read in full (arXiv version).
 
 ## Derivation and validity of the current equations
@@ -208,7 +206,7 @@ where:
 b_i is the expected cost avoided by reviewing transaction i, minus the expected cost of the review itself. It is positive exactly when p̂_i ≥ p*.
 
 - b_i increases with p̂_i, so the optimum is: take transactions in descending p̂ order while b_i ≥ 0, up to K_c.
-- Platt scaling is monotone, so descending p̂ is the same order as descending raw score. Hence:
+- Platt scaling with a positive fitted slope is strictly monotone, so descending p̂ is the same order as descending raw score (a non-positive fitted slope is reported as a calibration failure). Hence:
 
 $$
 \mathrm{R4}_d(\rho) = \lbrace i \in \mathrm{R3}_d : \hat{p}_i \ge p^* \rbrace
@@ -225,7 +223,7 @@ On each day d, R4 reviews those transactions in R3's top-K_c queue whose calibra
 
 Consequences:
 - **R4 ⊆ R3 on every day.** R4 can only leave capacity unused; it never reviews a transaction that R3 skips.
-- **Under A5, R4 minimises expected scenario cost among all policies that review at most K_c per day, and so it cannot be worse than R3 in expectation [I].** An observed loss for R4 against R3 therefore indicates calibration failure at the margin, or chance. This is the central interpretive point of RQ3.
+- **Under A5, R4 minimises expected scenario cost among all policies that review at most K_c per day, and so it cannot be worse than R3 in expectation [I].** An observed loss for R4 against R3 is therefore consistent with calibration failure at the margin **or** with finite-sample variation among the few marginal transactions; the grid-point intervals (§7) and the declined-set diagnostic (§8) are used to distinguish the two. This is the central interpretive point of RQ3.
 
 This was checked numerically on synthetic data (brute-force search over all subsets for small cases). No project data were used.
 
@@ -382,7 +380,7 @@ For each capacity c, configuration m and ratio ρ:
   - With isotonic calibration (not strictly monotone), this still gives a prefix of R3's queue.
 - **Threshold ties:** review if p̂_i **≥** p*. At exact indifference R4 keeps R3's action (fill capacity), so R4 departs from R3 only where it expects a strict gain [REF-008 treats equality as indifference].
 - **No tuning.** p* is fixed by ρ. Nothing is selected on V2 or Test. All ratios are reported.
-- **All four configurations are reported.** RQ3 selects no "best" configuration.
+- **All eight configurations are reported** ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)). RQ3 selects no "best" configuration.
 
 ### 4. Break-even definitions
 
@@ -479,6 +477,7 @@ It is the **largest assumed ratio at which the cost-aware policy is strictly che
   $$
 
   Within a segment, the policies cost the same at the ratio equal to unused reviews divided by frauds forgone.
+- **Boundary cases.** If a segment has f = 0 and u > 0, ΔJ = −u < 0 for every ρ in it (R4 is cheaper throughout the segment, and no crossing occurs). If u = 0, then f = 0 and ΔJ = 0: the two policies are identical.
 - ΔJ is therefore computed exactly on the whole range. **Interpolation between grid points is not used.**
 - Computing ΔJ at any ρ from the frozen Test probabilities selects nothing, so it is not tuning.
 
@@ -487,7 +486,7 @@ It is the **largest assumed ratio at which the cost-aware policy is strictly che
 | Case | Condition | Reported as |
 |---|---|---|
 | Coincidence break-even | ρ_BE = ρ_sat | R4 is cheaper right up to the ratio at which it merges with R3. The expected pattern under good calibration |
-| Crossing break-even | ρ_BE < ρ_sat | R4 becomes dearer than R3 before the policies merge. Leaving capacity unused was costly on (ρ_BE, ρ_sat). Indicates calibration shortfall at the margin |
+| Crossing break-even | ρ_BE < ρ_sat | R4 becomes dearer than R3 before the policies merge. Leaving capacity unused was costly on (ρ_BE, ρ_sat). Consistent with calibration shortfall at the margin, or with finite-sample variation among the marginal transactions |
 | No break-even in range | ΔJ ≥ 0 for all ρ ∈ (1, 1000] | "R4 never cheaper than R3 within the declared range" |
 | Right-censored | ρ_sat > 1000 and ΔJ(1000) < 0 | "Break-even above 1000" |
 
@@ -510,6 +509,9 @@ where:
 - `f(ρ₀) / u(ρ₀)` = fraud rate among the reviews R4 left unused.
 
 This break-even is the reciprocal of the fraud rate among the unused reviews. It is the classical crossing point of two cost lines [REF-040].
+
+- If f(ρ₀) = 0 and u(ρ₀) > 0, ρ_fixed(ρ₀) = +∞: the fixed queue is cheaper than R3 at every ratio.
+- If u(ρ₀) = 0, the R4 queue equals R3's and ρ_fixed(ρ₀) is not defined; the cell is reported as *identical*.
 
 R4 at ρ₀ beats R3 at its own ratio exactly when:
 
@@ -554,7 +556,7 @@ In words, R4 wins if the reviews it left unused contained frauds at a lower rate
 
 ### 7. Statistical treatment
 
-**RQ3 remains estimation and sensitivity analysis. No confirmatory hypothesis is added. The confirmatory hypotheses H1 (model family), H2 (class weighting) and H3 (alert-rate transfer), the SESOI (smallest effect size of interest), the Holm family and the H1/H2 bootstrap ([DR-006](DR-006-bootstrap-inference-strategy.md)) are unchanged.**
+**RQ3 is estimation and sensitivity analysis, with no confirmatory hypothesis. The confirmatory hypotheses H1 (model family), H2 (class weighting) and H3 (alert-rate transfer), the SESOI (smallest effect size of interest), the Holm family and the H1/H2 bootstrap ([DR-006](DR-006-bootstrap-inference-strategy.md)) are not affected by RQ3.**
 
 Why [I]:
 - ρ is an assumption, not a population parameter. A test at each ratio would test a family of assumption-conditional nulls.
@@ -562,7 +564,7 @@ Why [I]:
 - Adding RQ3 to the Holm family would reduce power for H1–H3.
 
 Uncertainty reporting (descriptive):
-- **Grid-point intervals.** For each (c, m, ρ ∈ G): 95 % percentile confidence intervals (CIs) for ΔJ, relative ΔJ, u, f and the amount measures.
+- **Grid-point intervals.** For each (c, m, ρ ∈ G): 95 % percentile confidence intervals (CIs) for ΔJ, relative ΔJ, u, f and the amount measures. Relative ΔJ = ΔJ / J_R3 is always defined, because J_R3 ≥ N_R3 = 28 · K_c > 0.
   - Method: a **day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000)**, the same key-free machinery as H3 and sensitivity analysis S2 of DR-006 (the key-free day-block bootstrap).
   - Whole days are resampled, so each day's R3 and R4 queues stay exactly intact. R3 and R4 are paired within each replicate.
   - **Limitation:** this does not capture cross-day entity dependence of frauds, so intervals for f may be too narrow ([DR-006](DR-006-bootstrap-inference-strategy.md) evidence). As a sensitivity check, the interval for frauds forgone f (a recall difference between R3 and R4) is also computed with the DR-006 two-way pigeonhole bootstrap.
@@ -577,12 +579,12 @@ Uncertainty reporting (descriptive):
 
 ### 8. Calibration
 
-**No change to the calibration plan.** No methodological conflict was found.
+**Calibration is required for R4** and is fitted on V2.
 - **Why calibration matters for R4.** R4 compares p̂ with an absolute threshold. R3 and every rate-based policy use only the ranking [REF-038, REF-073]. Miscalibration always lowers decision value and can make the cost-aware rule worse than its default alternative [REF-074].
 - **Primary: Platt scaling fitted on V2**, as in the protocol.
 - **Secondary check: isotonic regression.** RQ3 is recomputed with isotonic p̂. Any change in the ρ_BE classification or the regime map is reported as calibration sensitivity. Confirmatory interpretation uses Platt only.
 - **Declined-set calibration diagnostic.** For each grid ratio, the realised fraud rate among unused reviews, f/u, is reported next to (i) the mean p̂ of those transactions and (ii) p*. This is the calibration that decides RQ3.
-- **Interpretation rule when calibration is poor.** If Test calibration metrics (intercept, slope, reliability diagram) or the declined-set diagnostic show material miscalibration, R4 results are reported as the joint effect of **the cost rule and calibration transfer**. They are **not** evidence for or against cost-aware reviewing as such. A crossing break-even (ρ_BE < ρ_sat) is read as a calibration-transfer finding.
+- **Interpretation rule when calibration is poor.** If Test calibration metrics (intercept, slope, reliability diagram) or the declined-set diagnostic show material miscalibration, R4 results are reported as the joint effect of **the cost rule and calibration transfer**. They are **not** evidence for or against cost-aware reviewing as such. A crossing break-even (ρ_BE < ρ_sat) is read as consistent with calibration-transfer failure at the margin only when the declined-set diagnostic supports it; otherwise it is reported as within finite-sample variation.
 - **Label-latency supplement.** The protocol's latency sensitivity (calibrator refitted on V2 days 127–147) applies to R4 and is reported for RQ3 as exploratory.
 
 ### 9. RQ3 outputs
@@ -629,11 +631,9 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 
 ## Consequences
 
-- Protocol open item 4 is resolved, pending supervisor review.
 - R4's threshold is written as p* = 1/ρ, with review at p̂ ≥ p* and ranking by raw score.
-- The Test evaluation must save, for every configuration and Test transaction: raw score, Platt p̂, isotonic p̂ and relative day, plus labels and amounts once the Test is unsealed. These are needed to compute exact ΔJ curves.
+- The Test evaluation saves, for every one of the eight configurations and every Test transaction: raw score, Platt p̂, isotonic p̂ and relative day, plus labels and amounts once the Test is unsealed. These are needed to compute exact ΔJ curves.
 - ρ_sat is computed on V2 **before** the Test evaluation, as a pre-specified expectation of where R4 and R3 will merge.
-- H1, H2, H3, the SESOI, the H3 equivalence tolerance Δ, the capacity grid, the calibration plan and DR-006 are unchanged.
 
 ## Threats and limitations
 
@@ -669,7 +669,7 @@ Complete reference for every symbol used in this record. Each symbol is also def
 | c | Review-capacity scenario (share of transactions), c ∈ {1 %, 2 %, 5 %, 10 %} |
 | K_c | Fixed daily review budget for scenario c, in reviews per relative day ([DR-002](DR-002-review-capacity-definition.md)) |
 | d | A Test relative day, d ∈ {155, …, 182} (28 days) |
-| m | A model configuration: LightGBM or CatBoost, each unweighted or with balanced class weighting (four configurations) |
+| m | A model configuration: LightGBM, CatBoost, ResNet-style MLP or FT-Transformer, each unweighted or with balanced class weighting (eight configurations; DR-011) |
 | s_i | Raw model score of transaction i (used for ranking) |
 | p̂_i | Calibrated fraud probability of transaction i: the Platt-scaled score, with the calibrator fitted on Validation 2 (V2, relative days 127–154) |
 | y_i | Fraud label of transaction i (1 = fraud, 0 = legitimate) |
@@ -697,7 +697,7 @@ Complete reference for every symbol used in this record. Each symbol is also def
 | cᵢⱼ | Elkan's cost-matrix entry: cost of predicting (acting as) class i when the actual class is j [REF-008] |
 | c_f, A_i, t*_i | In Höppner et al. [REF-073]: fixed investigation cost per alert; amount of transaction i; optimal threshold for transaction i |
 | p*_wrong | Threshold that would result if C_R were charged only on reviewed legitimate transactions (shown only as the incorrect variant) |
-| ρ_fixed(ρ₀) | Fixed-policy break-even: the true ratio at which the R4 queue built at ratio ρ₀ and R3 cost the same (defined in the text) |
+| ρ_fixed(ρ₀) | Fixed-policy break-even: the true ratio at which the R4 queue built at ratio ρ₀ and R3 cost the same (defined in the text; +∞ when f(ρ₀) = 0 < u(ρ₀)) |
 | ρ_ref | Reference ratio 1 / prev_V2, at which p* equals V2 fraud prevalence prev_V2 |
 | F̄_d | Expected number of frauds on day d (used only in the saturation-ratio bound) |
 | [D], [L], [I] | Evidence tags: dataset observation, literature, inference |
@@ -705,7 +705,7 @@ Complete reference for every symbol used in this record. Each symbol is also def
 | AUC, ROC | Area Under the Curve; Receiver Operating Characteristic |
 | B | Number of bootstrap replicates (10,000) |
 | CI | Confidence interval |
-| Δ | H3 equivalence tolerance on the alert rate (defined in DR-003; unchanged here) |
+| Δ | H3 equivalence tolerance on the alert rate (defined in DR-003) |
 | E[cost \| action] | Expected cost of an action (review or not review) |
 | H1, H2, H3 | Confirmatory hypotheses of the protocol: model family; class weighting; alert-rate transfer |
 | ℓ | Block length of the day-level moving-block bootstrap (3 days) |
