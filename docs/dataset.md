@@ -42,7 +42,7 @@ The Kaggle competition also provides:
 - `test_identity.csv`
 - `sample_submission.csv`
 
-For this MSc study, the labelled Kaggle training data will be used to construct the project's own reproducible chronological train, validation, and final test partitions. The original Kaggle competition test set does not contain the `isFraud` labels and therefore cannot serve as the primary labelled holdout for the dissertation's statistical evaluation.
+For this MSc study, the labelled Kaggle training data are used to construct the project's own reproducible chronological train, validation and final test partitions. The original Kaggle competition test set does not contain the `isFraud` labels and therefore cannot serve as the primary labelled holdout for the dissertation's statistical evaluation.
 
 ## Key Dataset Characteristics
 
@@ -54,7 +54,7 @@ Data-understanding evidence is in the [notebooks](../notebooks/README.md): noteb
 - Transaction (394 columns) and identity (41 columns) tables joined by `TransactionID`, their only shared column; the left join keeps all 590,540 transactions and yields 434 columns
 - Not every transaction has corresponding identity information: coverage falls from 27.1 % (Train) to 20.7 % (Validation 1) and 17.5 % (Validation 2), and fraud prevalence is much higher where identity information exists (notebook 03)
 - `TransactionDT` is a time delta from an undisclosed reference datetime rather than an absolute timestamp
-- The dataset contains substantial class imbalance
+- Fraud is the minority class: the data are imbalanced / low-prevalence (see below)
 - Many feature meanings are masked or partially anonymised
 
 These properties are directly relevant to the research questions on class imbalance (low prevalence: ≈ 28 legitimate transactions per fraud, a 28 : 1 ratio, in development data; see [references](references.md) REF-002), temporal evaluation, decision thresholds, false-negative risk, and constrained review capacity.
@@ -120,54 +120,15 @@ Research reproducibility should instead be supported through lightweight metadat
 - split-generation rules;
 - generated split hashes where practical.
 
-A dataset manifest will be added before the final experiments are run.
+The dataset manifest (file checksums, sizes, row counts and partition hashes) is created together with the split-generation code (protocol design item 8) and recorded in this file.
 
 ## Research Split Policy
 
-The final MSc experiments must use a reproducible time-aware protocol based on `TransactionDT`.
-
-Conceptually:
-
-```text
-earlier observations
-    -> training
-
-later observations
-    -> validation
-
-latest labelled observations
-    -> final test
-```
-
-The exact cut points were subsequently frozen in [DR-001](decisions/DR-001-temporal-split-strategy.md): Train relative days 1–105, Validation 1 106–126, Validation 2 127–154 and a sealed final Test period 155–182 (relative day = `TransactionDT` in whole days from the undisclosed reference point). Partition hashes are recorded there.
-
-The final test partition must not be used to select:
-
-- model family;
-- hyperparameters;
-- class weights;
-- probability calibration;
-- decision threshold;
-- review-capacity policy;
-- cost-sensitive policy.
-
-All such choices must be made using training and validation data only.
+The chronological partitions and their roles are defined in [DR-001](decisions/DR-001-temporal-split-strategy.md) and the [protocol](protocol.md#experimental-split-structure). The final Test period is never used to select any model, input, policy, capacity or cost setting.
 
 ## Ethics and Data Governance Note
 
-This project uses secondary competition data and does not require recruitment of human participants for the core experimental design.
-
-However, the final ethics position must follow current University of Greenwich guidance and supervisor / Faculty Research Ethics Committee requirements. The project concerns fraud, financial transactions, and automated decision support, so the ethics assessment should explicitly consider:
-
-- the status and anonymisation of the secondary data;
-- permitted use under Kaggle competition rules (verified: non-commercial academic research and education, Section 7A; no sharing with anyone who has not agreed to the Rules, Section 7B; the stricter project policy is in [Data-Use Terms](#data-use-terms));
-- privacy and re-identification risk;
-- false-positive and false-negative harms;
-- bias and fairness;
-- human oversight;
-- responsible interpretation of model outputs.
-
-**Current status (Issue #31).** Topic approval was received; a separate explicit ethics-route determination was requested but not provided. The project proceeds under the available University of Greenwich guidance and the data-governance controls above, without claiming formal ethics approval, exemption or an ethics identifier (see [`protocol.md`](protocol.md#ethics)).
+The study uses secondary competition data and recruits no human participants. The ethics and governance status, and the considerations the ethics assessment covers, are documented in the [protocol](protocol.md#ethics); the data-handling controls are the [data-use terms](#data-use-terms) above.
 
 ## Citation / Attribution
 
@@ -179,7 +140,7 @@ Local Parquet copies are derivative storage formats and should not be described 
 
 **Dataset source documented; data understanding complete** (notebooks 01–03).
 
-Next dataset-governance task: create a reproducible dataset manifest with checksums and summary statistics, and split-generation code that reproduces the DR-001 partition hashes (protocol open item 12). The SHA-256 checksums of both raw files are already recorded in notebooks 01 and 02.
+Next dataset-governance task: create a reproducible dataset manifest with checksums and summary statistics, and split-generation code that reproduces the DR-001 partition hashes (protocol design item 8). The SHA-256 (Secure Hash Algorithm, 256-bit) checksums of both raw files are already recorded in notebooks 01 and 02. Computation findings in the data-understanding notebooks are to be corrected in a new development-only notebook ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)).
 
 ## Symbols and notation
 
@@ -196,6 +157,7 @@ Next dataset-governance task: create a reproducible dataset manifest with checks
 | REF-NNN | Reference identifier in `references.md` |
 | SHA-256 | Secure Hash Algorithm, 256-bit (file checksum) |
 | SMOTE | Synthetic Minority Over-sampling Technique (excluded from the design) |
+| Test | Final partition: relative days 155–182, sealed until one confirmatory evaluation |
 | Train | Development partition: relative days 1–105 |
 | Relative day | `TransactionDT` expressed in whole days from the undisclosed reference point |
 | Validation 1, Validation 2 | Development partitions: relative days 106–126 and 127–154 |

@@ -658,6 +658,15 @@ The University of Greenwich Research Ethics Policy applies to master's students'
 
 **Ethics and governance status (Issue #31).** The supervisor has given written approval of the project topic. A separate, explicit determination of the ethics route (including whether §1.3.4 applies) was requested but was not provided. The project therefore proceeds under the available University of Greenwich research-governance guidance [REF-050, REF-051] and the project data-governance controls below. **No formal ethics approval, ethics exemption or ethics identifier is claimed.** The competition data-use terms have been verified [REF-049]: the Rules permit non-commercial use for academic research and education (Section 7A) and prohibit making the Competition Data available to any party not participating in the competition (Section 7B). As a stricter project policy, raw data and row-level derived data stay local, out of Git, and are not shared with anyone, including supervisors or examiners; aggregate results may be published ([`dataset.md`](dataset.md#data-use-terms)).
 
+**Ethical considerations.** Following the University of Greenwich guidance and the supervisor's or Faculty Research Ethics Committee's requirements, the ethics assessment considers:
+- the status and anonymisation of the secondary data;
+- permitted use under the competition rules ([`dataset.md`](dataset.md#data-use-terms));
+- privacy and re-identification risk;
+- false-positive and false-negative harms;
+- bias and fairness;
+- human oversight;
+- responsible interpretation of model outputs.
+
 Artificial intelligence (AI) assistance used in this project must be declared in the AI Reflection (AIR) required by University guidance [REF-053].
 
 ## Design items before protocol freeze
