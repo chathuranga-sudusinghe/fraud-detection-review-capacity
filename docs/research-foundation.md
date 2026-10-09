@@ -76,7 +76,7 @@ workload fidelity
 cost-sensitive outcome
 ```
 
-The structured literature review ([`literature-review.md`](literature-review.md), Sections 4.6–4.9 and 8; [`literature-evidence-matrix.md`](literature-evidence-matrix.md), Section 3) finds each element in prior work, but no study that combines a fixed daily review budget, a pre-specified test of threshold transfer, a tree-vs-neural comparison under one common procedure and dependence-aware inference on real chronological data.
+The structured literature review ([`literature-review.md`](literature-review.md), Sections 2–6 and 8; [`literature-evidence-matrix.md`](literature-evidence-matrix.md), Section 3) finds each element in prior work, but no study that combines a fixed daily review budget, a pre-specified test of threshold transfer, a tree-vs-neural comparison under one common procedure and dependence-aware inference on real chronological data.
 
 **No novelty is claimed for any single element**, each of which has established prior work:
 - fraud-detection algorithms, and the tree-vs-neural comparison on general tabular benchmarks [REF-087, REF-089, REF-090];
