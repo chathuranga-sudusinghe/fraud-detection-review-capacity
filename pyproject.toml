@@ -25,6 +25,13 @@ ml = [
     "catboost",
 ]
 
+# PyTorch for the neural models. The RTX 50-series GPU (compute capability 12.0)
+# needs a CUDA 12.8 build: install torch from https://download.pytorch.org/whl/cu128
+# before this group (see GitHub Issue #50).
+dl = [
+    "torch>=2.7",
+]
+
 dev = [
     "pytest",
     "ruff",
