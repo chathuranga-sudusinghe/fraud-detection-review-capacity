@@ -7,13 +7,13 @@
 
 ## Research overview
 
-Fraud teams can review only a limited number of transactions per day, so a fraud model is useful only through the rule that turns its scores into a daily review queue. Using the IEEE-CIS Fraud Detection data (IEEE-CIS = IEEE Computational Intelligence Society), this study trains two tree-based models (LightGBM, CatBoost) and two neural models (ResNet-style multilayer perceptron, FT-Transformer), each with and without class weighting, on the earliest period, selects thresholds and review rules on later validation periods, and evaluates them **once** on a sealed final period. The contribution is an integrated, pre-specified evaluation of this full path. Its most distinctive component is a test of whether a score threshold chosen on validation data still produces its intended alert rate on later data (research question RQ2, hypothesis H3). The study also compares the tree-based and neural families and class weighting at fixed capacity (RQ1, hypotheses H1 and H2) and asks when a calibrated cost-aware rule is cheaper than always filling the review budget (RQ3).
+Fraud teams can review only a limited number of transactions per day, so a fraud model is useful only through the rule that turns its scores into a daily review queue. Using the IEEE-CIS Fraud Detection data (IEEE-CIS = IEEE Computational Intelligence Society), this study trains two tree-based models (LightGBM, CatBoost) and two neural models (ResNet-style multilayer perceptron, MLP; Feature Tokenizer + Transformer, FT-Transformer), each with and without class weighting, on the earliest period, selects thresholds and review rules on later validation periods, and evaluates them **once** on a sealed final period. The contribution is an integrated, pre-specified evaluation of this full path ([research contribution](docs/research-foundation.md#research-contribution); full design in the [research protocol](docs/protocol.md)). Its most distinctive component is a test of whether a score threshold chosen on validation data still produces its intended alert rate on later data (research question RQ2, hypothesis H3). The study also compares the tree-based and neural families and class weighting at fixed capacity (RQ1, hypotheses H1 and H2) and asks when a calibrated cost-aware rule is cheaper than always filling the review budget (RQ3).
 
 ## Research questions and hypotheses
 
 Stated in full, with their estimands and tests, in the [research protocol](docs/protocol.md). In brief:
 
-| Question | Topic | Hypotheses |
+| Question | Topic | Hypotheses / analysis |
 |---|---|---|
 | [Main research question](docs/protocol.md#main-research-question) | How model family, class weighting and score-to-review decision policies affect fraud capture, review workload and cost-sensitive outcomes under a fixed daily review budget on later data | Answered through RQ1–RQ3 |
 | [RQ1](docs/protocol.md#rq1--model-family-and-weighting) | Tree-based vs neural model families, with and without class weighting, at fixed review capacity | [H1](docs/protocol.md#h1--model-family-effect) (model-family effect), [H2](docs/protocol.md#h2--class-weighting-effect) (class-weighting effect) |
@@ -22,21 +22,21 @@ Stated in full, with their estimands and tests, in the [research protocol](docs/
 
 ## Dataset source
 
-**Dataset:** [IEEE-CIS Fraud Detection — Kaggle competition data](https://www.kaggle.com/competitions/ieee-fraud-detection/data) [REF-047]: the labelled training files `train_transaction.csv` and `train_identity.csv`.
+**Dataset:** [IEEE-CIS Fraud Detection — Kaggle competition data](https://www.kaggle.com/competitions/ieee-fraud-detection/data) [REF-047], labelled training data only.
 
 **Data provider:** Vesta Corporation; real-world e-commerce transactions.
 
-**Use terms:** Competition Rules, Section 7 [REF-049]: non-commercial academic use only; raw data are never committed.
+**Use terms:** non-commercial use under the Competition Rules, Section 7 [REF-049]; by project policy, raw data stay local and are never committed.
 
 The data are used exactly as published: no rows are generated, simulated or altered. The [dataset documentation](docs/dataset.md) records provenance, use terms, version control and the dataset's limits; the temporal partitions are defined in [DR-001](docs/decisions/DR-001-temporal-split-strategy.md).
 
 ## Research path
 
-The study is organised along the ten stages of the Foundational Methodology for Data Science published by IBM (International Business Machines Corporation) [REF-085], adapted to a confirmatory research design. This framing is proposed and pending supervisor review; the adaptations below will be recorded in a Decision Record after that review.
+The study is organised along the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085], adapted to a confirmatory research design. This framing is proposed and pending supervisor review; the adaptations below will be recorded in a Decision Record after that review.
 
 - Stages 1–8 carry the confirmatory research; stage 9 (Deployment) is realised as a local demonstration application and stage 10 (Feedback) as supervisor review and reporting.
-- Iteration between stages is allowed only before the protocol freeze, only on the development partitions, and only within each partition's fixed role: Train for model fitting; Validation 1 (V1) for hyperparameter tuning and early stopping; Validation 2 (V2) for calibration, thresholds, the daily review budget and the H3 configuration. V2 results never feed back into hyperparameters or features.
-- The Test evaluation runs once and nothing is refined from it.
+- Iteration between stages is allowed only before the protocol freeze, only on the development partitions (Train, Validation 1 and Validation 2), and only within each partition's fixed role ([protocol: Experimental Split Structure](docs/protocol.md#experimental-split-structure)).
+- The evaluation on the sealed final Test period runs once, and nothing is refined from it.
 
 | # | Stage (IBM) | In this study | Status | Evidence |
 |---|---|---|---|---|
@@ -44,14 +44,14 @@ The study is organised along the ten stages of the Foundational Methodology for 
 | 2 | Analytic approach | Predictive, prescriptive, inferential and descriptive components, each mapped to RQ1–RQ3 and H1–H3 | Done; design review with the supervisor pending | [Protocol: Analytic Approach](docs/protocol.md#analytic-approach) |
 | 3 | Data requirements | Data each research question and hypothesis needs, and how the dataset's limits are handled (no real costs, real capacity, label-report dates or account identifiers) | Done; design review with the supervisor pending | [Protocol: Data Requirements](docs/protocol.md#data-requirements) |
 | 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; manifest pending (protocol design item 8) | [Dataset](docs/dataset.md), notebooks 01–02 |
-| 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; a corrective notebook for two notebook 01 computations (oracle ceiling, Population Stability Index) is planned with data preparation | [Notebooks 01–03](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
+| 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; corrective development-data notebook for the notebook computation findings pending ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–03](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
 | 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split and tree-based input representation fixed; neural-network representation proposed; validation contract and pipeline pending | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md) |
-| 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; GPU feasibility verified (Issue #50); training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
+| 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; graphics processing unit (GPU) feasibility verified (Issue #50); training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
 | 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after freeze | Design defined; runs after freeze | [Protocol: Statistical Plan](docs/protocol.md#statistical-plan) |
 | 9 | Deployment (demonstration) | Research report; local demonstration application programming interface (API) on synthetic example requests (not IEEE-CIS rows) | Planned | — |
 | 10 | Feedback (review) | Supervisor review; limitations; future work | Ongoing | — |
 
-Two gates separate development from confirmation: **(1)** training, policy and analysis procedures are fixed before the development runs; **(2)** the fitted models, calibrators, thresholds, review budgets and H3 configuration are frozen, and the protocol is tagged, before the Test period is scored.
+Two gates separate development from confirmation: **(1)** training, policy and analysis procedures are fixed before the development runs; **(2)** the fitted models, calibrators, thresholds, review budgets and the H3 configuration (the model × weighting configuration on which H3 is tested) are frozen, and the protocol is tagged, before the Test period is scored ([protocol: Protocol Freeze](docs/protocol.md#protocol-freeze)).
 
 ## Reading order
 
@@ -83,7 +83,7 @@ Two gates separate development from confirmation: **(1)** training, policy and a
 
 ## Status
 
-**Research design complete and under supervisor review; data understanding complete; protocol not yet frozen.**
+**Research design documented; supervisor review and remaining design items pending; protocol not yet frozen.**
 
 The ethics and governance status is documented in the [protocol](docs/protocol.md#ethics); no formal ethics approval or exemption is claimed.
 
@@ -92,7 +92,7 @@ Next steps:
 1. Design review with the supervisor (Issue #56) and resolution of the protocol's design items.
 2. Data preparation: dataset manifest and split-generation code that reproduces the DR-001 partition hashes, data validation contract and data pipeline.
 3. Training rules: search procedure, early stopping, tie handling, seeds, neural-network representation, calibration details.
-4. Development runs on Train, V1 and V2; protocol freeze; single Test evaluation; statistical analysis and reporting.
+4. Development runs on Train, Validation 1 (V1) and Validation 2 (V2); protocol freeze; single Test evaluation; statistical analysis and reporting.
 
 ## Symbols and notation
 
@@ -101,10 +101,10 @@ Next steps:
 | AI | Artificial intelligence |
 | API | Application programming interface (local demonstration only) |
 | DR-NNN | Decision Record NNN in `docs/decisions/` |
+| FT-Transformer | Feature Tokenizer + Transformer (a neural model for tabular data) |
 | GPU | Graphics processing unit |
 | H1, H2, H3 | Confirmatory hypotheses: model-family effect; class-weighting effect; alert-rate transfer fidelity |
 | H3 configuration | The model × weighting configuration on which H3 is tested, selected on V2 by a fixed rule before Test access |
-| IBM | International Business Machines Corporation (author of the methodology framing, REF-085) |
 | IEEE-CIS | IEEE Computational Intelligence Society |
 | MLP | Multilayer perceptron |
 | REF-NNN | Reference identifier in `docs/references.md` |

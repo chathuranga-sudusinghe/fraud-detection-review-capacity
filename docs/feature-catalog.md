@@ -176,7 +176,7 @@ Group description: "Vesta engineered rich features", including ranking, counting
 | Reason for treatment | Organiser does not list them as categorical; stored as numbers |
 | Missing (dev) | 0.0 % to 85.7 % per column |
 | Levels in Train | 1 to 25,530 per column; 7 columns are two-valued; 263 are integer-valued in development data |
-| Structure | 14 blocks of columns share an identical missing-value pattern in Train (table below) |
+| Structure | 14 blocks of columns with the same number of missing Train rows (table below); whether each block also shares an identical missing-row pattern is checked in [Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59) |
 | Caution | Construction undocumented, so potential look-back issues cannot be checked; heavy redundancy; uninterpretable, so not used for false-negative slicing |
 
 **Missingness blocks (Train).** Columns in a block are missing on exactly the same number of Train rows.

@@ -748,7 +748,6 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | bf16 | bfloat16: 16-bit floating-point format used for mixed-precision neural-network training |
 | arg max | The argument (here, configuration) at which a quantity is largest |
 | AI, AIR | Artificial intelligence; AI Reflection (University of Greenwich AI-use declaration) |
-| IBM | International Business Machines Corporation (author of the methodology framing, REF-085) |
 | B | Number of bootstrap replicates (10,000) |
 | c | Review-capacity share (1 %, 2 %, 5 % or 10 %) |
 | C_FP | Extra false-alert/customer-friction cost of reviewing a legitimate transaction (sensitivity only) |

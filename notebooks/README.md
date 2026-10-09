@@ -38,6 +38,28 @@ Notebook 01 is retained unchanged as the timestamped pre-freeze record. Document
 
 Sections not listed (e.g. §10 class weighting, §13 false-negative feasibility, §16 leakage audit, §18–19 practice and University alignment) inform the protocol without section-number citations.
 
+## Reading notebook 01 against the current design
+
+Notebook 01 is the pre-freeze feasibility record and is kept unchanged. Where its recommendations differ from the current design, the record in the right-hand column applies.
+
+| Notebook 01 says | Current design | Applies now |
+|---|---|---|
+| Title "…Study of Gradient-Boosting Models and Decision Policies"; programme "MSc Data Science" (also in notebooks 02 and 03) | Title naming tree-based and neural models; programme MSc Data Science and Its Applications | [Protocol](../docs/protocol.md), [README](../README.md) |
+| §9, §17 and the recommended model scope: LightGBM and CatBoost as the model pair; no neural networks | Eight configurations: LightGBM, CatBoost, ResNet-style multilayer perceptron (MLP) and Feature Tokenizer + Transformer (FT-Transformer), each unweighted and with balanced class weighting | [DR-011](../docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
+| Decision section: H3₀ (the null hypothesis of H3) stated as the realised alert rate lying **within** the tolerance band | Equivalence formulation: H3₀ is the rate lying **outside** the band, tested by Two One-Sided Tests (TOST) | [DR-003](../docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md) |
+| §11: calibration matters for R0 and R4 | R0 applies 0.5 to the raw model score; calibration applies to R4 only | [Protocol](../docs/protocol.md#calibration) |
+| §12: cost-ratio grid starting at 1 | ρ (miss-to-review cost ratio) ∈ {2, …, 1000}; ρ ≤ 1 excluded | [DR-007](../docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md) |
+| §8–§9: 432 raw features | 431 model inputs (`TransactionID` and raw `TransactionDT` excluded) | [DR-008](../docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [`config/features.yaml`](../config/features.yaml) |
+| §17: H1 and H2 as model-engineering comparisons | H1 is a model-family (tree-based vs neural) hypothesis | [Research foundation](../docs/research-foundation.md#research-contribution), DR-011 |
+| §19 and references L46–L47: Kaggle rules and two sources still to be verified | Rules verified (REF-049); REF-041 verified; REF-042 partially verified | [Dataset](../docs/dataset.md#data-use-terms), [references](../docs/references.md) |
+
+**Computation findings**, to be corrected in a new development-only notebook ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)):
+
+- **Notebook 01 §6, oracle recall and precision ceilings:** the recall ceiling is computed as the pooled budget divided by pooled frauds, not as the sum over days of min(K, F_d) divided by all frauds (K = fixed daily review budget; F_d = frauds on day d); the precision ceiling and the maximum lift use the nominal capacity share instead of the daily oracle captures. The values used by the design (1 %, 2 %, 5 %, 10 %) agree to two decimals; the exploratory 3 % and 3.5 % rows are overstated.
+- **Notebook 01 §14.1, Population Stability Index (PSI) of categorical columns:** missing values fall into the "other" bin instead of a separate missing bin. Numeric PSI is unaffected by this missing-bin defect. The stated method (bins from Train deciles) also describes only the comparisons with Train: for Validation 1 → Validation 2 the bins and categorical levels come from Validation 1, the earlier period of that pair.
+- **Notebook 01 §8, missingness blocks of `V1`–`V339`:** columns are grouped by their number of missing Train rows; equal counts do not show that the columns are missing on the same rows. The actual missing-row patterns are checked on development data.
+- **Notebook 02 §2.2, duplicate column names:** the check cannot fail, because pandas renames duplicate headers. The absence of duplicates is still established by the exact match with `config/features.yaml` (§2.5).
+
 ## Running and committing
 
 - Use the project kernel **Python (fraud-detection-review-capacity)** from the repository root's `.venv`; raw files are expected in `data/raw/`.
@@ -54,8 +76,19 @@ Sections not listed (e.g. §10 class weighting, §13 false-negative feasibility,
 | Symbol / abbreviation | Meaning |
 |---|---|
 | DR-NNN | Decision Record NNN in `docs/decisions/` |
+| F_d | Number of frauds on relative day d |
+| FT-Transformer | Feature Tokenizer + Transformer (a neural model for tabular data) |
+| H1, H2, H3; H3₀ | Confirmatory hypotheses: model-family effect; class-weighting effect; alert-rate transfer fidelity. H3₀ is the null hypothesis of H3 |
+| K | Fixed daily review budget (reviews per relative day) |
+| MLP | Multilayer perceptron |
+| PSI | Population Stability Index (a measure of distribution shift) |
+| R0, R4 | Decision policies: default 0.5 threshold; calibrated cost-aware capped review |
+| REF-NNN | Reference identifier in `docs/references.md` |
+| ρ | Miss-to-review cost ratio |
 | `isFraud` | Target: 1 = fraud, 0 = legitimate |
 | Relative day | `TransactionDT` divided by 86,400 seconds, rounded down |
 | SHA-256 | Secure Hash Algorithm, 256-bit (file checksum) |
+| TOST | Two One-Sided Tests (equivalence test) |
 | Test | Relative days 155–182; labels sealed |
 | `TransactionDT` | Time offset in seconds from an undisclosed reference point |
+| `TransactionID` | Transaction identifier (excluded from model input) |
