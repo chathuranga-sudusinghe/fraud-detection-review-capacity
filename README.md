@@ -22,17 +22,17 @@ Stated in full, with their estimands and tests, in the [research protocol](docs/
 
 ## Dataset source
 
-**Dataset:** [IEEE-CIS Fraud Detection — Kaggle competition data](https://www.kaggle.com/competitions/ieee-fraud-detection/data) [REF-047], labelled training data only.
+**Dataset:** [IEEE-CIS Fraud Detection — Kaggle competition data](https://www.kaggle.com/competitions/ieee-fraud-detection/data) [REF-047](docs/references.md#ref-047), labelled training data only.
 
 **Data provider:** Vesta Corporation; real-world e-commerce transactions.
 
-**Use terms:** non-commercial use under the Competition Rules, Section 7 [REF-049]; by project policy, raw data stay local and are never committed.
+**Use terms:** non-commercial use under the Competition Rules, Section 7 [REF-049](docs/references.md#ref-049); by project policy, raw data stay local and are never committed.
 
 The data are used exactly as published: no rows are generated, simulated or altered. The [dataset documentation](docs/dataset.md) records provenance, use terms, version control and the dataset's limits; the temporal partitions are defined in [DR-001](docs/decisions/DR-001-temporal-split-strategy.md).
 
 ## Research path
 
-The study is organised along the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085], adapted to a confirmatory research design. This framing is proposed and pending supervisor review; the adaptations below will be recorded in a Decision Record after that review.
+The study is organised along the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085](docs/references.md#ref-085), adapted to a confirmatory research design. This framing is proposed and pending supervisor review; the adaptations below will be recorded in a Decision Record after that review.
 
 - Stages 1–8 carry the confirmatory research; stage 9 (Deployment) is realised as a local demonstration application and stage 10 (Feedback) as supervisor review and reporting.
 - Iteration between stages is allowed only before the protocol freeze, only on the development partitions (Train, Validation 1 and Validation 2), and only within each partition's fixed role ([protocol: Experimental Split Structure](docs/protocol.md#experimental-split-structure)).
