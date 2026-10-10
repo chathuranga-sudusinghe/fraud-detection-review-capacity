@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) by Issue #23; supervisor review pending (Issue #56) |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54) and 2026-10-10 (Issue #57: neural-network representation moved to DR-012) |
-| Evidence source | Raw-file headers (schema only); development-period values (relative days 1–154) for type, missingness and cardinality checks, **with the target column never loaded**; organiser data description; LightGBM and CatBoost documentation; input-type checks on synthetic data; `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 8, 9 |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54), 2026-10-10 (Issue #57: neural-network representation moved to DR-012) and 2026-10-10 (Issue #64: time-of-day inputs) |
+| Evidence source | Raw-file headers (schema only); development-period values (relative days 1–154) for type, missingness and cardinality checks, **with the target column never loaded**; organiser data description; LightGBM and CatBoost documentation; input-type checks on synthetic data; `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 2.6, 8, 9 (§2.6: label-free completeness of `TransactionDT` over all 182 relative days); fraud-detection and software literature on periodic time features [REF-007, REF-104] |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md), [`config/features.yaml`](../../config/features.yaml), [feature catalog](../feature-catalog.md) |
 
 ## Context
@@ -14,11 +14,11 @@ The study compares four models in two families, as research question 1 (RQ1) and
 The declaration is not trivial:
 - many nominal (unordered, label-like) fields are stored as numbers (`card1`, `addr1`, several `id_*` fields);
 - the models accept categorical data and missing values in **different technical forms**;
-- no model may be given extra engineered information.
+- no model may be given information that another model does not receive.
 
-This record fixes, before any model is implemented: the target, the excluded columns, the categorical columns, the numeric columns, the canonical frame and the exact technical conversions for the tree-based libraries. The proposed neural-network representation is in [DR-012](DR-012-neural-network-input-representation.md).
+This record fixes, before any model is implemented: the target, the excluded columns, the categorical columns, the numeric columns, the two time-of-day inputs derived from `TransactionDT`, the canonical frame and the exact technical conversions for the tree-based libraries. The proposed neural-network representation is in [DR-012](DR-012-neural-network-input-representation.md).
 
-**Scope limits.** No feature is engineered, target-encoded, aggregated or created from pseudo-entity keys. No model is trained or tuned. The temporal split ([DR-001](DR-001-temporal-split-strategy.md)), capacity settings ([DR-002](DR-002-review-capacity-definition.md)), class weighting and hypotheses are defined elsewhere.
+**Scope limits.** Apart from the two time-of-day inputs (§4), no feature is engineered, target-encoded, aggregated or created from pseudo-entity keys. No model is trained or tuned. The temporal split ([DR-001](DR-001-temporal-split-strategy.md)), capacity settings ([DR-002](DR-002-review-capacity-definition.md)), class weighting and hypotheses are defined elsewhere.
 
 ## Decision
 
@@ -31,7 +31,7 @@ This record fixes, before any model is implemented: the target, the excluded col
 | Column | Reason |
 |---|---|
 | `TransactionID` | Row identifier; monotone in time, i.e. a disguised timestamp [D] |
-| `TransactionDT` | Raw time offset. Used only to derive relative days and the temporal split ([DR-001](DR-001-temporal-split-strategy.md)), never as a model input |
+| `TransactionDT` | Raw time offset. Used to derive relative days and the temporal split ([DR-001](DR-001-temporal-split-strategy.md)) and as the source of the two time-of-day inputs (§4); never a model input itself |
 
 **No further column is excluded.**
 - High missingness (up to 99.2 %, `id_24`) and high cardinality are **not** reasons for exclusion: every model handles missing values (natively for the trees, through indicators for the neural networks, [DR-012](DR-012-neural-network-input-representation.md)), and the categorical columns are the organiser's own list.
@@ -56,7 +56,9 @@ This record fixes, before any model is implemented: the target, the excluded col
 - Several numeric-coded identity fields look ordered (e.g. `id_14` ranges from −660 to 720 and `id_32` takes the values 0/16/24/32). Their meaning is **not documented**, so no ordinal interpretation is imposed; they stay categorical as declared.
 - The feasibility audit already used this list (notebook §8).
 
-### 4. Numeric columns (382) — every remaining joined column
+### 4. Numeric inputs (384) — every remaining joined column and two time-of-day inputs
+
+**Numeric joined columns (382).**
 
 | Group | Columns | Count |
 |---|---|---|
@@ -69,17 +71,61 @@ This record fixes, before any model is implemented: the target, the excluded col
 
 **Rule:** a joined column is numeric **if and only if** it is neither the target, nor excluded, nor in the categorical list. Binary-valued V columns remain numeric: they have no organiser categorical label, and a two-valued numeric split is equivalent for trees.
 
+**Time-of-day inputs (2).** Two numeric inputs place each transaction on the cycle of its relative day (the `TransactionDT` time offset in seconds divided by 86,400 seconds and rounded down; [DR-001](DR-001-temporal-split-strategy.md)). With `t` the transaction's `TransactionDT` value in seconds:
+
+$$
+\begin{aligned}
+\theta &= 360^\circ \times \frac{t \bmod 86400}{86400} \\
+\mathrm{tod\_sin} &= \sin\theta \\
+\mathrm{tod\_cos} &= \cos\theta
+\end{aligned}
+$$
+
+where:
+
+- `t` = `TransactionDT` of the transaction, in seconds from the undisclosed reference point;
+- `t mod 86400` = seconds elapsed since the start of the transaction's relative day;
+- `θ` = time-of-day angle: the fraction of the relative day elapsed, expressed as an angle on a full circle of 360°, with 0° ≤ θ < 360°;
+- `tod_sin`, `tod_cos` = the two time-of-day inputs, each between −1 and 1.
+
+The pair is a point on the unit circle: the end of one relative day lies next to the start of the next, and the pair identifies every time of day uniquely.
+
+- **Continuous angle.** θ keeps the full one-second resolution of `TransactionDT`; it is not rounded to whole hours.
+- **Relative-day phase, not clock time.** The reference point of `TransactionDT` is undisclosed [REF-047], so θ is a position within the relative day, not the local time of day. No time zone, clock hour or calendar label is inferred.
+- **Row-local and label-free.** Each pair is computed from the transaction's own `TransactionDT` only: no other row, label or fitted statistic is used, so the same rule applies unchanged to Train, Validation 1, Validation 2 and Test.
+- **Equal exposure.** All four models receive both inputs, as ordinary numeric inputs: the tree-based models receive their values unchanged; the neural networks apply the same numeric rules as to every other numeric input ([DR-012](DR-012-neural-network-input-representation.md)). No missingness indicator arises, because the inputs are never missing.
+- **Validation of `TransactionDT`.** Data preparation stops with an error if any `TransactionDT` value is missing, non-finite or not a whole number of seconds, or if its relative day lies outside 1–182. Such a row cannot be assigned to a partition ([DR-001](DR-001-temporal-split-strategy.md)) or to a daily review budget ([DR-002](DR-002-review-capacity-definition.md)), and imputing it would invent both its partition and its time of day; dropping it would change the evaluated population and the daily volumes. The completeness of the two inputs therefore follows from this validation rule, not only from the observed completeness of `TransactionDT`.
+- **`D9` is kept unchanged.** `D9` overlaps with the time of day only partly (Evidence) and is neither filled, overwritten nor corrected from the new inputs.
+
+**Why the time-of-day inputs are added [I].** Transaction time is an established fraud-detection signal: Correa Bahnsen et al. model the time of a transaction as a periodic quantity on a 24-hour clock and report an average 13 % increase in savings from their periodic features [REF-007]; those are customer-level features combined with aggregate features, so no benefit is claimed for the row-local pair used here. In this dataset, `D9` is the declared input that the inspection identified as partly encoding the hour of the relative day; it is missing on 87.3 % of development rows [D], and other masked columns are not known to carry the time of day; `TransactionDT` is complete on all 182 relative days [D]. The sine and cosine pair is the standard encoding of a periodic quantity without a jump at the end of the period [REF-104]. The decision was informed by development-data inspection (the `D9` evidence) and was taken before any model was run; it is not selected or tuned on Validation 1 or Validation 2 performance.
+
+**Why the continuous angle, not the whole hour [I].** The reference point of `TransactionDT` is undisclosed, so whole-hour boundaries counted from it have no documented meaning. If the recorded offsets are shifted by a constant c seconds (t′ = t + c for every transaction), the continuous pair is only rotated:
+
+$$
+\theta' = \left(\theta + 360^\circ \times \frac{c}{86400}\right) \bmod 360^\circ
+$$
+
+where:
+
+- `c` = a constant number of seconds added to every recorded `TransactionDT` value (a shift of the reference point by c seconds in the opposite direction);
+- `t′` = the shifted value t + c;
+- `θ′` = the angle computed from t′.
+
+The shift adds the same angle to every transaction, so the pair (`tod_sin`, `tod_cos`) is rotated as a whole and the relative positions of all times of day are unchanged.
+
+With whole hours, the same statement holds only for shifts of whole hours; any other shift moves transactions between hourly bins. The continuous angle also keeps the resolution within the hour. Whole hours would allow only 24 possible pairs, and each coordinate would take only 13 distinct values (for example, the sine is the same at 1 and 11 hours), giving large ties in the neural networks' quantile transformation; the continuous angle avoids these coarse ties, although transactions recorded at the same second still share a pair. Rotation of the inputs does not imply identical predictions from axis-aligned tree splits or from per-input transformations; the point is that the continuous pair carries no arbitrary boundary.
+
 ### 5. One canonical input, then the model-specific form
 
 All four models start from **one canonical data frame**, built identically:
 
-1. Drop `isFraud`, `TransactionID` and `TransactionDT`.
+1. Validate `TransactionDT` and derive `tod_sin` and `tod_cos` from it (§4); then drop `isFraud`, `TransactionID` and `TransactionDT`.
 2. **Categorical columns → canonical text labels:**
    - text values are kept exactly (no case folding, trimming, merging or grouping of rare levels);
    - integer-valued numeric codes are written as whole-number text (`100.0` → `"100"`, `1000` → `"1000"`);
    - the implementation must **fail loudly** if a numeric-coded categorical value is not a whole number;
    - missing values become the explicit label `"__MISSING__"`.
-3. **Numeric columns → `float64`**, with missing values left as NaN. No imputation, scaling, clipping, winsorising or transformation.
+3. **Numeric columns and the two time-of-day inputs → `float64`**, with missing values left as NaN. No imputation, scaling, clipping, winsorising or transformation.
 
 Then, for each tree-based library (the neural-network form is in [DR-012](DR-012-neural-network-input-representation.md)):
 
@@ -98,8 +144,8 @@ Then, for each tree-based library (the neural-network form is in [DR-012](DR-012
 
 ### 6. Parity statement
 
-- **Same semantic input:** all four models receive the same 431 columns, the same 49 categorical declarations, the same canonical category labels and the same numeric values.
-- **No model is given engineered information**: no counts, frequencies, target statistics or entity keys are computed outside the models.
+- **Same semantic input:** all four models receive the same 433 inputs (the 431 declared columns and the two time-of-day inputs), the same 49 categorical declarations, the same canonical category labels and the same numeric values.
+- **No other engineered information**: apart from the two time-of-day inputs, which every model receives identically, no counts, frequencies, target statistics or entity keys are computed outside the models.
 - **Family-specific representation.** The trees use native categorical and missing-value handling (§5); the neural networks receive the same information as integer category indices, transformed numeric values and missingness indicators ([DR-012](DR-012-neural-network-input-representation.md)). These forms are part of each family's design and therefore of the family contrast.
 - **Two unavoidable differences between the tree libraries remain.** Both are part of each library's native design, not of this study's preprocessing:
   1. how categories are split (LightGBM's gradient-sorted category partitions versus CatBoost's ordered target statistics);
@@ -120,7 +166,7 @@ Then, for each tree-based library (the neural-network form is in [DR-012](DR-012
 
 ### 8. Machine-readable declaration
 
-[`config/features.yaml`](../../config/features.yaml) lists the target, the excluded columns with reasons, all 49 categorical and all 382 numeric column names explicitly, and the encoding rules above. It contains **no data values and no fitted statistics**. It was checked against the raw-file headers: all 434 joined columns appear exactly once.
+[`config/features.yaml`](../../config/features.yaml) lists the target, the excluded columns with reasons, all 49 categorical and all 382 numeric column names explicitly, the two derived time-of-day inputs with their source column and rule, and the encoding rules above. It contains **no data values and no fitted statistics**. It was checked against the raw-file headers: all 434 joined columns appear exactly once. The derived inputs are declared separately from the joined columns, so the 434-column source schema is unchanged.
 
 The human-readable counterpart is the [feature catalog](../feature-catalog.md). It documents every column's official meaning (or states that it is masked), observed type, missingness, cardinality, role and cautions, using development data only.
 
@@ -171,7 +217,20 @@ where:
 - `N_cat` = 49 categorical model inputs;
 - `N_num` = 382 numeric model inputs.
 
-So each model receives N_cat + N_num = **431 declared input columns**. This matches the feasibility audit's count of 432 raw features, which still included `TransactionDT` (notebook §9).
+So the declared input columns number N_cat + N_num = **431**. This matches the feasibility audit's count of 432 raw features, which still included `TransactionDT` (notebook §9). With the two time-of-day inputs (§4), each model receives:
+
+$$
+\begin{aligned}
+N_{\mathrm{in}} &= N_{\mathrm{cat}} + N_{\mathrm{num}} + N_{\mathrm{tod}} \\
+&= 49 + 382 + 2 \\
+&= 433
+\end{aligned}
+$$
+
+where:
+
+- `N_in` = number of model inputs given to every model;
+- `N_tod` = 2 time-of-day inputs (`tod_sin`, `tod_cos`).
 
 Observed value types in development data [D]:
 - 31 columns are stored as text: `ProductCD`, `card4`, `card6`, `P_emaildomain`, `R_emaildomain`, `M1`–`M9`, `id_12`, `id_15`, `id_16`, `id_23`, `id_27`–`id_31`, `id_33`–`id_38`, `DeviceType`, `DeviceInfo`.
@@ -214,6 +273,13 @@ Observed value types in development data [D]:
 - **`TransactionDT` is excluded because a monotone time value cannot be extrapolated by trees into a later period.** That reason does not apply to a cyclic hour-of-day value, so `D9` is kept.
 - No column has a single constant value in development data.
 
+### Time of day [D; L]
+
+- **[D]** `TransactionDT` has no missing value on any of the 182 relative days (notebook 01 §2.6, all rows, label-free). Its development-row range is 86,400 to 13,391,998 seconds ([feature catalog](../feature-catalog.md)).
+- **[D]** `D9` is missing on 87.3 % of development rows and, where present, equals (hour of the relative day) ÷ 24 on 94.9 % of rows (above): it carries whole-hour information for a minority of rows only.
+- **[L]** Correa Bahnsen et al. model the time of a card transaction as a periodic quantity on a 24-hour clock, at minute resolution, because an arithmetic mean of transaction times ignores the wrap-around at midnight; their features are customer-level von Mises statistics, not the row-local pair used here [REF-007, §3.2].
+- **[L]** The scikit-learn documentation encodes a periodic time feature as a sine and cosine pair with the matching period, so that the two features carry the same information without a jump between the end and the start of the period [REF-104].
+
 ### High-cardinality and non-stationary categories (Train counts; development rows only) [D]
 
 | Column | Levels in Train | Levels with < 100 Train rows | Share of Train rows in those levels | Validation 1 values unseen in Train | Validation 2 values unseen in Train |
@@ -244,11 +310,19 @@ Observed value types in development data [D]:
 | Let each library use its own defaults (e.g. LightGBM auto-detecting pandas categories; CatBoost only on text columns) | Would give the two libraries **different** categorical sets, which the protocol forbids |
 | NaN for categorical missing values in LightGBM, a text label in CatBoost | The same information would enter in two forms. A shared explicit label is simpler and identical |
 | Exclude `D9` (time-of-day) | It is cyclic and bounded, not a monotone timestamp, so the reason for excluding `TransactionDT` does not apply |
+| Declared columns only, without time-of-day inputs | A valid simpler design, not shown to be inferior. Not chosen because `D9`, the declared column identified as partly encoding the hour of the relative day, is missing on 87.3 % of development rows, while `TransactionDT` gives a complete, row-local time of day |
+| Whole hour of the relative day (24 values) instead of the continuous angle | Whole-hour boundaries counted from an undisclosed reference point have no documented meaning, and a shift of the reference point that is not a whole number of hours moves transactions between hourly bins. It also discards the time within the hour and allows only 24 possible pairs, with 13 distinct values per coordinate, to the neural networks' quantile transformation |
+| Time of day as one linear value (θ or the hour) | Places the end of a relative day far from the start of the next, although they are adjacent in time |
+| Periodic spline features [REF-104] | More inputs per period and researcher-chosen knots, with no evidence of benefit here |
+| An additional seven-day phase | Weekdays are unknown, because the reference point is undisclosed. A relative seven-day phase could be computed, but it adds inputs without a documented weekly meaning |
+| Fill or correct `D9` from `TransactionDT` | Would alter an organiser field. `D9` is kept as observed, and its missingness remains information |
+| Entity-level aggregates (counts, frequencies, past-window statistics) | Depend on heuristic pseudo-entity keys and on assumptions about label availability, and add a leakage surface; outside the scope of this study |
 
 ## Consequences
 
 - The implementation must read [`config/features.yaml`](../../config/features.yaml). It must assert that the loaded columns match the declaration exactly and that numeric-coded categorical values are whole numbers.
 - LightGBM category lists are built from **Train rows only** and stored with each model.
+- The implementation validates `TransactionDT` and computes `tod_sin` and `tod_cos` as in §4, before the partitions are assigned and the raw time column is dropped; the validation stops data preparation on any invalid value.
 - Any later change to feature roles requires a new GitHub Issue. Before the protocol freeze, this record is revised in place; after the freeze, the change requires a record that supersedes this one ([record maintenance policy](README.md#record-maintenance-policy)).
 
 ## Threats and limitations
@@ -257,11 +331,13 @@ Observed value types in development data [D]:
 - **Organiser list taken as authoritative.** Some integer-coded identity fields may be ordinal in reality. Treating them as nominal can cost some efficiency but introduces no leakage.
 - **Different unseen-category handling** between the libraries remains. The raw information is identical. For LightGBM the unseen-to-missing mapping is applied in preprocessing by the Train-fixed category list, deliberately reproducing LightGBM's documented default rather than adding any information. CatBoost uses its native handling.
 - **The `D9` interpretation** (hour-of-day) is inferred from the data [D], not documented.
+- **Relative time of day.** `tod_sin` and `tod_cos` describe the phase within the relative day defined by an undisclosed reference point. They support no claim about local clock times, time zones or calendar effects.
+- **No ablation of the time-of-day inputs.** The study does not estimate their incremental contribution. Results are conditional on the fixed 433-input design.
 - **Look-back windows** of the C, D and V groups remain undocumented, a known threat to validity (protocol, Leakage Controls).
 
 ## References
 
-REF-012, REF-047, REF-048\*, REF-076, REF-077 — see [`../references.md`](../references.md).
+REF-007, REF-012, REF-047, REF-048\*, REF-076, REF-077, REF-104 — see [`../references.md`](../references.md).
 
 \* Partially verified.
 
@@ -270,7 +346,8 @@ REF-012, REF-047, REF-048\*, REF-076, REF-077 — see [`../references.md`](../re
 | Symbol / abbreviation | Meaning |
 |---|---|
 | [D], [L], [I] | Evidence tags: dataset observation, literature/documentation, inference |
-| `__MISSING__` | Explicit label given to a missing categorical value, identical for all models; reserved in every neural-network vocabulary; also the target of categories unseen in Train for LightGBM and the neural networks |
+| c | Constant number of seconds added to every recorded `TransactionDT` value |
+| `__MISSING__` | Explicit label given to a missing categorical value, identical for all models; reserved in every neural-network vocabulary, where values unseen in Train also map to its index (LightGBM maps them to NaN instead) |
 | FT-Transformer, ResNet-style MLP | The neural models of DR-011 (Feature Tokenizer + Transformer; residual multilayer perceptron) |
 | MLP | Multilayer perceptron |
 | `C1`–`C14`, `D1`–`D15`, `M1`–`M9` | Organiser feature groups: counts, time deltas, match flags |
@@ -287,14 +364,23 @@ REF-012, REF-047, REF-048\*, REF-076, REF-077 — see [`../references.md`](../re
 | Int32.MaxValue | Largest 32-bit signed integer (2,147,483,647) |
 | N_joined | Number of columns after the join (434) |
 | N_tx, N_id | Numbers of columns in the transaction (394) and identity (41) files |
-| N_target, N_excl, N_cat, N_num | Numbers of target (1), excluded (2), categorical (49) and numeric (382) columns |
+| N_target, N_excl, N_cat, N_num | Numbers of target (1), excluded (2), categorical (49) and numeric (382) joined columns |
+| N_in | Number of model inputs given to every model (433) |
+| N_tod | Number of time-of-day inputs (2) |
 | NaN | Not-a-number: the missing-value marker for numeric columns |
 | `nan_mode` | CatBoost setting for numeric missing values (default Min) |
 | `P_emaildomain`, `R_emaildomain` | Purchaser and recipient email domains (categorical) |
 | pandas `Categorical` | pandas data type holding a fixed category list and integer codes |
 | `ProductCD` | Organiser product code (categorical) |
 | ρ | Spearman rank correlation |
+| Relative day | `TransactionDT` divided by 86,400 seconds and rounded down (DR-001) |
 | RQ1 | Research question 1 (model and weighting) |
+| sin, cos | Sine and cosine functions |
+| t, t′ | `TransactionDT` value of a transaction, in seconds; t′ = t + c after a shift |
+| `t mod 86400` | Remainder of t after division by 86,400: seconds since the start of the relative day |
+| `x mod 360°` | Remainder of an angle x after division by 360° (one full turn) |
+| `tod_sin`, `tod_cos` | Time-of-day inputs: sine and cosine of θ |
+| θ, θ′ | Time-of-day angle: fraction of the relative day elapsed × 360° (0° ≤ θ < 360°); θ′ computed from t′ = t + c |
 | `TransactionAmt` | Transaction amount (numeric) |
 | `TransactionDT` | Time offset in seconds from an undisclosed reference point (excluded) |
 | `TransactionID` | Row identifier and join key (excluded) |

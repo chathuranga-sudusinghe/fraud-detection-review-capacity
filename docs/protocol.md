@@ -200,9 +200,9 @@ What each research question and hypothesis needs from the data, where it comes f
 | Requirement | Used for | Source | Partitions | Limit of the dataset and its handling |
 |---|---|---|---|---|
 | Fraud label `isFraud` | Model fitting (Train); tuning and early stopping (V1); R1 threshold, R4 calibrator and H3-configuration selection (V2); Recall@2% (H1, H2), RQ3 costs and false-negative analysis (Test) | `train_transaction.csv` | Train, V1, V2; Test only at the confirmatory evaluation | No label-report dates: label-latency sensitivity on V2 days 127–147 ([Experimental Split Structure](#experimental-split-structure)). Labels propagate across linked transactions: dependence-aware inference ([Statistical Plan](#statistical-plan)) and a stated threat to validity ([Leakage Controls](#leakage-controls)) |
-| Transaction time `TransactionDT` | Relative day; partitions; daily review queue; daily budget; day-level bootstrap | `train_transaction.csv` | All | Reference point undisclosed: relative days only, no calendar or seasonal claims |
+| Transaction time `TransactionDT` | Relative day; partitions; daily review queue; daily budget; day-level bootstrap; the two time-of-day inputs | `train_transaction.csv` | All | Reference point undisclosed: relative days and a phase within the relative day only, no calendar, clock-time or seasonal claims. Complete on all 182 relative days [D]; a missing or invalid value stops data validation ([Feature Policy](#feature-policy)) |
 | Join and row key `TransactionID` | Joining the two files; aligning scores, labels and partitions row by row | Both files | All | Monotone in time, so never a model input ([Feature Policy](#feature-policy)) |
-| Model inputs (431 declared columns) | Fraud scores | Both files, left-joined on `TransactionID` | All; every fitted transformation uses Train only | Most meanings masked by the provider: the organiser's declared roles are adopted ([Feature Policy](#feature-policy)) |
+| Model inputs (433: 431 declared columns and two time-of-day inputs) | Fraud scores | Both files, left-joined on `TransactionID`; time-of-day inputs derived from `TransactionDT` | All; every fitted transformation uses Train only | Most meanings masked by the provider: the organiser's declared roles are adopted ([Feature Policy](#feature-policy)) |
 | Daily transaction volume (label-free) | K (from V2 volume); realised alert rate r (H3); daily-budget fidelity | Derived from `TransactionDT` | V2 for K; Test for r | — |
 | Transaction amount `TransactionAmt` | Amount-weighted recall and fraud value exposed (exposure proxies) | `train_transaction.csv` | V2, Test | Not a realised loss; currency per the organiser (partially verified) ([Cost Model](#cost-model)) |
 | Slice variables (identity presence, `ProductCD`, `card4`, `card6`, `DeviceType`, amount band, relative week, score band) | False-negative analysis | Both files; model scores | Test | — |
@@ -256,7 +256,7 @@ The model set is fixed by DR-011; no further model families are added.
 
 1. **Identical for all eight configurations:**
    - the partitions: Train for fitting, V1 for tuning and early stopping, V2 for calibration, thresholds, K and the H3 configuration;
-   - the same 431 declared model inputs; any input added later through an approved GitHub Issue enters all eight configurations;
+   - the same 433 model inputs (the 431 declared columns and the two time-of-day inputs); any input added later through an approved GitHub Issue enters all eight configurations;
    - the same explicit Train-only class weights;
    - the same hyperparameter search method and budget per configuration;
    - the same V1 objective, early-stopping rule and seeds;
@@ -272,19 +272,37 @@ The values of these elements (search method, budget, objective, patience, seeds,
 
 ## Feature Policy
 
-- **Raw or minimally processed features are the primary design.** There is no feature-engineering study.
+- **Declared raw inputs plus one fixed time-of-day pair are the primary design.** There is no feature-engineering study: the design is set before any model run and is not selected or tuned on V1 or V2 performance.
 - **`TransactionID` and raw `TransactionDT` are not model features.** `TransactionID` is monotone in time, so it is a disguised timestamp [D]. Raw time cannot be extrapolated by tree models.
+- **Time-of-day inputs** ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §4). Two numeric inputs place each transaction at its continuous position within its relative day, from its own `TransactionDT` value t (in seconds):
+
+  $$
+  \begin{aligned}
+  \theta &= 360^\circ \times \frac{t \bmod 86400}{86400} \\
+  \mathrm{tod\_sin} &= \sin\theta \\
+  \mathrm{tod\_cos} &= \cos\theta
+  \end{aligned}
+  $$
+
+  where:
+
+  - `t` = `TransactionDT` of the transaction, in seconds from the undisclosed reference point;
+  - `θ` = time-of-day angle: the fraction of the relative day elapsed, expressed as an angle on a full circle (0° ≤ θ < 360°);
+  - `tod_sin`, `tod_cos` = the two time-of-day inputs.
+
+  The inputs are row-local and label-free, and every model receives them as ordinary numeric inputs. θ is a position within the relative day, not the local clock time. Data preparation stops with an error if any `TransactionDT` value is missing, non-finite or not a whole number of seconds, or if its relative day lies outside 1–182; no row is dropped or imputed. The organiser column `D9`, which partly encodes the hour of the relative day and is missing on 87.3 % of development rows [D], is kept unchanged.
 - **No future-looking aggregate features.** Any frequency, count or entity-level aggregate would have to be computed from Train only or with past-only windows. None is planned for the primary design.
 - **No manual target encoding.** Categorical handling is native to each model family: CatBoost ordered target statistics [REF-012]; LightGBM categorical splits [REF-011]; learned category embeddings in the neural networks ([DR-012](decisions/DR-012-neural-network-input-representation.md), proposed).
 - **No engineered entity identifiers as features.** Heuristic keys such as card + address + implied account-start day are used **only** for audit and slicing.
 - **Feature declaration** ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md); machine-readable in [`config/features.yaml`](../config/features.yaml); column-by-column reference in the [feature catalog](feature-catalog.md)). Of the 434 joined columns:
   - 1 is the target (`isFraud`) and 2 are excluded (`TransactionID`, `TransactionDT`);
   - **49 are categorical**, exactly the organiser's published list [REF-047]: `ProductCD`, `card1`–`card6`, `addr1`, `addr2`, `P_emaildomain`, `R_emaildomain`, `M1`–`M9`, `DeviceType`, `DeviceInfo`, `id_12`–`id_38`. This includes the numeric-coded fields `card1`–`card3`, `card5`, `addr1`, `addr2` and 12 `id_*` codes;
-  - **382 are numeric**: every other column (`TransactionAmt`, `dist1`, `dist2`, `C1`–`C14`, `D1`–`D15`, the `V1`–`V339` feature columns, `id_01`–`id_11`).
-- **Model input parity.** All four models receive the same 431 columns, built from one canonical frame:
+  - **382 are numeric**: every other column (`TransactionAmt`, `dist1`, `dist2`, `C1`–`C14`, `D1`–`D15`, the `V1`–`V339` feature columns, `id_01`–`id_11`);
+  - the two time-of-day inputs are added as numeric inputs, giving 384 numeric and 433 model inputs in total.
+- **Model input parity.** All four models receive the same 433 inputs, built from one canonical frame:
   - categorical values are written as text labels, with missing values labelled `"__MISSING__"`;
   - **tree-based models:** numeric values stay `float64` with native missing-value handling; LightGBM receives pandas categoricals whose categories are fixed from Train only, and CatBoost receives the text labels directly [REF-076, REF-077]; no imputation, scaling, rare-level grouping or high-cardinality exclusion is applied;
-  - **neural models (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md); identical for both, attached to input roles):** per-input category vocabularies fitted on Train with `"__MISSING__"` reserved in every vocabulary, values unseen in Train mapped to it, and category dropout (probability 0.01, training only) so that its embedding is trained; numeric values quantile-transformed to a normal distribution fitted on Train, with Gaussian noise added to every numeric input during fitting only, scaled as in the reference implementation [REF-087, REF-103]; missing values set to 0 after the transformation, and one missingness indicator per numeric input with missing Train values (755 inputs in total).
+  - **neural models (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md); identical for both, attached to input roles):** per-input category vocabularies fitted on Train with `"__MISSING__"` reserved in every vocabulary, values unseen in Train mapped to it, and category dropout (probability 0.01, training only) so that its embedding is trained; numeric values, including the time-of-day inputs, quantile-transformed to a normal distribution fitted on their non-missing Train values, with Gaussian noise added during fitting only, scaled as in the reference implementation [REF-087, REF-103]; missing values set to 0 after the transformation, and one missingness indicator per numeric input with missing Train values (757 inputs in total; FT-Transformer: 757 feature tokens plus the [CLS] classification token).
 
 ## Class-Imbalance Treatment
 
@@ -681,7 +699,7 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | SESOI, H1 and H2 | SESOI = 2 pp of Recall@2%; H1 family-effect difference test with practical interpretation; H2 intersection-union TOST over four models; Holm over {H1, H2, H3} | [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md) |
 | H1/H2 uncertainty | Two-way pigeonhole bootstrap (relative day × fine pseudo-entity); sensitivity S1 (Owen-corrected variance) and S2 (day blocks, ℓ = 3) | [DR-006](decisions/DR-006-bootstrap-inference-strategy.md) |
 | RQ3 cost analysis | Review + missed-fraud cost model (C_FP as a sensitivity relabelling); ρ ∈ {2, …, 1000} with exact curves; saturation and break-even ratios per capacity and configuration | [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md) |
-| Model inputs | 49 categorical, 382 numeric, 2 excluded; canonical labels with `"__MISSING__"`; tree-based representation fixed | [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) |
+| Model inputs | 49 categorical, 382 numeric, 2 excluded, plus 2 time-of-day inputs (`tod_sin`, `tod_cos`): 433 inputs; canonical labels with `"__MISSING__"`; tree-based representation fixed | [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) |
 | Overflow rule | Report-only: R0–R2 evaluated uncapped; demand, overflow, unused capacity and load ratio against K | [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md) |
 | H3 configuration | Highest pooled V2 Recall@2% under R3 among eight configurations; committed before Test access | [DR-010](decisions/DR-010-h3-confirmatory-configuration.md) |
 | Model set | LightGBM, CatBoost, ResNet-style MLP, FT-Transformer × unweighted/balanced; common-procedure fairness | [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) |
@@ -693,9 +711,9 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | # | Item | Notes |
 |---|---|---|
 | 1 | Supervisor review of the design (DR-001–DR-012) | Design review with the supervisor (Issue #56) |
-| 2 | Neural-network input representation | [DR-012](decisions/DR-012-neural-network-input-representation.md), proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise and 1,000 quantiles [REF-103], missingness indicators; noise seed and constant or all-missing inputs fixed in the training rules |
+| 2 | Neural-network input representation | [DR-012](decisions/DR-012-neural-network-input-representation.md), proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise and 1,000 quantiles [REF-103], missingness indicators; one fixed noise seed shared by all neural configurations (value fixed in the training rules); inputs constant in Train need no special rule; an input entirely missing in Train stops data preparation |
 | 3 | Training rules | Search method and budget, V1 objective, early-stopping rule, seeds, aggregation of neural-network seeds, tie rule for equal scores, calibration details |
-| 4 | Feature-engineering policy | Current design: declared raw inputs only (DR-008); confirmed or changed at the design review |
+| 4 | Feature-engineering policy | Resolved (Issue #64): declared inputs plus the two time-of-day inputs; no other engineered feature ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §4) |
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
 | 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Tier set by the assessment brief; confirmed with the supervisor [REF-053] |
 | 7 | Research-methodology framing | IBM Foundational Methodology adaptation [REF-085], recorded after the design review |
@@ -765,8 +783,10 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | C_R | Cost of reviewing one transaction, charged on every review |
 | Cat, LGB, RES, FTT | CatBoost, LightGBM, ResNet-style MLP, FT-Transformer |
 | CPU, GPU | Central and graphics processing units |
+| [CLS] | Classification token that FT-Transformer adds to its feature tokens |
 | CI | Confidence interval |
 | d | A relative day |
+| `D9` | Organiser time-delta column; equals the hour of the relative day ÷ 24 on most rows where present |
 | Δ | H3 equivalence tolerance on r (0.004 = 20 % of the 2 % target) |
 | δ_F, δ*_F | Model-family effect: neural mean minus tree-based mean of Recall@2% (H1 estimand); its value in one bootstrap replicate |
 | δ_W,m | Weighting effect of model m (H2 estimands) |
@@ -816,9 +836,14 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | SE | Standard error |
 | SESOI | Smallest Effect Size Of Interest (2 percentage points of Recall@2%) |
 | SHA-256 | Secure Hash Algorithm, 256-bit |
+| sin, cos | Sine and cosine functions |
 | SMOTE | Synthetic Minority Over-sampling Technique |
 | sup | Supremum: the largest value (least upper bound) of a set |
 | Σ_d | Sum over days |
+| t | `TransactionDT` value of a transaction, in seconds |
+| `t mod 86400` | Seconds elapsed since the start of the transaction's relative day |
+| θ | Time-of-day angle: fraction of the relative day elapsed × 360° |
+| `tod_sin`, `tod_cos` | Time-of-day inputs: sine and cosine of θ |
 | τ₂, τ_c | V2-selected score threshold flagging 2 % (a fraction c) of V2 transactions |
 | TOST | Two One-Sided Tests |
 | TP_d | True positives: frauds reviewed on day d |
