@@ -2,20 +2,157 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by Issue #14; supervisor review pending. Extended to the eight-configuration model set of [DR-011](DR-011-model-set-tree-based-and-neural-families.md) and to bounded bootstrap p-values (Issue #54). |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54) |
+| Status | Accepted (pre-freeze) by Issue #14; supervisor review pending (Issue #56) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values) |
 | Evidence source | Development-period (V2, relative days 127–154) dependence diagnostics, computed for this decision with no Test labels and no model scores; `notebooks/01_dataset_feasibility_audit.ipynb` §15; bootstrap and clustered-inference literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
 ## Context
 
-Confirmatory hypotheses H1 (model family) and H2 (class weighting) compare paired differences in pooled Test **Recall@2 %** (share of frauds reviewed at 2 % review capacity) under the daily top-K policy R3 (review the K highest-scoring transactions each relative day; K = 56 reviews per relative day) across the eight model × weighting configurations of [DR-011](DR-011-model-set-tree-based-and-neural-families.md) ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). DR-005 requires a **joint paired bootstrap** that does not assume independent transactions or frauds. The **resampling unit** has two natural candidates: heuristic pseudo-entity clusters and day blocks.
+Confirmatory hypotheses H1 (model family) and H2 (class weighting) compare paired differences in pooled Test **Recall@2%** (share of frauds reviewed at 2 % review capacity) under the daily top-K policy R3 (review the K highest-scoring transactions each relative day; K = 56 reviews per relative day) across the eight model × weighting configurations of [DR-011](DR-011-model-set-tree-based-and-neural-families.md) ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). DR-005 requires a **joint paired bootstrap** that does not assume independent transactions or frauds. The **resampling unit** has two natural candidates: heuristic pseudo-entity clusters and day blocks.
 
 The trade-off:
 - entity resampling targets within-entity dependence, but relies on a **heuristic** key;
 - day resampling targets temporal dependence and keeps each day's top-K intact, but the Test period has only **28 days**.
 
 This record fixes that choice using development-period evidence only.
+
+## Decision
+
+### Primary method: two-way (pigeonhole) paired bootstrap over relative days × fine pseudo-entities
+
+**Why [I, grounded in D and L].**
+- Both day-level and entity-level dependence are observed, of similar size, and crossed.
+- Each one-way method demonstrably misses one of them.
+- The pigeonhole bootstrap addresses both [REF-068, REF-070].
+- Its known bias is **conservative**. That is the safe direction for confirmatory claims, and especially for **H2 equivalence**, where an underestimated variance would produce false "equivalence" conclusions.
+- Its dependence on the heuristic key is limited: the day dimension does not use the key, and a poor key still adds variance rather than removing it.
+
+**Why not day-only as primary.** It does not use the heuristic key and it preserves top-K exactly, but the evidence indicates it would understate variance by roughly 30–50 % for entity-linked quantities. With 28 days it also carries the few-cluster risk alone [REF-069].
+
+### Sensitivity analyses (pre-declared; not confirmatory)
+
+- **S1 — Owen-corrected two-way variance** [REF-068]:
+
+  $$
+  \begin{aligned}
+  \mathrm{SE}^2 &= V_{\mathrm{pigeonhole}} - 2 \cdot V_{\mathrm{naive}} \\
+  \text{Wald interval} &= \hat{\delta} \pm z \cdot \mathrm{SE}
+  \end{aligned}
+  $$
+
+  where:
+
+  - `SE` = corrected standard error of the estimated difference;
+  - `V_pigeonhole` = variance of the estimate across pigeonhole replicates;
+  - `V_naive` = variance from a fraud-level independent and identically distributed (iid) bootstrap;
+  - `δ̂` = point estimate of the paired difference (δ_F or δ_W,m);
+  - `z` = standard-normal quantile for the interval level (e.g. 1.96 for 95 %).
+
+  This removes the known over-count and shows how far conclusions depend on the primary method's conservatism. If the corrected variance is ≤ 0, S1 is reported as not estimable.
+- **S2 — Day-level moving-block bootstrap, ℓ (block length) = 3 days.** Circular wrap is not used, to match H3 ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)). This is a key-free check that preserves each day's top-K exactly. The same B and interval type as the primary are used.
+
+**Robustness rule.**
+- Confirmatory decisions (H1, H2) use the **primary method only**; there is no switching after results are seen.
+- If S1 or S2 would lead to a different H1 or H2 conclusion, this is reported explicitly as sensitivity of the conclusion to dependence assumptions.
+
+### Exact paired resampling procedure (primary)
+
+Inputs from the one confirmatory Test evaluation, computed **once**:
+- For each of the eight configurations m ∈ {LGB-u, Cat-u, RES-u, FTT-u, LGB-b, Cat-b, RES-b, FTT-b} (LightGBM, CatBoost, ResNet-style MLP or FT-Transformer, unweighted or balanced weighting; [DR-011](DR-011-model-set-tree-based-and-neural-families.md)) and each Test relative day d, rank that day's transactions by m's score. Set c_{m,i} = 1 if fraud i is among day(i)'s top K = 56 under m, else 0. Ties are handled as pre-declared in the implementation.
+- For each Test fraud i: its day d(i), and its fine pseudo-entity e(i), built from Test-period features only (card1, addr1, P_emaildomain, relative day − D1).
+
+For each bootstrap replicate b = 1, …, B (B = number of replicates):
+
+1. Draw day multiplicities over the 28 Test days, and, independently, entity multiplicities over the G fraud entities in Test:
+
+   $$
+   \begin{aligned}
+   (a_1, \dots, a_{28}) &\sim \operatorname{Multinomial}\left(28;\ \tfrac{1}{28}, \dots, \tfrac{1}{28}\right) \\
+   (b_1, \dots, b_G) &\sim \operatorname{Multinomial}\left(G;\ \tfrac{1}{G}, \dots, \tfrac{1}{G}\right)
+   \end{aligned}
+   $$
+
+   where:
+
+   - `a_d` = number of times Test day d is drawn in this replicate;
+   - `b_e` = number of times fraud entity e is drawn in this replicate;
+   - `G` = number of distinct fine pseudo-entities among Test frauds.
+
+2. Weight each fraud by the product of its day's and its entity's multiplicities:
+
+   $$
+   w_i = a_{d(i)} \cdot b_{e(i)}
+   $$
+
+   where `d(i)` and `e(i)` are the day and the entity of fraud i.
+
+3. For **every** configuration m, using the **same** weights, compute the replicate recall:
+
+   $$
+   R^*_m = \frac{\sum_i w_i \cdot c_{m,i}}{\sum_i w_i}
+   $$
+
+   where `c_m,i` = 1 if fraud i is among its day's top K under configuration m, else 0 (the capture indicator), and `Σ_i` sums over Test frauds.
+
+4. Compute the replicate estimands:
+
+   $$
+   \begin{aligned}
+   \delta^*_F &= \frac{1}{4} \sum_{m \in N} \sum_{w} R^*_{m\text{-}w} \;-\; \frac{1}{4} \sum_{m \in T} \sum_{w} R^*_{m\text{-}w} \\
+   \delta^*_{W,m} &= R^*_{m\text{-}b} - R^*_{m\text{-}u} \qquad \text{for } m \in \lbrace \mathrm{LGB}, \mathrm{Cat}, \mathrm{RES}, \mathrm{FTT} \rbrace
+   \end{aligned}
+   $$
+
+   where δ*_F and δ*_W,m are the model-family effect and the weighting effect of model m, computed in this replicate; T = {LGB, Cat}, N = {RES, FTT} and w ∈ {u, b}. The descriptive contrasts and the interaction are computed in the same way.
+
+**Why this is valid for paired comparison.**
+- The weights depend only on each fraud's (day, entity) membership, never on model outputs.
+- Applying the same weights to all eight configurations keeps the within-fraud correlation between configurations. The bootstrap distribution of each difference therefore reflects paired, not independent-sample, variability [REF-068, REF-036].
+
+**Daily top-K: why the ranking is not recomputed in each replicate.**
+- In the **primary**, recomputing top-K on a "resampled dataset" is not well defined. Duplicating an entity inside a day would create tied duplicate transactions and change that day's volume while K stays 56, so the capacity rate would no longer be 2 %.
+- The primary therefore conditions on the realised within-day ranking. Uncertainty comes from *which days and which fraud entities occur*. Day-level variation in capacity competition is carried by the day weights, which move all of a day's frauds together.
+- As a consequence, a replicate's weighted captured count for a day can exceed K. The replicate is a weighted estimator used for variance approximation, not a literal simulated Test period.
+- In **S2**, whole days are resampled. Each day's top-K is then *exactly* preserved, and recomputation would give identical results, so none is needed.
+
+
+### Confidence intervals and replicates
+
+| Item | Specification | Justification |
+|---|---|---|
+| Interval type (primary) | **Percentile** confidence intervals (CIs) from the pigeonhole distribution [REF-044] | Simple, respects the non-normal shape of a bounded ratio, and matches H3's percentile intervals. Mildly conservative by construction [REF-068]. |
+| BCa (bias-corrected and accelerated interval) | **Not used** | Its acceleration constant is normally estimated by a jackknife, and no standard jackknife exists for crossed two-way data. Using BCa here would add an unvalidated component. |
+| Basic / studentized | Not used as primary | A studentized interval needs a per-replicate variance estimate, which would need a second-level two-way bootstrap. The added complexity is not justified for this confirmatory analysis. S1 provides a Wald-type check. |
+| Levels | 95 % for difference estimates; 90 % for H1's practical interpretation and for the H2 TOST (Two One-Sided Tests) contrasts, reported descriptively. Confirmatory decisions use the bootstrap p-values with Holm adjustment | As DR-005 |
+| Replicates | **B = 10,000**, fixed seed recorded | Holm adjustment compares the smallest p-value with 0.05 / 3 ≈ 0.0167, so tail proportions near 1.67 % must be estimated precisely: ≈ 167 replicates in the tail at B = 10,000, against ≈ 17 at B = 1,000, which is too few. Computation is negligible. Monte Carlo standard errors of reported p-values are also reported. |
+| Small-cluster corrections | **None applied**; limitation stated | Wild cluster bootstrap-t corrections [REF-069] are designed for regression coefficients with few clusters in one dimension. Here the entity dimension is large (≈ 1,350 clusters projected), the day dimension (28) carries the few-cluster risk, and the primary's conservatism partly offsets it. |
+| Day blocks | Primary: iid days inside the two-way scheme. Sensitivity S2: fixed ℓ = 3 | Within V2, lag-1 autocorrelation of daily prevalence is 0.01 [D]. Once entity recurrence is modelled explicitly, the remaining serial dependence is small. S2 keeps the H3 block length (DR-003; [REF-064]) for comparability. |
+
+
+### Relationship to H1, H2, TOST and McNemar
+
+- **H1 (difference).** The two-sided bootstrap p-value is the percentile-interval inversion, with the add-one correction and a cap at 1 ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)):
+
+  $$
+  p_{\mathrm{H1}} = \min\left\lbrace 1,\ 2 \cdot \min\left( \frac{1 + \#\lbrace \delta^*_F \le 0 \rbrace}{B + 1},\ \frac{1 + \#\lbrace \delta^*_F \ge 0 \rbrace}{B + 1} \right) \right\rbrace
+  $$
+
+  where `#{ · }` = the number of bootstrap replicates satisfying the condition. The 90 % percentile interval gives DR-005's five-way practical interpretation against ±0.02 (± the Smallest Effect Size Of Interest, SESOI).
+- **H2 (intersection-union TOST).** For each model m, the two one-sided p-values and the H2 p-value are:
+
+  $$
+  \begin{aligned}
+  p_{a,m} &= \frac{1 + \#\lbrace \delta^*_{W,m} \le -0.02 \rbrace}{B + 1} \\
+  p_{b,m} &= \frac{1 + \#\lbrace \delta^*_{W,m} \ge +0.02 \rbrace}{B + 1} \\
+  p_{\mathrm{H2}} &= \max_{m \in \lbrace \mathrm{LGB}, \mathrm{Cat}, \mathrm{RES}, \mathrm{FTT} \rbrace} \max\left(p_{a,m},\ p_{b,m}\right)
+  \end{aligned}
+  $$
+
+  where p_a,m and p_b,m test the lower and upper equivalence bounds for model m. H2 needs all eight one-sided tests to reject, and is decided by the Holm-adjusted value of p_H2 [REF-061, REF-062] ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). **TOST uses the bootstrap distribution**, because no closed-form interval accounts for the crossed dependence. The percentile intervals of δ_W,m are reported. They describe uncertainty only and do not determine rejection, because the decision uses the Holm-adjusted p-value.
+- **Multiplicity.** Holm over {H1, H2, H3} ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
+- **H3** is label-free and uses the day-level moving-block bootstrap of [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md).
+- **McNemar remains secondary and descriptive.** It assumes independent paired units, and its size "can greatly exceed the nominal level" under intracluster correlation [REF-071]. It is reported for the cell-level contrasts only, labelled as independence-based, and is excluded from the Holm family.
 
 ## Evidence
 
@@ -101,16 +238,16 @@ The more frauds concentrate in large clusters, the larger DE becomes; DE = 1 whe
 - **Few clusters.** With few (five to thirty) clusters, standard cluster-robust tests can over-reject [REF-069]. With 28 Test days, this applies to any day-only method.
 - **Temporal dependence.** Block bootstraps handle short-range serial dependence [REF-037]; block-length orders are given by [REF-064]. They cannot absorb dependence at lags comparable to the series length.
 - **Paired binary comparisons under clustering.** "In the presence of intracluster correlation, the size of McNemar's test can greatly exceed the nominal level" [REF-071]. Paired classifier comparisons that assume independent observations [REF-028, REF-035] are therefore not valid primary tests here.
-- **No fraud-specific standard.** No verified source prescribes a bootstrap design for capacity-constrained recall in fraud detection. The choice below is an application of the general methods above.
+- **No fraud-specific standard.** No verified source prescribes a bootstrap design for capacity-constrained recall in fraud detection. The choice in [Decision](#decision) is an application of the general methods above.
 
-## Candidate methods compared
+## Alternatives considered
 
 | | A. Transaction-level | B. Pseudo-entity cluster (one-way) | C. Day-level, iid days | D. Moving-block days (ℓ = 3) | **E. Two-way pigeonhole (day × fine entity)** |
 |---|---|---|---|---|---|
 | Dependence handled | None | Within-entity, including across days | Within-day, including same-day entity clustering and daily capacity competition | Within-day plus short-range (≤ ≈ 3 days) serial dependence | **Both** day-level and entity-level, including cross-day entity recurrence |
 | Dependence ignored | All | Day-level shocks and capacity competition shared across entities | Cross-day entity recurrence (45 % of frauds) | Entity recurrence beyond ≈ 3 days (≈ half of same-entity pairs) | Residual dependence not captured by the heuristic key; serial dependence between days (small in V2) |
 | Key assumptions | Independence (contradicted) | The key captures entities; days exchangeable | Days exchangeable | Short-range stationarity | Crossed random-effects structure; iid days; key approximately captures entities |
-| Recall@2 % compatibility | Yes | Yes, via fixed capture indicators | Yes, exactly (days intact) | Yes, exactly | Yes, via fixed capture indicators |
+| Recall@2% compatibility | Yes | Yes, via fixed capture indicators | Yes, exactly (days intact) | Yes, exactly | Yes, via fixed capture indicators |
 | Paired comparison | Yes | Yes | Yes | Yes | Yes |
 | Preserves daily top-K | No | Conditionally (rankings fixed) | **Exactly** | **Exactly** | Conditionally (rankings fixed; day dimension carries day-level variation) |
 | Feasible with 28 days | — | Not day-dependent (≈ 1,350 entity clusters) | Few-cluster risk [REF-069] | Worse: ≈ 26 distinct blocks, ≈ 10 per replicate | Day dimension carries the few-cluster risk; entity dimension large |
@@ -118,141 +255,6 @@ The more frauds concentrate in large clusters, the larger DE becomes; DE = 1 whe
 | Computation | Trivial | Trivial | Trivial | Trivial | Trivial (product weights on ≈ 2,700 frauds) |
 | Interpretability | High but wrong | Moderate | High | Moderate | Moderate |
 | Verdict | **Rejected** | Sensitivity input only (via E) | Rejected as primary: misses cross-day entity dependence | **Sensitivity (key-free)** | **Primary** |
-
-## Decision
-
-### Primary method: two-way (pigeonhole) paired bootstrap over relative days × fine pseudo-entities
-
-**Why [I, grounded in D and L].**
-- Both day-level and entity-level dependence are observed, of similar size, and crossed.
-- Each one-way method demonstrably misses one of them.
-- The pigeonhole bootstrap addresses both [REF-068, REF-070].
-- Its known bias is **conservative**. That is the safe direction for confirmatory claims, and especially for **H2 equivalence**, where an underestimated variance would produce false "equivalence" conclusions.
-- Its dependence on the heuristic key is limited: the day dimension does not use the key, and a poor key still adds variance rather than removing it.
-
-**Why not day-only as primary.** It does not use the heuristic key and it preserves top-K exactly, but the evidence indicates it would understate variance by roughly 30–50 % for entity-linked quantities. With 28 days it also carries the few-cluster risk alone [REF-069].
-
-### Sensitivity analyses (pre-declared; not confirmatory)
-
-- **S1 — Owen-corrected two-way variance** [REF-068]:
-
-  $$
-  \begin{aligned}
-  \mathrm{SE}^2 &= V_{\mathrm{pigeonhole}} - 2 \cdot V_{\mathrm{naive}} \\
-  \text{Wald interval} &= \hat{\delta} \pm z \cdot \mathrm{SE}
-  \end{aligned}
-  $$
-
-  where:
-
-  - `SE` = corrected standard error of the estimated difference;
-  - `V_pigeonhole` = variance of the estimate across pigeonhole replicates;
-  - `V_naive` = variance from a fraud-level iid bootstrap;
-  - `δ̂` = point estimate of the paired difference (δ_F or δ_W,m);
-  - `z` = standard-normal quantile for the interval level (e.g. 1.96 for 95 %).
-
-  This removes the known over-count and shows how far conclusions depend on the primary method's conservatism. If the corrected variance is ≤ 0, S1 is reported as not estimable.
-- **S2 — Day-level moving-block bootstrap, ℓ = 3 days.** Circular wrap is not used, to match H3 ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)). This is a key-free check that preserves each day's top-K exactly. The same B and interval type as the primary are used.
-
-**Robustness rule.**
-- Confirmatory decisions (H1, H2) use the **primary method only**; there is no switching after results are seen.
-- If S1 or S2 would lead to a different H1 or H2 conclusion, this is reported explicitly as sensitivity of the conclusion to dependence assumptions.
-
-## Exact paired resampling procedure (primary)
-
-Inputs from the one confirmatory Test evaluation, computed **once**:
-- For each of the eight configurations m ∈ {LGB-u, Cat-u, RES-u, FTT-u, LGB-b, Cat-b, RES-b, FTT-b} (LightGBM, CatBoost, ResNet-style MLP or FT-Transformer, unweighted or balanced weighting; [DR-011](DR-011-model-set-tree-based-and-neural-families.md)) and each Test relative day d, rank that day's transactions by m's score. Set c_{m,i} = 1 if fraud i is among day(i)'s top K = 56 under m, else 0. Ties are handled as pre-declared in the implementation.
-- For each Test fraud i: its day d(i), and its fine pseudo-entity e(i), built from Test-period features only (card1, addr1, P_emaildomain, relative day − D1).
-
-For each bootstrap replicate b = 1, …, B (B = number of replicates):
-
-1. Draw day multiplicities over the 28 Test days, and, independently, entity multiplicities over the G fraud entities in Test:
-
-   $$
-   \begin{aligned}
-   (a_1, \dots, a_{28}) &\sim \operatorname{Multinomial}\left(28;\ \tfrac{1}{28}, \dots, \tfrac{1}{28}\right) \\
-   (b_1, \dots, b_G) &\sim \operatorname{Multinomial}\left(G;\ \tfrac{1}{G}, \dots, \tfrac{1}{G}\right)
-   \end{aligned}
-   $$
-
-   where:
-
-   - `a_d` = number of times Test day d is drawn in this replicate;
-   - `b_e` = number of times fraud entity e is drawn in this replicate;
-   - `G` = number of distinct fine pseudo-entities among Test frauds.
-
-2. Weight each fraud by the product of its day's and its entity's multiplicities:
-
-   $$
-   w_i = a_{d(i)} \cdot b_{e(i)}
-   $$
-
-   where `d(i)` and `e(i)` are the day and the entity of fraud i.
-
-3. For **every** configuration m, using the **same** weights, compute the replicate recall:
-
-   $$
-   R^*_m = \frac{\sum_i w_i \cdot c_{m,i}}{\sum_i w_i}
-   $$
-
-   where `c_m,i` = 1 if fraud i is among its day's top K under configuration m, else 0 (the capture indicator), and `Σ_i` sums over Test frauds.
-
-4. Compute the replicate estimands:
-
-   $$
-   \begin{aligned}
-   \delta^*_F &= \frac{1}{4} \sum_{m \in N} \sum_{w} R^*_{m\text{-}w} \;-\; \frac{1}{4} \sum_{m \in T} \sum_{w} R^*_{m\text{-}w} \\
-   \delta^*_{W,m} &= R^*_{m\text{-}b} - R^*_{m\text{-}u} \qquad \text{for } m \in \lbrace \mathrm{LGB}, \mathrm{Cat}, \mathrm{RES}, \mathrm{FTT} \rbrace
-   \end{aligned}
-   $$
-
-   where δ*_F and δ*_W,m are the model-family effect and the weighting effect of model m, computed in this replicate; T = {LGB, Cat}, N = {RES, FTT} and w ∈ {u, b}. The descriptive contrasts and the interaction are computed in the same way.
-
-**Why this is valid for paired comparison.**
-- The weights depend only on each fraud's (day, entity) membership, never on model outputs.
-- Applying the same weights to all eight configurations keeps the within-fraud correlation between configurations. The bootstrap distribution of each difference therefore reflects paired, not independent-sample, variability [REF-068, REF-036].
-
-**Daily top-K: why the ranking is not recomputed in each replicate.**
-- In the **primary**, recomputing top-K on a "resampled dataset" is not well defined. Duplicating an entity inside a day would create tied duplicate transactions and change that day's volume while K stays 56, so the capacity rate would no longer be 2 %.
-- The primary therefore conditions on the realised within-day ranking. Uncertainty comes from *which days and which fraud entities occur*. Day-level variation in capacity competition is carried by the day weights, which move all of a day's frauds together.
-- As a consequence, a replicate's weighted captured count for a day can exceed K. The replicate is a weighted estimator used for variance approximation, not a literal simulated Test period.
-- In **S2**, whole days are resampled. Each day's top-K is then *exactly* preserved, and recomputation would give identical results, so none is needed.
-
-## Confidence intervals and replicates
-
-| Item | Specification | Justification |
-|---|---|---|
-| Interval type (primary) | **Percentile** confidence intervals (CIs) from the pigeonhole distribution | Simple, respects the non-normal shape of a bounded ratio, and matches H3's percentile intervals. Mildly conservative by construction [REF-068]. |
-| BCa (bias-corrected and accelerated interval) | **Not used** | Its acceleration constant is normally estimated by a jackknife, and no standard jackknife exists for crossed two-way data. Using BCa here would add an unvalidated component. |
-| Basic / studentized | Not used as primary | A studentized interval needs a per-replicate variance estimate, which would need a second-level two-way bootstrap. The added complexity is not justified for this confirmatory analysis. S1 provides a Wald-type check. |
-| Levels | 95 % for difference estimates; 90 % for H1's practical interpretation and for the H2 TOST (Two One-Sided Tests) contrasts, reported descriptively. Confirmatory decisions use the bootstrap p-values with Holm adjustment | As DR-005 |
-| Replicates | **B = 10,000**, fixed seed recorded | Holm adjustment compares the smallest p-value with 0.05 / 3 ≈ 0.0167, so tail proportions near 1.67 % must be estimated precisely: ≈ 167 replicates in the tail at B = 10,000, against ≈ 17 at B = 1,000, which is too few. Computation is negligible. Monte Carlo standard errors of reported p-values are also reported. |
-| Small-cluster corrections | **None applied**; limitation stated | Wild cluster bootstrap-t corrections [REF-069] are designed for regression coefficients with few clusters in one dimension. Here the entity dimension is large (≈ 1,350 clusters projected), the day dimension (28) carries the few-cluster risk, and the primary's conservatism partly offsets it. |
-| Day blocks | Primary: iid days inside the two-way scheme. Sensitivity S2: fixed ℓ = 3 | Within V2, lag-1 autocorrelation of daily prevalence is 0.01 [D]. Once entity recurrence is modelled explicitly, the remaining serial dependence is small. S2 keeps the H3 block length (DR-003; [REF-064]) for comparability. |
-
-## Relationship to H1, H2, TOST and McNemar
-
-- **H1 (difference).** The two-sided bootstrap p-value is the percentile-interval inversion, with the add-one correction and a cap at 1 ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)):
-
-  $$
-  p_{\mathrm{H1}} = \min\left\lbrace 1,\ 2 \cdot \min\left( \frac{1 + \#\lbrace \delta^*_F \le 0 \rbrace}{B + 1},\ \frac{1 + \#\lbrace \delta^*_F \ge 0 \rbrace}{B + 1} \right) \right\rbrace
-  $$
-
-  where `#{ · }` = the number of bootstrap replicates satisfying the condition. The 90 % percentile interval gives DR-005's five-way practical interpretation against ±0.02 (± the Smallest Effect Size Of Interest, SESOI).
-- **H2 (intersection-union TOST).** For each model m, the two one-sided p-values and the H2 p-value are:
-
-  $$
-  \begin{aligned}
-  p_{a,m} &= \frac{1 + \#\lbrace \delta^*_{W,m} \le -0.02 \rbrace}{B + 1} \\
-  p_{b,m} &= \frac{1 + \#\lbrace \delta^*_{W,m} \ge +0.02 \rbrace}{B + 1} \\
-  p_{\mathrm{H2}} &= \max_{m \in \lbrace \mathrm{LGB}, \mathrm{Cat}, \mathrm{RES}, \mathrm{FTT} \rbrace} \max\left(p_{a,m},\ p_{b,m}\right)
-  \end{aligned}
-  $$
-
-  where p_a,m and p_b,m test the lower and upper equivalence bounds for model m. H2 needs all eight one-sided tests to reject, and is decided by the Holm-adjusted value of p_H2 [REF-061, REF-062] ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). **TOST uses the bootstrap distribution**, because no closed-form interval accounts for the crossed dependence. The percentile intervals of δ_W,m are reported. They describe uncertainty only and do not determine rejection, because the decision uses the Holm-adjusted p-value.
-- **Multiplicity.** Holm over {H1, H2, H3} ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
-- **H3** is label-free and uses the day-level moving-block bootstrap of [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md).
-- **McNemar remains secondary and descriptive.** It assumes independent paired units, and its size "can greatly exceed the nominal level" under intracluster correlation [REF-071]. It is reported for the cell-level contrasts only, labelled as independence-based, and is excluded from the Holm family.
 
 ## Consequences
 
@@ -278,7 +280,6 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | Symbol / abbreviation | Meaning |
 |---|---|
 | [D], [L], [I] | Evidence tags: dataset observation, literature, inference |
-| α | Family-wise significance level (0.05) |
 | A, B (factors) | The two crossed factors in Owen's model (here relative day and pseudo-entity) |
 | a_d | Multiplicity of Test day d in a bootstrap replicate |
 | B | Number of bootstrap replicates (10,000) |
@@ -310,8 +311,7 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | p_a,m, p_b,m | One-sided H2 p-values for the lower and upper bounds of model m |
 | p_H1, p_H2 | p-values of H1 and H2 |
 | R3 | Decision policy: daily top-K review |
-| R*_m | Replicate Recall@2 % of configuration m |
-| Recall@2 % | Share of frauds reviewed at the 2 % review capacity |
+| Recall@2% | Share of frauds reviewed at the 2 % review capacity |
 | S1, S2 | Sensitivity analyses: Owen-corrected variance; day-level moving-block bootstrap |
 | SE | Standard error |
 | SESOI | Smallest Effect Size Of Interest |

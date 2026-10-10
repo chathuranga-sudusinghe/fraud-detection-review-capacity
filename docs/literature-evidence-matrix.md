@@ -52,7 +52,7 @@ Data type: *real* = real transactions; *synthetic* = simulated data. ULB = the U
 
 ## 3. Coverage of this study's design elements by the closest studies
 
-"Yes" = the element is present; "Partly" = a related but weaker form; "No" = absent. Proposed elements that are not yet part of the frozen design are marked †.
+"Yes" = the element is present; "Partly" = a related but weaker form; "No" = absent. Proposed elements that are not yet part of the accepted design are marked †.
 
 | Design element | REF-078 | REF-080 | REF-079 | REF-058 | REF-098 | REF-099 | REF-005 / REF-086 |
 |---|---|---|---|---|---|---|---|

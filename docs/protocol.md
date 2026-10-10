@@ -4,7 +4,7 @@
 
 **Working protocol — pre-freeze. Not yet confirmatory.**
 
-This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-011).
+This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-012).
 
 The remaining items are listed under [Design items before protocol freeze](#design-items-before-protocol-freeze). The protocol becomes confirmatory only when every item is resolved and the file is tagged in Git.
 
@@ -40,12 +40,7 @@ Defined in [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md), which 
 
 > **Under different assumed miss-to-review cost ratios, when does a calibrated cost-aware review policy outperform always filling the available review capacity?**
 
-**Scope:**
-- RQ3 is evaluated **across the whole capacity grid (1 %, 2 %, 5 %, 10 %)**, not at 2 % alone.
-- Its **main output is the break-even miss-to-review cost ratio ρ_BE at each capacity and for each model configuration**. ρ_BE is the largest assumed ratio of missed-fraud cost to review cost at which the cost-aware policy is cheaper than filling capacity. It is reported with the saturation ratio ρ_sat (the ratio above which the cost-aware policy fills the budget every day) and exact cost-difference curves [REF-039, REF-040, REF-072]. Definitions, grid and outputs are fixed in [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md).
-- At 2 % the budget is below the daily fraud count on every validation day. The cost-aware policy is expected to coincide with daily top-K review (reviewing the K highest-scoring transactions each day, K = fixed daily review budget) above a low saturation ratio, so RQ3 at 2 % is informative only at low ratios. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md), [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)).
-- RQ3 is analysed by estimation and sensitivity analysis, not by a separate significance test.
-- **Positioning.** Zhang et al. [REF-078] show, on IEEE-CIS, that a calibrated cost-threshold policy and full-capacity review are largely compressed toward the same capacity ceiling when capacity is tight and diverge when capacity is slack. RQ3 replicates and extends this pattern under this study's fixed daily capacity design, summarised as break-even and saturation ratios. It is not the study's main research gap.
+RQ3 is answered by estimation and sensitivity analysis across the capacity grid, not by a separate significance test. Its scope and outputs are specified under [Cost Model](#cost-model).
 
 ## Confirmatory Hypotheses
 
@@ -72,14 +67,7 @@ where:
 
 **Smallest effect size of interest (SESOI) = 2 percentage points of Recall@2%.** At the projected ≈ 2,660 Test frauds this is ≈ 53 frauds per 28 days, or ≈ 2 per day, at identical review workload (≈ 3.4 percentage points, pp, of Precision@K, the share of reviewed transactions that are fraud).
 
-H1 is a two-sided **difference** test; it is not a winner-selection test. The 90 % confidence interval (CI) for δ_F is additionally interpreted against ±0.02. This interpretation is pre-specified but not a separate confirmatory test, and has five possible outcomes:
-- a practically meaningful difference;
-- a difference of uncertain practical size;
-- a detectable but negligible difference;
-- data compatible only with negligible differences;
-- inconclusive.
-
-The within-family model contrasts (CatBoost vs LightGBM; FT-Transformer vs ResNet-style MLP), the family × weighting interaction and the cell contrasts are reported descriptively.
+H1 is tested as a two-sided **difference** test, with a pre-specified practical interpretation against ±SESOI ([Statistical Plan](#statistical-plan)).
 
 ### H2 — Class-weighting effect
 
@@ -96,10 +84,7 @@ where `δ_W,m` = balanced-minus-unweighted Recall@2% of model m. It is positive 
 
 H2 is an **equivalence** hypothesis, because the literature expects class weighting mainly to distort calibration rather than ranking [REF-019, REF-020]. The substantive question is therefore whether weighting matters *materially*. A non-significant difference must never be read as "no effect" [REF-030, REF-063].
 
-**Test.**
-- An intersection-union TOST (Two One-Sided Tests) [REF-061, REF-062]. p_H2 is the maximum of the eight one-sided p-values (two per model). H2₁ is concluded only if the Holm-adjusted p-value of H2 is at most 0.05 (Statistical Plan). The 90 % CIs of the four δ_W,m and their position relative to (−0.02, +0.02) describe uncertainty only and do not determine rejection.
-- Equivalence is required for each model, rather than for an averaged effect, so that opposite effects cannot cancel.
-- The two-sided difference CIs are also reported descriptively.
+H2 is tested by an intersection-union equivalence test over the four models ([Statistical Plan](#statistical-plan)).
 
 ### H3 — Alert-rate transfer fidelity
 
@@ -139,12 +124,7 @@ r is the share of all Test transactions that the transferred threshold flags. **
 - The relative form follows the common practice of defining equivalence margins relative to a reference value [REF-065].
 - Full justification and the alternatives considered (absolute, budget-derived; 10 %, 25 %, 50 %) are in [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
 
-**Test.**
-- TOST [REF-061, REF-062, REF-030]: p_H3 is the larger of the two one-sided bootstrap p-values, and H3₁ is concluded only if the Holm-adjusted p-value of H3 is at most 0.05 [REF-029] (Statistical Plan). The 90 % CI for r is reported in every case, with its position relative to (0.016, 0.024). The 90 % CI describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment.
-- A CI overlapping a bound is **inconclusive**.
-- The CI comes from a **moving-block bootstrap over Test days**: block length 3 days, B = 10,000 bootstrap replicates, percentile interval [REF-037, REF-064]. Sensitivity block lengths are 1 and 7 days.
-- Inference is conditional on the H3 configuration's trained model and its τ₂.
-- Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded.
+H3 is tested by TOST (Two One-Sided Tests) on the H3 configuration defined below ([Statistical Plan](#statistical-plan)).
 
 **Configuration** ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)). H3 is confirmatory for **one** of the eight model × weighting configurations, the *H3 configuration*: the configuration with the highest pooled V2 Recall@2% under R3 (K = 56):
 
@@ -162,16 +142,27 @@ where:
 - The rule uses Train, V1 and V2 only. The eight V2 recall values and the selected configuration are committed to the repository **before the Test period is unsealed**, and are final.
 - The H3 configuration is a pre-specified, validation-selected deployment proxy: it is chosen on held-out development data by a criterion that does not directly optimise H3 alert-rate transfer. It does not model any particular organisation's model-selection process, it is not evidence for H1 or H2, and it is not described as the "best" model.
 - A confirmatory H3 conclusion applies to the H3 configuration only.
-- For the other seven configurations, r and its 90 % CI are reported **descriptively**: they are outside the Holm family and no equivalence conclusion is drawn from them. Together they give a descriptive tree-vs-neural comparison of threshold transfer.
+- For the other seven configurations, r and its 90 % confidence interval (CI) are reported **descriptively**: they are outside the Holm family and no equivalence conclusion is drawn from them. Together they give a descriptive tree-vs-neural comparison of threshold transfer.
 
-**Daily-budget fidelity** is a separate operational outcome, reported descriptively and **not** hypothesis-tested. Measures:
-- daily alerts generated by the threshold (review demand, A_d; not a count of reviews performed);
-- deviation and absolute deviation from K;
-- percentage of days above and below K;
-- total overflow and total unused capacity, as defined in [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md);
-- rate/volume decomposition.
+Fidelity of the threshold's daily alert demand to the fixed daily review budget is a separate descriptive outcome, not a hypothesis ([Outcomes](#outcomes)).
 
-See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
+## Analytic Approach
+
+The study combines four analytic components. Each research question and hypothesis is answered by the components marked below; the methods are specified in the sections linked.
+
+| Component | What it produces | Answers | Specified in |
+|---|---|---|---|
+| **Predictive** | A fraud score for every transaction from each of the eight model × weighting configurations | Input to every policy; RQ1 | [Models](#models), [Training Procedure](#training-procedure), [Feature Policy](#feature-policy), [Class-Imbalance Treatment](#class-imbalance-treatment) |
+| **Prescriptive** | Score-to-review decisions on each relative day: threshold-generated alert demand under R0–R2 and capped review selections under R3 and R4, all assessed against the fixed daily review budget K | RQ1 (through R3), RQ2 (through R2), RQ3 (R4 against R3) | [Review Capacity](#review-capacity), [Decision Policies](#decision-policies), [Calibration](#calibration) |
+| **Inferential (confirmatory)** | Decisions on H1–H3 with family-wise error control | H1, H2, H3 | [Statistical Plan](#statistical-plan) |
+| **Estimation and sensitivity (descriptive)** | Effect sizes with intervals; daily-budget fidelity; cost-difference curves, break-even and saturation ratios; false-negative slices | RQ2 (daily-budget fidelity), RQ3, false-negative analysis | [Outcomes](#outcomes), [Cost Model](#cost-model), [False-Negative Analysis](#false-negative-analysis) |
+
+**Units of analysis.**
+- **Transaction:** the unit that is scored and reviewed.
+- **Relative day:** the unit of the review queue, of the fixed daily budget K and of the day-level bootstrap used for H3.
+- **Fraud:** the unit of Recall@2% (H1, H2), resampled jointly by relative day and pseudo-entity ([Statistical Plan](#statistical-plan)).
+
+**Order of use of the data.** Models are fitted on Train and tuned and early-stopped on Validation 1. The quantities that depend on data are fixed on Validation 2: the R1 and R2 thresholds, the R4 calibrator, the daily budget K and the H3 configuration. The R0 threshold (0.5) and the R4 cost-threshold rule are pre-specified and are not selected on data. The Test period is scored once, after the protocol freeze ([Experimental Split Structure](#experimental-split-structure)).
 
 ## Dataset
 
@@ -202,14 +193,32 @@ The competition test data are not used because their labels are unavailable.
 
 **Labelling caveat.** According to the organiser, a reported chargeback marks the card's transaction as fraud, and later transactions linked by account, email or billing address are also labelled fraud, within a 120-day window [REF-048, partially verified]. Labels are therefore not independent across transactions, and fraud that was never reported is labelled legitimate.
 
+## Data Requirements
+
+What each research question and hypothesis needs from the data, where it comes from, and how the data's limits are handled. All requirements are met by the two labelled source files; quantities the dataset does not contain are introduced as stated assumptions, never as invented data.
+
+| Requirement | Used for | Source | Partitions | Limit of the dataset and its handling |
+|---|---|---|---|---|
+| Fraud label `isFraud` | Model fitting (Train); tuning and early stopping (V1); R1 threshold, R4 calibrator and H3-configuration selection (V2); Recall@2% (H1, H2), RQ3 costs and false-negative analysis (Test) | `train_transaction.csv` | Train, V1, V2; Test only at the confirmatory evaluation | No label-report dates: label-latency sensitivity on V2 days 127–147 ([Experimental Split Structure](#experimental-split-structure)). Labels propagate across linked transactions: dependence-aware inference ([Statistical Plan](#statistical-plan)) and a stated threat to validity ([Leakage Controls](#leakage-controls)) |
+| Transaction time `TransactionDT` | Relative day; partitions; daily review queue; daily budget; day-level bootstrap | `train_transaction.csv` | All | Reference point undisclosed: relative days only, no calendar or seasonal claims |
+| Join and row key `TransactionID` | Joining the two files; aligning scores, labels and partitions row by row | Both files | All | Monotone in time, so never a model input ([Feature Policy](#feature-policy)) |
+| Model inputs (431 declared columns) | Fraud scores | Both files, left-joined on `TransactionID` | All; every fitted transformation uses Train only | Most meanings masked by the provider: the organiser's declared roles are adopted ([Feature Policy](#feature-policy)) |
+| Daily transaction volume (label-free) | K (from V2 volume); realised alert rate r (H3); daily-budget fidelity | Derived from `TransactionDT` | V2 for K; Test for r | — |
+| Transaction amount `TransactionAmt` | Amount-weighted recall and fraud value exposed (exposure proxies) | `train_transaction.csv` | V2, Test | Not a realised loss; currency per the organiser (partially verified) ([Cost Model](#cost-model)) |
+| Slice variables (identity presence, `ProductCD`, `card4`, `card6`, `DeviceType`, amount band, relative week, score band) | False-negative analysis | Both files; model scores | Test | — |
+| Review capacity | K and every capacity-based outcome | **Not in the dataset** | — | Simulated scenarios of 1 %, 2 %, 5 % and 10 % ([Review Capacity](#review-capacity)) |
+| Review and missed-fraud costs | RQ3 | **Not in the dataset** | — | Assumed cost ratios with sensitivity and break-even analysis ([Cost Model](#cost-model)) |
+| Account or customer identifier | Dependence-aware inference (H1, H2); recurring vs new entity slice | **Not in the dataset** | — | Heuristic fine pseudo-entity key built from `card1`, `addr1`, `P_emaildomain` and relative day − `D1` ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)). The inference key uses Test-period features only; the recurring vs new slice also uses Train features and Train labels. Used only for audit, inference and slicing, never as a model input ([Feature Policy](#feature-policy)) |
+| Review outcomes and analyst behaviour | — | **Not in the dataset** | — | Perfect verification is assumed; human review is an exogenous capacity constraint, and no human participants are involved |
+
 ## Experimental Split Structure
 
-Chronological, day-aligned split, frozen from transaction volume only, before any target analysis ([DR-001](decisions/DR-001-temporal-split-strategy.md)):
+Chronological, day-aligned split, fixed from transaction volume only, before any target analysis ([DR-001](decisions/DR-001-temporal-split-strategy.md)):
 
 | Partition | Relative days | Rows | Role |
 |---|---|---|---|
 | Train | 1–105 | 368,632 | Model fitting. **No refit** on later data. |
-| Validation 1 (V1) | 106–126 | 65,544 | Hyper-parameter tuning and early stopping only |
+| Validation 1 (V1) | 106–126 | 65,544 | Hyperparameter tuning and early stopping only |
 | Validation 2 (V2) | 127–154 | 77,822 | Probability calibration (for R4, the calibrated cost-aware policy); threshold selection (R1, the F1-optimal threshold; R2); daily budget K; selection of the H3 configuration ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)) |
 | Gap | — | — | **None in the primary design** |
 | Final Test | 155–182 | 78,542 | **Sealed.** One confirmatory evaluation |
@@ -229,7 +238,7 @@ Defined in [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md
 | Tree-based (T) | LightGBM (LGB) [REF-011]; CatBoost (Cat) [REF-012] | LGB-u, LGB-b, Cat-u, Cat-b |
 | Neural (N) | ResNet-style MLP (RES); FT-Transformer (FTT) [REF-087] | RES-u, RES-b, FTT-u, FTT-b |
 
-The tree-vs-neural family question is open in the literature for tabular data: no family is universally superior, and the gap is often small relative to tuning effects [REF-013, REF-014, REF-087, REF-088, REF-089, REF-090] ([literature review](literature-review.md), Section 4.8).
+The tree-vs-neural family question is open in the literature for tabular data: no family is universally superior, and the gap is often small relative to tuning effects [REF-013, REF-014, REF-087, REF-088, REF-089, REF-090] ([literature review](literature-review.md), Section 2).
 
 Optional reference (descriptive only, outside H1–H3; inclusion decided at the design review):
 
@@ -254,7 +263,7 @@ The model set is fixed by DR-011; no further model families are added.
    - the same decision policies, capacity settings and evaluation.
 2. **Identical within each family:**
    - tree-based: native categorical and missing-value handling ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5), weighted log-loss, CPU training;
-   - neural: the representation of [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §9, weighted binary cross-entropy, bf16 mixed precision on the GPU.
+   - neural: the representation of [DR-012](decisions/DR-012-neural-network-input-representation.md) (proposed), weighted binary cross-entropy, bf16 mixed precision on the GPU.
 3. **Model-specific:** each model's architecture and internal computation (self-attention, residual blocks, ordered boosting, leaf-wise growth) and its own search space (neural models: the large-dataset spaces (B) of REF-087, used by the authors for datasets of this size), tuned under the Level 1 method and budget.
 
 The values of these elements (search method, budget, objective, patience, seeds, aggregation of neural-network seeds, tie rule for equal scores) are fixed in the training rules before the development runs ([Design items](#design-items-before-protocol-freeze)).
@@ -266,7 +275,7 @@ The values of these elements (search method, budget, objective, patience, seeds,
 - **Raw or minimally processed features are the primary design.** There is no feature-engineering study.
 - **`TransactionID` and raw `TransactionDT` are not model features.** `TransactionID` is monotone in time, so it is a disguised timestamp [D]. Raw time cannot be extrapolated by tree models.
 - **No future-looking aggregate features.** Any frequency, count or entity-level aggregate would have to be computed from Train only or with past-only windows. None is planned for the primary design.
-- **No manual target encoding.** Categorical handling is native to each model family: CatBoost ordered target statistics [REF-012]; LightGBM categorical splits [REF-011]; learned category embeddings in the neural networks ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §9).
+- **No manual target encoding.** Categorical handling is native to each model family: CatBoost ordered target statistics [REF-012]; LightGBM categorical splits [REF-011]; learned category embeddings in the neural networks ([DR-012](decisions/DR-012-neural-network-input-representation.md), proposed).
 - **No engineered entity identifiers as features.** Heuristic keys such as card + address + implied account-start day are used **only** for audit and slicing.
 - **Feature declaration** ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md); machine-readable in [`config/features.yaml`](../config/features.yaml); column-by-column reference in the [feature catalog](feature-catalog.md)). Of the 434 joined columns:
   - 1 is the target (`isFraud`) and 2 are excluded (`TransactionID`, `TransactionDT`);
@@ -275,7 +284,7 @@ The values of these elements (search method, budget, objective, patience, seeds,
 - **Model input parity.** All four models receive the same 431 columns, built from one canonical frame:
   - categorical values are written as text labels, with missing values labelled `"__MISSING__"`;
   - **tree-based models:** numeric values stay `float64` with native missing-value handling; LightGBM receives pandas categoricals whose categories are fixed from Train only, and CatBoost receives the text labels directly [REF-076, REF-077]; no imputation, scaling, rare-level grouping or high-cardinality exclusion is applied;
-  - **neural models (proposed, DR-008 §9; identical for both, attached to input roles):** per-input category vocabularies fitted on Train with `"__MISSING__"` reserved in every vocabulary, values unseen in Train mapped to it, and category dropout (probability 0.01, training only) so that its embedding is trained; numeric values quantile-transformed to a normal distribution fitted on Train, with Gaussian noise added to every numeric input during fitting only, scaled as in the reference implementation [REF-087, REF-103]; missing values set to 0 after the transformation, and one missingness indicator per numeric input with missing Train values (≈ 720 inputs in total).
+  - **neural models (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md); identical for both, attached to input roles):** per-input category vocabularies fitted on Train with `"__MISSING__"` reserved in every vocabulary, values unseen in Train mapped to it, and category dropout (probability 0.01, training only) so that its embedding is trained; numeric values quantile-transformed to a normal distribution fitted on Train, with Gaussian noise added to every numeric input during fitting only, scaled as in the reference implementation [REF-087, REF-103]; missing values set to 0 after the transformation, and one missingness indicator per numeric input with missing Train values (≈ 720 inputs in total).
 
 ## Class-Imbalance Treatment
 
@@ -313,30 +322,6 @@ Defined in [DR-002](decisions/DR-002-review-capacity-definition.md).
 - **Capacity ÷ prevalence** is reported with every result. At 2 % it is 0.59 (binding regime); at 5 % and 10 % it is above 1 (slack regime).
 
 Prior art for capacity-constrained fraud evaluation exists [REF-006, REF-004, REF-005, REF-046, REF-084], including capacity-aware threshold selection and allocation [REF-081, REF-082, REF-083] and temporal evaluation of capacity-constrained top-K review policies on IEEE-CIS [REF-078]. No novelty is claimed for it.
-
-**Primary metric:** Recall@2% under R3 (daily top-K, K = 56), pooled over the Test days. Reported with:
-- the **oracle recall ceiling** (≈ 0.6 at 2 % in V2);
-- **pooled normalised recall** ([DR-002](decisions/DR-002-review-capacity-definition.md)):
-
-  $$
-  \text{pooled normalised recall} = \frac{\sum_d \mathrm{TP}_d}{\sum_d \min(K, F_d)}
-  $$
-
-  where `TP_d` (true positives) = frauds reviewed on day d and `F_d` = frauds on day d. It compares the frauds reviewed with the most any policy could review, and equals Recall@K divided by the oracle ceiling. Days without frauds contribute 0 to both sums and are excluded from per-day summaries.
-
-Precision@K is a rescaling of Recall@K (share of all frauds reviewed under budget K) under fixed K. It is reported descriptively and **not** treated as independent confirmatory evidence.
-
-**Secondary outcomes:**
-- Recall@1 %, 5 %, 10 %;
-- false negatives at capacity;
-- frauds per 1,000 reviews;
-- lift over random review;
-- utilisation of the capped policies R3 and R4; alert demand, overflow, unused capacity and load ratio of the threshold policies R0–R2 (see RQ2 and [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md));
-- Average Precision / PR-AUC (Precision–Recall Area Under the Curve) [REF-010] and ROC-AUC (Receiver Operating Characteristic Area Under the Curve);
-- amount-weighted recall;
-- scenario cost;
-- calibration metrics for R4.
-
 **Overflow rule** for the threshold policies (R0, the default 0.5 threshold; R1; R2) — **report-only, no truncation** ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)). They are evaluated as uncapped threshold policies: every threshold-generated alert counts as review demand and is never truncated to K. Workload is measured against the fixed budget:
 
 $$
@@ -365,9 +350,9 @@ R2_c is compared with its own K_c; R0 and R1 have one threshold each and are com
 
 ### R0 — Default threshold
 
-Probability threshold = 0.5.
+Threshold 0.5 on the raw model score (the model's uncalibrated predicted fraud probability).
 
-Purpose: naive reference only. Its alert volume mainly reflects the score scale (which changes with class weighting). **Descriptive only; excluded from confirmatory tests.** Evaluated uncapped under the report-only overflow rule (DR-009).
+Purpose: naive reference only. Its alert volume mainly reflects the raw score scale (which changes with class weighting). **Descriptive only; excluded from confirmatory tests.** Evaluated uncapped under the report-only overflow rule (DR-009).
 
 ### R1 — F1-optimal threshold
 
@@ -438,11 +423,17 @@ Purpose: RQ3. When does leaving capacity unused become the cheaper choice under 
 Calibration is a supporting component, not a separate research question.
 
 - **Fitted on V2, not V1.** V1 scores are optimistic because V1 is used for early stopping, and V1 prevalence (4.22 %) differs from V2 (3.39 %): a −0.23 log-odds shift [D]. V2 is also closest in time to Test.
-- **Relevant to R4 (and the descriptive R0) only.** R1–R3 rank and threshold on raw model scores, so calibration does not affect them. Platt scaling with a positive fitted slope is strictly monotone and preserves the ranking; isotonic regression is monotone but can merge scores into ties, which is why it serves only as a secondary check for R4 [I; REF-015, REF-017].
+- **Relevant to R4 only.** R0–R3 rank and threshold on raw model scores, so calibration does not affect them. Platt scaling with a positive fitted slope is strictly monotone and preserves the ranking; isotonic regression is monotone but can merge scores into ties, which is why it serves only as a secondary check for R4 [I; REF-015, REF-017].
 - **Primary method:** Platt scaling [REF-016]. **Secondary check:** isotonic regression [REF-017].
 - **Metrics:** Brier score, log loss, calibration intercept and slope, reliability diagram [REF-018]. Reported on V2 (in-sample for the calibrator) and on Test.
 
 ## Cost Model
+
+**Scope of RQ3.**
+- RQ3 is evaluated **across the whole capacity grid (1 %, 2 %, 5 %, 10 %)**, not at 2 % alone.
+- Its **main output is the break-even miss-to-review cost ratio ρ_BE at each capacity and for each model configuration**. ρ_BE is the largest assumed ratio of missed-fraud cost to review cost at which the cost-aware policy is cheaper than filling capacity. It is reported with the saturation ratio ρ_sat (the ratio above which the cost-aware policy fills the budget every day) and exact cost-difference curves [REF-039, REF-040, REF-072]. Definitions, grid and outputs are fixed in [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md).
+- At 2 % the budget is below the daily fraud count on every validation day. The cost-aware policy is expected to coincide with daily top-K review (reviewing the K highest-scoring transactions each day, K = fixed daily review budget) above a low saturation ratio, so RQ3 at 2 % is informative only at low ratios. The informative contrasts are expected at 5 % and 10 % ([DR-002](decisions/DR-002-review-capacity-definition.md), [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)).
+- **Positioning.** Zhang et al. [REF-078] show, on IEEE-CIS, that a calibrated cost-threshold policy and full-capacity review are largely compressed toward the same capacity ceiling when capacity is tight and diverge when capacity is slack. RQ3 replicates and extends this pattern under this study's fixed daily capacity design, summarised as break-even and saturation ratios. It is not the study's main research gap.
 
 The analysis separates:
 - review effort (C_R);
@@ -495,15 +486,54 @@ Amount-weighted results will have wide uncertainty: the top 20 % of development 
   ΔJ is negative when the cost-aware policy is cheaper than filling capacity. ρ_BE is reported per capacity and configuration, with ties, censoring and non-monotone cases as defined in DR-007;
 - amount-dependent miss costs are **not** used to change decisions. Amount enters only as an evaluation-only sensitivity analysis (amount-weighted recall, fraud value exposed, fraud value forgone), labelled as exposure proxies, never as loss or saving [REF-073].
 
-**Uncertainty (descriptive).** 95 % percentile intervals at grid ratios come from a day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000, R3 and R4 paired). A DR-006 pigeonhole check is applied to frauds forgone. ρ_sat and ρ_BE are point estimates.
+**Uncertainty (descriptive).** 95 % percentile intervals at grid ratios come from a day-level moving-block bootstrap (block length ℓ = 3 days, B (number of bootstrap replicates) = 10,000, R3 and R4 paired). A DR-006 pigeonhole check is applied to frauds forgone. ρ_sat and ρ_BE are point estimates.
 
 **Calibration dependence.** Under calibrated probabilities, R4 cannot be worse than R3 in expectation. An observed loss for R4 is consistent with calibration-transfer failure at the margin [REF-074] **or** with finite-sample variation among the few marginal transactions; the grid-point intervals, isotonic calibration and a declined-set calibration diagnostic are used to distinguish the two ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)).
 
 No assumed value will be presented as an actual institutional banking cost.
 
+## Outcomes
+
+### Primary outcome
+
+Recall@2% under R3 (daily top-K, K = 56), pooled over the Test days. Reported with:
+- the **oracle recall ceiling** (≈ 0.6 at 2 % in V2);
+- **pooled normalised recall** ([DR-002](decisions/DR-002-review-capacity-definition.md)):
+
+  $$
+  \text{pooled normalised recall} = \frac{\sum_d \mathrm{TP}_d}{\sum_d \min(K, F_d)}
+  $$
+
+  where `TP_d` (true positives) = frauds reviewed on day d and `F_d` = frauds on day d. It compares the frauds reviewed with the most any policy could review, and equals Recall@K divided by the oracle ceiling. Days without frauds contribute 0 to both sums and are excluded from per-day summaries.
+
+Precision@K is a rescaling of Recall@K (share of all frauds reviewed under budget K) under fixed K. It is reported descriptively and **not** treated as independent confirmatory evidence.
+
+### Secondary outcomes
+
+- Recall@1%, Recall@5%, Recall@10%;
+- false negatives at capacity;
+- frauds per 1,000 reviews;
+- lift over random review;
+- utilisation of the capped policies R3 and R4; alert demand, overflow, unused capacity and load ratio of the threshold policies R0–R2 (see RQ2 and [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md));
+- Average Precision / PR-AUC (Precision–Recall Area Under the Curve) [REF-010] and ROC-AUC (Receiver Operating Characteristic Area Under the Curve);
+- amount-weighted recall;
+- scenario cost;
+- calibration metrics for R4.
+
+### Daily-budget fidelity (RQ2)
+
+**Daily-budget fidelity** is a separate operational outcome, reported descriptively and **not** hypothesis-tested. Measures:
+- daily alerts generated by the threshold (review demand, A_d; not a count of reviews performed);
+- deviation and absolute deviation from K;
+- percentage of days above and below K;
+- total overflow and total unused capacity, as defined in [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md);
+- rate/volume decomposition.
+
+See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
+
 ## Statistical Plan
 
-**Primary confirmatory comparison:** Recall@2% (H1, H2), plus H3 as specified above. The H1/H2 inference plan is defined in [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md).
+**Primary confirmatory comparison:** Recall@2% (H1, H2), plus the realised alert rate r (H3). The H1/H2 inference plan is defined in [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md).
 
 **Uncertainty must be cluster- or day-block-aware.** Fraud labels cluster by entity: V2 frauds average ≈ 2 per heuristic pseudo-entity, with an upper-bound design effect (variance inflation due to clustering) ≈ 4.3 [D]. 45 % of V2 frauds belong to entities that span several days, and daily fraud counts are overdispersed (≈ 5 times binomial variance in V2) [D]. Transaction-level resampling would therefore understate uncertainty.
 
@@ -525,16 +555,31 @@ No assumed value will be presented as an actual institutional banking cost.
   - S2: a key-free day-level moving-block bootstrap (ℓ = 3 days) that preserves each day's top-K exactly [REF-037, REF-064].
 
   A different H1 or H2 conclusion under S1 or S2 is reported as sensitivity to dependence assumptions. Confirmatory decisions use the primary method only.
-- H3 uses the day-level moving-block bootstrap specified above, because its outcome does not depend on labels.
-- **H1:** two-sided bootstrap p-value for δ_F = 0, plus the pre-specified practical interpretation of the 90 % CI against ±SESOI. The p-value uses the add-one form, bounded to (0, 1] ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)):
+- **H1: two-sided difference test.** It is not a winner-selection test. p_H1 is the two-sided bootstrap p-value for δ_F = 0, in the add-one form bounded to (0, 1] ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)):
 
   $$
   p_{\mathrm{H1}} = \min\left\lbrace 1,\ 2 \cdot \min\left( \frac{1 + \#\lbrace \delta^*_F \le 0 \rbrace}{B + 1},\ \frac{1 + \#\lbrace \delta^*_F \ge 0 \rbrace}{B + 1} \right) \right\rbrace
   $$
 
   where `δ*_F` = δ_F in one bootstrap replicate and `#{ · }` = the number of replicates satisfying the condition.
-- **H2:** intersection-union TOST with SESOI = 0.02; p_H2 = the maximum of the eight one-sided p-values (two per model), each in the same add-one form [REF-061, REF-062].
-- **H3:** TOST with Δ = 0.004 (±20 % relative) and a day-level moving-block bootstrap [REF-061, REF-062, REF-064], on the H3 configuration only ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)); p_H3 = the larger of its two one-sided p-values, decided by its Holm-adjusted p-value ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
+
+  The 90 % CI for δ_F is additionally interpreted against ±0.02 (±SESOI). This interpretation is pre-specified but not a separate confirmatory test, and has five possible outcomes:
+  - a practically meaningful difference;
+  - a difference of uncertain practical size;
+  - a detectable but negligible difference;
+  - data compatible only with negligible differences;
+  - inconclusive.
+
+  The within-family model contrasts (CatBoost vs LightGBM; FT-Transformer vs ResNet-style MLP), the family × weighting interaction and the cell contrasts are reported descriptively.
+- **H2: intersection-union TOST** with SESOI = 0.02 [REF-061, REF-062]. p_H2 is the maximum of the eight one-sided p-values (two per model), each in the same add-one form. H2₁ is concluded only if the Holm-adjusted p-value of H2 is at most 0.05.
+  - Equivalence is required for each model, rather than for an averaged effect, so that opposite effects cannot cancel.
+  - The 90 % CIs of the four δ_W,m and their position relative to (−0.02, +0.02) describe uncertainty only and do not determine rejection.
+  - The two-sided difference CIs are also reported descriptively.
+- **H3: TOST** with Δ = 0.004 (±20 % relative), on the H3 configuration only ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)) [REF-061, REF-062, REF-030]. p_H3 is the larger of the two one-sided bootstrap p-values, and H3₁ is concluded only if the Holm-adjusted p-value of H3 is at most 0.05 [REF-029] ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
+  - Uncertainty comes from a **moving-block bootstrap over Test days**, because the outcome does not depend on labels: block length 3 days, B = 10,000 bootstrap replicates, percentile interval [REF-037, REF-064]. Sensitivity block lengths are 1 and 7 days.
+  - The 90 % CI for r is reported in every case, with its position relative to (0.016, 0.024). It describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. A CI overlapping a bound is **inconclusive**.
+  - Inference is conditional on the H3 configuration's trained model and its τ₂.
+  - Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded.
 - **Multiplicity:** **Holm** (sequentially rejective multiple-testing procedure) at family-wise α = 0.05 over the confirmatory family {H1, H2, H3} [REF-029]: three members, with H3 tested once, on the H3 configuration. Decisions use **Holm-adjusted p-values**:
 
   $$
@@ -613,6 +658,15 @@ The University of Greenwich Research Ethics Policy applies to master's students'
 
 **Ethics and governance status (Issue #31).** The supervisor has given written approval of the project topic. A separate, explicit determination of the ethics route (including whether §1.3.4 applies) was requested but was not provided. The project therefore proceeds under the available University of Greenwich research-governance guidance [REF-050, REF-051] and the project data-governance controls below. **No formal ethics approval, ethics exemption or ethics identifier is claimed.** The competition data-use terms have been verified [REF-049]: the Rules permit non-commercial use for academic research and education (Section 7A) and prohibit making the Competition Data available to any party not participating in the competition (Section 7B). As a stricter project policy, raw data and row-level derived data stay local, out of Git, and are not shared with anyone, including supervisors or examiners; aggregate results may be published ([`dataset.md`](dataset.md#data-use-terms)).
 
+**Ethical considerations.** Following the University of Greenwich guidance and the supervisor's or Faculty Research Ethics Committee's requirements, the ethics assessment considers:
+- the status and anonymisation of the secondary data;
+- permitted use under the competition rules ([`dataset.md`](dataset.md#data-use-terms));
+- privacy and re-identification risk;
+- false-positive and false-negative harms;
+- bias and fairness;
+- human oversight;
+- responsible interpretation of model outputs.
+
 Artificial intelligence (AI) assistance used in this project must be declared in the AI Reflection (AIR) required by University guidance [REF-053].
 
 ## Design items before protocol freeze
@@ -627,7 +681,7 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | SESOI, H1 and H2 | SESOI = 2 pp of Recall@2%; H1 family-effect difference test with practical interpretation; H2 intersection-union TOST over four models; Holm over {H1, H2, H3} | [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md) |
 | H1/H2 uncertainty | Two-way pigeonhole bootstrap (relative day × fine pseudo-entity); sensitivity S1 (Owen-corrected variance) and S2 (day blocks, ℓ = 3) | [DR-006](decisions/DR-006-bootstrap-inference-strategy.md) |
 | RQ3 cost analysis | Review + missed-fraud cost model (C_FP as a sensitivity relabelling); ρ ∈ {2, …, 1000} with exact curves; saturation and break-even ratios per capacity and configuration | [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md) |
-| Model inputs | 49 categorical, 382 numeric, 2 excluded; canonical labels with `"__MISSING__"`; tree-based representation fixed | [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §§1–8 |
+| Model inputs | 49 categorical, 382 numeric, 2 excluded; canonical labels with `"__MISSING__"`; tree-based representation fixed | [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) |
 | Overflow rule | Report-only: R0–R2 evaluated uncapped; demand, overflow, unused capacity and load ratio against K | [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md) |
 | H3 configuration | Highest pooled V2 Recall@2% under R3 among eight configurations; committed before Test access | [DR-010](decisions/DR-010-h3-confirmatory-configuration.md) |
 | Model set | LightGBM, CatBoost, ResNet-style MLP, FT-Transformer × unweighted/balanced; common-procedure fairness | [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) |
@@ -638,8 +692,8 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 
 | # | Item | Notes |
 |---|---|---|
-| 1 | Supervisor review of the design (DR-001–DR-011) | Design review with the supervisor (Issue #54) |
-| 2 | Neural-network input representation | DR-008 §9, proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise and 1,000 quantiles [REF-103], missingness indicators; noise seed and constant or all-missing inputs fixed in the training rules |
+| 1 | Supervisor review of the design (DR-001–DR-012) | Design review with the supervisor (Issue #56) |
+| 2 | Neural-network input representation | [DR-012](decisions/DR-012-neural-network-input-representation.md), proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise and 1,000 quantiles [REF-103], missingness indicators; noise seed and constant or all-missing inputs fixed in the training rules |
 | 3 | Training rules | Search method and budget, V1 objective, early-stopping rule, seeds, aggregation of neural-network seeds, tie rule for equal scores, calibration details |
 | 4 | Feature-engineering policy | Current design: declared raw inputs only (DR-008); confirmed or changed at the design review |
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
@@ -673,12 +727,13 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-009 — Overflow handling for threshold-based policies R0, R1 and R2](decisions/DR-009-overflow-handling-for-threshold-policies.md)
 - [DR-010 — Confirmatory configuration for H3](decisions/DR-010-h3-confirmatory-configuration.md)
 - [DR-011 — Model set: tree-based and neural model families](decisions/DR-011-model-set-tree-based-and-neural-families.md)
+- [DR-012 — Neural-network input representation](decisions/DR-012-neural-network-input-representation.md) (proposed)
 
 ## References
 
 Full entries and verification status are in [`docs/references.md`](references.md).
 
-REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-007, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-036, REF-037, REF-039, REF-040, REF-043, REF-044, REF-046, REF-047, REF-048\*, REF-049, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-066, REF-067, REF-068, REF-069, REF-070, REF-071, REF-072, REF-073, REF-074, REF-075, REF-076, REF-077, REF-078, REF-081\*, REF-082, REF-083, REF-084, REF-085, REF-087, REF-088, REF-089, REF-090, REF-103.
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-037, REF-039, REF-040, REF-043, REF-044, REF-046, REF-047, REF-048\*, REF-049, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-068, REF-070, REF-071, REF-072, REF-073, REF-074, REF-076, REF-077, REF-078, REF-081\*, REF-082, REF-083, REF-084, REF-085, REF-087, REF-088, REF-089, REF-090, REF-103.
 
 \* Partially verified.
 
@@ -703,7 +758,6 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | bf16 | bfloat16: 16-bit floating-point format used for mixed-precision neural-network training |
 | arg max | The argument (here, configuration) at which a quantity is largest |
 | AI, AIR | Artificial intelligence; AI Reflection (University of Greenwich AI-use declaration) |
-| IBM | International Business Machines Corporation (author of the methodology framing, REF-085) |
 | B | Number of bootstrap replicates (10,000) |
 | c | Review-capacity share (1 %, 2 %, 5 % or 10 %) |
 | C_FP | Extra false-alert/customer-friction cost of reviewing a legitimate transaction (sensitivity only) |

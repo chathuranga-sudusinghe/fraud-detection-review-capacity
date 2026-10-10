@@ -52,7 +52,7 @@ Human-readable data dictionary for every column of the joined IEEE-CIS (IEEE Com
 
 **Encoding reminder (DR-008).**
 - Categorical inputs are converted to text labels, and missing categorical values become the label `"__MISSING__"`.
-- Numeric inputs stay `float64`, with missing values left as NaN (not-a-number): handled natively by the tree-based libraries, and represented by a Train-fitted quantile transformation with missingness indicators for the neural networks (proposed, DR-008 §9).
+- Numeric inputs stay `float64`, with missing values left as NaN (not-a-number): handled natively by the tree-based libraries, and represented by a Train-fitted quantile transformation with missingness indicators for the neural networks (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md)).
 - The canonical frame and the tree-based models receive no imputation, scaling or grouping. No engineered feature is added for any model.
 
 ## 1. Key, target and time
@@ -176,7 +176,7 @@ Group description: "Vesta engineered rich features", including ranking, counting
 | Reason for treatment | Organiser does not list them as categorical; stored as numbers |
 | Missing (dev) | 0.0 % to 85.7 % per column |
 | Levels in Train | 1 to 25,530 per column; 7 columns are two-valued; 263 are integer-valued in development data |
-| Structure | 14 blocks of columns share an identical missing-value pattern in Train (table below) |
+| Structure | 14 blocks of columns with the same number of missing Train rows (table below); whether each block also shares an identical missing-row pattern is checked in [Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59) |
 | Caution | Construction undocumented, so potential look-back issues cannot be checked; heavy redundancy; uninterpretable, so not used for false-negative slicing |
 
 **Missingness blocks (Train).** Columns in a block are missing on exactly the same number of Train rows.
@@ -253,9 +253,9 @@ Group description: identity information, i.e. network connection information (e.
 ## 12. Cross-cutting cautions
 
 - **Masked semantics.** Apart from the target, the key, `TransactionDT`, `TransactionAmt` and the email and device fields, meanings are at most group-level. No field-level meaning is claimed for masked columns.
-- **Structured missingness.** The identity block is missing for about three quarters of rows. The V, D and M groups have shared missingness patterns. Missing values are informative: the tree-based models handle them natively, and the neural networks receive a value of 0 together with a missingness indicator for each numeric input with at least one missing Train value (proposed, DR-008 §9).
+- **Structured missingness.** The identity block is missing for about three quarters of rows. The V, D and M groups have shared missingness patterns. Missing values are informative: the tree-based models handle them natively, and the neural networks receive a value of 0 together with a missingness indicator for each numeric input with at least one missing Train value (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md)).
 - **High cardinality.** `card1` (11,870 Train levels), `DeviceInfo` (1,470), `card2`, `id_19`, `id_20`, `id_21`, `id_25`, `addr1` and `id_33` stay categorical for every model (DR-008 §7).
-- **Category drift.** `id_13` and `id_31` show large shares of Validation 2 values that were never seen in Train. Under DR-008 they become missing values for LightGBM (the Train-fixed category list maps unseen values to NaN, matching LightGBM's documented default), new values for CatBoost, and the `"__MISSING__"` index for the neural networks (proposed, DR-008 §9).
+- **Category drift.** `id_13` and `id_31` show large shares of Validation 2 values that were never seen in Train. Under DR-008 they become missing values for LightGBM (the Train-fixed category list maps unseen values to NaN, matching LightGBM's documented default), new values for CatBoost, and the `"__MISSING__"` index for the neural networks (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md)).
 - **Entity memorisation.** Card, address and time-delta fields together can partly identify recurring entities. This optimism risk is recorded in DR-001 and in the protocol.
 - **Undocumented construction.** The look-back windows of the C, D and V groups are not documented, a stated threat to validity.
 

@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by Issue #29; supervisor review pending. Selection pool of eight configurations ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)) and Holm-level H3 decision (Issue #54). |
-| Date | 2026-09-26; revised 2026-10-09 (Issue #54) |
+| Status | Accepted (pre-freeze) by Issue #29; supervisor review pending (Issue #56) |
+| Date | 2026-09-26; revised 2026-10-09 (Issue #54: selection pool of eight configurations; Holm-level H3 decision) |
 | Evidence source | The protocol's hypothesis, policy and multiplicity definitions; [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and [DR-005](DR-005-sesoi-and-h1-h2-inference.md); the existing power projections of DR-005. No labels, model scores or new dataset computations were used, no models were trained, and no Test-period data were inspected for this record. |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-009](DR-009-overflow-handling-for-threshold-policies.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -29,7 +29,7 @@ H3 is tested with TOST (Two One-Sided Tests) against the band (0.016, 0.024), i.
 
 Each configuration produces its own scores, so each has its own τ₂ and its own r. DR-003 defines H3 inference as **conditional on the trained model and the frozen τ₂**, so the model on which H3 is confirmatory must be specified. [DR-005](DR-005-sesoi-and-h1-h2-inference.md) fixes the multiple-testing plan as Holm's procedure at family-wise α = 0.05 (α = significance level) over {H1, H2, H3}; every additional confirmatory H3 configuration would add a family member. The rolling-origin supplement ([DR-001](DR-001-temporal-split-strategy.md), protocol) also needs a defined "primary configuration".
 
-## Methodological problem
+### Methodological problem
 
 The choice must be fixed before any Test access, and must not depend on which configuration is expected to transfer best. It has three consequences:
 
@@ -39,7 +39,7 @@ The choice must be fixed before any Test access, and must not depend on which co
 
 ## Decision
 
-**H3 is confirmatory for a single configuration, the *H3 configuration*, selected by a frozen development-only rule.** The H3 configuration is a **pre-specified, validation-selected deployment proxy**: a configuration chosen on held-out development data, whose V2-selected threshold is then transferred to the Test period. The study does not model any particular organisation's operational model-selection process.
+**H3 is confirmatory for a single configuration, the *H3 configuration*, selected by a pre-specified development-only rule.** The H3 configuration is a **pre-specified, validation-selected deployment proxy**: a configuration chosen on held-out development data, whose V2-selected threshold is then transferred to the Test period. The study does not model any particular organisation's operational model-selection process.
 
 ### Selection rule
 
@@ -83,7 +83,7 @@ This is DR-003's r evaluated for one named configuration. It is not a rate poole
 
 **Procedural safeguards.**
 
-- R3 on V2 uses the protocol's existing daily top-K definition and tie rule.
+- R3 on V2 uses the protocol's daily top-K definition; its tie rule for equal scores is fixed in the training rules (protocol design item 3).
 - The eight V2 recall values, the tie-break steps used, if any, and the selected configuration are recorded in the repository (committed) **before the Test period is unsealed**. The selection is final once recorded. It is not revisited after Test results are seen.
 - The rule uses V2 labels. That is within V2's role: V2 labels are already used for R1 (the F1-optimal threshold) and for the R4 calibrator. The H3 outcome r itself needs no labels.
 
@@ -177,7 +177,6 @@ No new external references. REF-010, REF-029 and REF-038 are existing, verified 
 | [I], [L] | Evidence tags: inference; literature |
 | α | Significance level (family-wise 0.05) |
 | α_(k) | Holm significance level applied to the k-th smallest p-value |
-| p̃_H3 | Holm-adjusted p-value of H3 (DR-005); H3₁ is concluded if it is at most 0.05 |
 | arg max | The configuration at which a quantity is largest |
 | B | Number of bootstrap replicates (10,000) |
 | Cat, LGB, RES, FTT | CatBoost, LightGBM, ResNet-style MLP, FT-Transformer |

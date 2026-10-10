@@ -506,7 +506,7 @@ encoding:
     unseen_categories: "handled natively by CatBoost"
     numeric_missing: "library default nan_mode = Min"
   neural:
-    # DR-008 section 9: PROPOSED for the design review (GitHub Issue #54); identical for ResNet-style MLP and FT-Transformer.
+    # docs/decisions/DR-012-neural-network-input-representation.md: PROPOSED for the design review (GitHub Issue #56); identical for ResNet-style MLP and FT-Transformer.
     # Rules apply by input role (categorical / numeric), including any input added later through an approved Issue.
     status: proposed
     categorical: "per-input vocabulary of canonical labels observed in Train only; __MISSING__ reserved in every vocabulary; values unseen in Train map to the __MISSING__ index; learned embeddings in the model"

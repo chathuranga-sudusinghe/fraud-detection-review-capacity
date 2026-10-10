@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze); supervisor review pending. Δ fixed at 0.004 (±20 % relative) by Issue #7; H3 configuration by [DR-010](DR-010-h3-confirmatory-configuration.md); Holm-level H3 decision and zero-alert days in the rate/volume decomposition (Issue #54). |
-| Date | 2026-09-23; Δ added 2026-09-24 (Issue #7); revised 2026-10-09 (Issue #54) |
+| Status | Accepted (pre-freeze); supervisor review pending (Issue #56) |
+| Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) and 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (H1/H2 bootstrap), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (H3 configuration), [protocol](../protocol.md) |
 
@@ -60,7 +60,7 @@ A point-null hypothesis on the rate is **uninformative**. With about 78,500 Test
   \end{aligned}
   $$
 
-  Δ is a **relative tolerance of 20 % of the target rate**. See [Equivalence tolerance Δ](#equivalence-tolerance-δ-issue-7).
+  Δ is a **relative tolerance of 20 % of the target rate**. See [Equivalence tolerance Δ](#equivalence-tolerance-δ).
 
 > **H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ, where Δ = 0.004, i.e. ±20% of the target).
 >
@@ -69,7 +69,7 @@ A point-null hypothesis on the rate is **uninformative**. With about 78,500 Test
 **Test.** Two One-Sided Tests (TOST) using a day-level moving-block bootstrap, decided by the Holm-adjusted p-value of H3 ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). Details are in [Statistical formulation of H3](#statistical-formulation-of-h3).
 
 **Configuration and multiplicity.**
-- H3 is confirmatory for a single *H3 configuration*: the one of the eight model × weighting configurations with the highest pooled V2 Recall@2% under R3 (policy R3, daily top-K; K = 56), selected by a frozen rule before the Test period is unsealed ([DR-010](DR-010-h3-confirmatory-configuration.md)). H3 results for the other seven configurations are descriptive.
+- H3 is confirmatory for a single *H3 configuration*: the one of the eight model × weighting configurations with the highest pooled V2 Recall@2% under R3 (policy R3, daily top-K; K = 56), selected by a pre-specified rule before the Test period is unsealed ([DR-010](DR-010-h3-confirmatory-configuration.md)). H3 results for the other seven configurations are descriptive.
 - H3 is one member of the confirmatory family {H1 (model family), H2 (class weighting), H3}, controlled by Holm's procedure at family-wise α = 0.05 [REF-029] ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
 
 ### Daily-budget fidelity — a separate operational outcome (not a confirmatory hypothesis)
@@ -112,9 +112,9 @@ These statistics are reported descriptively with bootstrap intervals where appro
 - descriptively and conditional on score-priority ordering, "flagged frauds in excess demand". Frauds among alerts in excess of K are **not** counted as missed, because the labels do not show what would happen to excess alerts;
 - review capacity left unused on underuse days.
 
-## Equivalence tolerance Δ (Issue #7)
+### Equivalence tolerance Δ
 
-### Literature findings
+#### Literature findings
 
 - **[L] No fraud-specific or alerting-specific standard exists.** A targeted search found no peer-reviewed standard for an acceptable deviation of a transferred alert rate from its target, in fraud detection or in alert-budget / top-k evaluation. The fraud evaluation literature establishes capacity-based evaluation [REF-004, REF-005, REF-006] but does not define a tolerance for alert-rate drift. The only related items found were non-peer-reviewed preprints and patents, which are not used as evidence.
 - **[L] The general framework is well established.**
@@ -125,7 +125,7 @@ These statistics are reported descriptively with bootstrap intervals where appro
 
 **Consequence.** The magnitude of Δ cannot be taken from the literature. It is a **pre-specified researcher judgement**, justified below by the research design and by development-period evidence that uses no labels and no Test data.
 
-### Candidate definitions compared
+#### Candidate definitions compared
 
 | Definition | Form | Interpretability | Statistical validity | Transferability across the capacity grid | Dependence on volume | Usefulness for RQ2 |
 |---|---|---|---|---|---|---|
@@ -135,7 +135,7 @@ These statistics are reported descriptively with bootstrap intervals where appro
 
 **Decision [I].** Use **B (relative)**. Here x is the relative tolerance and y (in C) a tolerance in reviews per day. At the V2 reference volume, B and C coincide: a relative rate deviation of x changes expected daily reviews by x × K. The relative form keeps the rate hypothesis free of volume assumptions, and it can be reported unchanged, descriptively, at 1 %, 5 % and 10 %.
 
-### Choice of magnitude: x = 20 % (Δ = 0.004)
+#### Choice of magnitude: x = 20 % (Δ = 0.004)
 
 Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 - mean V2 volume 2,779.4 per day, so K = 56 at 2 %;
@@ -173,7 +173,8 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 - Report the smallest relative tolerance at which equivalence would be concluded, so readers can apply their own margin.
 - These do not change the confirmatory H3 decision, which uses ±20 % only.
 
-## Statistical formulation of H3
+
+### Statistical formulation of H3
 
 | Element | Specification |
 |---|---|
@@ -184,7 +185,7 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 | **Test** | TOST: H0a: r ≤ 0.016 and H0b: r ≥ 0.024 (the two one-sided null hypotheses), with one-sided bootstrap p-values p_a = (1 + #{r* ≤ 0.016}) / (B + 1) and p_b = (1 + #{r* ≥ 0.024}) / (B + 1), where r* is r in one bootstrap replicate. p_H3 = max(p_a, p_b) enters Holm's procedure [REF-061, REF-062, REF-029]. H3₁ is concluded only if the **Holm-adjusted p-value of H3 is at most 0.05**. |
 | **CI interpretation** | The 90 % CI is reported in every case. The 90 % CI describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. The unadjusted and the Holm-adjusted p-value are both reported. Inside the band: rate preserved within ±20 %. Entirely outside: rate not preserved. Overlapping a bound: **inconclusive**, which must not be reported as "preserved". |
 | **Analysis unit** | The **relative day**. Flags are deterministic given the score, but a day's scores share that day's transaction composition (e.g. identity coverage, product mix), so transactions within a day are not independent draws [D; DR-001]. A transaction-level binomial interval would be anti-conservative. |
-| **Dependence between days** | Days are autocorrelated (daily-volume lag-1 autocorrelation 0.75 over days 1–182; 0.27 within V2 [D]). The CI therefore uses a **moving-block bootstrap over days** [REF-037]: blocks of ℓ consecutive Test days are resampled with replacement to 28 days, the pooled ratio is recomputed, B = 10,000 bootstrap replicates, percentile intervals. |
+| **Dependence between days** | Days are autocorrelated (daily-volume lag-1 autocorrelation 0.75 over days 1–182; 0.27 within V2 [D]). The CI therefore uses a **moving-block bootstrap over days** [REF-037]: blocks of ℓ consecutive Test days are resampled with replacement to 28 days, the pooled ratio is recomputed, B = 10,000 bootstrap replicates, percentile intervals [REF-044]. |
 | **Block length** | **ℓ (block length) = 3 days, primary.** This follows the n^(1/3) and n^(1/4) orders for variance and one-sided distribution estimation (≈ 3.0 and 2.3 for n = 28, where n = number of Test days) [REF-064]. Those are asymptotic orders with unknown constants, so ℓ is pre-specified rather than estimated from Test data. **Sensitivity:** ℓ = 1 (independent days) and ℓ = 7 (weekly). |
 | **Entity clustering** | Within-day entity clustering is absorbed by the day unit. Cross-day recurrence is partly absorbed by the blocks. Because H3 involves **no labels**, the label-propagation dependence that affects H1/H2 ([DR-001](DR-001-temporal-split-strategy.md); addressed by the two-way bootstrap of [DR-006](DR-006-bootstrap-inference-strategy.md)) does not apply to H3. |
 | **Threshold ties** | τ₂ is the score of the transaction ranked ⌈0.02 × N_V2⌉ in descending V2 order (N_V2 = number of V2 transactions; ⌈ · ⌉ = round up), and transactions are flagged if score ≥ τ₂. The realised V2 rate r_V2 (share of V2 transactions with score ≥ τ₂) is reported. If tied scores make r_V2 differ from 0.02 by more than 1 % relative, this is reported and discussed, but the H3 target remains 0.02. |
@@ -228,7 +229,7 @@ The rate component answers the research question, *does a validation-selected op
 
 ## References
 
-REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-036, REF-037, REF-038, REF-044, REF-061, REF-062, REF-063, REF-064, REF-065 — see [`../references.md`](../references.md).
+REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-037, REF-038, REF-044, REF-061, REF-062, REF-063, REF-064, REF-065 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 
@@ -236,7 +237,6 @@ REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-036, REF-037,
 |---|---|
 | [D], [L], [I] | Evidence tags: dataset observation, literature, inference |
 | α | Family-wise significance level (0.05) |
-| p̃_H3 | Holm-adjusted p-value of H3 (DR-005); H3₁ is concluded if it is at most 0.05 |
 | #{ · } | Number of bootstrap replicates satisfying a condition |
 | AR(1) | First-order autoregressive model |
 | B | Number of bootstrap replicates (10,000) |

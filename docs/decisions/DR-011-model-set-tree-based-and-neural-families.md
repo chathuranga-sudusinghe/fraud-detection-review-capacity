@@ -2,21 +2,16 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner (Issue #54); supervisor review pending. The values of the common training procedure (search method, budget, early-stopping rule, seeds) are fixed in the training rules before development runs. |
-| Date | 2026-10-09 |
+| Status | Accepted (pre-freeze) by the project owner (Issue #54); supervisor review pending (Issue #56) |
+| Date | 2026-10-09 (Issue #54) |
 | Evidence source | Structured literature search and evidence matrix (Issue #52: [`literature-search-method.md`](../literature-search-method.md), [`literature-evidence-matrix.md`](../literature-evidence-matrix.md)); GPU memory feasibility probe on synthetic inputs (Issue #50, `scripts/gpu_feasibility_probe.py`). No labels, model scores or Test-period data were used. |
-| Related | [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-008](DR-008-feature-declaration-and-model-input-policy.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [protocol](../protocol.md) |
+| Related | [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-008](DR-008-feature-declaration-and-model-input-policy.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md) |
 
 ## Context
 
 Research question 1 (RQ1) asks how model family and class weighting affect fraud capture at a fixed daily review budget on a later temporal period. The model set therefore defines what "model family" means in hypothesis H1 (model-family effect), which configurations H2 (class-weighting effect) covers, and the selection pool of H3 (alert-rate transfer fidelity, [DR-010](DR-010-h3-confirmatory-configuration.md)).
 
-The family question that remains open in the literature for tabular data is **gradient-boosted decision trees (GBDTs) versus neural networks**:
-
-- **[L]** Tree ensembles remain strong on tabular data [REF-013, REF-014, REF-090], but no family is universally superior: a ResNet-style multilayer perceptron (MLP) is a strong deep baseline and FT-Transformer (Feature Tokenizer + Transformer) the strongest deep model on most of eleven benchmarks [REF-087]. Across 176 datasets the neural-vs-tree gap is often negligible relative to tuning effects, and GBDTs handle skewed, heavy-tailed features better [REF-089]. Well-regularised MLPs can outperform XGBoost [REF-088].
-- **[L]** On IEEE-CIS (the IEEE Computational Intelligence Society Fraud Detection dataset) the fraud-specific evidence is limited: comparisons use non-temporal splits [REF-099], different user groups [REF-100], abstract-level results [REF-101] or unverifiable reporting [REF-098]. The closest capacity study compares logistic regression, LightGBM and TabNet without a family hypothesis [REF-078] ([`literature-evidence-matrix.md`](../literature-evidence-matrix.md), Section 3).
-
-No study found compares tree-based and neural families under one tuning procedure, a chronological holdout and a fixed daily review budget.
+The family question that remains open in the literature for tabular data is **gradient-boosted decision trees (GBDTs) versus neural networks** (see Evidence).
 
 ## Decision
 
@@ -25,7 +20,7 @@ No study found compares tree-based and neural families under one tuning procedur
 | Family | Models | Class weighting |
 |---|---|---|
 | **Tree-based (T)** | LightGBM (LGB) [REF-011]; CatBoost (Cat) [REF-012] | unweighted (u); balanced (b) |
-| **Neural (N)** | ResNet-style MLP (RES); FT-Transformer (FTT) [REF-087] | unweighted (u); balanced (b) |
+| **Neural (N)** | ResNet-style multilayer perceptron, MLP (RES); Feature Tokenizer + Transformer, FT-Transformer (FTT) [REF-087] | unweighted (u); balanced (b) |
 
 Each configuration is written model-weighting, e.g. LGB-u or FTT-b. The eight configurations, in the fixed order used for deterministic tie-breaks, are:
 
@@ -60,7 +55,7 @@ Fairness is defined as **one common procedure for all eight configurations**, no
 | Level | Scope | Elements |
 |---|---|---|
 | **1. Identical for all eight configurations** | Every choice that does not depend on the model | Data partitions: Train for fitting; Validation 1 (V1) for tuning and early stopping; Validation 2 (V2) for calibration, thresholds, the daily budget K and the H3 configuration ([DR-001](DR-001-temporal-split-strategy.md)). Model inputs: the same 431 declared inputs from one canonical frame, and any input added later through an approved GitHub Issue enters all eight configurations ([DR-008](DR-008-feature-declaration-and-model-input-policy.md)). Class weights: the same explicit Train-only sample weights. Hyperparameter search: the same search method and the same budget per configuration. V1 objective, early-stopping rule and seeds. Scores: raw model outputs (fraud scores) are used for ranking by every decision policy; calibration is fitted on V2 for R4 only. Decision policies, capacity settings and evaluation. |
-| **2. Identical within each family** | Choices that must follow the input form of the family | Tree-based (both models): native categorical and missing-value handling ([DR-008](DR-008-feature-declaration-and-model-input-policy.md) §5); weighted log-loss; CPU training. Neural (both models): the representation of [DR-008](DR-008-feature-declaration-and-model-input-policy.md) §9 (vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with fitting noise, missingness indicators); weighted binary cross-entropy; bf16 mixed precision on the GPU. |
+| **2. Identical within each family** | Choices that must follow the input form of the family | Tree-based (both models): native categorical and missing-value handling ([DR-008](DR-008-feature-declaration-and-model-input-policy.md) §5); weighted log-loss; CPU training. Neural (both models): the representation of [DR-012](DR-012-neural-network-input-representation.md), proposed (vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with fitting noise, missingness indicators); weighted binary cross-entropy; bf16 mixed precision on the GPU. |
 | **3. Model-specific** | Components that define each model | Architecture and internal computation: self-attention (FT-Transformer), residual blocks with BatchNorm (ResNet-style MLP), ordered boosting and ordered target statistics (CatBoost), leaf-wise growth and gradient-sorted categorical splits (LightGBM). Each model's own search space (for the neural models, the large-dataset spaces (B) of REF-087; §4). Memory-efficient attention applies to FT-Transformer only. These components are tuned under the Level 1 search method and budget. |
 
 The values of the Level 1 elements (search method, budget, objective, patience, seeds, aggregation of neural-network seeds) are fixed in the training rules before the development runs.
@@ -78,12 +73,12 @@ The values of the Level 1 elements (search method, budget, objective, patience, 
 
   bf16 with memory-efficient attention is therefore the chosen setting. Batch size and gradient checkpointing are fixed in the training rules within these measured limits. Batch limits were found by doubling: where the probe stopped at an out-of-memory failure, the true maximum lies between the listed value and twice it; where it reached its batch cap (ResNet-style MLP), the listed value is a feasible batch size, not a maximum.
 
-### 5. Consequences for the hypotheses
+## Evidence
 
-- **H1** compares the families: the mean Recall@2% of the four neural configurations minus the mean of the four tree configurations ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). Within-family contrasts (CatBoost vs LightGBM; FT-Transformer vs ResNet) are descriptive.
-- **H2** covers all four models through one intersection-union equivalence test ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
-- **H3** selects its configuration from all eight ([DR-010](DR-010-h3-confirmatory-configuration.md)); threshold transfer is also compared descriptively between families.
-- The Holm family stays {H1, H2, H3} with three members.
+- **[L]** Tree ensembles remain strong on tabular data [REF-013, REF-014, REF-090], but no family is universally superior: a ResNet-style multilayer perceptron (MLP) is a strong deep baseline and FT-Transformer (Feature Tokenizer + Transformer) the strongest deep model on most of eleven benchmarks [REF-087]. Across 176 datasets the neural-vs-tree gap is often negligible relative to tuning effects, and GBDTs handle skewed, heavy-tailed features better [REF-089]. Well-regularised MLPs can outperform XGBoost [REF-088].
+- **[L]** On IEEE-CIS (the IEEE Computational Intelligence Society Fraud Detection dataset) the fraud-specific evidence is limited: comparisons use non-temporal splits [REF-099], different user groups [REF-100], abstract-level results [REF-101] or unverifiable reporting [REF-098]. The closest capacity study compares logistic regression, LightGBM and TabNet without a family hypothesis [REF-078] ([`literature-evidence-matrix.md`](../literature-evidence-matrix.md), Section 3).
+
+No study found compares tree-based and neural families under one tuning procedure, a chronological holdout and a fixed daily review budget.
 
 ## Alternatives considered
 
@@ -101,10 +96,17 @@ The values of the Level 1 elements (search method, budget, objective, patience, 
 
 Two models per family give H1 a family-level estimand that does not rest on one architecture. The chosen neural models are the strongest documented baselines under a common tuning protocol [REF-087], and the tree models are the two GBDT libraries already declared in the input policy. The three-level procedure makes a family difference attributable to the model-and-representation pipelines compared, not to unequal data access or effort.
 
+## Consequences
+
+- **H1** compares the families: the mean Recall@2% of the four neural configurations minus the mean of the four tree configurations ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). Within-family contrasts (CatBoost vs LightGBM; FT-Transformer vs ResNet) are descriptive.
+- **H2** covers all four models through one intersection-union equivalence test ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
+- **H3** selects its configuration from all eight ([DR-010](DR-010-h3-confirmatory-configuration.md)); threshold transfer is also compared descriptively between families.
+- The Holm family stays {H1, H2, H3} with three members.
+
 ## Threats and limitations
 
 - **Pipeline-specific conclusions.** H1 concerns these four models under this procedure and input policy. It is not a claim about every tree-based or neural method.
-- **Representation differences.** Trees and neural networks receive the same information in family-specific forms ([DR-008](DR-008-feature-declaration-and-model-input-policy.md)). These differences are part of the family contrast.
+- **Representation differences.** Trees and neural networks receive the same information in family-specific forms ([DR-008](DR-008-feature-declaration-and-model-input-policy.md), [DR-012](DR-012-neural-network-input-representation.md)). These differences are part of the family contrast.
 - **Tuning efficiency.** A common budget measured in search trials may favour the family that converges faster; run time and the number of completed trials are reported per configuration.
 - **Seed variability.** Neural networks vary more across seeds than GBDTs; the seed protocol is fixed in the training rules and reported.
 - **Mixed precision.** bf16 computation is standard for Transformer training, but numerical differences from float32 are possible; training stability is monitored on development data.
@@ -120,7 +122,7 @@ REF-011, REF-012, REF-013, REF-014, REF-078, REF-087, REF-088, REF-089, REF-090,
 | [L] | Evidence tag: literature |
 | bf16 | bfloat16: 16-bit floating-point format with the exponent range of float32 |
 | BatchNorm, Dropout, Linear, ReLU | Batch normalisation; dropout; affine layer; rectified linear unit |
-| `__MISSING__` | Explicit label for a missing categorical value; reserved in every neural-network vocabulary (DR-008) |
+| `__MISSING__` | Explicit label for a missing categorical value (DR-008); reserved in every neural-network vocabulary (DR-012) |
 | Cat, LGB | CatBoost, LightGBM |
 | [CLS] | Classification token whose final representation gives the FT-Transformer prediction |
 | CPU, GPU | Central and graphics processing units |
