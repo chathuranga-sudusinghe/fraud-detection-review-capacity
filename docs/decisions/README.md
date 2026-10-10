@@ -26,6 +26,7 @@ At every stage:
   - *Frozen* — part of the tagged confirmatory protocol; changed only by supersession.
   - *Accepted* — in force; used for process and governance decisions that are not part of the confirmatory protocol (e.g. DR-004).
   - *Superseded by DR-NNN* — replaced after the freeze by the named record.
+- **Section template** (methodology records): a header table (Status, Date, Evidence source, Related), then **Context → Decision → Evidence → Alternatives considered → Rationale → Consequences → Threats and limitations**, an optional appendix for long derivations, **References** and **Symbols and notation**. Detailed specifications (e.g. statistical formulations, mathematical definitions) are subsections of the main section they belong to. A section is omitted only when the record has no content for it; reasons that concern one part of the decision may stay beside that part, and a separate Rationale section collects the record-level reasons. *Status* states the status and approval; *Date* states when the record was created and revised, and why. Process and governance records (DR-004) follow their own structure.
 - **Evidence tags** (as in the feasibility notebook):
   - **[D]** observed in the dataset;
   - **[L]** literature, cited by `REF-NNN` from [`../references.md`](../references.md);

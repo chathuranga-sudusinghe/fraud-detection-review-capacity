@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by Issue #27; supervisor review pending. |
+| Status | Accepted (pre-freeze) by Issue #27; supervisor review pending (Issue #56) |
 | Date | 2026-09-25; revised 2026-10-09 (Issue #54) |
 | Evidence source | Internal policy definitions in the [protocol](../protocol.md); existing Decision Records [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and [DR-007](DR-007-rq3-cost-ratio-and-break-even.md); an algebraic argument about thresholds and daily top-K selection; the existing label-free daily-volume inspection of the feasibility audit (`notebooks/01_dataset_feasibility_audit.ipynb` §3). No labels or model scores were inspected for this record. No new Test-period data were inspected; this record relies only on previously logged, label-free structural evidence from the feasibility audit. |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-007](DR-007-rq3-cost-ratio-and-break-even.md), [protocol](../protocol.md) |
@@ -19,7 +19,7 @@ A threshold policy therefore produces a daily **alert demand** that can lie abov
 
 This study is research on fraud detection under limited review capacity; it does not model the fraud-operations workflow of a particular organisation.
 
-## Methodological problem
+### Methodological problem
 
 Two treatments of R0, R1 and R2 are possible: "report overflow only", or "truncate to the top-K of the flagged transactions". Descriptions such as "realised daily review count" for the daily number of threshold alerts, or "frauds missed because of overflow", would also assume a particular operational outcome.
 
@@ -45,9 +45,9 @@ The decision must therefore:
 
 > **Research boundary.** The research measures the gap between alert demand and review capacity. It does not prescribe how an organisation closes that gap.
 
-## Mathematical definitions
+### Mathematical definitions
 
-### Daily workload quantities (label-free)
+#### Daily workload quantities (label-free)
 
 For threshold policy j ∈ {R0, R1, R2}, relative day d and review-capacity scenario c:
 
@@ -92,7 +92,7 @@ $$
 
 where `n_d` = number of transactions on day d with score ≥ τ₂ and `K` = 56.
 
-### Period summaries over the Test days (label-free, descriptive)
+#### Period summaries over the Test days (label-free, descriptive)
 
 $$
 \begin{aligned}
@@ -108,7 +108,7 @@ where `Σ_d` sums over the 28 Test relative days. These totals are reported toge
 - the mean and maximum daily O and U;
 - the existing absolute deviation |A_{d,j} − K_c| and the rate/volume decomposition of DR-003.
 
-### Fraud-related quantities that need no operational assumption
+#### Fraud-related quantities that need no operational assumption
 
 These use labels, so they may be computed only when labels may be used: on development data now, and on the Test period after the protocol freeze. With F_d the number of frauds on day d:
 
@@ -130,7 +130,7 @@ where:
 
 Alert-set recall and precision describe the threshold classifier over its **whole alert set**. They are always reported together with the demand A_j, because the policies generate different workloads and their recalls are not comparable at equal workload.
 
-### Optional, assumption-bounded quantity: flagged frauds in excess demand
+#### Optional, assumption-bounded quantity: flagged frauds in excess demand
 
 Deciding *which* alerts make up the overflow requires an ordering rule, and an ordering rule is an operational assumption. The only ordering reproducible from the research design itself is **score priority**, i.e. reviewing the highest-scoring alerts first. Under that explicitly stated assumption only, the number of flagged frauds beyond the daily budget is:
 
@@ -149,7 +149,8 @@ where:
 
 E is descriptive only. It is always labelled "conditional on score-priority ordering" and is never called "missed frauds" or "false negatives". It needs no new policy, because it follows from quantities already reported for the policy itself and for R3.
 
-## Workload demand versus hard-capacity enforcement
+
+### Workload demand versus hard-capacity enforcement
 
 The decision keeps two different concepts separate:
 
@@ -191,7 +192,63 @@ Consequently:
 
 In results tables, **demand** (R0–R2: A, O, U, L) and **enforced reviews** (R3, R4: reviews performed, utilisation) are reported in separate columns and are never merged.
 
-## Why truncation to top-K is rejected
+
+### Treatment of fraud labels and overflow
+
+Three things are kept apart:
+
+1. **Observed labels.** `isFraud` labels are **retrospective research ground truth**, derived from chargebacks and linked-transaction labelling. They show which transactions were fraudulent. They are **not** review outcomes.
+2. **Operational review outcomes.** Whether an analyst would review an alert, when, and with what decision is **not** in the dataset. The perfect-verification assumption of [DR-007](DR-007-rq3-cost-ratio-and-break-even.md) (assumption A1) applies only to transactions that a policy actually reviews within its budget.
+3. **Operational handling of overflow.** The labels do **not** tell us whether an overflow alert would later be reviewed, dropped, escalated, reviewed by additional staff or deferred to another day.
+
+Therefore:
+
+- overflow alerts are **not** automatically "missed frauds";
+- overflow alerts are **not** automatically false negatives: they were flagged by the policy;
+- frauds **below the threshold** (FN^τ) may be described as false negatives *of the threshold classifier*;
+- the recommended term for frauds among excess alerts is **"flagged frauds in excess demand"**. Any count of them must state its ordering assumption (score priority) and remains descriptive.
+
+
+### Research-scope boundary
+
+**In scope:**
+
+- measuring threshold-generated alert demand A;
+- quantifying daily overflow O, unused capacity U and load ratio L;
+- reporting days above and below K_c;
+- the rate/volume decomposition (DR-003);
+- label-based alert-set recall and precision, and the bounded quantity E, reported descriptively;
+- supporting the workload-fidelity analysis of research question 2 (RQ2).
+
+**Out of scope (not assumed):**
+
+- carrying overflow alerts to the next day;
+- adding staff or changing review capacity dynamically;
+- escalation procedures;
+- assuming overflow alerts are dropped;
+- assuming overflow alerts are reviewed later;
+- arrival-order (first-come-first-served) processing within a day. This would be a different, streaming policy; R3 is already an idealised end-of-day batch policy. It would need its own GitHub Issue;
+- any other organisation-specific fraud-operations rule.
+
+## Alternatives considered
+
+| Alternative | Why not chosen |
+|---|---|
+| **Truncate R0/R1/R2 to the top K_c of their alerts** | Reproduces R3 exactly on every overflow day and equals the uncapped policy on all other days (algebra in [Why truncation to top-K is rejected](#why-truncation-to-top-k-is-rejected)). Removes the workload demand that RQ2 studies and makes the threshold policies redundant. |
+| **Truncate by arrival order** (first K_c alerts of the day by `TransactionDT`) | Imports an operational rule (first-come-first-served) and defines a different, streaming policy. Out of scope; would need its own issue. |
+| **Count overflow frauds as missed or as false negatives** | Assumes excess alerts are never reviewed, which the design does not state and the labels cannot show. |
+| **Assign a cost to overflow in RQ3** | Needs an assumption about what happens to excess alerts. RQ3 compares only capped policies. |
+| **Carry excess alerts to the next day** | An organisation-specific backlog rule. Would also make daily workloads depend on earlier days, mixing policy transfer with queue dynamics. |
+| **Leave the rule undeclared until after the Test run** | Would allow the treatment to be chosen after seeing results. The rule is fixed before any Test access. |
+
+## Rationale
+
+- **Fidelity to RQ2.** RQ2 asks how well a transferred threshold preserves the intended alert rate and how the resulting workload compares with the fixed budget. That is a question about demand, so demand must be measured, not censored at K_c.
+- **Distinct policies stay distinct.** R0–R2 describe what a threshold asks of the review team; R3 and R4 describe what a team with fixed capacity actually reviews. Truncation would erase that difference.
+- **No unsupported assumptions.** The labels are research ground truth, not review outcomes. Any statement about frauds in overflow beyond counting them would need an operational rule that the research does not have and does not need.
+- **Consistency.** One set of definitions (A, O, U, L) covers every policy, matching DR-003's existing sums and DR-007's unused reviews.
+
+### Why truncation to top-K is rejected
 
 Truncating a threshold policy to "the top K_c of the flagged transactions" would **reproduce R3 exactly on every overflow day**.
 
@@ -221,43 +278,13 @@ Truncation would therefore:
 - turn R0, R1 and R2 into weaker duplicates of R3 (on overflow days) or of the uncapped policy (on other days), adding no information;
 - repeat the collapse that [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) already rejected ("that is a different policy, close to R3").
 
-## Treatment of fraud labels and overflow
+## Consequences
 
-Three things are kept apart:
+- The Test evaluation saves, for each threshold policy, configuration and Test day: A_{d,j}; and, once labels may be used, TP^A_{d,j}. O, U, L and E are derived from these, K_c and the R3 results.
+- Result tables keep separate columns for demand (R0–R2) and enforced reviews (R3, R4).
+- Any future study of downstream overflow handling (backlog, escalation, arrival-order processing) requires a new GitHub Issue and Decision Record.
 
-1. **Observed labels.** `isFraud` labels are **retrospective research ground truth**, derived from chargebacks and linked-transaction labelling. They show which transactions were fraudulent. They are **not** review outcomes.
-2. **Operational review outcomes.** Whether an analyst would review an alert, when, and with what decision is **not** in the dataset. The perfect-verification assumption of [DR-007](DR-007-rq3-cost-ratio-and-break-even.md) (assumption A1) applies only to transactions that a policy actually reviews within its budget.
-3. **Operational handling of overflow.** The labels do **not** tell us whether an overflow alert would later be reviewed, dropped, escalated, reviewed by additional staff or deferred to another day.
-
-Therefore:
-
-- overflow alerts are **not** automatically "missed frauds";
-- overflow alerts are **not** automatically false negatives: they were flagged by the policy;
-- frauds **below the threshold** (FN^τ) may be described as false negatives *of the threshold classifier*;
-- the recommended term for frauds among excess alerts is **"flagged frauds in excess demand"**. Any count of them must state its ordering assumption (score priority) and remains descriptive.
-
-## Research-scope boundary
-
-**In scope:**
-
-- measuring threshold-generated alert demand A;
-- quantifying daily overflow O, unused capacity U and load ratio L;
-- reporting days above and below K_c;
-- the rate/volume decomposition (DR-003);
-- label-based alert-set recall and precision, and the bounded quantity E, reported descriptively;
-- supporting the RQ2 workload-fidelity analysis.
-
-**Out of scope (not assumed):**
-
-- carrying overflow alerts to the next day;
-- adding staff or changing review capacity dynamically;
-- escalation procedures;
-- assuming overflow alerts are dropped;
-- assuming overflow alerts are reviewed later;
-- arrival-order (first-come-first-served) processing within a day. This would be a different, streaming policy; R3 is already an idealised end-of-day batch policy. It would need its own GitHub Issue;
-- any other organisation-specific fraud-operations rule.
-
-## Effects on the existing research design
+### Effects on the existing research design
 
 | Area | Effect |
 |---|---|
@@ -270,30 +297,6 @@ Therefore:
 | **False-negative analysis** | Defined under **R3 at the primary capacity** ("false negatives at capacity"). Flagged frauds in excess demand are never counted as false negatives. This makes explicit what the protocol already implied. |
 | **Statistical plan** | **No new hypothesis.** The Holm family {H1, H2, H3} is not affected. The label-free summaries of A, O, U and L may carry intervals from the existing day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000 replicates), as for H3 and budget fidelity ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)). Label-based alert-set measures and E are descriptive; any intervals use already-declared bootstrap machinery ([DR-006](DR-006-bootstrap-inference-strategy.md)). |
 | **Capacity grid, K values, split, features, SESOI, cost-ratio grid** | Not affected. |
-
-## Alternatives considered
-
-| Alternative | Why not chosen |
-|---|---|
-| **Truncate R0/R1/R2 to the top K_c of their alerts** | Reproduces R3 exactly on every overflow day and equals the uncapped policy on all other days (algebra above). Removes the workload demand that RQ2 studies and makes the threshold policies redundant. |
-| **Truncate by arrival order** (first K_c alerts of the day by `TransactionDT`) | Imports an operational rule (first-come-first-served) and defines a different, streaming policy. Out of scope; would need its own issue. |
-| **Count overflow frauds as missed or as false negatives** | Assumes excess alerts are never reviewed, which the design does not state and the labels cannot show. |
-| **Assign a cost to overflow in RQ3** | Needs an assumption about what happens to excess alerts. RQ3 compares only capped policies. |
-| **Carry excess alerts to the next day** | An organisation-specific backlog rule. Would also make daily workloads depend on earlier days, mixing policy transfer with queue dynamics. |
-| **Leave the rule undeclared until after the Test run** | Would allow the treatment to be chosen after seeing results. The rule is fixed before any Test access. |
-
-## Rationale
-
-- **Fidelity to RQ2.** RQ2 asks how well a transferred threshold preserves the intended alert rate and how the resulting workload compares with the fixed budget. That is a question about demand, so demand must be measured, not censored at K_c.
-- **Distinct policies stay distinct.** R0–R2 describe what a threshold asks of the review team; R3 and R4 describe what a team with fixed capacity actually reviews. Truncation would erase that difference.
-- **No unsupported assumptions.** The labels are research ground truth, not review outcomes. Any statement about frauds in overflow beyond counting them would need an operational rule that the research does not have and does not need.
-- **Consistency.** One set of definitions (A, O, U, L) covers every policy, matching DR-003's existing sums and DR-007's unused reviews.
-
-## Consequences
-
-- The Test evaluation saves, for each threshold policy, configuration and Test day: A_{d,j}; and, once labels may be used, TP^A_{d,j}. O, U, L and E are derived from these, K_c and the R3 results.
-- Result tables keep separate columns for demand (R0–R2) and enforced reviews (R3, R4).
-- Any future study of downstream overflow handling (backlog, escalation, arrival-order processing) requires a new GitHub Issue and Decision Record.
 
 ## Threats and limitations
 

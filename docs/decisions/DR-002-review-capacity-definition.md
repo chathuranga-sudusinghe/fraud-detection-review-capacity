@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze); supervisor review pending. Pooled normalised recall and days without frauds defined (Issue #54). |
-| Date | 2026-09-23; revised 2026-10-09 (Issue #54) |
+| Status | Accepted (pre-freeze); supervisor review pending (Issue #56) |
+| Date | 2026-09-23; revised 2026-10-09 (Issue #54: pooled normalised recall; days without frauds) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§6, 7, 11 |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 

@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze); supervisor review pending. Δ fixed at 0.004 (±20 % relative) by Issue #7; H3 configuration by [DR-010](DR-010-h3-confirmatory-configuration.md); Holm-level H3 decision and zero-alert days in the rate/volume decomposition (Issue #54). |
-| Date | 2026-09-23; Δ added 2026-09-24 (Issue #7); revised 2026-10-09 (Issue #54) |
+| Status | Accepted (pre-freeze); supervisor review pending (Issue #56) |
+| Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) and 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (H1/H2 bootstrap), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (H3 configuration), [protocol](../protocol.md) |
 
@@ -60,7 +60,7 @@ A point-null hypothesis on the rate is **uninformative**. With about 78,500 Test
   \end{aligned}
   $$
 
-  Δ is a **relative tolerance of 20 % of the target rate**. See [Equivalence tolerance Δ](#equivalence-tolerance-δ-issue-7).
+  Δ is a **relative tolerance of 20 % of the target rate**. See [Equivalence tolerance Δ](#equivalence-tolerance-δ).
 
 > **H3₀:** The realised alert rate under the validation-selected 2% threshold lies outside the pre-specified equivalence band around the 2% target (|r − 0.02| ≥ Δ, where Δ = 0.004, i.e. ±20% of the target).
 >
@@ -112,9 +112,9 @@ These statistics are reported descriptively with bootstrap intervals where appro
 - descriptively and conditional on score-priority ordering, "flagged frauds in excess demand". Frauds among alerts in excess of K are **not** counted as missed, because the labels do not show what would happen to excess alerts;
 - review capacity left unused on underuse days.
 
-## Equivalence tolerance Δ (Issue #7)
+### Equivalence tolerance Δ
 
-### Literature findings
+#### Literature findings
 
 - **[L] No fraud-specific or alerting-specific standard exists.** A targeted search found no peer-reviewed standard for an acceptable deviation of a transferred alert rate from its target, in fraud detection or in alert-budget / top-k evaluation. The fraud evaluation literature establishes capacity-based evaluation [REF-004, REF-005, REF-006] but does not define a tolerance for alert-rate drift. The only related items found were non-peer-reviewed preprints and patents, which are not used as evidence.
 - **[L] The general framework is well established.**
@@ -125,7 +125,7 @@ These statistics are reported descriptively with bootstrap intervals where appro
 
 **Consequence.** The magnitude of Δ cannot be taken from the literature. It is a **pre-specified researcher judgement**, justified below by the research design and by development-period evidence that uses no labels and no Test data.
 
-### Candidate definitions compared
+#### Candidate definitions compared
 
 | Definition | Form | Interpretability | Statistical validity | Transferability across the capacity grid | Dependence on volume | Usefulness for RQ2 |
 |---|---|---|---|---|---|---|
@@ -135,7 +135,7 @@ These statistics are reported descriptively with bootstrap intervals where appro
 
 **Decision [I].** Use **B (relative)**. Here x is the relative tolerance and y (in C) a tolerance in reviews per day. At the V2 reference volume, B and C coincide: a relative rate deviation of x changes expected daily reviews by x × K. The relative form keeps the rate hypothesis free of volume assumptions, and it can be reported unchanged, descriptively, at 1 %, 5 % and 10 %.
 
-### Choice of magnitude: x = 20 % (Δ = 0.004)
+#### Choice of magnitude: x = 20 % (Δ = 0.004)
 
 Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 - mean V2 volume 2,779.4 per day, so K = 56 at 2 %;
@@ -173,7 +173,8 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 - Report the smallest relative tolerance at which equivalence would be concluded, so readers can apply their own margin.
 - These do not change the confirmatory H3 decision, which uses ±20 % only.
 
-## Statistical formulation of H3
+
+### Statistical formulation of H3
 
 | Element | Specification |
 |---|---|

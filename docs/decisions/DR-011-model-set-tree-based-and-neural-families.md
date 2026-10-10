@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner (Issue #54); supervisor review pending. The values of the common training procedure (search method, budget, early-stopping rule, seeds) are fixed in the training rules before development runs. |
-| Date | 2026-10-09 |
+| Status | Accepted (pre-freeze) by the project owner (Issue #54); supervisor review pending (Issue #56) |
+| Date | 2026-10-09 (Issue #54) |
 | Evidence source | Structured literature search and evidence matrix (Issue #52: [`literature-search-method.md`](../literature-search-method.md), [`literature-evidence-matrix.md`](../literature-evidence-matrix.md)); GPU memory feasibility probe on synthetic inputs (Issue #50, `scripts/gpu_feasibility_probe.py`). No labels, model scores or Test-period data were used. |
 | Related | [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-008](DR-008-feature-declaration-and-model-input-policy.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md) |
 
@@ -11,12 +11,7 @@
 
 Research question 1 (RQ1) asks how model family and class weighting affect fraud capture at a fixed daily review budget on a later temporal period. The model set therefore defines what "model family" means in hypothesis H1 (model-family effect), which configurations H2 (class-weighting effect) covers, and the selection pool of H3 (alert-rate transfer fidelity, [DR-010](DR-010-h3-confirmatory-configuration.md)).
 
-The family question that remains open in the literature for tabular data is **gradient-boosted decision trees (GBDTs) versus neural networks**:
-
-- **[L]** Tree ensembles remain strong on tabular data [REF-013, REF-014, REF-090], but no family is universally superior: a ResNet-style multilayer perceptron (MLP) is a strong deep baseline and FT-Transformer (Feature Tokenizer + Transformer) the strongest deep model on most of eleven benchmarks [REF-087]. Across 176 datasets the neural-vs-tree gap is often negligible relative to tuning effects, and GBDTs handle skewed, heavy-tailed features better [REF-089]. Well-regularised MLPs can outperform XGBoost [REF-088].
-- **[L]** On IEEE-CIS (the IEEE Computational Intelligence Society Fraud Detection dataset) the fraud-specific evidence is limited: comparisons use non-temporal splits [REF-099], different user groups [REF-100], abstract-level results [REF-101] or unverifiable reporting [REF-098]. The closest capacity study compares logistic regression, LightGBM and TabNet without a family hypothesis [REF-078] ([`literature-evidence-matrix.md`](../literature-evidence-matrix.md), Section 3).
-
-No study found compares tree-based and neural families under one tuning procedure, a chronological holdout and a fixed daily review budget.
+The family question that remains open in the literature for tabular data is **gradient-boosted decision trees (GBDTs) versus neural networks** (see Evidence).
 
 ## Decision
 
@@ -25,7 +20,7 @@ No study found compares tree-based and neural families under one tuning procedur
 | Family | Models | Class weighting |
 |---|---|---|
 | **Tree-based (T)** | LightGBM (LGB) [REF-011]; CatBoost (Cat) [REF-012] | unweighted (u); balanced (b) |
-| **Neural (N)** | ResNet-style MLP (RES); FT-Transformer (FTT) [REF-087] | unweighted (u); balanced (b) |
+| **Neural (N)** | ResNet-style multilayer perceptron, MLP (RES); Feature Tokenizer + Transformer, FT-Transformer (FTT) [REF-087] | unweighted (u); balanced (b) |
 
 Each configuration is written model-weighting, e.g. LGB-u or FTT-b. The eight configurations, in the fixed order used for deterministic tie-breaks, are:
 
@@ -78,12 +73,12 @@ The values of the Level 1 elements (search method, budget, objective, patience, 
 
   bf16 with memory-efficient attention is therefore the chosen setting. Batch size and gradient checkpointing are fixed in the training rules within these measured limits. Batch limits were found by doubling: where the probe stopped at an out-of-memory failure, the true maximum lies between the listed value and twice it; where it reached its batch cap (ResNet-style MLP), the listed value is a feasible batch size, not a maximum.
 
-### 5. Consequences for the hypotheses
+## Evidence
 
-- **H1** compares the families: the mean Recall@2% of the four neural configurations minus the mean of the four tree configurations ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). Within-family contrasts (CatBoost vs LightGBM; FT-Transformer vs ResNet) are descriptive.
-- **H2** covers all four models through one intersection-union equivalence test ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
-- **H3** selects its configuration from all eight ([DR-010](DR-010-h3-confirmatory-configuration.md)); threshold transfer is also compared descriptively between families.
-- The Holm family stays {H1, H2, H3} with three members.
+- **[L]** Tree ensembles remain strong on tabular data [REF-013, REF-014, REF-090], but no family is universally superior: a ResNet-style multilayer perceptron (MLP) is a strong deep baseline and FT-Transformer (Feature Tokenizer + Transformer) the strongest deep model on most of eleven benchmarks [REF-087]. Across 176 datasets the neural-vs-tree gap is often negligible relative to tuning effects, and GBDTs handle skewed, heavy-tailed features better [REF-089]. Well-regularised MLPs can outperform XGBoost [REF-088].
+- **[L]** On IEEE-CIS (the IEEE Computational Intelligence Society Fraud Detection dataset) the fraud-specific evidence is limited: comparisons use non-temporal splits [REF-099], different user groups [REF-100], abstract-level results [REF-101] or unverifiable reporting [REF-098]. The closest capacity study compares logistic regression, LightGBM and TabNet without a family hypothesis [REF-078] ([`literature-evidence-matrix.md`](../literature-evidence-matrix.md), Section 3).
+
+No study found compares tree-based and neural families under one tuning procedure, a chronological holdout and a fixed daily review budget.
 
 ## Alternatives considered
 
@@ -100,6 +95,13 @@ The values of the Level 1 elements (search method, budget, objective, patience, 
 ## Rationale
 
 Two models per family give H1 a family-level estimand that does not rest on one architecture. The chosen neural models are the strongest documented baselines under a common tuning protocol [REF-087], and the tree models are the two GBDT libraries already declared in the input policy. The three-level procedure makes a family difference attributable to the model-and-representation pipelines compared, not to unequal data access or effort.
+
+## Consequences
+
+- **H1** compares the families: the mean Recall@2% of the four neural configurations minus the mean of the four tree configurations ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). Within-family contrasts (CatBoost vs LightGBM; FT-Transformer vs ResNet) are descriptive.
+- **H2** covers all four models through one intersection-union equivalence test ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
+- **H3** selects its configuration from all eight ([DR-010](DR-010-h3-confirmatory-configuration.md)); threshold transfer is also compared descriptively between families.
+- The Holm family stays {H1, H2, H3} with three members.
 
 ## Threats and limitations
 

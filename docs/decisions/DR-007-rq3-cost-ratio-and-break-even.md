@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by Issue #13; supervisor review pending. Eight configurations ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)), boundary cases and interpretation of R4 losses (Issue #54). |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54) |
+| Status | Accepted (pre-freeze) by Issue #13; supervisor review pending (Issue #56) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight configurations; boundary cases; interpretation of R4 losses) |
 | Evidence source | Decision-theoretic derivation (checked numerically on synthetic data only); cost-sensitive learning, cost-curve and decision-curve literature; `notebooks/01_dataset_feasibility_audit.ipynb` §§6, 11, 12. **No Test labels, no model scores and no new dataset computations were used.** |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -25,268 +25,9 @@ This record fixes four elements:
 
 **R3 and R4 are research evaluation policies, not the rules of any company or bank. Every cost value in this record is a simulated research assumption.** Nothing here estimates a real banking cost, loss or saving.
 
-## Literature findings
-
-### Cost-derived thresholds from calibrated probabilities
-
-- **[L]** For a two-class decision with cost matrix entries c(predicted, actual), the expected-cost-minimising rule predicts class 1 if and only if P(class 1 | x) ≥ p*, where x is the example's features and [REF-008, Eq. 2]:
-
-  $$
-  p^* = \frac{c_{10} - c_{00}}{c_{10} - c_{00} + c_{01} - c_{11}}
-  $$
-
-  where:
-
-  - `p*` = probability threshold at or above which predicting class 1 has the lower expected cost;
-  - `cᵢⱼ` = cost of predicting class i when the actual class is j (i, j ∈ {0, 1}; 1 = positive class);
-  - `c₁₀` and `c₀₁` = costs of a false positive and a false negative; `c₀₀` and `c₁₁` = costs of the two correct decisions.
-
-  The numerator is the extra cost of acting on a true negative. The denominator adds the saving from acting on a true positive. p* is the probability at which acting and not acting have equal expected cost.
-  - Elkan requires the "reasonableness" conditions c₁₀ > c₀₀ and c₀₁ > c₁₁. When one of them fails, one decision is optimal for every example.
-  - Optimal decisions do not change when every cost is multiplied by a positive constant or shifted by a constant, so "any 2x2 cost matrix has essentially only one degree of freedom from a decision-making perspective" [REF-008].
-  - Elkan also warns that every cost must be measured from the **same baseline**, otherwise the matrix is economically incoherent. He recommends fitting the classifier on the data as given and then applying the cost threshold to its probability estimates [REF-008].
-- **[L]** **Fraud-specific cost matrix.** Höppner et al. use: false positive cost = true positive cost = a fixed investigation cost c_f (the cardholder is contacted in both cases), false negative cost = the transaction amount A_i, true negative cost = 0. The optimal threshold for transaction i is then:
-
-  $$
-  t^*_i = \frac{c_f}{A_i}
-  $$
-
-  where:
-
-  - `t*_i` = optimal probability threshold for transaction i;
-  - `c_f` = fixed investigation cost, the same for every alert;
-  - `A_i` = amount of transaction i (the cost of missing it if it is fraud).
-
-  A transaction is worth investigating when its fraud probability exceeds its investigation cost divided by its amount. They stress that this requires "true calibrated probabilities rather than just scores that rank" [REF-073]. They attribute the fixed-cost matrix to Hand et al. [REF-006]. This is exactly the structure of the protocol's primary cost model, with an example-dependent missed-fraud cost.
-- **[L]** **Threshold choice and calibration.** Choosing the threshold directly from the probability scale ("score-driven" threshold choice) gives an expected loss, averaged uniformly over cost proportions, equal to the Brier score. If the model is perfectly calibrated, this equals the loss of the optimal threshold choice [REF-038]. A policy that fixes the alert *rate* (such as R3) belongs to the "rate-driven" family, whose expected loss is linked to ranking quality (AUC, the area under the ROC curve) instead [REF-038].
-
-### Uncertain costs, cost curves and decision curves
-
-- **[L]** When costs cannot be specified precisely, classifiers should be compared across the whole range of plausible operating conditions, not at one assumed cost [REF-039].
-  - Provost & Fawcett name fraud detection as a domain where "costs change based on workforce and reimbursement issues".
-  - They treat the fixed-workforce problem ("the system should present the best possible set of K cases") as a separate decision criterion. This is R3's criterion [REF-039].
-- **[L]** **Cost curves** plot normalised expected cost against a probability-cost operating condition. Each fixed classifier is a straight line, and "the intersection point of the two lines is the value … where [the two classifiers] perform identically" [REF-040]. That is the classical break-even point. Drummond & Holte also put bootstrap confidence intervals on cost lines [REF-040].
-- **[L]** **Decision curve analysis** (medical prediction) plots the *net benefit* of a model against the threshold probability. The threshold is taken to encode how the decision-maker weighs false positives against false negatives [REF-072]. The ratio is described as an "exchange rate", for example "the maximum number of patients a doctor would recommend for biopsy to find one cancer". Because it is subjective, net benefit is plotted across "a range of reasonable exchange rates" [REF-075]. This is the same logic as RQ3's ratio grid. Here ρ (the miss-to-review cost ratio: assumed cost of missing a fraud ÷ cost of one review) is the largest number of reviews worth spending to find one fraud.
-- **[L]** **Calibration drives decision value.** In simulation, "miscalibration always reduced Net Benefit". Harm, meaning a result worse than the default strategies, arose when a model **under-estimated risk at a threshold below the event rate**, or over-estimated risk at a threshold above it [REF-074].
-
-### Break-even analysis in fraud detection
-
-- **[L]** No verified source prescribes this project's specific cost-ratio grid or break-even rule for capacity-constrained fraud review. The fraud literature supplies the cost-matrix structure [REF-006, REF-073] and the capacity framing [REF-004, REF-005, REF-006]. The grid and break-even rule below apply the general methods above and are **researcher decisions [I]**.
-
-- **[L]** Zhang et al. [REF-078] show, on IEEE-CIS with a separate policy-selection period, the binding-versus-slack pattern this record anticipates: at a tight capacity ceiling their calibrated cost-threshold queue was clipped to the ceiling in almost every run, while at a slack ceiling full-capacity review cost markedly more than the calibrated threshold.
-  - Their calibrated rule overlaps strongly with R4: a Platt-calibrated probability compared with a cost-derived threshold of the same form as p\* = (C_R + C_FP) / (C_miss + C_FP), capped at the review ceiling. Their ceiling applies per evaluation period rather than per day, and they report regret against a retrospective oracle rather than break-even ratios.
-  - ρ_BE and ρ_sat are therefore an extension and alternative operationalisation of that pattern under a fixed daily cap, not a primary novelty claim.
-- **[L]** The protocol cites REF-007 for amount-dependent costs. Its author copy could not be read in this pass (access restricted), so the amount-dependent cost structure is supported here by REF-073, which was read in full (arXiv version).
-
-## Derivation and validity of the current equations
-
-### Per-transaction decision (no capacity limit)
-
-Assumptions (all simulated, all stated):
-- **A1 — Perfect verification.** A reviewed fraud is caught, with no residual loss. A reviewed legitimate transaction is cleared.
-- **A2 — Per-transaction, additive costs.** Reviewing one transaction does not stop other frauds of the same entity. Costs do not depend on each other.
-- **A3 — Common baseline.** An unreviewed legitimate transaction costs 0. All costs are measured from that baseline [REF-008].
-- **A4 — C_R is charged on every review**, fraud or not. C_FP is charged only on reviewed legitimate transactions. C_miss is charged only on unreviewed frauds.
-- **A5 — Calibration.** p̂_i equals the Test-period probability that transaction i is fraud.
-- **A6 — Unused capacity has value.** C_R is the marginal cost a review slot would incur or free up (e.g. analyst time redeployable to other work). If slots were fully sunk with no alternative use, C_R = 0 and only C_FP could justify leaving capacity unused. The reduction below covers that case as well.
-
-**Direct derivation.** For a transaction with calibrated fraud probability p̂, the expected cost of each action is:
-
-$$
-\begin{aligned}
-E[\text{cost} \mid \text{not reviewed}] &= \hat{p} \cdot C_{\mathrm{miss}} \\
-E[\text{cost} \mid \text{reviewed}] &= C_R + (1 - \hat{p}) \cdot C_{\mathrm{FP}}
-\end{aligned}
-$$
-
-where:
-
-- `p̂` = calibrated probability that the transaction is fraud;
-- `C_R` = cost of reviewing one transaction;
-- `C_miss` = cost of missing a fraud;
-- `C_FP` = additional false-alert/customer-friction cost for reviewing a legitimate transaction;
-- `E[cost | action]` = expected cost of taking that action.
-
-Not reviewing costs C_miss only if the transaction is fraud. Reviewing always costs C_R, plus C_FP if the transaction turns out to be legitimate.
-
-Review when reviewing is no more expensive in expectation:
-
-$$
-\begin{aligned}
-C_R + (1 - \hat{p}) \cdot C_{\mathrm{FP}} &\le \hat{p} \cdot C_{\mathrm{miss}} \\
-C_R + C_{\mathrm{FP}} - \hat{p} \cdot C_{\mathrm{FP}} &\le \hat{p} \cdot C_{\mathrm{miss}} \\
-C_R + C_{\mathrm{FP}} &\le \hat{p} \cdot (C_{\mathrm{miss}} + C_{\mathrm{FP}}) \\
-\hat{p} &\ge \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}}
-\end{aligned}
-$$
-
-The right-hand side of the last line is the threshold p*.
-
-**Check against Elkan's formula.** In Elkan's notation (class 1 = review/fraud), the cost matrix entries are:
-
-$$
-\begin{aligned}
-c_{00} &= 0 && \text{(legitimate, not reviewed)} \\
-c_{01} &= C_{\mathrm{miss}} && \text{(fraud, not reviewed)} \\
-c_{10} &= C_R + C_{\mathrm{FP}} && \text{(legitimate, reviewed)} \\
-c_{11} &= C_R && \text{(fraud, reviewed)}
-\end{aligned}
-$$
-
-where:
-
-- `cᵢⱼ` = cost of action i (1 = review, 0 = do not review) when the true class is j (1 = fraud, 0 = legitimate).
-
-Substituting into REF-008 Eq. 2, step by step:
-
-$$
-\begin{aligned}
-p^* &= \frac{c_{10} - c_{00}}{c_{10} - c_{00} + c_{01} - c_{11}} \\
-&= \frac{C_R + C_{\mathrm{FP}}}{(C_R + C_{\mathrm{FP}}) + C_{\mathrm{miss}} - C_R} \\
-&= \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}} \\
-&= \frac{1}{\rho'}
-\end{aligned}
-$$
-
-where:
-
-- `p*` = cost-derived probability threshold used by R4;
-- `ρ′` = effective cost ratio, (C_miss + C_FP) / (C_R + C_FP).
-
-The two routes agree. The threshold is the reciprocal of the effective cost ratio ρ′ = (C_miss + C_FP) / (C_R + C_FP).
-
-**Primary case (no false-alert cost).** When C_FP = 0:
-
-$$
-\begin{aligned}
-p^* &= \frac{C_R}{C_{\mathrm{miss}}} \\
-&= \frac{1}{\rho}
-\end{aligned}
-$$
-
-where:
-
-- `ρ` = C_miss / C_R, the miss-to-review cost ratio.
-
-A transaction is reviewed when its calibrated fraud probability is at least one divided by the miss-to-review cost ratio. For example, with ρ = 20 it is reviewed if p̂ ≥ 0.05, i.e. if at least one review in twenty is expected to find a fraud.
-
-**Verdict [I].** Both equations in the protocol are **correct under A1–A5**. They depend critically on A4.
-- If C_R were wrongly charged only on false alerts, the threshold would become the following. That is a different and incorrect rule under the stated assumptions:
-
-  $$
-  p^*_{\mathrm{wrong}} = \frac{C_R}{C_R + C_{\mathrm{miss}}}
-  $$
-
-  where:
-
-  - `p*_wrong` = the threshold that would result if C_R were charged only on reviewed legitimate transactions (the incorrect variant).
-
-- Elkan's reasonableness conditions reduce to:
-
-  $$
-  C_{\mathrm{miss}} > C_R, \qquad \text{i.e.} \qquad \rho > 1
-  $$
-
-  For ρ ≤ 1 the threshold is p* ≥ 1. Reviewing can then never reduce expected cost, even for a transaction that is certainly fraud, so R4 reviews nothing.
-
-### With the daily capacity limit
-
-On each day, R4's rule is equivalent to maximising the total expected net benefit of reviewing over at most K_c transactions. The expected net benefit of reviewing transaction i is:
-
-$$
-b_i = \hat{p}_i \cdot (C_{\mathrm{miss}} + C_{\mathrm{FP}}) - (C_R + C_{\mathrm{FP}})
-$$
-
-where:
-
-- `b_i` = expected net benefit of reviewing transaction i, in the same units as the costs;
-- `p̂_i` = calibrated fraud probability of transaction i;
-- `C_miss`, `C_R`, `C_FP` = missed-fraud, review and false-alert costs (as defined above).
-
-b_i is the expected cost avoided by reviewing transaction i, minus the expected cost of the review itself. It is positive exactly when p̂_i ≥ p*.
-
-- b_i increases with p̂_i, so the optimum is: take transactions in descending p̂ order while b_i ≥ 0, up to K_c.
-- Platt scaling with a positive fitted slope is strictly monotone, so descending p̂ is the same order as descending raw score (a non-positive fitted slope is reported as a calibration failure). Hence:
-
-$$
-\mathrm{R4}_d(\rho) = \lbrace i \in \mathrm{R3}_d : \hat{p}_i \ge p^* \rbrace
-$$
-
-where:
-
-- `R4_d(ρ)` = set of transactions that R4 reviews on day d at cost ratio ρ;
-- `R3_d` = R3's queue on day d: the K_c transactions with the highest raw scores;
-- `K_c` = fixed daily review budget at capacity c;
-- `p*` = R4's threshold (1/ρ in the primary model; 1/ρ′ when C_FP is included).
-
-On each day d, R4 reviews those transactions in R3's top-K_c queue whose calibrated probability reaches the threshold. That is the top min(K_c, number with p̂ ≥ p*) transactions of R3's queue.
-
-Consequences:
-- **R4 ⊆ R3 on every day.** R4 can only leave capacity unused; it never reviews a transaction that R3 skips.
-- **Under A5, R4 minimises expected scenario cost among all policies that review at most K_c per day, and so it cannot be worse than R3 in expectation [I].** An observed loss for R4 against R3 is therefore consistent with calibration failure at the margin **or** with finite-sample variation among the few marginal transactions; the grid-point intervals (§7) and the declined-set diagnostic (§8) are used to distinguish the two. This is the central interpretive point of RQ3.
-
-This was checked numerically on synthetic data (brute-force search over all subsets for small cases). No project data were used.
-
-### C_FP reduces to a relabelled ratio
-
-Define the scenario cost of policy π, in units of C_R (all costs divided by C_R):
-
-$$
-\begin{aligned}
-J_\pi(\rho, \varphi) &= N_\pi + \varphi \cdot \mathrm{FP}_\pi + \rho \cdot \mathrm{FN}_\pi \\
-\mathrm{FP}_\pi &= N_\pi - \mathrm{TP}_\pi
-\end{aligned}
-$$
-
-where:
-
-- `π` = a decision policy (R3 or R4);
-- `J_π(ρ, φ)` = scenario cost of policy π, in units of one review cost;
-- `N_π` = number of reviews; `TP_π` = frauds reviewed; `FP_π` = legitimate transactions reviewed; `FN_π` = frauds not reviewed;
-- `ρ` = C_miss / C_R; `φ` = C_FP / C_R.
-
-The scenario cost counts one unit per review, φ units per reviewed legitimate transaction, and ρ units per unreviewed fraud.
-
-**Difference between R4 and R3, step by step.** Compared with R3, R4 makes u fewer reviews. Of these, f are frauds and (u − f) are legitimate. R4 therefore also misses f more frauds:
-
-$$
-\begin{aligned}
-J_{\mathrm{R4}} - J_{\mathrm{R3}} &= -u - \varphi \cdot (u - f) + \rho \cdot f \\
-&= (\rho + \varphi) \cdot f - (1 + \varphi) \cdot u \\
-&= (1 + \varphi) \cdot (\rho' \cdot f - u)
-\end{aligned}
-$$
-
-where:
-
-- `u` = unused reviews: reviews made by R3 but not by R4 (N_R3 − N_R4);
-- `f` = frauds forgone: frauds reviewed by R3 but not by R4 (TP_R3 − TP_R4);
-- `ρ′` = effective cost ratio (defined next).
-
-The effective cost ratio, written in terms of ρ and φ, is:
-
-$$
-\rho' = \frac{\rho + \varphi}{1 + \varphi}
-$$
-
-This is the same ρ′ = (C_miss + C_FP) / (C_R + C_FP) defined above, after dividing numerator and denominator by C_R. The factor (1 + φ) is positive, so it never changes which policy is cheaper.
-
-**Consequence [I].** Comparing R4 with R3 depends on the three costs **only through ρ′**, up to a positive scale factor.
-- The C_FP model therefore adds no new decision behaviour. It relabels the ratio axis. A break-even ratio ρ_BE found with C_FP = 0 corresponds, under a given φ, to:
-
-  $$
-  \rho = (1 + \varphi) \cdot \rho_{\mathrm{BE}} - \varphi
-  $$
-
-  where:
-
-  - `ρ_BE` = break-even ratio found in the primary model (C_FP = 0), defined in §4;
-  - `ρ` = the miss-to-review cost ratio that gives the same R4-vs-R3 comparison when false alerts also cost φ review units.
-
-  This is ρ′ = ρ_BE solved for ρ. It converts a primary break-even into the missed-fraud cost ratio that gives the same decision when false alerts also carry friction cost φ.
-- This holds because C_FP is charged per reviewed legitimate transaction, and every policy compared here reviews a subset of R3's queue. It would not hold for a policy that blocks transactions without review.
-
 ## Decision
+
+The equations used below are derived step by step, with their assumptions, in [Appendix A](#appendix-a--derivation-and-validity-of-the-equations).
 
 ### 1. Primary cost model: A (review cost and missed-fraud cost only)
 
@@ -301,18 +42,18 @@ where:
 
 - `J_π(ρ)` = scenario cost of policy π (R3 or R4), in units of one review cost;
 - `N_π` = number of reviews; `FN_π` = frauds not reviewed;
-- `ρ` = C_miss / C_R, the miss-to-review cost ratio;
+- `ρ` = C_miss / C_R, the miss-to-review cost ratio, with C_miss the cost of missing (not reviewing) a fraud and C_R the cost of reviewing one transaction;
 - `p*` = R4's review threshold.
 
 The primary scenario cost, in units of one review cost, is the number of reviews plus ρ times the number of frauds not reviewed. R4's threshold is the reciprocal of ρ.
 
 Why [I]:
-- **No loss of generality for RQ3.** R4-vs-R3 comparisons under model B (with C_FP) are the primary results with ρ read as ρ′ (derivation above).
+- **No loss of generality for RQ3.** R4-vs-R3 comparisons under model B (with C_FP, an extra false-alert cost charged for each reviewed legitimate transaction) are the primary results with ρ read as ρ′, the effective cost ratio (C_miss + C_FP) / (C_R + C_FP) (derivation in [Appendix A](#appendix-a--derivation-and-validity-of-the-equations)).
 - **One parameter** gives a single cost-difference curve and one break-even ratio per capacity. Model B would need a two-dimensional surface for the same information.
 - **No dataset support for C_FP.** IEEE-CIS contains no information on customer contact, declines or friction [D; feasibility notebook §12].
 - **Literature fit.** The fixed-investigation-cost fraud matrix [REF-073, attributed to REF-006] is model A.
 
-**C_FP is a sensitivity analysis only.** Break-even ratios are converted for φ ∈ {1, 5} (friction equal to one and five review costs, both illustrative), using the conversion ρ = (1 + φ) · ρ_BE − φ derived above. No separate computation is needed. Relative cost differences are reported for φ = 0 only, because J_R3 itself depends on φ.
+**C_FP is a sensitivity analysis only.** Break-even ratios are converted for φ = C_FP / C_R ∈ {1, 5} (friction equal to one and five review costs, both illustrative), using the conversion ρ = (1 + φ) · ρ_BE − φ derived in [Appendix A](#appendix-a--derivation-and-validity-of-the-equations). No separate computation is needed. Relative cost differences are reported for φ = 0 only, because J_R3 itself depends on φ.
 
 ### 2. Ratio grid
 
@@ -544,7 +285,7 @@ In words, R4 wins if the reviews it left unused contained frauds at a lower rate
 
 ### 6. Amount-based analysis
 
-- **The amount analysis is an evaluation-only sensitivity analysis.** R3 and R4 decisions stay count-based (the threshold uses ρ). No amount-aware policy is added: a transaction-specific threshold C_R / A_i [REF-073] would be a **new decision policy** and would need its own GitHub Issue.
+- **The amount analysis is an evaluation-only sensitivity analysis.** R3 and R4 decisions stay count-based (the threshold uses ρ). No amount-aware policy is added: a transaction-specific threshold C_R / A_i (A_i = amount of transaction i) [REF-073] would be a **new decision policy** and would need its own GitHub Issue.
 - **Reported quantities [D]:**
   - `TransactionAmt` (the dataset's transaction amount) is in United States dollars (USD) per the organiser [REF-048, partially verified].
   - Amount-weighted recall of R3 and R4.
@@ -615,6 +356,59 @@ Reported for every capacity c, configuration m and grid ratio ρ ∈ G, plus exa
 
 The cost-difference plot follows the cost-curve idea of plotting performance across operating conditions [REF-040, REF-072]. It is not a formal Drummond–Holte cost curve, which assumes uncapacitated classifiers and normalises costs differently.
 
+## Evidence
+
+### Cost-derived thresholds from calibrated probabilities
+
+- **[L]** For a two-class decision with cost matrix entries c(predicted, actual), the expected-cost-minimising rule predicts class 1 if and only if P(class 1 | x) ≥ p*, where x is the example's features and [REF-008, Eq. 2]:
+
+  $$
+  p^* = \frac{c_{10} - c_{00}}{c_{10} - c_{00} + c_{01} - c_{11}}
+  $$
+
+  where:
+
+  - `p*` = probability threshold at or above which predicting class 1 has the lower expected cost;
+  - `cᵢⱼ` = cost of predicting class i when the actual class is j (i, j ∈ {0, 1}; 1 = positive class);
+  - `c₁₀` and `c₀₁` = costs of a false positive and a false negative; `c₀₀` and `c₁₁` = costs of the two correct decisions.
+
+  The numerator is the extra cost of acting on a true negative. The denominator adds the saving from acting on a true positive. p* is the probability at which acting and not acting have equal expected cost.
+  - Elkan requires the "reasonableness" conditions c₁₀ > c₀₀ and c₀₁ > c₁₁. When one of them fails, one decision is optimal for every example.
+  - Optimal decisions do not change when every cost is multiplied by a positive constant or shifted by a constant, so "any 2x2 cost matrix has essentially only one degree of freedom from a decision-making perspective" [REF-008].
+  - Elkan also warns that every cost must be measured from the **same baseline**, otherwise the matrix is economically incoherent. He recommends fitting the classifier on the data as given and then applying the cost threshold to its probability estimates [REF-008].
+- **[L]** **Fraud-specific cost matrix.** Höppner et al. use: false positive cost = true positive cost = a fixed investigation cost c_f (the cardholder is contacted in both cases), false negative cost = the transaction amount A_i, true negative cost = 0. The optimal threshold for transaction i is then:
+
+  $$
+  t^*_i = \frac{c_f}{A_i}
+  $$
+
+  where:
+
+  - `t*_i` = optimal probability threshold for transaction i;
+  - `c_f` = fixed investigation cost, the same for every alert;
+  - `A_i` = amount of transaction i (the cost of missing it if it is fraud).
+
+  A transaction is worth investigating when its fraud probability exceeds its investigation cost divided by its amount. They stress that this requires "true calibrated probabilities rather than just scores that rank" [REF-073]. They attribute the fixed-cost matrix to Hand et al. [REF-006]. This is exactly the structure of the protocol's primary cost model, with an example-dependent missed-fraud cost.
+- **[L]** **Threshold choice and calibration.** Choosing the threshold directly from the probability scale ("score-driven" threshold choice) gives an expected loss, averaged uniformly over cost proportions, equal to the Brier score. If the model is perfectly calibrated, this equals the loss of the optimal threshold choice [REF-038]. A policy that fixes the alert *rate* (such as R3) belongs to the "rate-driven" family, whose expected loss is linked to ranking quality (AUC, the area under the ROC curve) instead [REF-038].
+
+### Uncertain costs, cost curves and decision curves
+
+- **[L]** When costs cannot be specified precisely, classifiers should be compared across the whole range of plausible operating conditions, not at one assumed cost [REF-039].
+  - Provost & Fawcett name fraud detection as a domain where "costs change based on workforce and reimbursement issues".
+  - They treat the fixed-workforce problem ("the system should present the best possible set of K cases") as a separate decision criterion. This is R3's criterion [REF-039].
+- **[L]** **Cost curves** plot normalised expected cost against a probability-cost operating condition. Each fixed classifier is a straight line, and "the intersection point of the two lines is the value … where [the two classifiers] perform identically" [REF-040]. That is the classical break-even point. Drummond & Holte also put bootstrap confidence intervals on cost lines [REF-040].
+- **[L]** **Decision curve analysis** (medical prediction) plots the *net benefit* of a model against the threshold probability. The threshold is taken to encode how the decision-maker weighs false positives against false negatives [REF-072]. The ratio is described as an "exchange rate", for example "the maximum number of patients a doctor would recommend for biopsy to find one cancer". Because it is subjective, net benefit is plotted across "a range of reasonable exchange rates" [REF-075]. This is the same logic as RQ3's ratio grid. Here ρ (the miss-to-review cost ratio: assumed cost of missing a fraud ÷ cost of one review) is the largest number of reviews worth spending to find one fraud.
+- **[L]** **Calibration drives decision value.** In simulation, "miscalibration always reduced Net Benefit". Harm, meaning a result worse than the default strategies, arose when a model **under-estimated risk at a threshold below the event rate**, or over-estimated risk at a threshold above it [REF-074].
+
+### Break-even analysis in fraud detection
+
+- **[L]** No verified source prescribes this project's specific cost-ratio grid or break-even rule for capacity-constrained fraud review. The fraud literature supplies the cost-matrix structure [REF-006, REF-073] and the capacity framing [REF-004, REF-005, REF-006]. The grid and break-even rule in [Decision](#decision) apply the general methods above and are **researcher decisions [I]**.
+
+- **[L]** Zhang et al. [REF-078] show, on IEEE-CIS with a separate policy-selection period, the binding-versus-slack pattern this record anticipates: at a tight capacity ceiling their calibrated cost-threshold queue was clipped to the ceiling in almost every run, while at a slack ceiling full-capacity review cost markedly more than the calibrated threshold.
+  - Their calibrated rule overlaps strongly with R4: a Platt-calibrated probability compared with a cost-derived threshold of the same form as p\* = (C_R + C_FP) / (C_miss + C_FP), capped at the review ceiling. Their ceiling applies per evaluation period rather than per day, and they report regret against a retrospective oracle rather than break-even ratios.
+  - ρ_BE and ρ_sat are therefore an extension and alternative operationalisation of that pattern under a fixed daily cap, not a primary novelty claim.
+- **[L]** The protocol cites REF-007 for amount-dependent costs. Its author copy could not be read in this pass (access restricted), so the amount-dependent cost structure is supported here by REF-073, which was read in full (arXiv version).
+
 ## Alternatives considered
 
 | Alternative | Why not chosen |
@@ -653,6 +447,214 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
   - REF-038's threshold-choice results were read in the arXiv preprint (1112.2640v2), whose abstract matches the published JMLR abstract.
   - REF-039 was read in its arXiv version (cs/0009007).
   - REF-007's cost matrix was not read.
+
+## Appendix A — Derivation and validity of the equations
+
+### Per-transaction decision (no capacity limit)
+
+Assumptions (all simulated, all stated):
+- **A1 — Perfect verification.** A reviewed fraud is caught, with no residual loss. A reviewed legitimate transaction is cleared.
+- **A2 — Per-transaction, additive costs.** Reviewing one transaction does not stop other frauds of the same entity. Costs do not depend on each other.
+- **A3 — Common baseline.** An unreviewed legitimate transaction costs 0. All costs are measured from that baseline [REF-008].
+- **A4 — C_R is charged on every review**, fraud or not. C_FP is charged only on reviewed legitimate transactions. C_miss is charged only on unreviewed frauds.
+- **A5 — Calibration.** p̂_i equals the Test-period probability that transaction i is fraud.
+- **A6 — Unused capacity has value.** C_R is the marginal cost a review slot would incur or free up (e.g. analyst time redeployable to other work). If slots were fully sunk with no alternative use, C_R = 0 and only C_FP could justify leaving capacity unused. The reduction below covers that case as well.
+
+**Direct derivation.** For a transaction with calibrated fraud probability p̂, the expected cost of each action is:
+
+$$
+\begin{aligned}
+E[\text{cost} \mid \text{not reviewed}] &= \hat{p} \cdot C_{\mathrm{miss}} \\
+E[\text{cost} \mid \text{reviewed}] &= C_R + (1 - \hat{p}) \cdot C_{\mathrm{FP}}
+\end{aligned}
+$$
+
+where:
+
+- `p̂` = calibrated probability that the transaction is fraud;
+- `C_R` = cost of reviewing one transaction;
+- `C_miss` = cost of missing a fraud;
+- `C_FP` = additional false-alert/customer-friction cost for reviewing a legitimate transaction;
+- `E[cost | action]` = expected cost of taking that action.
+
+Not reviewing costs C_miss only if the transaction is fraud. Reviewing always costs C_R, plus C_FP if the transaction turns out to be legitimate.
+
+Review when reviewing is no more expensive in expectation:
+
+$$
+\begin{aligned}
+C_R + (1 - \hat{p}) \cdot C_{\mathrm{FP}} &\le \hat{p} \cdot C_{\mathrm{miss}} \\
+C_R + C_{\mathrm{FP}} - \hat{p} \cdot C_{\mathrm{FP}} &\le \hat{p} \cdot C_{\mathrm{miss}} \\
+C_R + C_{\mathrm{FP}} &\le \hat{p} \cdot (C_{\mathrm{miss}} + C_{\mathrm{FP}}) \\
+\hat{p} &\ge \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}}
+\end{aligned}
+$$
+
+The right-hand side of the last line is the threshold p*.
+
+**Check against Elkan's formula.** In Elkan's notation (class 1 = review/fraud), the cost matrix entries are:
+
+$$
+\begin{aligned}
+c_{00} &= 0 && \text{(legitimate, not reviewed)} \\
+c_{01} &= C_{\mathrm{miss}} && \text{(fraud, not reviewed)} \\
+c_{10} &= C_R + C_{\mathrm{FP}} && \text{(legitimate, reviewed)} \\
+c_{11} &= C_R && \text{(fraud, reviewed)}
+\end{aligned}
+$$
+
+where:
+
+- `cᵢⱼ` = cost of action i (1 = review, 0 = do not review) when the true class is j (1 = fraud, 0 = legitimate).
+
+Substituting into REF-008 Eq. 2, step by step:
+
+$$
+\begin{aligned}
+p^* &= \frac{c_{10} - c_{00}}{c_{10} - c_{00} + c_{01} - c_{11}} \\
+&= \frac{C_R + C_{\mathrm{FP}}}{(C_R + C_{\mathrm{FP}}) + C_{\mathrm{miss}} - C_R} \\
+&= \frac{C_R + C_{\mathrm{FP}}}{C_{\mathrm{miss}} + C_{\mathrm{FP}}} \\
+&= \frac{1}{\rho'}
+\end{aligned}
+$$
+
+where:
+
+- `p*` = cost-derived probability threshold used by R4;
+- `ρ′` = effective cost ratio, (C_miss + C_FP) / (C_R + C_FP).
+
+The two routes agree. The threshold is the reciprocal of the effective cost ratio ρ′ = (C_miss + C_FP) / (C_R + C_FP).
+
+**Primary case (no false-alert cost).** When C_FP = 0:
+
+$$
+\begin{aligned}
+p^* &= \frac{C_R}{C_{\mathrm{miss}}} \\
+&= \frac{1}{\rho}
+\end{aligned}
+$$
+
+where:
+
+- `ρ` = C_miss / C_R, the miss-to-review cost ratio.
+
+A transaction is reviewed when its calibrated fraud probability is at least one divided by the miss-to-review cost ratio. For example, with ρ = 20 it is reviewed if p̂ ≥ 0.05, i.e. if at least one review in twenty is expected to find a fraud.
+
+**Verdict [I].** Both equations in the protocol are **correct under A1–A5**. They depend critically on A4.
+- If C_R were wrongly charged only on false alerts, the threshold would become the following. That is a different and incorrect rule under the stated assumptions:
+
+  $$
+  p^*_{\mathrm{wrong}} = \frac{C_R}{C_R + C_{\mathrm{miss}}}
+  $$
+
+  where:
+
+  - `p*_wrong` = the threshold that would result if C_R were charged only on reviewed legitimate transactions (the incorrect variant).
+
+- Elkan's reasonableness conditions reduce to:
+
+  $$
+  C_{\mathrm{miss}} > C_R, \qquad \text{i.e.} \qquad \rho > 1
+  $$
+
+  For ρ ≤ 1 the threshold is p* ≥ 1. Reviewing can then never reduce expected cost, even for a transaction that is certainly fraud, so R4 reviews nothing.
+
+### With the daily capacity limit
+
+On each day, R4's rule is equivalent to maximising the total expected net benefit of reviewing over at most K_c transactions. The expected net benefit of reviewing transaction i is:
+
+$$
+b_i = \hat{p}_i \cdot (C_{\mathrm{miss}} + C_{\mathrm{FP}}) - (C_R + C_{\mathrm{FP}})
+$$
+
+where:
+
+- `b_i` = expected net benefit of reviewing transaction i, in the same units as the costs;
+- `p̂_i` = calibrated fraud probability of transaction i;
+- `C_miss`, `C_R`, `C_FP` = missed-fraud, review and false-alert costs (as defined above).
+
+b_i is the expected cost avoided by reviewing transaction i, minus the expected cost of the review itself. It is positive exactly when p̂_i ≥ p*.
+
+- b_i increases with p̂_i, so the optimum is: take transactions in descending p̂ order while b_i ≥ 0, up to K_c.
+- Platt scaling with a positive fitted slope is strictly monotone, so descending p̂ is the same order as descending raw score (a non-positive fitted slope is reported as a calibration failure). Hence:
+
+$$
+\mathrm{R4}_d(\rho) = \lbrace i \in \mathrm{R3}_d : \hat{p}_i \ge p^* \rbrace
+$$
+
+where:
+
+- `R4_d(ρ)` = set of transactions that R4 reviews on day d at cost ratio ρ;
+- `R3_d` = R3's queue on day d: the K_c transactions with the highest raw scores;
+- `K_c` = fixed daily review budget at capacity c;
+- `p*` = R4's threshold (1/ρ in the primary model; 1/ρ′ when C_FP is included).
+
+On each day d, R4 reviews those transactions in R3's top-K_c queue whose calibrated probability reaches the threshold. That is the top min(K_c, number with p̂ ≥ p*) transactions of R3's queue.
+
+Consequences:
+- **R4 ⊆ R3 on every day.** R4 can only leave capacity unused; it never reviews a transaction that R3 skips.
+- **Under A5, R4 minimises expected scenario cost among all policies that review at most K_c per day, and so it cannot be worse than R3 in expectation [I].** An observed loss for R4 against R3 is therefore consistent with calibration failure at the margin **or** with finite-sample variation among the few marginal transactions; the grid-point intervals (§7) and the declined-set diagnostic (§8) are used to distinguish the two. This is the central interpretive point of RQ3.
+
+This was checked numerically on synthetic data (brute-force search over all subsets for small cases). No project data were used.
+
+### C_FP reduces to a relabelled ratio
+
+Define the scenario cost of policy π, in units of C_R (all costs divided by C_R):
+
+$$
+\begin{aligned}
+J_\pi(\rho, \varphi) &= N_\pi + \varphi \cdot \mathrm{FP}_\pi + \rho \cdot \mathrm{FN}_\pi \\
+\mathrm{FP}_\pi &= N_\pi - \mathrm{TP}_\pi
+\end{aligned}
+$$
+
+where:
+
+- `π` = a decision policy (R3 or R4);
+- `J_π(ρ, φ)` = scenario cost of policy π, in units of one review cost;
+- `N_π` = number of reviews; `TP_π` = frauds reviewed; `FP_π` = legitimate transactions reviewed; `FN_π` = frauds not reviewed;
+- `ρ` = C_miss / C_R; `φ` = C_FP / C_R.
+
+The scenario cost counts one unit per review, φ units per reviewed legitimate transaction, and ρ units per unreviewed fraud.
+
+**Difference between R4 and R3, step by step.** Compared with R3, R4 makes u fewer reviews. Of these, f are frauds and (u − f) are legitimate. R4 therefore also misses f more frauds:
+
+$$
+\begin{aligned}
+J_{\mathrm{R4}} - J_{\mathrm{R3}} &= -u - \varphi \cdot (u - f) + \rho \cdot f \\
+&= (\rho + \varphi) \cdot f - (1 + \varphi) \cdot u \\
+&= (1 + \varphi) \cdot (\rho' \cdot f - u)
+\end{aligned}
+$$
+
+where:
+
+- `u` = unused reviews: reviews made by R3 but not by R4 (N_R3 − N_R4);
+- `f` = frauds forgone: frauds reviewed by R3 but not by R4 (TP_R3 − TP_R4);
+- `ρ′` = effective cost ratio (defined next).
+
+The effective cost ratio, written in terms of ρ and φ, is:
+
+$$
+\rho' = \frac{\rho + \varphi}{1 + \varphi}
+$$
+
+This is the same ρ′ = (C_miss + C_FP) / (C_R + C_FP) defined above, after dividing numerator and denominator by C_R. The factor (1 + φ) is positive, so it never changes which policy is cheaper.
+
+**Consequence [I].** Comparing R4 with R3 depends on the three costs **only through ρ′**, up to a positive scale factor.
+- The C_FP model therefore adds no new decision behaviour. It relabels the ratio axis. A break-even ratio ρ_BE found with C_FP = 0 corresponds, under a given φ, to:
+
+  $$
+  \rho = (1 + \varphi) \cdot \rho_{\mathrm{BE}} - \varphi
+  $$
+
+  where:
+
+  - `ρ_BE` = break-even ratio found in the primary model (C_FP = 0), defined in §4;
+  - `ρ` = the miss-to-review cost ratio that gives the same R4-vs-R3 comparison when false alerts also cost φ review units.
+
+  This is ρ′ = ρ_BE solved for ρ. It converts a primary break-even into the missed-fraud cost ratio that gives the same decision when false alerts also carry friction cost φ.
+- This holds because C_FP is charged per reviewed legitimate transaction, and every policy compared here reviews a subset of R3's queue. It would not hold for a policy that blocks transactions without review.
 
 ## References
 

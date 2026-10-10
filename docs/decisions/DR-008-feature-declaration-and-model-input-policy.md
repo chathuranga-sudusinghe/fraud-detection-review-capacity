@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by Issue #23; supervisor review pending. The neural-network representation is proposed separately in [DR-012](DR-012-neural-network-input-representation.md). |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54) and 2026-10-10 (Issue #57) |
+| Status | Accepted (pre-freeze) by Issue #23; supervisor review pending (Issue #56) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54) and 2026-10-10 (Issue #57: neural-network representation moved to DR-012) |
 | Evidence source | Raw-file headers (schema only); development-period values (relative days 1–154) for type, missingness and cardinality checks, **with the target column never loaded**; organiser data description; LightGBM and CatBoost documentation; input-type checks on synthetic data; `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 8, 9 |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md), [`config/features.yaml`](../../config/features.yaml), [feature catalog](../feature-catalog.md) |
 
@@ -19,6 +19,110 @@ The declaration is not trivial:
 This record fixes, before any model is implemented: the target, the excluded columns, the categorical columns, the numeric columns, the canonical frame and the exact technical conversions for the tree-based libraries. The proposed neural-network representation is in [DR-012](DR-012-neural-network-input-representation.md).
 
 **Scope limits.** No feature is engineered, target-encoded, aggregated or created from pseudo-entity keys. No model is trained or tuned. The temporal split ([DR-001](DR-001-temporal-split-strategy.md)), capacity settings ([DR-002](DR-002-review-capacity-definition.md)), class weighting and hypotheses are defined elsewhere.
+
+## Decision
+
+### 1. Target
+
+`isFraud` is the target. **It is never a model input**, in any form.
+
+### 2. Excluded columns (2)
+
+| Column | Reason |
+|---|---|
+| `TransactionID` | Row identifier; monotone in time, i.e. a disguised timestamp [D] |
+| `TransactionDT` | Raw time offset. Used only to derive relative days and the temporal split ([DR-001](DR-001-temporal-split-strategy.md)), never as a model input |
+
+**No further column is excluded.**
+- High missingness (up to 99.2 %, `id_24`) and high cardinality are **not** reasons for exclusion: every model handles missing values (natively for the trees, through indicators for the neural networks, [DR-012](DR-012-neural-network-input-representation.md)), and the categorical columns are the organiser's own list.
+- The known risks of the undocumented look-back windows of the C, D and V feature groups, and of entity memorisation through `card1`-type fields, are already stated as threats to validity in the protocol. They are not new exclusion grounds.
+- Heuristic pseudo-entity keys remain audit tools only and are **not** model inputs.
+
+### 3. Categorical columns (49) — the organiser's list, unchanged
+
+| Group | Columns | Count | Reason |
+|---|---|---|---|
+| Product | `ProductCD` | 1 | Organiser-declared categorical; 5 text codes |
+| Card | `card1`, `card2`, `card3`, `card4`, `card5`, `card6` | 6 | Organiser-declared. `card4` and `card6` are text; `card1`–`card3` and `card5` are **integer-coded** labels whose numeric order has no documented meaning |
+| Address | `addr1`, `addr2` | 2 | Organiser-declared; integer-coded billing region and country labels |
+| Email domain | `P_emaildomain`, `R_emaildomain` | 2 | Organiser-declared; text domain names |
+| Match flags | `M1`–`M9` | 9 | Organiser-declared; T/F flags, and M0/M1/M2 for `M4` |
+| Device | `DeviceType`, `DeviceInfo` | 2 | Organiser-declared; text |
+| Identity | `id_12`–`id_38` | 27 | Organiser-declared. 15 are text. The other 12 (`id_13`, `id_14`, `id_17`–`id_22`, `id_24`–`id_26`, `id_32`) are **integer-coded** labels |
+
+**Why the organiser's list is adopted as it stands [I].**
+- It is the only documented source of variable roles for these masked fields.
+- Overriding it would require inventing semantics that the organiser withholds.
+- Several numeric-coded identity fields look ordered (e.g. `id_14` ranges from −660 to 720 and `id_32` takes the values 0/16/24/32). Their meaning is **not documented**, so no ordinal interpretation is imposed; they stay categorical as declared.
+- The feasibility audit already used this list (notebook §8).
+
+### 4. Numeric columns (382) — every remaining joined column
+
+| Group | Columns | Count |
+|---|---|---|
+| Amount | `TransactionAmt` | 1 |
+| Distance | `dist1`, `dist2` | 2 |
+| Counts | `C1`–`C14` | 14 |
+| Time deltas | `D1`–`D15` (including `D9`; negative values kept) | 15 |
+| Organiser-engineered | `V1`–`V339` (the feature columns, not the validation partitions) | 339 |
+| Identity numeric | `id_01`–`id_11` | 11 |
+
+**Rule:** a joined column is numeric **if and only if** it is neither the target, nor excluded, nor in the categorical list. Binary-valued V columns remain numeric: they have no organiser categorical label, and a two-valued numeric split is equivalent for trees.
+
+### 5. One canonical input, then the model-specific form
+
+All four models start from **one canonical data frame**, built identically:
+
+1. Drop `isFraud`, `TransactionID` and `TransactionDT`.
+2. **Categorical columns → canonical text labels:**
+   - text values are kept exactly (no case folding, trimming, merging or grouping of rare levels);
+   - integer-valued numeric codes are written as whole-number text (`100.0` → `"100"`, `1000` → `"1000"`);
+   - the implementation must **fail loudly** if a numeric-coded categorical value is not a whole number;
+   - missing values become the explicit label `"__MISSING__"`.
+3. **Numeric columns → `float64`**, with missing values left as NaN. No imputation, scaling, clipping, winsorising or transformation.
+
+Then, for each tree-based library (the neural-network form is in [DR-012](DR-012-neural-network-input-representation.md)):
+
+| Step | LightGBM | CatBoost |
+|---|---|---|
+| Categorical type | pandas `Categorical`, with the **category list fixed from Train rows only** and reused unchanged for Validation 1, Validation 2 and Test | Canonical text columns passed directly |
+| Declared categorical columns | `categorical_feature` = the 49 names | `cat_features` = the 49 names |
+| Missing categorical value | The level `"__MISSING__"` (a normal category) | The level `"__MISSING__"` (a normal category) |
+| Category unseen in Train | Becomes NaN **during preprocessing**, because it is absent from the Train-fixed pandas category list; LightGBM then treats it as missing. This reproduces LightGBM's own documented predict-time behaviour [REF-076] | Passed as its text label; handled natively by CatBoost as a value not seen in training |
+| Numeric missing value | Native (`use_missing = true`, `zero_as_missing = false`; library defaults) | Native (`nan_mode = Min`; library default) |
+| Extra encodings | None | None. CatBoost's internal ordered target statistics are part of the model family, not preprocessing [REF-012] |
+
+**Why the missing-value label is explicit for categoricals [I].** CatBoost cannot accept NaN in a categorical column (checked under [Library requirements](#library-requirements-l-checked-on-synthetic-data)), so some label is technically required. Using the **same** label in both libraries gives them identical categorical information. For LightGBM a missing value simply becomes one more category it can split on. Numeric missing values stay native in both libraries, as the protocol prefers.
+
+**Why LightGBM categories are fixed from Train [I].** It keeps the category-to-code mapping free of later-period information. It also matches LightGBM's own behaviour of aligning categories to those seen in training [REF-076].
+
+### 6. Parity statement
+
+- **Same semantic input:** all four models receive the same 431 columns, the same 49 categorical declarations, the same canonical category labels and the same numeric values.
+- **No model is given engineered information**: no counts, frequencies, target statistics or entity keys are computed outside the models.
+- **Family-specific representation.** The trees use native categorical and missing-value handling (§5); the neural networks receive the same information as integer category indices, transformed numeric values and missingness indicators ([DR-012](DR-012-neural-network-input-representation.md)). These forms are part of each family's design and therefore of the family contrast.
+- **Two unavoidable differences between the tree libraries remain.** Both are part of each library's native design, not of this study's preprocessing:
+  1. how categories are split (LightGBM's gradient-sorted category partitions versus CatBoost's ordered target statistics);
+  2. how an unseen category is treated. For LightGBM the Train-fixed category list turns it into a missing value, matching LightGBM's documented default; CatBoost handles it natively as a new value.
+
+  These are "categorical treatment" differences that belong to the models themselves (feasibility notebook §9).
+- **Tuning parameters are not fixed here.** LightGBM's categorical-regularisation parameters (`max_cat_threshold`, `cat_l2`, `cat_smooth`, `min_data_per_group`) and CatBoost's corresponding settings belong to the equal-budget tuning search on Validation 1, which is defined separately. This record only requires that neither library's categorical handling be switched off or bypassed.
+
+### 7. High-cardinality policy
+
+- **All high-cardinality columns stay categorical for every model** (`card1`, `DeviceInfo`, `card2`, `id_19`, `id_20`, `id_21`, `id_25`, `addr1`, `id_33`, the email domains).
+- They are not merged, frequency-encoded or dropped: any of these would be feature engineering, and treating them as numeric in one library only would break parity.
+- **Documented cautions [I]:**
+  - **Entity memorisation.** `card1` has 11,870 Train levels, and 27 % of Train rows fall in levels with fewer than 100 rows. Together with other card and address fields it can let a model partly recognise recurring entities. This is the optimism risk already recorded in DR-001 and in the protocol's threats to validity. The "recurring vs new pseudo-entity" false-negative slice will show its effect.
+  - **Non-stationary categories.** `id_13` (51 % of Validation 2 values unseen in Train), `id_31` (41 %), `id_21` (8 %) and `id_25` (6 %) will often become missing values for LightGBM and the neural networks (through the Train-fixed category list and vocabulary) or new values for CatBoost in later periods. This is part of the temporal-transfer problem the study measures, not a defect to remove.
+  - **LightGBM guidance.** LightGBM's documentation notes that high-cardinality features often work best treated as numeric [REF-076]. That advice is **not** adopted, because it would contradict the organiser's declaration and break parity. Its effect is instead controlled through LightGBM's categorical-regularisation parameters in the equal-budget tuning.
+  - **Computation.** Very large category counts increase LightGBM histogram cost and CatBoost statistic computation. This affects run time, not validity.
+
+### 8. Machine-readable declaration
+
+[`config/features.yaml`](../../config/features.yaml) lists the target, the excluded columns with reasons, all 49 categorical and all 382 numeric column names explicitly, and the encoding rules above. It contains **no data values and no fitted statistics**. It was checked against the raw-file headers: all 434 joined columns appear exactly once.
+
+The human-readable counterpart is the [feature catalog](../feature-catalog.md). It documents every column's official meaning (or states that it is masked), observed type, missingness, cardinality, role and cautions, using development data only.
 
 ## Evidence
 
@@ -128,110 +232,6 @@ Observed value types in development data [D]:
 | `P_emaildomain` / `R_emaildomain` | 59 / 60 | 15 / 32 | 0.3 % / 1.1 % | 0 % | 0 % |
 
 "Unseen" shares are computed over non-missing values. The threshold of 100 rows is LightGBM's default `min_data_per_group` (minimum rows per categorical group) [REF-076].
-
-## Decision
-
-### 1. Target
-
-`isFraud` is the target. **It is never a model input**, in any form.
-
-### 2. Excluded columns (2)
-
-| Column | Reason |
-|---|---|
-| `TransactionID` | Row identifier; monotone in time, i.e. a disguised timestamp [D] |
-| `TransactionDT` | Raw time offset. Used only to derive relative days and the temporal split ([DR-001](DR-001-temporal-split-strategy.md)), never as a model input |
-
-**No further column is excluded.**
-- High missingness (up to 99.2 %, `id_24`) and high cardinality are **not** reasons for exclusion: every model handles missing values (natively for the trees, through indicators for the neural networks, [DR-012](DR-012-neural-network-input-representation.md)), and the categorical columns are the organiser's own list.
-- The known risks of the undocumented look-back windows of the C, D and V feature groups, and of entity memorisation through `card1`-type fields, are already stated as threats to validity in the protocol. They are not new exclusion grounds.
-- Heuristic pseudo-entity keys remain audit tools only and are **not** model inputs.
-
-### 3. Categorical columns (49) — the organiser's list, unchanged
-
-| Group | Columns | Count | Reason |
-|---|---|---|---|
-| Product | `ProductCD` | 1 | Organiser-declared categorical; 5 text codes |
-| Card | `card1`, `card2`, `card3`, `card4`, `card5`, `card6` | 6 | Organiser-declared. `card4` and `card6` are text; `card1`–`card3` and `card5` are **integer-coded** labels whose numeric order has no documented meaning |
-| Address | `addr1`, `addr2` | 2 | Organiser-declared; integer-coded billing region and country labels |
-| Email domain | `P_emaildomain`, `R_emaildomain` | 2 | Organiser-declared; text domain names |
-| Match flags | `M1`–`M9` | 9 | Organiser-declared; T/F flags, and M0/M1/M2 for `M4` |
-| Device | `DeviceType`, `DeviceInfo` | 2 | Organiser-declared; text |
-| Identity | `id_12`–`id_38` | 27 | Organiser-declared. 15 are text. The other 12 (`id_13`, `id_14`, `id_17`–`id_22`, `id_24`–`id_26`, `id_32`) are **integer-coded** labels |
-
-**Why the organiser's list is adopted as it stands [I].**
-- It is the only documented source of variable roles for these masked fields.
-- Overriding it would require inventing semantics that the organiser withholds.
-- Several numeric-coded identity fields look ordered (e.g. `id_14` ranges from −660 to 720 and `id_32` takes the values 0/16/24/32). Their meaning is **not documented**, so no ordinal interpretation is imposed; they stay categorical as declared.
-- The feasibility audit already used this list (notebook §8).
-
-### 4. Numeric columns (382) — every remaining joined column
-
-| Group | Columns | Count |
-|---|---|---|
-| Amount | `TransactionAmt` | 1 |
-| Distance | `dist1`, `dist2` | 2 |
-| Counts | `C1`–`C14` | 14 |
-| Time deltas | `D1`–`D15` (including `D9`; negative values kept) | 15 |
-| Organiser-engineered | `V1`–`V339` (the feature columns, not the validation partitions) | 339 |
-| Identity numeric | `id_01`–`id_11` | 11 |
-
-**Rule:** a joined column is numeric **if and only if** it is neither the target, nor excluded, nor in the categorical list. Binary-valued V columns remain numeric: they have no organiser categorical label, and a two-valued numeric split is equivalent for trees.
-
-### 5. One canonical input, then the model-specific form
-
-All four models start from **one canonical data frame**, built identically:
-
-1. Drop `isFraud`, `TransactionID` and `TransactionDT`.
-2. **Categorical columns → canonical text labels:**
-   - text values are kept exactly (no case folding, trimming, merging or grouping of rare levels);
-   - integer-valued numeric codes are written as whole-number text (`100.0` → `"100"`, `1000` → `"1000"`);
-   - the implementation must **fail loudly** if a numeric-coded categorical value is not a whole number;
-   - missing values become the explicit label `"__MISSING__"`.
-3. **Numeric columns → `float64`**, with missing values left as NaN. No imputation, scaling, clipping, winsorising or transformation.
-
-Then, for each tree-based library (the neural-network form is in [DR-012](DR-012-neural-network-input-representation.md)):
-
-| Step | LightGBM | CatBoost |
-|---|---|---|
-| Categorical type | pandas `Categorical`, with the **category list fixed from Train rows only** and reused unchanged for Validation 1, Validation 2 and Test | Canonical text columns passed directly |
-| Declared categorical columns | `categorical_feature` = the 49 names | `cat_features` = the 49 names |
-| Missing categorical value | The level `"__MISSING__"` (a normal category) | The level `"__MISSING__"` (a normal category) |
-| Category unseen in Train | Becomes NaN **during preprocessing**, because it is absent from the Train-fixed pandas category list; LightGBM then treats it as missing. This reproduces LightGBM's own documented predict-time behaviour [REF-076] | Passed as its text label; handled natively by CatBoost as a value not seen in training |
-| Numeric missing value | Native (`use_missing = true`, `zero_as_missing = false`; library defaults) | Native (`nan_mode = Min`; library default) |
-| Extra encodings | None | None. CatBoost's internal ordered target statistics are part of the model family, not preprocessing [REF-012] |
-
-**Why the missing-value label is explicit for categoricals [I].** CatBoost cannot accept NaN in a categorical column (checked above), so some label is technically required. Using the **same** label in both libraries gives them identical categorical information. For LightGBM a missing value simply becomes one more category it can split on. Numeric missing values stay native in both libraries, as the protocol prefers.
-
-**Why LightGBM categories are fixed from Train [I].** It keeps the category-to-code mapping free of later-period information. It also matches LightGBM's own behaviour of aligning categories to those seen in training [REF-076].
-
-### 6. Parity statement
-
-- **Same semantic input:** all four models receive the same 431 columns, the same 49 categorical declarations, the same canonical category labels and the same numeric values.
-- **No model is given engineered information**: no counts, frequencies, target statistics or entity keys are computed outside the models.
-- **Family-specific representation.** The trees use native categorical and missing-value handling (§5); the neural networks receive the same information as integer category indices, transformed numeric values and missingness indicators ([DR-012](DR-012-neural-network-input-representation.md)). These forms are part of each family's design and therefore of the family contrast.
-- **Two unavoidable differences between the tree libraries remain.** Both are part of each library's native design, not of this study's preprocessing:
-  1. how categories are split (LightGBM's gradient-sorted category partitions versus CatBoost's ordered target statistics);
-  2. how an unseen category is treated. For LightGBM the Train-fixed category list turns it into a missing value, matching LightGBM's documented default; CatBoost handles it natively as a new value.
-
-  These are "categorical treatment" differences that belong to the models themselves (feasibility notebook §9).
-- **Tuning parameters are not fixed here.** LightGBM's categorical-regularisation parameters (`max_cat_threshold`, `cat_l2`, `cat_smooth`, `min_data_per_group`) and CatBoost's corresponding settings belong to the equal-budget tuning search on Validation 1, which is defined separately. This record only requires that neither library's categorical handling be switched off or bypassed.
-
-### 7. High-cardinality policy
-
-- **All high-cardinality columns stay categorical for every model** (`card1`, `DeviceInfo`, `card2`, `id_19`, `id_20`, `id_21`, `id_25`, `addr1`, `id_33`, the email domains).
-- They are not merged, frequency-encoded or dropped: any of these would be feature engineering, and treating them as numeric in one library only would break parity.
-- **Documented cautions [I]:**
-  - **Entity memorisation.** `card1` has 11,870 Train levels, and 27 % of Train rows fall in levels with fewer than 100 rows. Together with other card and address fields it can let a model partly recognise recurring entities. This is the optimism risk already recorded in DR-001 and in the protocol's threats to validity. The "recurring vs new pseudo-entity" false-negative slice will show its effect.
-  - **Non-stationary categories.** `id_13` (51 % of Validation 2 values unseen in Train), `id_31` (41 %), `id_21` (8 %) and `id_25` (6 %) will often become missing values for LightGBM and the neural networks (through the Train-fixed category list and vocabulary) or new values for CatBoost in later periods. This is part of the temporal-transfer problem the study measures, not a defect to remove.
-  - **LightGBM guidance.** LightGBM's documentation notes that high-cardinality features often work best treated as numeric [REF-076]. That advice is **not** adopted, because it would contradict the organiser's declaration and break parity. Its effect is instead controlled through LightGBM's categorical-regularisation parameters in the equal-budget tuning.
-  - **Computation.** Very large category counts increase LightGBM histogram cost and CatBoost statistic computation. This affects run time, not validity.
-
-### 8. Machine-readable declaration
-
-[`config/features.yaml`](../../config/features.yaml) lists the target, the excluded columns with reasons, all 49 categorical and all 382 numeric column names explicitly, and the encoding rules above. It contains **no data values and no fitted statistics**. It was checked against the raw-file headers: all 434 joined columns appear exactly once.
-
-The human-readable counterpart is the [feature catalog](../feature-catalog.md). It documents every column's official meaning (or states that it is masked), observed type, missingness, cardinality, role and cautions, using development data only.
 
 ## Alternatives considered
 

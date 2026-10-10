@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted |
-| Date | 2026-09-23; revised 2026-10-09 |
+| Date | 2026-09-23 (Issue #6); revised 2026-10-09 (Issue #57: AI assistants) |
 | Evidence source | Project governance (GitHub Issue #6); GitHub documentation on linking pull requests to issues |
 | Related | [`AGENTS.md`](../../AGENTS.md), [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
