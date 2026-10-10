@@ -15,6 +15,8 @@ The final Test period (relative days 155–182) is sealed ([DR-001](../docs/deci
 
 Reading order: 02 → 03 for the current data view; 01 for the full feasibility evidence and split rationale; 04 for the corrections to 01 and 02.
 
+From the data-preparation stage onwards, the reusable code is the `review_capacity` package ([`src/review_capacity/`](../src/review_capacity/), Issue #62). New notebooks load, validate and partition the data through it instead of repeating that logic. Notebooks 01–04 stay unchanged as saved evidence.
+
 ## Notebook 01 section map
 
 Notebook 01 is retained unchanged as the timestamped pre-freeze record. Documents cite its sections by number:

@@ -43,9 +43,9 @@ The study is organised along the ten stages of the Foundational Methodology for 
 | 1 | Business understanding | Research problem, gap, RQ1–RQ3, H1–H3; structured literature review | Done; design review with the supervisor pending | [Protocol](docs/protocol.md), [research foundation](docs/research-foundation.md), [literature review](docs/literature-review.md) |
 | 2 | Analytic approach | Predictive, prescriptive, inferential and descriptive components, each mapped to RQ1–RQ3 and H1–H3 | Done; design review with the supervisor pending | [Protocol: Analytic Approach](docs/protocol.md#analytic-approach) |
 | 3 | Data requirements | Data each research question and hypothesis needs, and how the dataset's limits are handled (no real costs, real capacity, label-report dates or account identifiers) | Done; design review with the supervisor pending | [Protocol: Data Requirements](docs/protocol.md#data-requirements) |
-| 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; manifest pending (protocol design item 8) | [Dataset](docs/dataset.md), notebooks 01–02 |
+| 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; dataset manifest generated and committed (Issue #62) | [Dataset](docs/dataset.md#dataset-manifest), [`data/datapackage.json`](data/datapackage.json), notebooks 01–02 |
 | 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
-| 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based input representation fixed; neural-network representation proposed; validation contract and pipeline pending | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md) |
+| 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based input representation fixed; neural-network representation proposed; validation contract and data-preparation pipeline implemented and verified on the raw data (Issue #62) | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md), [`src/review_capacity/`](src/review_capacity/) |
 | 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; graphics processing unit (GPU) feasibility verified (Issue #50); training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
 | 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after freeze | Design defined; runs after freeze | [Protocol: Statistical Plan](docs/protocol.md#statistical-plan) |
 | 9 | Deployment (demonstration) | Research report; local demonstration application programming interface (API) on synthetic example requests (not IEEE-CIS rows) | Planned | — |
@@ -73,13 +73,17 @@ Two gates separate development from confirmation: **(1)** training, policy and a
 | [`docs/literature-evidence-matrix.md`](docs/literature-evidence-matrix.md) | Field-by-field comparison of the selected studies |
 | [`docs/literature-search-method.md`](docs/literature-search-method.md) | How the literature was searched, screened and selected |
 | [`docs/references.md`](docs/references.md) | Reference register with verification status |
-| [`docs/dataset.md`](docs/dataset.md) | Dataset source, provenance, data-use terms, version-control policy |
+| [`docs/dataset.md`](docs/dataset.md) | Dataset source, provenance, data-use terms, version-control policy, dataset manifest |
 | [`docs/feature-catalog.md`](docs/feature-catalog.md) | Column-by-column data dictionary |
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (433 inputs: 431 declared columns and 2 time-of-day inputs) |
+| [`config/dataset.yaml`](config/dataset.yaml) | Machine-readable raw files, DR-001 partitions and their integrity anchors |
+| [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs (`features/`); command `review-capacity` |
+| [`tests/`](tests/) | Unit tests on synthetic data; integration tests on the local raw data (run by the project owner) |
 | [`notebooks/`](notebooks/README.md) | Data-understanding notebooks 01–04 |
 | [`scripts/`](scripts/) | Engineering scripts (GPU memory feasibility probe, Issue #50) |
 | [`AGENTS.md`](AGENTS.md) | Working rules for the project and AI-assisted work |
-| `data/raw/` | Local raw data (never committed) |
+| [`data/datapackage.json`](data/datapackage.json) | Dataset manifest (Frictionless Data Package): file checksums, sizes, rows and label-free partition summary |
+| `data/raw/`, `data/processed/` | Local raw data and processed development files (never committed) |
 
 ## Status
 
@@ -90,9 +94,8 @@ The ethics and governance status is documented in the [protocol](docs/protocol.m
 Next steps:
 
 1. Design review with the supervisor (Issue #56) and resolution of the protocol's design items.
-2. Data preparation: dataset manifest and split-generation code that reproduces the DR-001 partition hashes, data validation contract and data pipeline.
-3. Training rules: search procedure, early stopping, tie handling, seeds, neural-network representation, calibration details.
-4. Development runs on Train, Validation 1 (V1) and Validation 2 (V2); protocol freeze; single Test evaluation; statistical analysis and reporting.
+2. Training rules: search procedure, early stopping, tie handling, seeds, neural-network representation, calibration details.
+3. Development runs on Train, Validation 1 (V1) and Validation 2 (V2); protocol freeze; single Test evaluation; statistical analysis and reporting.
 
 ## Symbols and notation
 
@@ -101,6 +104,7 @@ Next steps:
 | AI | Artificial intelligence |
 | API | Application programming interface (local demonstration only) |
 | DR-NNN | Decision Record NNN in `docs/decisions/` |
+| Frictionless Data Package | Open standard for describing a dataset in a `datapackage.json` descriptor |
 | FT-Transformer | Feature Tokenizer + Transformer (a neural model for tabular data) |
 | GPU | Graphics processing unit |
 | H1, H2, H3 | Confirmatory hypotheses: model-family effect; class-weighting effect; alert-rate transfer fidelity |
