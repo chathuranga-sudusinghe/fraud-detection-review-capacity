@@ -12,7 +12,7 @@ If this file conflicts with [`docs/protocol.md`](docs/protocol.md) on a methodol
 
 - **Repository:** `fraud-detection-review-capacity`
 - **Nature:** standalone MSc Data Science research project, University of Greenwich, COMP1885 Individual Project.
-- **Working title:** *Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Tree-Based and Neural Models and Decision Policies*
+- **Title:** *Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Tree-Based and Neural Models and Decision Policies*
 - **Dataset:** IEEE-CIS Fraud Detection labelled training data.
 - **Research basis:** this repository, local project data, University of Greenwich guidance, and verified literature.
 

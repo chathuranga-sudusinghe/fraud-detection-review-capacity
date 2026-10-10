@@ -311,7 +311,6 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | p_a,m, p_b,m | One-sided H2 p-values for the lower and upper bounds of model m |
 | p_H1, p_H2 | p-values of H1 and H2 |
 | R3 | Decision policy: daily top-K review |
-| R*_m | Replicate Recall@2% of configuration m |
 | Recall@2% | Share of frauds reviewed at the 2 % review capacity |
 | S1, S2 | Sensitivity analyses: Owen-corrected variance; day-level moving-block bootstrap |
 | SE | Standard error |

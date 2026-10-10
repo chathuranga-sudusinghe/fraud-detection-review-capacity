@@ -182,7 +182,7 @@ $$
 
 where `actual reviews_d,R3,c` = transactions actually reviewed by R3 on day d at capacity c. R3 reviews K_c transactions when the day has at least K_c, and every transaction otherwise.
 
-**Existing structural evidence [D].** The feasibility audit's label-free volume inspection covered all 182 relative days, including the Test period, before the split was frozen. It recorded 2,048 to 6,852 transactions per relative day (`notebooks/01_dataset_feasibility_audit.ipynb` §3, "Min / max transactions per relative day"; logged as a counts-only inspection). Since 2,048 exceeds the largest budget K_c = 278, min(K_c, N_d) = K_c on every relative day. No new Test-period data were inspected for this record; the record relies only on previously logged, label-free structural evidence from the feasibility audit.
+**Existing structural evidence [D].** The feasibility audit's label-free volume inspection covered all 182 relative days, including the Test period, before the split was fixed. It recorded 2,048 to 6,852 transactions per relative day (`notebooks/01_dataset_feasibility_audit.ipynb` §3, "Min / max transactions per relative day"; logged as a counts-only inspection). Since 2,048 exceeds the largest budget K_c = 278, min(K_c, N_d) = K_c on every relative day. No new Test-period data were inspected for this record; the record relies only on previously logged, label-free structural evidence from the feasibility audit.
 
 Consequently:
 
@@ -349,4 +349,3 @@ No new external references. The decision rests on the protocol's policy definiti
 | U_d,j,c | Unused capacity: max(K_c − A_d,j, 0) |
 | u(ρ) | DR-007's unused reviews of R4 at cost ratio ρ |
 | V2 | Validation 2 (relative days 127–154) |
-| Δ | H3 equivalence tolerance on r (0.004) |

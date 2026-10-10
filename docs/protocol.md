@@ -238,7 +238,7 @@ Defined in [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md
 | Tree-based (T) | LightGBM (LGB) [REF-011]; CatBoost (Cat) [REF-012] | LGB-u, LGB-b, Cat-u, Cat-b |
 | Neural (N) | ResNet-style MLP (RES); FT-Transformer (FTT) [REF-087] | RES-u, RES-b, FTT-u, FTT-b |
 
-The tree-vs-neural family question is open in the literature for tabular data: no family is universally superior, and the gap is often small relative to tuning effects [REF-013, REF-014, REF-087, REF-088, REF-089, REF-090] ([literature review](literature-review.md), Section 4.8).
+The tree-vs-neural family question is open in the literature for tabular data: no family is universally superior, and the gap is often small relative to tuning effects [REF-013, REF-014, REF-087, REF-088, REF-089, REF-090] ([literature review](literature-review.md), Section 2).
 
 Optional reference (descriptive only, outside H1–H3; inclusion decided at the design review):
 

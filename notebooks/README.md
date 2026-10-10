@@ -8,7 +8,7 @@ The final Test period (relative days 155–182) is sealed ([DR-001](../docs/deci
 
 | Notebook | Purpose | Data read | Test-sealing approach |
 |---|---|---|---|
-| [`01_dataset_feasibility_audit.ipynb`](01_dataset_feasibility_audit.ipynb) | Pre-freeze feasibility audit: integrity, temporal structure, split choice, development-data target structure, capacity, power, features, model pair, weighting, policies, costs, drift, entity dependence, leakage, suitability | Full raw tables | Split chosen from transaction volume only; target domain checked once before the split was frozen (logged in §3.6); all target-based analysis restricted to development rows |
+| [`01_dataset_feasibility_audit.ipynb`](01_dataset_feasibility_audit.ipynb) | Pre-freeze feasibility audit: integrity, temporal structure, split choice, development-data target structure, capacity, power, features, model pair, weighting, policies, costs, drift, entity dependence, leakage, suitability | Full raw tables | Split chosen from transaction volume only; target domain checked once before the split was fixed (logged in §3.6); all target-based analysis restricted to development rows |
 | [`02_raw_table_schema_inventory.ipynb`](02_raw_table_schema_inventory.ipynb) | Schema inventory of each raw table separately: checksums, column inventory, target location, shared key, match with [`config/features.yaml`](../config/features.yaml) | Headers; key columns; raw-row preview (local only) | Test-period rows read without `isFraud`; preview outputs removed before commit |
 | [`03_merged_dataset_inspection.ipynb`](03_merged_dataset_inspection.ipynb) | Merged (joined) development dataset: join validity, shape and roles, class imbalance (bar charts), identity coverage, merged missingness | Keys (all rows); full columns for the first 511,998 rows only (relative days 1–154) | Test represented by its row count only; no Test-period label read |
 
@@ -24,7 +24,7 @@ Notebook 01 is retained unchanged as the timestamped pre-freeze record. Document
 | §2.3 | Column types | [DR-008](../docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [feature catalog](../docs/feature-catalog.md) |
 | §2.7 | Obvious data-quality checks | [Feature catalog](../docs/feature-catalog.md) |
 | §3 | Temporal structure (volume only) | [DR-001](../docs/decisions/DR-001-temporal-split-strategy.md), [DR-003](../docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-009](../docs/decisions/DR-009-overflow-handling-for-threshold-policies.md), [protocol](../docs/protocol.md) |
-| §4, §4.3 | Split candidates; frozen split and partition hashes | DR-001 |
+| §4, §4.3 | Split candidates; fixed split and partition hashes | DR-001 |
 | §5, §5.1 | Target structure; prevalence over time (development data) | DR-001, feature catalog; notebook 03 |
 | §6 | Review-capacity feasibility | [DR-002](../docs/decisions/DR-002-review-capacity-definition.md), DR-003, [DR-005](../docs/decisions/DR-005-sesoi-and-h1-h2-inference.md), [DR-007](../docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md) |
 | §7 | Statistical power projection | DR-002, DR-005 |

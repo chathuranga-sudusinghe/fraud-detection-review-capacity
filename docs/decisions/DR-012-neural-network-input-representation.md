@@ -117,5 +117,5 @@ REF-087, REF-089, REF-103 — see [`../references.md`](../references.md).
 | Train | Model-fitting partition (relative days 1–105) |
 | N(0, 1e−3) | The primary source's notation for the quantile-fitting noise: a normal distribution with mean 0 and second parameter 10⁻³ (standard deviation or variance not stated; see Alternatives considered) |
 | REF-NNN | Reference identifier in `../references.md` |
-| `V1`–`V339` | Organiser-engineered numeric feature columns (distinct from the Validation 1/2 partitions, written in full here) |
+| `V` columns | Organiser-engineered numeric feature columns `V1`–`V339` (distinct from the Validation 1/2 partitions, written in full here) |
 | ⌊ · ⌋ | Round down to a whole number |

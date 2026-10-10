@@ -39,7 +39,7 @@ The choice must be fixed before any Test access, and must not depend on which co
 
 ## Decision
 
-**H3 is confirmatory for a single configuration, the *H3 configuration*, selected by a frozen development-only rule.** The H3 configuration is a **pre-specified, validation-selected deployment proxy**: a configuration chosen on held-out development data, whose V2-selected threshold is then transferred to the Test period. The study does not model any particular organisation's operational model-selection process.
+**H3 is confirmatory for a single configuration, the *H3 configuration*, selected by a pre-specified development-only rule.** The H3 configuration is a **pre-specified, validation-selected deployment proxy**: a configuration chosen on held-out development data, whose V2-selected threshold is then transferred to the Test period. The study does not model any particular organisation's operational model-selection process.
 
 ### Selection rule
 
@@ -177,7 +177,6 @@ No new external references. REF-010, REF-029 and REF-038 are existing, verified 
 | [I], [L] | Evidence tags: inference; literature |
 | α | Significance level (family-wise 0.05) |
 | α_(k) | Holm significance level applied to the k-th smallest p-value |
-| p̃_H3 | Holm-adjusted p-value of H3 (DR-005); H3₁ is concluded if it is at most 0.05 |
 | arg max | The configuration at which a quantity is largest |
 | B | Number of bootstrap replicates (10,000) |
 | Cat, LGB, RES, FTT | CatBoost, LightGBM, ResNet-style MLP, FT-Transformer |

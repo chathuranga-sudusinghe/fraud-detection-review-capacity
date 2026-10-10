@@ -69,7 +69,7 @@ A point-null hypothesis on the rate is **uninformative**. With about 78,500 Test
 **Test.** Two One-Sided Tests (TOST) using a day-level moving-block bootstrap, decided by the Holm-adjusted p-value of H3 ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). Details are in [Statistical formulation of H3](#statistical-formulation-of-h3).
 
 **Configuration and multiplicity.**
-- H3 is confirmatory for a single *H3 configuration*: the one of the eight model × weighting configurations with the highest pooled V2 Recall@2% under R3 (policy R3, daily top-K; K = 56), selected by a frozen rule before the Test period is unsealed ([DR-010](DR-010-h3-confirmatory-configuration.md)). H3 results for the other seven configurations are descriptive.
+- H3 is confirmatory for a single *H3 configuration*: the one of the eight model × weighting configurations with the highest pooled V2 Recall@2% under R3 (policy R3, daily top-K; K = 56), selected by a pre-specified rule before the Test period is unsealed ([DR-010](DR-010-h3-confirmatory-configuration.md)). H3 results for the other seven configurations are descriptive.
 - H3 is one member of the confirmatory family {H1 (model family), H2 (class weighting), H3}, controlled by Holm's procedure at family-wise α = 0.05 [REF-029] ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
 
 ### Daily-budget fidelity — a separate operational outcome (not a confirmatory hypothesis)
@@ -237,7 +237,6 @@ REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-037, REF-038,
 |---|---|
 | [D], [L], [I] | Evidence tags: dataset observation, literature, inference |
 | α | Family-wise significance level (0.05) |
-| p̃_H3 | Holm-adjusted p-value of H3 (DR-005); H3₁ is concluded if it is at most 0.05 |
 | #{ · } | Number of bootstrap replicates satisfying a condition |
 | AR(1) | First-order autoregressive model |
 | B | Number of bootstrap replicates (10,000) |
