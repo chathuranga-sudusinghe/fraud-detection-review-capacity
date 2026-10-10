@@ -35,7 +35,7 @@ Human-readable data dictionary for every column of the joined IEEE-CIS (IEEE Com
 | Field | Values |
 |---|---|
 | Interpretation | `identifier`, `temporal`, `target`, `categorical` (with "numeric-coded" when stored as numbers), `numeric`, `ambiguous` |
-| Model input | `include` (one of the 431 inputs given identically to all four models of DR-011) or `exclude` |
+| Model input | `include` (one of the 431 declared input columns given identically to all four models of DR-011; with the two derived time-of-day inputs, every model receives 433 inputs) or `exclude` |
 | Missing (dev) | Share of development rows with no value |
 | Levels in Train | Number of distinct non-missing values in Train rows |
 | Validation 2 values unseen in Train | Share of non-missing Validation 2 values never observed in Train (categorical columns only) |
@@ -50,10 +50,12 @@ Human-readable data dictionary for every column of the joined IEEE-CIS (IEEE Com
 | Numeric input | `TransactionAmt`, `dist1`, `dist2`, `C1`–`C14`, `D1`–`D15`, `V1`–`V339`, `id_01`–`id_11` | 382 |
 | **Total** | | **434** |
 
+**Derived inputs (not joined columns).** Two numeric time-of-day inputs, `tod_sin` and `tod_cos`, are computed from `TransactionDT` (DR-008 §4; rows in [§1](#1-key-target-and-time)). Every model therefore receives 433 inputs: 49 categorical and 384 numeric (382 joined columns and the two derived inputs).
+
 **Encoding reminder (DR-008).**
 - Categorical inputs are converted to text labels, and missing categorical values become the label `"__MISSING__"`.
 - Numeric inputs stay `float64`, with missing values left as NaN (not-a-number): handled natively by the tree-based libraries, and represented by a Train-fitted quantile transformation with missingness indicators for the neural networks (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md)).
-- The canonical frame and the tree-based models receive no imputation, scaling or grouping. No engineered feature is added for any model.
+- The canonical frame and the tree-based models receive no imputation, scaling or grouping. Apart from the two time-of-day inputs, no engineered feature is added for any model.
 
 ## 1. Key, target and time
 
@@ -61,7 +63,9 @@ Human-readable data dictionary for every column of the joined IEEE-CIS (IEEE Com
 |---|---|---|---|---|---|---|---|---|---|
 | `TransactionID` | both (join key) | Transaction identifier joining the transaction and identity tables [REF-047] | int64 | 2,987,000 to 3,498,997; unique per row | identifier | **exclude** | Row identifier; increases with time (Spearman rank correlation 1.000 with `TransactionDT`), so it is a disguised timestamp | 0.0 % | Join key only |
 | `isFraud` | transaction | Binary target: whether the transaction is fraudulent [REF-047] | binary 0/1 (not loaded for this catalog) | 1 = fraud, 0 = legitimate; complete in development data (notebook §5) | target | **exclude** (target) | Never a model input | 0.0 % (notebook §5) | Labels are chargeback-derived; linked later transactions are also labelled fraud [REF-048, partially verified] |
-| `TransactionDT` | transaction | "A timedelta from a given reference datetime (not an actual timestamp)" [REF-047]; in seconds | int64 | 86,400 to 13,391,998 (development rows) | temporal | **exclude** | Raw time. Trees cannot extrapolate a monotone time value to a later period. Used only to derive relative days and the split | 0.0 % | No calendar dates can be inferred |
+| `TransactionDT` | transaction | "A timedelta from a given reference datetime (not an actual timestamp)" [REF-047]; in seconds | int64 | 86,400 to 13,391,998 (development rows) | temporal | **exclude** | Raw time. Trees cannot extrapolate a monotone time value to a later period. Used to derive relative days, the split and the two time-of-day inputs below | 0.0 % | No calendar dates can be inferred. A missing or invalid value stops data validation (DR-008 §4) |
+| `tod_sin` | derived (from `TransactionDT`) | Not an organiser column: sine of the time-of-day angle, i.e. the fraction of the relative day elapsed × 360° (DR-008 §4) | float64 | −1 to 1 (theoretical bounds) | numeric | include | Continuous, row-local position within the relative day | 0.0 % (guaranteed by the `TransactionDT` validation rule) | Position within the relative day, not local clock time |
+| `tod_cos` | derived (from `TransactionDT`) | Not an organiser column: cosine of the same angle (DR-008 §4) | float64 | −1 to 1 (theoretical bounds) | numeric | include | With `tod_sin`, identifies every time of day without a jump at the end of the relative day | 0.0 % (guaranteed by the `TransactionDT` validation rule) | Position within the relative day, not local clock time |
 
 ## 2. Transaction amount and product
 
@@ -136,7 +140,7 @@ Group description: time deltas, e.g. days between a transaction and a previous e
 | `D6` | transaction | Masked: individual meaning not disclosed (time-delta group) | float64 | -83 to 847 | numeric | include | Numeric time delta; negative values kept as observed | 87.8 % | 743 | 3 negative values |
 | `D7` | transaction | Masked: individual meaning not disclosed (time-delta group) | float64 | 0 to 801 | numeric | include | Numeric time delta; negative values kept as observed | 93.7 % | 527 | — |
 | `D8` | transaction | Masked: individual meaning not disclosed (time-delta group) | float64 | 0 to 1,707.792 | numeric | include | Numeric time delta; negative values kept as observed | 87.3 % | 10,478 | Non-integer values |
-| `D9` | transaction | Masked: individual meaning not disclosed (time-delta group) | float64 | 0 to 0.958 | numeric | include | Numeric time delta; negative values kept as observed | 87.3 % | 24 | Equals (hour of the relative day) ÷ 24 on 94.9 % of non-missing development rows [D]: a cyclic time-of-day value, kept because it is not a monotone timestamp (DR-008). This interpretation is inferred, not documented |
+| `D9` | transaction | Masked: individual meaning not disclosed (time-delta group) | float64 | 0 to 0.958 | numeric | include | Numeric time delta; negative values kept as observed | 87.3 % | 24 | Equals (hour of the relative day) ÷ 24 on 94.9 % of non-missing development rows [D]: a cyclic time-of-day value, kept because it is not a monotone timestamp (DR-008). This interpretation is inferred, not documented. Kept unchanged alongside `tod_sin` and `tod_cos`, with which it overlaps only partly |
 | `D10` | transaction | Masked: individual meaning not disclosed (time-delta group) | float64 | 0 to 847 | numeric | include | Numeric time delta; negative values kept as observed | 13.5 % | 738 | — |
 | `D11` | transaction | Masked: individual meaning not disclosed (time-delta group) | float64 | -53 to 644 | numeric | include | Numeric time delta; negative values kept as observed | 50.1 % | 599 | 7 negative values |
 | `D12` | transaction | Masked: individual meaning not disclosed (time-delta group) | float64 | -83 to 634 | numeric | include | Numeric time delta; negative values kept as observed | 89.0 % | 565 | 2 negative values |

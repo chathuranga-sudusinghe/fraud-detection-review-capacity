@@ -50,7 +50,7 @@ Notebook 01 is the pre-freeze feasibility record and is kept unchanged. Where it
 | Decision section: H3₀ (the null hypothesis of H3) stated as the realised alert rate lying **within** the tolerance band | Equivalence formulation: H3₀ is the rate lying **outside** the band, tested by Two One-Sided Tests (TOST) | [DR-003](../docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md) |
 | §11: calibration matters for R0 and R4 | R0 applies 0.5 to the raw model score; calibration applies to R4 only | [Protocol](../docs/protocol.md#calibration) |
 | §12: cost-ratio grid starting at 1 | ρ (miss-to-review cost ratio) ∈ {2, …, 1000}; ρ ≤ 1 excluded | [DR-007](../docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md) |
-| §8–§9: 432 raw features | 431 model inputs (`TransactionID` and raw `TransactionDT` excluded) | [DR-008](../docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [`config/features.yaml`](../config/features.yaml) |
+| §8–§9: 432 raw features | 431 declared input columns (`TransactionID` and raw `TransactionDT` excluded), plus two time-of-day inputs derived from `TransactionDT`: 433 model inputs | [DR-008](../docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [`config/features.yaml`](../config/features.yaml) |
 | §17: H1 and H2 as model-engineering comparisons | H1 is a model-family (tree-based vs neural) hypothesis | [Research foundation](../docs/research-foundation.md#research-contribution), DR-011 |
 | §19 and references L46–L47: Kaggle rules and two sources still to be verified | Rules verified (REF-049); REF-041 verified; REF-042 partially verified | [Dataset](../docs/dataset.md#data-use-terms), [references](../docs/references.md) |
 
