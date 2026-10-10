@@ -1,0 +1,92 @@
+{
+  "$schema": "https://datapackage.org/profiles/2.0/datapackage.json",
+  "name": "ieee-cis-fraud-detection-labelled-training-data",
+  "title": "IEEE-CIS Fraud Detection: labelled training data (local copy)",
+  "description": "The two labelled training files of the IEEE-CIS Fraud Detection competition, as used by this study. The files stay local and are never committed or redistributed (competition rules). Partition statistics are label-free.",
+  "sources": [
+    {
+      "title": "IEEE-CIS Fraud Detection, Kaggle competition data",
+      "path": "https://www.kaggle.com/competitions/ieee-fraud-detection/data"
+    }
+  ],
+  "licenses": [
+    {
+      "title": "Competition Rules: non-commercial academic use, no redistribution",
+      "path": "https://www.kaggle.com/competitions/ieee-fraud-detection/rules"
+    }
+  ],
+  "resources": [
+    {
+      "name": "train_transaction",
+      "path": "raw/train_transaction.csv",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "bytes": 683351067,
+      "hash": "sha256:3a5c83ab6b3cc13dcabe5ffa9f522307fd5f7f7b6e6f6a60c32284ca6283d642",
+      "_rows": 590540,
+      "_columns": 394
+    },
+    {
+      "name": "train_identity",
+      "path": "raw/train_identity.csv",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "bytes": 26529680,
+      "hash": "sha256:b63c725d8377be90a995268d97f347c17d456b95db45807adcf9f59cd603c37c",
+      "_rows": 144233,
+      "_columns": 41
+    }
+  ],
+  "_split": {
+    "decision_record": "docs/decisions/DR-001-temporal-split-strategy.md",
+    "relative_day": "TransactionDT // 86400",
+    "transaction_id_sha256": "SHA-256 of the partition's TransactionIDs, sorted ascending, as little-endian 64-bit integers",
+    "joined_rows": 590540,
+    "partitions": [
+      {
+        "name": "train",
+        "first_day": 1,
+        "last_day": 105,
+        "rows": 368632,
+        "transaction_dt_min": 86400,
+        "transaction_dt_max": 9158384,
+        "transaction_id_sha256": "f3c088aa2f9527381fd31890a6f47453b2e98e10e4054d4542bfc1a8a48e5c63",
+        "sealed": false
+      },
+      {
+        "name": "v1",
+        "first_day": 106,
+        "last_day": 126,
+        "rows": 65544,
+        "transaction_dt_min": 9158441,
+        "transaction_dt_max": 10972793,
+        "transaction_id_sha256": "cb1325d41dae02a35f3983a1e601e9afb5657a0223a90c0e7edbf9d277a04e82",
+        "sealed": false
+      },
+      {
+        "name": "v2",
+        "first_day": 127,
+        "last_day": 154,
+        "rows": 77822,
+        "transaction_dt_min": 10972801,
+        "transaction_dt_max": 13391998,
+        "transaction_id_sha256": "54edb97bc6b82d4baa71c3e1e9459aa1062c3dde36c803bdc18cf8b00f76f9e7",
+        "sealed": false
+      },
+      {
+        "name": "test",
+        "first_day": 155,
+        "last_day": 182,
+        "rows": 78542,
+        "transaction_dt_min": 13392056,
+        "transaction_dt_max": 15811131,
+        "transaction_id_sha256": "9f266b2bdf2da9f11a819f768e0a4c3a77fc84b228975c71cf6e19231cde24a3",
+        "sealed": true
+      }
+    ]
+  },
+  "_generator": {
+    "package": "review_capacity",
+    "version": "0.1.0"
+  }
+}

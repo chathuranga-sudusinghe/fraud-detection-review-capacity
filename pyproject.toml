@@ -20,6 +20,9 @@ dependencies = [
     "ipykernel",
 ]
 
+[project.scripts]
+review-capacity = "review_capacity.cli:main"
+
 [project.optional-dependencies]
 ml = [
     "lightgbm",
@@ -36,7 +39,38 @@ dl = [
 dev = [
     "pytest",
     "ruff",
+    "mypy",
+    "pandas-stubs",
+    "types-PyYAML",
 ]
 
-[tool.setuptools]
-packages = []
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF"]
+allowed-confusables = ["–", "−", "×"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+mypy_path = "tests"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = "-ra --import-mode=importlib"
+markers = [
+    "integration: tests on the local raw data (skipped when data/raw/ is absent)",
+]
