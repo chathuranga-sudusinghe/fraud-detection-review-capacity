@@ -9,7 +9,7 @@
 
 ## Context
 
-Confirmatory hypothesis H1 compares the two model families, tree-based and neural, and hypothesis H2 compares class weighting (balanced vs unweighted), across the eight configurations of [DR-011](DR-011-model-set-tree-based-and-neural-families.md): LightGBM (LGB) and CatBoost (Cat) in the tree-based family, ResNet-style MLP (RES) and FT-Transformer (FTT) in the neural family, each unweighted (u) and balanced (b). Both hypotheses use the primary outcome: **Recall@2 % (the share of frauds reviewed at 2 % review capacity) under the daily top-K policy R3 (review the K highest-scoring transactions each relative day), with K (fixed daily review budget) = 56 reviews per relative day** ([DR-002](DR-002-review-capacity-definition.md)).
+Confirmatory hypothesis H1 compares the two model families, tree-based and neural, and hypothesis H2 compares class weighting (balanced vs unweighted), across the eight configurations of [DR-011](DR-011-model-set-tree-based-and-neural-families.md): LightGBM (LGB) and CatBoost (Cat) in the tree-based family, ResNet-style MLP (RES) and FT-Transformer (FTT) in the neural family, each unweighted (u) and balanced (b). Both hypotheses use the primary outcome: **Recall@2% (the share of frauds reviewed at 2 % review capacity) under the daily top-K policy R3 (review the K highest-scoring transactions each relative day), with K (fixed daily review budget) = 56 reviews per relative day** ([DR-002](DR-002-review-capacity-definition.md)).
 
 The feasibility audit found four things:
 - **[D]** At 2 % capacity the oracle recall ceiling is ≈ 0.595 (V2).
@@ -23,11 +23,11 @@ Class weighting is expected mainly to distort calibration, with little effect on
 
 ### 1. SESOI
 
-> **SESOI = 2 percentage points (0.02) of Recall@2 %**, on the absolute recall scale, for both H1 and H2.
+> **SESOI = 2 percentage points (0.02) of Recall@2%**, on the absolute recall scale, for both H1 and H2.
 
 ### 2. Estimands
 
-R^m,w is the pooled Test Recall@2 % of model m ∈ {LGB, Cat, RES, FTT} with weighting w ∈ {u, b}. It is the share of Test frauds that fall within their day's top-56 scores, over relative days 155–182. All eight configurations are evaluated on the **same** Test frauds, so every contrast is **paired**.
+R^m,w is the pooled Test Recall@2% of model m ∈ {LGB, Cat, RES, FTT} with weighting w ∈ {u, b}. It is the share of Test frauds that fall within their day's top-56 scores, over relative days 155–182. All eight configurations are evaluated on the **same** Test frauds, so every contrast is **paired**.
 
 | Estimand | Definition | Used by |
 |---|---|---|
@@ -51,7 +51,7 @@ where:
 - `δ_F` = model-family effect: neural-minus-tree recall difference, averaged over the two models of each family and over both weighting conditions;
 - `δ_W,m` = weighting simple effect of model m: balanced minus unweighted recall;
 - `T` = tree-based family {LGB, Cat}; `N` = neural family {RES, FTT};
-- `R^m,w` = pooled Test Recall@2 % of model m with weighting w.
+- `R^m,w` = pooled Test Recall@2% of model m with weighting w.
 
 δ_F is positive when the neural family reviews more frauds than the tree-based family; δ_W,m is positive when balanced weighting helps model m.
 
@@ -102,7 +102,7 @@ In addition, the magnitude of δ_F is interpreted against ±SESOI using its **90
 
 | Element | Specification |
 |---|---|
-| **Estimands** | δ_F (H1); δ_W,LGB, δ_W,Cat, δ_W,RES and δ_W,FTT (H2); within-family model contrasts, family × weighting interaction and cell contrasts (descriptive). All are paired differences in pooled Test Recall@2 % under R3, K = 56. |
+| **Estimands** | δ_F (H1); δ_W,LGB, δ_W,Cat, δ_W,RES and δ_W,FTT (H2); within-family model contrasts, family × weighting interaction and cell contrasts (descriptive). All are paired differences in pooled Test Recall@2% under R3, K = 56. |
 | **Primary uncertainty method** | **Joint paired bootstrap.** Each replicate resamples the same units for all eight configurations, preserving the pairing, and recomputes every estimand. B (number of bootstrap replicates) = 10,000; percentile CIs [REF-044]. |
 | **Clustering / resampling unit** | Two-way (pigeonhole) bootstrap over relative days × fine pseudo-entities, with an Owen-corrected variance and a day-level moving-block bootstrap as sensitivity analyses ([DR-006](DR-006-bootstrap-inference-strategy.md)). Transaction-level or fraud-level resampling that assumes independence is **not** acceptable. The SESOI decision does not depend on this choice: the power scenarios in [Resolution of the design](#resolution-of-the-design-approximate-planning-assumptions-i) bracket DE = 1–4. |
 | **CI types** | 95 % CI for difference estimates (H1, descriptive contrasts). 90 % CI for practical interpretation against ±SESOI (H1) and for the four δ_W,m against the H2 equivalence bounds (descriptive). Confirmatory decisions use the p-values. |
@@ -160,7 +160,7 @@ Inputs [D]:
 - oracle ceiling ≈ 0.595;
 - random-review precision ≈ 0.034 (V2 prevalence).
 
-Under fixed K, every extra fraud captured replaces a non-fraud in the queue, so 1 pp of Recall@2 % ≈ **26.6 frauds per 28 days (≈ 0.95 per day)** ≈ **+1.7 pp Precision@K** (share of reviewed transactions that are fraud) ≈ +1.7 pp normalised recall (frauds reviewed ÷ the most that could be reviewed each day; [DR-002](DR-002-review-capacity-definition.md)).
+Under fixed K, every extra fraud captured replaces a non-fraud in the queue, so 1 pp of Recall@2% ≈ **26.6 frauds per 28 days (≈ 0.95 per day)** ≈ **+1.7 pp Precision@K** (share of reviewed transactions that are fraud) ≈ +1.7 pp normalised recall (frauds reviewed ÷ the most that could be reviewed each day; [DR-002](DR-002-review-capacity-definition.md)).
 
 | Candidate SESOI | Frauds per 28 days | Frauds per day (of ≈ 95 per day) | Precision@K equivalent | Share of oracle ceiling |
 |---|---|---|---|---|
@@ -262,7 +262,7 @@ REF-004, REF-005, REF-006, REF-019, REF-020, REF-028, REF-029, REF-030, REF-035,
 | Cat, LGB, RES, FTT | CatBoost, LightGBM, ResNet-style MLP, FT-Transformer |
 | CI | Confidence interval |
 | δ | A true paired recall difference (in power calculations) |
-| δ_F | Model-family effect: neural mean minus tree mean of Recall@2 % (H1 estimand) |
+| δ_F | Model-family effect: neural mean minus tree mean of Recall@2% (H1 estimand) |
 | δ*_F | δ_F in one bootstrap replicate |
 | δ_W,m | Weighting simple effect of model m (H2 estimands) |
 | DE | Design effect: variance inflation due to clustering |
@@ -276,17 +276,17 @@ REF-004, REF-005, REF-006, REF-019, REF-020, REF-028, REF-029, REF-030, REF-035,
 | ML | Machine learning |
 | MLP | Multilayer perceptron |
 | N, T | Neural family {RES, FTT}; tree-based family {LGB, Cat} |
-| N_w, T_w | Mean Recall@2 % of the neural and tree-based family at weighting w |
+| N_w, T_w | Mean Recall@2% of the neural and tree-based family at weighting w |
 | p_disc | Share of frauds captured by exactly one of two configurations |
 | p_H1, p_H2, p_H3 | p-values of H1, H2 and H3 |
 | pp | Percentage points |
 | Precision@K | Share of reviewed transactions that are fraud |
 | R3 | Decision policy: daily top-K review |
-| R^m,w | Pooled Test Recall@2 % of model m with weighting w |
-| Recall@2 % | Share of frauds reviewed at the 2 % review capacity |
+| R^m,w | Pooled Test Recall@2% of model m with weighting w |
+| Recall@2% | Share of frauds reviewed at the 2 % review capacity |
 | ROPE | Region of practical equivalence |
 | RQ1 | Research question 1 (model family and class weighting) |
 | SE | Standard error |
-| SESOI | Smallest Effect Size Of Interest (2 percentage points of Recall@2 %) |
+| SESOI | Smallest Effect Size Of Interest (2 percentage points of Recall@2%) |
 | TOST | Two One-Sided Tests |
 | V2 | Validation 2 (relative days 127–154) |

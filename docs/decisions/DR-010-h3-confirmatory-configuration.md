@@ -83,7 +83,7 @@ This is DR-003's r evaluated for one named configuration. It is not a rate poole
 
 **Procedural safeguards.**
 
-- R3 on V2 uses the protocol's existing daily top-K definition and tie rule.
+- R3 on V2 uses the protocol's daily top-K definition; its tie rule for equal scores is fixed in the training rules (protocol design item 3).
 - The eight V2 recall values, the tie-break steps used, if any, and the selected configuration are recorded in the repository (committed) **before the Test period is unsealed**. The selection is final once recorded. It is not revisited after Test results are seen.
 - The rule uses V2 labels. That is within V2's role: V2 labels are already used for R1 (the F1-optimal threshold) and for the R4 calibrator. The H3 outcome r itself needs no labels.
 

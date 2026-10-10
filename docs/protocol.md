@@ -218,7 +218,7 @@ Chronological, day-aligned split, fixed from transaction volume only, before any
 | Partition | Relative days | Rows | Role |
 |---|---|---|---|
 | Train | 1–105 | 368,632 | Model fitting. **No refit** on later data. |
-| Validation 1 (V1) | 106–126 | 65,544 | Hyper-parameter tuning and early stopping only |
+| Validation 1 (V1) | 106–126 | 65,544 | Hyperparameter tuning and early stopping only |
 | Validation 2 (V2) | 127–154 | 77,822 | Probability calibration (for R4, the calibrated cost-aware policy); threshold selection (R1, the F1-optimal threshold; R2); daily budget K; selection of the H3 configuration ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)) |
 | Gap | — | — | **None in the primary design** |
 | Final Test | 155–182 | 78,542 | **Sealed.** One confirmatory evaluation |
@@ -510,7 +510,7 @@ Precision@K is a rescaling of Recall@K (share of all frauds reviewed under budge
 
 ### Secondary outcomes
 
-- Recall@1 %, 5 %, 10 %;
+- Recall@1%, Recall@5%, Recall@10%;
 - false negatives at capacity;
 - frauds per 1,000 reviews;
 - lift over random review;

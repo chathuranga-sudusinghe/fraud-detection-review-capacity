@@ -9,7 +9,7 @@
 
 ## Context
 
-Confirmatory hypotheses H1 (model family) and H2 (class weighting) compare paired differences in pooled Test **Recall@2 %** (share of frauds reviewed at 2 % review capacity) under the daily top-K policy R3 (review the K highest-scoring transactions each relative day; K = 56 reviews per relative day) across the eight model × weighting configurations of [DR-011](DR-011-model-set-tree-based-and-neural-families.md) ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). DR-005 requires a **joint paired bootstrap** that does not assume independent transactions or frauds. The **resampling unit** has two natural candidates: heuristic pseudo-entity clusters and day blocks.
+Confirmatory hypotheses H1 (model family) and H2 (class weighting) compare paired differences in pooled Test **Recall@2%** (share of frauds reviewed at 2 % review capacity) under the daily top-K policy R3 (review the K highest-scoring transactions each relative day; K = 56 reviews per relative day) across the eight model × weighting configurations of [DR-011](DR-011-model-set-tree-based-and-neural-families.md) ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)). DR-005 requires a **joint paired bootstrap** that does not assume independent transactions or frauds. The **resampling unit** has two natural candidates: heuristic pseudo-entity clusters and day blocks.
 
 The trade-off:
 - entity resampling targets within-entity dependence, but relies on a **heuristic** key;
@@ -121,7 +121,7 @@ For each bootstrap replicate b = 1, …, B (B = number of replicates):
 
 | Item | Specification | Justification |
 |---|---|---|
-| Interval type (primary) | **Percentile** confidence intervals (CIs) from the pigeonhole distribution | Simple, respects the non-normal shape of a bounded ratio, and matches H3's percentile intervals. Mildly conservative by construction [REF-068]. |
+| Interval type (primary) | **Percentile** confidence intervals (CIs) from the pigeonhole distribution [REF-044] | Simple, respects the non-normal shape of a bounded ratio, and matches H3's percentile intervals. Mildly conservative by construction [REF-068]. |
 | BCa (bias-corrected and accelerated interval) | **Not used** | Its acceleration constant is normally estimated by a jackknife, and no standard jackknife exists for crossed two-way data. Using BCa here would add an unvalidated component. |
 | Basic / studentized | Not used as primary | A studentized interval needs a per-replicate variance estimate, which would need a second-level two-way bootstrap. The added complexity is not justified for this confirmatory analysis. S1 provides a Wald-type check. |
 | Levels | 95 % for difference estimates; 90 % for H1's practical interpretation and for the H2 TOST (Two One-Sided Tests) contrasts, reported descriptively. Confirmatory decisions use the bootstrap p-values with Holm adjustment | As DR-005 |
@@ -247,7 +247,7 @@ The more frauds concentrate in large clusters, the larger DE becomes; DE = 1 whe
 | Dependence handled | None | Within-entity, including across days | Within-day, including same-day entity clustering and daily capacity competition | Within-day plus short-range (≤ ≈ 3 days) serial dependence | **Both** day-level and entity-level, including cross-day entity recurrence |
 | Dependence ignored | All | Day-level shocks and capacity competition shared across entities | Cross-day entity recurrence (45 % of frauds) | Entity recurrence beyond ≈ 3 days (≈ half of same-entity pairs) | Residual dependence not captured by the heuristic key; serial dependence between days (small in V2) |
 | Key assumptions | Independence (contradicted) | The key captures entities; days exchangeable | Days exchangeable | Short-range stationarity | Crossed random-effects structure; iid days; key approximately captures entities |
-| Recall@2 % compatibility | Yes | Yes, via fixed capture indicators | Yes, exactly (days intact) | Yes, exactly | Yes, via fixed capture indicators |
+| Recall@2% compatibility | Yes | Yes, via fixed capture indicators | Yes, exactly (days intact) | Yes, exactly | Yes, via fixed capture indicators |
 | Paired comparison | Yes | Yes | Yes | Yes | Yes |
 | Preserves daily top-K | No | Conditionally (rankings fixed) | **Exactly** | **Exactly** | Conditionally (rankings fixed; day dimension carries day-level variation) |
 | Feasible with 28 days | — | Not day-dependent (≈ 1,350 entity clusters) | Few-cluster risk [REF-069] | Worse: ≈ 26 distinct blocks, ≈ 10 per replicate | Day dimension carries the few-cluster risk; entity dimension large |
@@ -280,7 +280,6 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | Symbol / abbreviation | Meaning |
 |---|---|
 | [D], [L], [I] | Evidence tags: dataset observation, literature, inference |
-| α | Family-wise significance level (0.05) |
 | A, B (factors) | The two crossed factors in Owen's model (here relative day and pseudo-entity) |
 | a_d | Multiplicity of Test day d in a bootstrap replicate |
 | B | Number of bootstrap replicates (10,000) |
@@ -312,8 +311,8 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | p_a,m, p_b,m | One-sided H2 p-values for the lower and upper bounds of model m |
 | p_H1, p_H2 | p-values of H1 and H2 |
 | R3 | Decision policy: daily top-K review |
-| R*_m | Replicate Recall@2 % of configuration m |
-| Recall@2 % | Share of frauds reviewed at the 2 % review capacity |
+| R*_m | Replicate Recall@2% of configuration m |
+| Recall@2% | Share of frauds reviewed at the 2 % review capacity |
 | S1, S2 | Sensitivity analyses: Owen-corrected variance; day-level moving-block bootstrap |
 | SE | Standard error |
 | SESOI | Smallest Effect Size Of Interest |

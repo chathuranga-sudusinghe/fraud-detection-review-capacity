@@ -116,7 +116,7 @@ The research studies fraud detection when only a limited number of transactions 
 
 ## Consequences
 
-- **Primary metric:** Recall@2 %, evaluated under the daily top-K policy R3 (review the K highest-scoring transactions each day) with K = 56. It is interpreted against the ≈ 0.6 ceiling and reported with normalised recall.
+- **Primary metric:** Recall@2%, evaluated under the daily top-K policy R3 (review the K highest-scoring transactions each day) with K = 56. It is interpreted against the ≈ 0.6 ceiling and reported with normalised recall.
 - **Research question RQ3 must be evaluated across the capacity grid.** In the binding regime, the marginal (K-th) reviewed transaction is likely to have a high fraud probability. A cost-aware policy (R4, the calibrated cost-aware capped policy) will then rarely leave budget unused, and R4 will often coincide with R3. The informative contrasts are expected at 5 % and 10 % and at low miss-to-review cost ratios [I]. The **main RQ3 output is the break-even miss-to-review cost ratio for each capacity** [REF-008, REF-039, REF-040].
 - Policies that are not capped (R0, the default 0.5 threshold; R1, the F1-optimal threshold; R2, the capacity-rate threshold) can exceed K on a given day. Their **overflow rule** is report-only ([DR-009](DR-009-overflow-handling-for-threshold-policies.md)): R0–R2 are evaluated uncapped, and their alert demand is compared with K. Truncation is rejected because it reproduces R3 on every overflow day.
 - Review effort is counted **per transaction**.
@@ -125,7 +125,7 @@ The research studies fraud detection when only a limited number of transactions 
 
 - **Construct validity.** Real review queues work at account or case level. Reviewing one transaction of a compromised account usually triggers action on the whole account, so transaction-level K overstates the effort needed to stop entity-level fraud. IEEE-CIS has no true account or card identifier, so card-level precision [REF-046] cannot be computed.
 - **External validity.** The capacity percentages are not calibrated to any institution.
-- **Ceiling compression.** With a ceiling of ≈ 0.6, absolute differences in Recall@2 % between models are compressed. Minimum detectable effects are discussed in the protocol.
+- **Ceiling compression.** With a ceiling of ≈ 0.6, absolute differences in Recall@2% between models are compressed. Minimum detectable effects are discussed in the protocol.
 
 ## References
 
@@ -147,7 +147,7 @@ REF-004, REF-005, REF-006, REF-008, REF-032, REF-033, REF-039, REF-040, REF-046,
 | Precision@K | Share of reviewed transactions that are fraud |
 | pooled normalised recall | Σ_d TP_d / Σ_d min(K, F_d): Recall@K divided by the oracle recall ceiling |
 | R0–R4 | Decision policies: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |
-| Recall@K, Recall@2 % | Share of all frauds reviewed under budget K (at the 2 % capacity) |
+| Recall@K, Recall@2% | Share of all frauds reviewed under budget K (at the 2 % capacity) |
 | RQ2, RQ3 | Research questions 2 (policy transfer) and 3 (cost-aware capacity use) |
 | TP_d | True positives: number of frauds reviewed on day d |
 | V2 | Validation 2 (relative days 127–154) |

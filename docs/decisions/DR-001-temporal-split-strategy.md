@@ -37,8 +37,8 @@ The partitions are:
 | Partition | Relative days | Days | Rows | % rows | Role |
 |---|---|---|---|---|---|
 | **Train** | 1–105 | 105 | 368,632 | 62.4 | Model fitting. **Models are not refit** on later partitions. |
-| **V1** (Validation 1) | 106–126 | 21 | 65,544 | 11.1 | Hyper-parameter selection and early stopping **only** |
-| **V2** (Validation 2) | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for policy R4, the calibrated cost-aware capped policy); threshold selection (R1, the F1-optimal threshold; R2, the capacity-rate threshold); fixed daily review budget K ([DR-002](DR-002-review-capacity-definition.md)); selection of the H3 configuration ([DR-010](DR-010-h3-confirmatory-configuration.md)) |
+| **V1** (Validation 1) | 106–126 | 21 | 65,544 | 11.1 | Hyperparameter selection and early stopping **only** |
+| **V2** (Validation 2) | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for policy R4, the calibrated cost-aware capped policy); threshold selection (R1, the threshold that maximises F1, the harmonic mean of precision and recall; R2, the capacity-rate threshold); fixed daily review budget K ([DR-002](DR-002-review-capacity-definition.md)); selection of the H3 configuration ([DR-010](DR-010-h3-confirmatory-configuration.md)) |
 | **Test** | 155–182 | 28 | 78,542 | 13.3 | **Sealed.** One confirmatory evaluation after the protocol freeze |
 | **Total (full joined dataset)** | 1–182 | 182 | 590,540 | 100.0 | Train + V1 + V2 + Test; mutually exclusive and exhaustive |
 
@@ -96,7 +96,7 @@ Reproducibility anchors, from the notebook (§4.3):
 1. **Train as large as possible, including the early high-volume regime.** The model then sees the full range of volumes.
 2. **V2 has the same length as Test (28 days) and near-identical volume.** Threshold and budget transfer (research question RQ2) is then a like-for-like comparison.
 3. **V1 and V2 have different jobs.** Early stopping makes V1 scores optimistic. V2 supplies out-of-sample scores for policy selection and calibration, and is closer in time to Test.
-4. **Calibration on V2, not V1.** V1's prevalence (4.22 %) differs from V2's (3.39 %), and V1 is used for early stopping. Calibration matters only for R4 (and the descriptive R0, the default 0.5 threshold). R1–R3 (R3 is the daily top-K policy) rank and threshold on raw model scores, so calibration does not affect them: Platt scaling with a positive slope is strictly monotone and preserves the ranking, while isotonic regression is monotone but can merge scores into ties [I; REF-015, REF-016, REF-017].
+4. **Calibration on V2, not V1.** V1's prevalence (4.22 %) differs from V2's (3.39 %), and V1 is used for early stopping. Calibration matters only for R4. R0–R3 (R0 is the default 0.5 threshold; R3 is the daily top-K policy) rank and threshold on raw model scores, so calibration does not affect them: Platt scaling with a positive slope is strictly monotone and preserves the ranking, while isotonic regression is monotone but can merge scores into ties [I; REF-015, REF-016, REF-017].
 5. **No primary gap.** Its purpose would be to simulate label latency [REF-005, REF-046], but its length cannot be grounded in this dataset. Because models are not refit, the Train → Test separation is already 49 days.
 
 ## Consequences
@@ -131,7 +131,8 @@ REF-004, REF-005, REF-015, REF-016, REF-017, REF-023, REF-024, REF-025, REF-026,
 | K | Fixed daily review budget (reviews per relative day), defined in DR-002 |
 | n | Number of Test relative days (28) |
 | PSI | Population Stability Index (a measure of distribution shift) |
-| R0 | Decision policy: default probability threshold 0.5 (descriptive only) |
+| R0 | Decision policy: default threshold 0.5 on the raw model score (descriptive only) |
+| F1 | Harmonic mean of precision and recall |
 | R1 | Decision policy: F1-optimal threshold chosen on V2 |
 | R2 | Decision policy: capacity-rate threshold chosen on V2 |
 | R3 | Decision policy: daily top-K review |
