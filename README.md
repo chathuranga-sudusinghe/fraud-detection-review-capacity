@@ -44,7 +44,7 @@ The study is organised along the ten stages of the Foundational Methodology for 
 | 2 | Analytic approach | Predictive, prescriptive, inferential and descriptive components, each mapped to RQ1–RQ3 and H1–H3 | Done; design review with the supervisor pending | [Protocol: Analytic Approach](docs/protocol.md#analytic-approach) |
 | 3 | Data requirements | Data each research question and hypothesis needs, and how the dataset's limits are handled (no real costs, real capacity, label-report dates or account identifiers) | Done; design review with the supervisor pending | [Protocol: Data Requirements](docs/protocol.md#data-requirements) |
 | 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; manifest pending (protocol design item 8) | [Dataset](docs/dataset.md), notebooks 01–02 |
-| 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; corrective development-data notebook for the notebook computation findings pending ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–03](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
+| 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
 | 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split and tree-based input representation fixed; neural-network representation proposed; validation contract and pipeline pending | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md) |
 | 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; graphics processing unit (GPU) feasibility verified (Issue #50); training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
 | 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after freeze | Design defined; runs after freeze | [Protocol: Statistical Plan](docs/protocol.md#statistical-plan) |
@@ -76,7 +76,7 @@ Two gates separate development from confirmation: **(1)** training, policy and a
 | [`docs/dataset.md`](docs/dataset.md) | Dataset source, provenance, data-use terms, version-control policy |
 | [`docs/feature-catalog.md`](docs/feature-catalog.md) | Column-by-column data dictionary |
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (431 inputs) |
-| [`notebooks/`](notebooks/README.md) | Data-understanding notebooks 01–03 |
+| [`notebooks/`](notebooks/README.md) | Data-understanding notebooks 01–04 |
 | [`scripts/`](scripts/) | Engineering scripts (GPU memory feasibility probe, Issue #50) |
 | [`AGENTS.md`](AGENTS.md) | Working rules for the project and AI-assisted work |
 | `data/raw/` | Local raw data (never committed) |

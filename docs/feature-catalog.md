@@ -176,10 +176,10 @@ Group description: "Vesta engineered rich features", including ranking, counting
 | Reason for treatment | Organiser does not list them as categorical; stored as numbers |
 | Missing (dev) | 0.0 % to 85.7 % per column |
 | Levels in Train | 1 to 25,530 per column; 7 columns are two-valued; 263 are integer-valued in development data |
-| Structure | 14 blocks of columns with the same number of missing Train rows (table below); whether each block also shares an identical missing-row pattern is checked in [Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59) |
+| Structure | 14 blocks of columns share an identical missing-row pattern in Train ([notebook 04](../notebooks/04_development_data_corrections.ipynb) §6; table below) |
 | Caution | Construction undocumented, so potential look-back issues cannot be checked; heavy redundancy; uninterpretable, so not used for false-negative slicing |
 
-**Missingness blocks (Train).** Columns in a block are missing on exactly the same number of Train rows.
+**Missingness blocks (Train).** Columns in a block are missing on exactly the same Train rows ([notebook 04](../notebooks/04_development_data_corrections.ipynb) §6).
 
 | Block | Columns | Missing in Train |
 |---|---|---|
@@ -194,7 +194,7 @@ Group description: "Vesta engineered rich features", including ranking, counting
 | 9 | `V169`–`V171`, `V174`–`V175`, `V180`, `V184`–`V185`, `V188`–`V189`, `V194`–`V195`, `V197`–`V198`, `V200`–`V201`, `V208`–`V210` (19 columns) | 73.8 % |
 | 10 | `V217`–`V219`, `V223`–`V226`, `V228`–`V233`, `V235`–`V237`, `V240`–`V244`, `V246`–`V249`, `V252`–`V254`, `V257`–`V258`, `V260`–`V269`, `V273`–`V278` (46 columns) | 75.1 % |
 | 11 | `V220`–`V222`, `V227`, `V234`, `V238`–`V239`, `V245`, `V250`–`V251`, `V255`–`V256`, `V259`, `V270`–`V272` (16 columns) | 73.3 % |
-| 12 | `V279`–`V280`, `V284`–`V287`, `V290`–`V295`, `V297`–`V299`, `V302`–`V312`, `V316`–`V321` (32 columns) | 0.0 % |
+| 12 | `V279`–`V280`, `V284`–`V287`, `V290`–`V295`, `V297`–`V299`, `V302`–`V312`, `V316`–`V321` (32 columns) | < 0.01 % (12 rows) |
 | 13 | `V281`–`V283`, `V288`–`V289`, `V296`, `V300`–`V301`, `V313`–`V315` (11 columns) | 0.1 % |
 | 14 | `V322`–`V339` (18 columns) | 83.1 % |
 
