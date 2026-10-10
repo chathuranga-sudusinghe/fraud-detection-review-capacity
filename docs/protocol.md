@@ -4,7 +4,7 @@
 
 **Working protocol — pre-freeze. Not yet confirmatory.**
 
-This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-011).
+This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-012).
 
 The remaining items are listed under [Design items before protocol freeze](#design-items-before-protocol-freeze). The protocol becomes confirmatory only when every item is resolved and the file is tagged in Git.
 
@@ -263,7 +263,7 @@ The model set is fixed by DR-011; no further model families are added.
    - the same decision policies, capacity settings and evaluation.
 2. **Identical within each family:**
    - tree-based: native categorical and missing-value handling ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5), weighted log-loss, CPU training;
-   - neural: the representation of [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §9, weighted binary cross-entropy, bf16 mixed precision on the GPU.
+   - neural: the representation of [DR-012](decisions/DR-012-neural-network-input-representation.md) (proposed), weighted binary cross-entropy, bf16 mixed precision on the GPU.
 3. **Model-specific:** each model's architecture and internal computation (self-attention, residual blocks, ordered boosting, leaf-wise growth) and its own search space (neural models: the large-dataset spaces (B) of REF-087, used by the authors for datasets of this size), tuned under the Level 1 method and budget.
 
 The values of these elements (search method, budget, objective, patience, seeds, aggregation of neural-network seeds, tie rule for equal scores) are fixed in the training rules before the development runs ([Design items](#design-items-before-protocol-freeze)).
@@ -275,7 +275,7 @@ The values of these elements (search method, budget, objective, patience, seeds,
 - **Raw or minimally processed features are the primary design.** There is no feature-engineering study.
 - **`TransactionID` and raw `TransactionDT` are not model features.** `TransactionID` is monotone in time, so it is a disguised timestamp [D]. Raw time cannot be extrapolated by tree models.
 - **No future-looking aggregate features.** Any frequency, count or entity-level aggregate would have to be computed from Train only or with past-only windows. None is planned for the primary design.
-- **No manual target encoding.** Categorical handling is native to each model family: CatBoost ordered target statistics [REF-012]; LightGBM categorical splits [REF-011]; learned category embeddings in the neural networks ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §9).
+- **No manual target encoding.** Categorical handling is native to each model family: CatBoost ordered target statistics [REF-012]; LightGBM categorical splits [REF-011]; learned category embeddings in the neural networks ([DR-012](decisions/DR-012-neural-network-input-representation.md), proposed).
 - **No engineered entity identifiers as features.** Heuristic keys such as card + address + implied account-start day are used **only** for audit and slicing.
 - **Feature declaration** ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md); machine-readable in [`config/features.yaml`](../config/features.yaml); column-by-column reference in the [feature catalog](feature-catalog.md)). Of the 434 joined columns:
   - 1 is the target (`isFraud`) and 2 are excluded (`TransactionID`, `TransactionDT`);
@@ -284,7 +284,7 @@ The values of these elements (search method, budget, objective, patience, seeds,
 - **Model input parity.** All four models receive the same 431 columns, built from one canonical frame:
   - categorical values are written as text labels, with missing values labelled `"__MISSING__"`;
   - **tree-based models:** numeric values stay `float64` with native missing-value handling; LightGBM receives pandas categoricals whose categories are fixed from Train only, and CatBoost receives the text labels directly [REF-076, REF-077]; no imputation, scaling, rare-level grouping or high-cardinality exclusion is applied;
-  - **neural models (proposed, DR-008 §9; identical for both, attached to input roles):** per-input category vocabularies fitted on Train with `"__MISSING__"` reserved in every vocabulary, values unseen in Train mapped to it, and category dropout (probability 0.01, training only) so that its embedding is trained; numeric values quantile-transformed to a normal distribution fitted on Train, with Gaussian noise added to every numeric input during fitting only, scaled as in the reference implementation [REF-087, REF-103]; missing values set to 0 after the transformation, and one missingness indicator per numeric input with missing Train values (≈ 720 inputs in total).
+  - **neural models (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md); identical for both, attached to input roles):** per-input category vocabularies fitted on Train with `"__MISSING__"` reserved in every vocabulary, values unseen in Train mapped to it, and category dropout (probability 0.01, training only) so that its embedding is trained; numeric values quantile-transformed to a normal distribution fitted on Train, with Gaussian noise added to every numeric input during fitting only, scaled as in the reference implementation [REF-087, REF-103]; missing values set to 0 after the transformation, and one missingness indicator per numeric input with missing Train values (≈ 720 inputs in total).
 
 ## Class-Imbalance Treatment
 
@@ -681,7 +681,7 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | SESOI, H1 and H2 | SESOI = 2 pp of Recall@2%; H1 family-effect difference test with practical interpretation; H2 intersection-union TOST over four models; Holm over {H1, H2, H3} | [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md) |
 | H1/H2 uncertainty | Two-way pigeonhole bootstrap (relative day × fine pseudo-entity); sensitivity S1 (Owen-corrected variance) and S2 (day blocks, ℓ = 3) | [DR-006](decisions/DR-006-bootstrap-inference-strategy.md) |
 | RQ3 cost analysis | Review + missed-fraud cost model (C_FP as a sensitivity relabelling); ρ ∈ {2, …, 1000} with exact curves; saturation and break-even ratios per capacity and configuration | [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md) |
-| Model inputs | 49 categorical, 382 numeric, 2 excluded; canonical labels with `"__MISSING__"`; tree-based representation fixed | [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §§1–8 |
+| Model inputs | 49 categorical, 382 numeric, 2 excluded; canonical labels with `"__MISSING__"`; tree-based representation fixed | [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) |
 | Overflow rule | Report-only: R0–R2 evaluated uncapped; demand, overflow, unused capacity and load ratio against K | [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md) |
 | H3 configuration | Highest pooled V2 Recall@2% under R3 among eight configurations; committed before Test access | [DR-010](decisions/DR-010-h3-confirmatory-configuration.md) |
 | Model set | LightGBM, CatBoost, ResNet-style MLP, FT-Transformer × unweighted/balanced; common-procedure fairness | [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) |
@@ -693,7 +693,7 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | # | Item | Notes |
 |---|---|---|
 | 1 | Supervisor review of the design (DR-001–DR-012) | Design review with the supervisor (Issue #56) |
-| 2 | Neural-network input representation | DR-008 §9, proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise and 1,000 quantiles [REF-103], missingness indicators; noise seed and constant or all-missing inputs fixed in the training rules |
+| 2 | Neural-network input representation | [DR-012](decisions/DR-012-neural-network-input-representation.md), proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise and 1,000 quantiles [REF-103], missingness indicators; noise seed and constant or all-missing inputs fixed in the training rules |
 | 3 | Training rules | Search method and budget, V1 objective, early-stopping rule, seeds, aggregation of neural-network seeds, tie rule for equal scores, calibration details |
 | 4 | Feature-engineering policy | Current design: declared raw inputs only (DR-008); confirmed or changed at the design review |
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
@@ -727,6 +727,7 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-009 — Overflow handling for threshold-based policies R0, R1 and R2](decisions/DR-009-overflow-handling-for-threshold-policies.md)
 - [DR-010 — Confirmatory configuration for H3](decisions/DR-010-h3-confirmatory-configuration.md)
 - [DR-011 — Model set: tree-based and neural model families](decisions/DR-011-model-set-tree-based-and-neural-families.md)
+- [DR-012 — Neural-network input representation](decisions/DR-012-neural-network-input-representation.md) (proposed)
 
 ## References
 

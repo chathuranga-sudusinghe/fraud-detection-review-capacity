@@ -2,21 +2,21 @@
 
 | Field | Value |
 |---|---|
-| Status | §§1–8 Accepted (pre-freeze) by Issue #23; supervisor review pending. §9 (neural-network representation) **Proposed** for the design review (Issue #54). |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54) |
+| Status | Accepted (pre-freeze) by Issue #23; supervisor review pending. The neural-network representation is proposed separately in [DR-012](DR-012-neural-network-input-representation.md). |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54) and 2026-10-10 (Issue #57) |
 | Evidence source | Raw-file headers (schema only); development-period values (relative days 1–154) for type, missingness and cardinality checks, **with the target column never loaded**; organiser data description; LightGBM and CatBoost documentation; input-type checks on synthetic data; `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 8, 9 |
-| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md), [`config/features.yaml`](../../config/features.yaml), [feature catalog](../feature-catalog.md) |
+| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md), [`config/features.yaml`](../../config/features.yaml), [feature catalog](../feature-catalog.md) |
 
 ## Context
 
-The study compares four models in two families, as research question 1 (RQ1) and hypothesis H1 (model-family effect) require ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)): the gradient-boosting libraries LightGBM and CatBoost, and the neural networks ResNet-style MLP and FT-Transformer. The protocol requires all four to receive **the same declared model inputs** under one common training procedure, so that a difference between the families can be attributed to the model-and-representation pipelines compared, not to unequal data or effort. Each family keeps the representation its models require (§§5, 9).
+The study compares four models in two families, as research question 1 (RQ1) and hypothesis H1 (model-family effect) require ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)): the gradient-boosting libraries LightGBM and CatBoost, and the neural networks ResNet-style MLP and FT-Transformer. The protocol requires all four to receive **the same declared model inputs** under one common training procedure, so that a difference between the families can be attributed to the model-and-representation pipelines compared, not to unequal data or effort. Each family keeps the representation its models require: §5 for the tree-based models, [DR-012](DR-012-neural-network-input-representation.md) for the neural networks.
 
 The declaration is not trivial:
 - many nominal (unordered, label-like) fields are stored as numbers (`card1`, `addr1`, several `id_*` fields);
 - the models accept categorical data and missing values in **different technical forms**;
 - no model may be given extra engineered information.
 
-This record fixes, before any model is implemented: the target, the excluded columns, the categorical columns, the numeric columns, and the exact technical conversions for each model family.
+This record fixes, before any model is implemented: the target, the excluded columns, the categorical columns, the numeric columns, the canonical frame and the exact technical conversions for the tree-based libraries. The proposed neural-network representation is in [DR-012](DR-012-neural-network-input-representation.md).
 
 **Scope limits.** No feature is engineered, target-encoded, aggregated or created from pseudo-entity keys. No model is trained or tuned. The temporal split ([DR-001](DR-001-temporal-split-strategy.md)), capacity settings ([DR-002](DR-002-review-capacity-definition.md)), class weighting and hypotheses are defined elsewhere.
 
@@ -143,7 +143,7 @@ Observed value types in development data [D]:
 | `TransactionDT` | Raw time offset. Used only to derive relative days and the temporal split ([DR-001](DR-001-temporal-split-strategy.md)), never as a model input |
 
 **No further column is excluded.**
-- High missingness (up to 99.2 %, `id_24`) and high cardinality are **not** reasons for exclusion: every model handles missing values (natively for the trees, through indicators for the neural networks, §9), and the categorical columns are the organiser's own list.
+- High missingness (up to 99.2 %, `id_24`) and high cardinality are **not** reasons for exclusion: every model handles missing values (natively for the trees, through indicators for the neural networks, [DR-012](DR-012-neural-network-input-representation.md)), and the categorical columns are the organiser's own list.
 - The known risks of the undocumented look-back windows of the C, D and V feature groups, and of entity memorisation through `card1`-type fields, are already stated as threats to validity in the protocol. They are not new exclusion grounds.
 - Heuristic pseudo-entity keys remain audit tools only and are **not** model inputs.
 
@@ -190,7 +190,7 @@ All four models start from **one canonical data frame**, built identically:
    - missing values become the explicit label `"__MISSING__"`.
 3. **Numeric columns → `float64`**, with missing values left as NaN. No imputation, scaling, clipping, winsorising or transformation.
 
-Then, for each tree-based library (the neural-network form is in §9):
+Then, for each tree-based library (the neural-network form is in [DR-012](DR-012-neural-network-input-representation.md)):
 
 | Step | LightGBM | CatBoost |
 |---|---|---|
@@ -209,7 +209,7 @@ Then, for each tree-based library (the neural-network form is in §9):
 
 - **Same semantic input:** all four models receive the same 431 columns, the same 49 categorical declarations, the same canonical category labels and the same numeric values.
 - **No model is given engineered information**: no counts, frequencies, target statistics or entity keys are computed outside the models.
-- **Family-specific representation.** The trees use native categorical and missing-value handling (§5); the neural networks receive the same information as integer category indices, transformed numeric values and missingness indicators (§9). These forms are part of each family's design and therefore of the family contrast.
+- **Family-specific representation.** The trees use native categorical and missing-value handling (§5); the neural networks receive the same information as integer category indices, transformed numeric values and missingness indicators ([DR-012](DR-012-neural-network-input-representation.md)). These forms are part of each family's design and therefore of the family contrast.
 - **Two unavoidable differences between the tree libraries remain.** Both are part of each library's native design, not of this study's preprocessing:
   1. how categories are split (LightGBM's gradient-sorted category partitions versus CatBoost's ordered target statistics);
   2. how an unseen category is treated. For LightGBM the Train-fixed category list turns it into a missing value, matching LightGBM's documented default; CatBoost handles it natively as a new value.
@@ -233,61 +233,6 @@ Then, for each tree-based library (the neural-network form is in §9):
 
 The human-readable counterpart is the [feature catalog](../feature-catalog.md). It documents every column's official meaning (or states that it is masked), observed type, missingness, cardinality, role and cautions, using development data only.
 
-### 9. Neural-network representation (proposed for the design review)
-
-Neural networks need finite numeric inputs and integer category indices. The proposed representation keeps the information of the canonical frame (§5), is fitted on Train rows only and is **identical for ResNet-style MLP and FT-Transformer**. Its rules are attached to **input roles**, not to column names: every categorical input, including any input added later through an approved GitHub Issue, follows the categorical rules, and every numeric input follows the numeric and indicator rules.
-
-| Step | ResNet-style MLP and FT-Transformer (identical for both) |
-|---|---|
-| Categorical vocabularies | Per categorical input, a vocabulary of the canonical labels observed in Train. `"__MISSING__"` is **reserved in every vocabulary**, also for inputs without a missing Train value, so its index always exists. Each label maps to an integer index; a value unseen in Train maps to the `"__MISSING__"` index, the same unseen-to-missing rule that LightGBM applies (§5). Each input has a learned embedding inside the model. |
-| Category dropout (training only) | During training, each categorical value of a Train row is replaced by `"__MISSING__"` with probability 0.01, independently per value and per epoch, drawn from the declared training seed. The probability is fixed at 0.01 and is not tuned, so it adds no hyperparameter that could differ between the two neural models. This trains the `"__MISSING__"` embedding of every input, so that values unseen in Train reach a learned embedding in Validation 1, Validation 2 and Test. No dropout is applied when scoring Validation 1, Validation 2 or Test. |
-| Numeric transformation | Quantile transformation to a normal output distribution, fitted per numeric input on its non-missing Train values, as in the primary source of both architectures [REF-087]. When the quantiles are fitted, Gaussian noise is added to **every** numeric Train value, with a fixed seed; the fitted transformation is then applied to the original, noise-free values of Train, Validation 1, Validation 2 and Test. The noise scale and the number of quantiles follow the reference implementation of REF-087 exactly [REF-103], as defined below the table. This is the device that REF-087 (arXiv v5, Appendix B.2) uses for inputs with few distinct values. |
-| Numeric missing values | 0 after the transformation (the centre of the normal output distribution). |
-| Missingness indicators | One binary indicator per numeric input with at least one missing Train value, so that the networks receive the missingness information the trees use natively. For the declared inputs this adds about 290 indicators: 264 `V` columns (Train missingness blocks 1–5, 7–11, 13 and 14 of the [feature catalog](../feature-catalog.md)) and 28 other numeric columns [D]. |
-| Input count | 431 declared columns + about 290 indicators ≈ 720 inputs. FT-Transformer receives one token per input plus the [CLS] token. The engineering probe of Issue #50 (synthetic tensors) showed that FT-Transformer training fits on the project GPU up to 800 input tokens, over the width and depth grid of the large-dataset search space of REF-087 (Table 13, space (B)) with the feed-forward size factor fixed at 4/3 ([DR-011](DR-011-model-set-tree-based-and-neural-families.md) §4). At 800 input tokens with bf16 mixed precision and memory-efficient attention, the largest setting fits at batch size 64; gradient checkpointing raises this to 128. The probe is repeated before the development runs if the input count exceeds 800. |
-| Fitting and reuse | Vocabularies, quantile transformations and the indicator list are fitted on Train only, stored with each model and applied unchanged to Validation 1, Validation 2 and Test. |
-
-The quantile noise and the number of quantiles follow the reference implementation [REF-103]:
-
-$$
-\begin{aligned}
-\sigma_{\mathrm{noise},i} &= \frac{10^{-3}}{\max\left(s_i,\ 10^{-3}\right)} \\[6pt]
-n_{\mathrm{q}} &= \max\left(\min\left(\left\lfloor n_{\mathrm{Train}} / 30 \right\rfloor,\ 1000\right),\ 10\right) = 1000
-\end{aligned}
-$$
-
-where:
-
-- `σ_noise,i` = standard deviation of the zero-mean Gaussian noise added to numeric input i when its quantiles are fitted;
-- `i` = index of a numeric input;
-- `s_i` = population standard deviation (ddof = 0, the `np.std` default used by the reference implementation) of the non-missing Train values of numeric input i;
-- `n_q` = number of quantiles of each transformation;
-- `n_Train` = number of Train rows (368,632), so ⌊n_Train / 30⌋ = 12,287 and the cap of 1,000 applies;
-- `⌊ · ⌋` = rounding down to a whole number.
-
-All non-missing Train values are used to fit the quantiles (no subsampling). The training rules fix the remaining implementation values before the development runs: the noise seed and the handling of numeric inputs that are constant or entirely missing in Train.
-
-**Why [I].**
-- The quantile transformation is the numeric preprocessing under which both neural architectures were evaluated [REF-087]. It limits the influence of the skewed, heavy-tailed features on which neural networks are known to be weaker [REF-089].
-- **Noise for every numeric input.** Many inputs here have few distinct values or a large mass at one value. A synthetic check (100,000 values: 60 % zeros, 40 % log-normal; scikit-learn quantile transformation with n_q = 1,000) mapped 0 to −5.20 without noise and to −0.52 with the reference noise rule: without noise, the most common value is pushed to the extreme of the output distribution. Applying the same noise rule to every numeric input keeps the representation uniform and needs no per-column judgement.
-- **Reserved `"__MISSING__"` with category dropout.** A reserved index alone would leave the embedding of an input without missing Train values untrained, so unseen later values would reach an arbitrary initial embedding. Category dropout gives every such embedding training signal at a low rate.
-- Missingness is informative in this dataset (whole blocks of `V` columns are missing together); indicators carry it to the networks without engineering new features.
-- One representation for both neural models keeps the within-family comparison clean.
-
-**Alternatives for §9.**
-
-| Alternative | Why not proposed |
-|---|---|
-| Impute missing values without indicators | Discards informative missingness that the trees use natively. |
-| A learned "missing" embedding per feature in FT-Transformer only | Would give the two neural models different representations of the same information. |
-| Standardisation instead of the quantile transformation | Leaves heavy tails and extreme values that destabilise neural training [REF-089]; departs from the evaluated setting of REF-087. |
-| Quantile transformation without noise | Maps a dominant repeated value to an extreme of the output distribution (−5.20 instead of −0.52 in the synthetic check). |
-| Noise of a fixed standard deviation 10⁻³ for every input, as a reading of the paper's notation N(0, 1e−3) | The paper's notation does not state whether 10⁻³ is a standard deviation or a variance, and its text refers to the source code for the exact implementation. Following the reference implementation [REF-103] removes this ambiguity and makes the preprocessing reproducible against a pinned commit. |
-| Noise only for inputs with few distinct values | Requires a researcher-chosen cut-off per input; the uniform rule is simpler and matches REF-087. |
-| `"__MISSING__"` added only where Train has missing values | The index would not exist for other inputs, so the unseen-to-missing rule could not be applied to them. |
-| A fixed zero vector, instead of a trained embedding, for unseen values | Gives unseen values no learned representation and differs from how observed missing values are represented. |
-| One indicator per missingness block (14 `V` blocks) | Fewer inputs, but the block grouping is a derived feature. Retained as a contingency only if training time requires it, to be decided before the development runs. |
-
 ## Alternatives considered
 
 | Alternative | Why not chosen |
@@ -303,8 +248,7 @@ All non-missing Train values are used to fit the quantiles (no subsampling). The
 ## Consequences
 
 - The implementation must read [`config/features.yaml`](../../config/features.yaml). It must assert that the loaded columns match the declaration exactly and that numeric-coded categorical values are whole numbers.
-- LightGBM category lists, neural-network vocabularies and quantile transformations are built from **Train rows only** and stored with each model.
-- The quantile preprocessing is implemented against the pinned commit of the reference implementation [REF-103]. A unit test on a synthetic input with many tied values checks the noise scale, the number of quantiles and that the transformation is applied to the original values.
+- LightGBM category lists are built from **Train rows only** and stored with each model.
 - Any later change to feature roles requires a new GitHub Issue. Before the protocol freeze, this record is revised in place; after the freeze, the change requires a record that supersedes this one ([record maintenance policy](README.md#record-maintenance-policy)).
 
 ## Threats and limitations
@@ -317,7 +261,7 @@ All non-missing Train values are used to fit the quantiles (no subsampling). The
 
 ## References
 
-REF-012, REF-047, REF-048\*, REF-076, REF-077, REF-087, REF-089, REF-103 — see [`../references.md`](../references.md).
+REF-012, REF-047, REF-048\*, REF-076, REF-077 — see [`../references.md`](../references.md).
 
 \* Partially verified.
 
@@ -327,17 +271,7 @@ REF-012, REF-047, REF-048\*, REF-076, REF-077, REF-087, REF-089, REF-103 — see
 |---|---|
 | [D], [L], [I] | Evidence tags: dataset observation, literature/documentation, inference |
 | `__MISSING__` | Explicit label given to a missing categorical value, identical for all models; reserved in every neural-network vocabulary; also the target of categories unseen in Train for LightGBM and the neural networks |
-| bf16 | bfloat16: 16-bit floating-point format used for mixed-precision neural-network training |
-| σ_noise,i | Standard deviation of the quantile-fitting noise for numeric input i |
-| i | Index of a numeric input |
-| s_i | Population standard deviation (ddof = 0) of the non-missing Train values of numeric input i |
-| ddof | Delta degrees of freedom: the divisor of a standard deviation is (number of values − ddof) |
-| n_q | Number of quantiles per transformation (1,000) |
-| n_Train | Number of Train rows (368,632) |
-| ⌊ · ⌋ | Round down to a whole number |
-| [CLS] | Classification token of FT-Transformer |
 | FT-Transformer, ResNet-style MLP | The neural models of DR-011 (Feature Tokenizer + Transformer; residual multilayer perceptron) |
-| GPU | Graphics processing unit |
 | MLP | Multilayer perceptron |
 | `C1`–`C14`, `D1`–`D15`, `M1`–`M9` | Organiser feature groups: counts, time deltas, match flags |
 | `card1`–`card6`, `addr1`, `addr2` | Organiser card and address fields (categorical) |
