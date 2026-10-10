@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze); supervisor review pending (Issue #56) |
-| Date | 2026-09-23; revised 2026-10-09 (Issue #54) |
+| Date | 2026-09-23; revised 2026-10-09 (Issue #54) and 2026-10-10 (Issue #62: link to the machine-readable declaration) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3–4, 5.1, 14, 15 |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
@@ -107,6 +107,7 @@ Reproducibility anchors, from the notebook (§4.3):
 - **RQ2 observes only one V2 → Test transfer event.** A development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only) shows whether transfer failure is systematic. It does not replace the single confirmatory Test evaluation. The primary configuration is the H3 configuration selected on V2 ([DR-010](DR-010-h3-confirmatory-configuration.md)).
 - **Label-latency sensitivity.** Label-dependent policy choices (R1 threshold; R4 calibrator) are repeated using only V2 days 127–147. This costs no Test access.
 - If the protocol is ever changed to **refit** on Train+V1(+V2), this decision must be revisited and a gap reconsidered.
+- The partitions and their reproducibility anchors are declared machine-readably in [`config/dataset.yaml`](../../config/dataset.yaml). The data-preparation code (Issue #62) reproduces the row counts, `TransactionDT` bounds and hash prefixes above, and stops if any of them differs ([dataset manifest](../dataset.md#dataset-manifest)).
 
 ## Threats and limitations
 

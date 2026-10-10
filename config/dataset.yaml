@@ -1,0 +1,58 @@
+# Raw dataset and temporal-split declaration for the IEEE-CIS Fraud Detection study.
+# Decision records: docs/decisions/DR-001-temporal-split-strategy.md (partitions and anchors);
+#                   docs/decisions/DR-008-feature-declaration-and-model-input-policy.md §4 (TransactionDT validation).
+# Dataset governance: docs/dataset.md. Column roles: config/features.yaml.
+#
+# The expected values below are integrity anchors recorded in notebooks/01_dataset_feasibility_audit.ipynb
+# (§2.1 file SHA-256; §4.3 partition rows, TransactionDT bounds and TransactionID hash prefixes).
+# The data-preparation code checks the raw files against them and fails loudly on any difference.
+# No partition statistic here uses a label.
+
+version: 1
+
+raw_files:
+  transaction:
+    path: data/raw/train_transaction.csv
+    sha256: "3a5c83ab6b3cc13dcabe5ffa9f522307fd5f7f7b6e6f6a60c32284ca6283d642"
+    columns: 394
+  identity:
+    path: data/raw/train_identity.csv
+    sha256: "b63c725d8377be90a995268d97f347c17d456b95db45807adcf9f59cd603c37c"
+    columns: 41
+
+key: TransactionID
+time: TransactionDT
+seconds_per_day: 86400   # fixed by DR-001 (relative day = TransactionDT // 86400); any other value is rejected
+total_rows: 590540
+
+# Partition hash: SHA-256 of the partition's TransactionIDs, sorted ascending and serialised as
+# little-endian 64-bit integers; the first 16 hexadecimal characters are recorded in DR-001.
+partitions:
+  - name: train
+    label: Train
+    days: [1, 105]
+    rows: 368632
+    transaction_dt: [86400, 9158384]
+    transaction_id_sha256_prefix: "f3c088aa2f952738"
+    sealed: false
+  - name: v1
+    label: Validation 1
+    days: [106, 126]
+    rows: 65544
+    transaction_dt: [9158441, 10972793]
+    transaction_id_sha256_prefix: "cb1325d41dae02a3"
+    sealed: false
+  - name: v2
+    label: Validation 2
+    days: [127, 154]
+    rows: 77822
+    transaction_dt: [10972801, 13391998]
+    transaction_id_sha256_prefix: "54edb97bc6b82d4b"
+    sealed: false
+  - name: test
+    label: Test
+    days: [155, 182]
+    rows: 78542
+    transaction_dt: [13392056, 15811131]
+    transaction_id_sha256_prefix: "9f266b2bdf2da9f1"
+    sealed: true   # labels are never read before the protocol freeze

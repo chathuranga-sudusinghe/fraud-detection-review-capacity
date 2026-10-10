@@ -717,7 +717,7 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
 | 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Tier set by the assessment brief; confirmed with the supervisor [REF-053] |
 | 7 | Research-methodology framing | IBM Foundational Methodology adaptation [REF-085], recorded after the design review |
-| 8 | Dataset manifest | SHA-256 (Secure Hash Algorithm, 256-bit) values and partition hashes reproduced by the split-generation code |
+| 8 | Dataset manifest | Resolved (Issue #62): SHA-256 (Secure Hash Algorithm, 256-bit) values and partition hashes reproduced by the data-preparation code and recorded in `data/datapackage.json` ([dataset manifest](dataset.md#dataset-manifest)) |
 
 ## Protocol Freeze
 
