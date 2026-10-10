@@ -138,9 +138,9 @@ Local Parquet copies are derivative storage formats and should not be described 
 
 ## Status
 
-**Dataset source documented; data understanding complete** (notebooks 01–03).
+**Dataset source documented; data understanding complete** (notebooks 01–04).
 
-Next dataset-governance task: create a reproducible dataset manifest with checksums and summary statistics, and split-generation code that reproduces the DR-001 partition hashes (protocol design item 8). The SHA-256 (Secure Hash Algorithm, 256-bit) checksums of both raw files are already recorded in notebooks 01 and 02. Computation findings in the data-understanding notebooks are to be corrected in a new development-only notebook ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)).
+Next dataset-governance task: create a reproducible dataset manifest with checksums and summary statistics, and split-generation code that reproduces the DR-001 partition hashes (protocol design item 8). The SHA-256 (Secure Hash Algorithm, 256-bit) checksums of both raw files are already recorded in notebooks 01 and 02. Computation findings in the data-understanding notebooks are corrected in development-only notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)).
 
 ## Symbols and notation
 

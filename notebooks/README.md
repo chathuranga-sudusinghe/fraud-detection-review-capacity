@@ -11,8 +11,9 @@ The final Test period (relative days 155–182) is sealed ([DR-001](../docs/deci
 | [`01_dataset_feasibility_audit.ipynb`](01_dataset_feasibility_audit.ipynb) | Pre-freeze feasibility audit: integrity, temporal structure, split choice, development-data target structure, capacity, power, features, model pair, weighting, policies, costs, drift, entity dependence, leakage, suitability | Full raw tables | Split chosen from transaction volume only; target domain checked once before the split was fixed (logged in §3.6); all target-based analysis restricted to development rows |
 | [`02_raw_table_schema_inventory.ipynb`](02_raw_table_schema_inventory.ipynb) | Schema inventory of each raw table separately: checksums, column inventory, target location, shared key, match with [`config/features.yaml`](../config/features.yaml) | Headers; key columns; raw-row preview (local only) | Test-period rows read without `isFraud`; preview outputs removed before commit |
 | [`03_merged_dataset_inspection.ipynb`](03_merged_dataset_inspection.ipynb) | Merged (joined) development dataset: join validity, shape and roles, class imbalance (bar charts), identity coverage, merged missingness | Keys (all rows); full columns for the first 511,998 rows only (relative days 1–154) | Test represented by its row count only; no Test-period label read |
+| [`04_development_data_corrections.ipynb`](04_development_data_corrections.ipynb) | Corrections to notebooks 01 and 02: raw header names, oracle ceilings on Validation 2, Population Stability Index with a separate missing bin, `V` missingness blocks; each recomputed with the original and the corrected method ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | Header lines; keys (all rows); full columns for the first 511,998 rows only (relative days 1–154) | As notebook 03: day-154 boundary asserted; no Test-period label read |
 
-Reading order: 02 → 03 for the current data view; 01 for the full feasibility evidence and split rationale.
+Reading order: 02 → 03 for the current data view; 01 for the full feasibility evidence and split rationale; 04 for the corrections to 01 and 02.
 
 ## Notebook 01 section map
 
@@ -53,12 +54,12 @@ Notebook 01 is the pre-freeze feasibility record and is kept unchanged. Where it
 | §17: H1 and H2 as model-engineering comparisons | H1 is a model-family (tree-based vs neural) hypothesis | [Research foundation](../docs/research-foundation.md#research-contribution), DR-011 |
 | §19 and references L46–L47: Kaggle rules and two sources still to be verified | Rules verified (REF-049); REF-041 verified; REF-042 partially verified | [Dataset](../docs/dataset.md#data-use-terms), [references](../docs/references.md) |
 
-**Computation findings**, to be corrected in a new development-only notebook ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)):
+**Computation findings**, corrected in [notebook 04](04_development_data_corrections.ipynb):
 
-- **Notebook 01 §6, oracle recall and precision ceilings:** the recall ceiling is computed as the pooled budget divided by pooled frauds, not as the sum over days of min(K, F_d) divided by all frauds (K = fixed daily review budget; F_d = frauds on day d); the precision ceiling and the maximum lift use the nominal capacity share instead of the daily oracle captures. The values used by the design (1 %, 2 %, 5 %, 10 %) agree to two decimals; the exploratory 3 % and 3.5 % rows are overstated.
-- **Notebook 01 §14.1, Population Stability Index (PSI) of categorical columns:** missing values fall into the "other" bin instead of a separate missing bin. Numeric PSI is unaffected by this missing-bin defect. The stated method (bins from Train deciles) also describes only the comparisons with Train: for Validation 1 → Validation 2 the bins and categorical levels come from Validation 1, the earlier period of that pair.
-- **Notebook 01 §8, missingness blocks of `V1`–`V339`:** columns are grouped by their number of missing Train rows; equal counts do not show that the columns are missing on the same rows. The actual missing-row patterns are checked on development data.
-- **Notebook 02 §2.2, duplicate column names:** the check cannot fail, because pandas renames duplicate headers. The absence of duplicates is still established by the exact match with `config/features.yaml` (§2.5).
+- **Notebook 01 §6, oracle recall and precision ceilings:** computed from pooled totals instead of the daily oracle captures. For the scenarios used by the design (1 %, 2 %, 5 %, 10 %) the recall ceilings are unchanged and the precision ceilings agree to three decimals; the exploratory 3 % and 3.5 % rows were overstated (notebook 04 §4).
+- **Notebook 01 §14.1, Population Stability Index (PSI) of categorical columns:** missing values fell into the "other" bin instead of a separate missing bin. With the separate bin, the PSI of 12 categorical features changes by more than 0.001 in at least one period pair (largest: `id_13`), but no feature changes band (notebook 04 §5).
+- **Notebook 01 §8, missingness blocks of `V1`–`V339`:** columns were grouped by their number of missing Train rows. Notebook 04 §6 confirms that each of the 14 groups shares one missing-row pattern.
+- **Notebook 02 §2.2, duplicate column names:** the check could not fail, because pandas renames duplicate headers. The raw header lines contain no repeated name (notebook 04 §2).
 
 ## Running and committing
 
@@ -76,10 +77,8 @@ Notebook 01 is the pre-freeze feasibility record and is kept unchanged. Where it
 | Symbol / abbreviation | Meaning |
 |---|---|
 | DR-NNN | Decision Record NNN in `docs/decisions/` |
-| F_d | Number of frauds on relative day d |
 | FT-Transformer | Feature Tokenizer + Transformer (a neural model for tabular data) |
 | H1, H2, H3; H3₀ | Confirmatory hypotheses: model-family effect; class-weighting effect; alert-rate transfer fidelity. H3₀ is the null hypothesis of H3 |
-| K | Fixed daily review budget (reviews per relative day) |
 | MLP | Multilayer perceptron |
 | PSI | Population Stability Index (a measure of distribution shift) |
 | R0, R4 | Decision policies: default 0.5 threshold; calibrated cost-aware capped review |
