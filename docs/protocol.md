@@ -657,6 +657,7 @@ Slice base rates differ strongly (e.g. identity present 9.4 % vs absent 2.1 % in
 Before the protocol is frozen [REF-026, REF-027]:
 
 - all partitions are mutually exclusive and chronological (asserted and hashed; [DR-001](decisions/DR-001-temporal-split-strategy.md));
+- after the one-time Parquet build, development work reads only the verified processed files; the raw files are read again only by the confirmatory Test evaluation ([data access rule](dataset.md#data-access-after-the-parquet-build));
 - no random or shuffled splitting or cross-validation across time;
 - preprocessing, encoders, category vocabularies, quantile transformations, class weights and any baseline pipelines are fitted on Train only;
 - tuning and early stopping use V1; calibration, threshold selection and K use V2;
@@ -817,6 +818,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | φ | False-alert-to-review cost ratio, C_FP / C_R |
 | π | A decision policy (R3 or R4) in J_π and N_π |
 | pp | Percentage points |
+| Parquet | Column-oriented file format of the local processed development files ([`dataset.md`](dataset.md#data-access-after-the-parquet-build)) |
 | PR-AUC | Precision–Recall Area Under the Curve |
 | Precision@K | Share of reviewed transactions that are fraud |
 | r | Realised Test alert rate at τ₂, pooled over Test days; in confirmatory H3, r = r^f*,w* (H3 configuration only) |

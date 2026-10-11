@@ -269,14 +269,14 @@ Observed value types in development data [D]:
   - `TransactionID` has |ρ| = 1.000, a disguised timestamp;
   - the next-highest column, `V151`, has |ρ| = 0.324;
   - no other column behaves as a time index.
-- `D9` takes 24 fractional values. It equals (hour of the relative day) ÷ 24 on 94.9 % of development rows where it is present. It is a bounded, cyclic time-of-day value, not a monotone timestamp.
+- `D9` takes 24 fractional values. Stored to six decimal places, it equals (hour of the relative day) ÷ 24 on every development row where it is present (100 %; largest difference 6.95 × 10⁻⁷). It is a bounded, cyclic time-of-day value, not a monotone timestamp.
 - **`TransactionDT` is excluded because a monotone time value cannot be extrapolated by trees into a later period.** That reason does not apply to a cyclic hour-of-day value, so `D9` is kept.
 - No column has a single constant value in development data.
 
 ### Time of day [D; L]
 
 - **[D]** `TransactionDT` has no missing value on any of the 182 relative days (notebook 01 §2.6, all rows, label-free). Its development-row range is 86,400 to 13,391,998 seconds ([feature catalog](../feature-catalog.md)).
-- **[D]** `D9` is missing on 87.3 % of development rows and, where present, equals (hour of the relative day) ÷ 24 on 94.9 % of rows (above): it carries whole-hour information for a minority of rows only.
+- **[D]** `D9` is missing on 87.3 % of development rows and, where present, equals (hour of the relative day) ÷ 24 on 100 % of rows, to its six stored decimal places (above): it carries whole-hour information for a minority of rows only.
 - **[L]** Correa Bahnsen et al. model the time of a card transaction as a periodic quantity on a 24-hour clock, at minute resolution, because an arithmetic mean of transaction times ignores the wrap-around at midnight; their features are customer-level von Mises statistics, not the row-local pair used here [REF-007, §3.2].
 - **[L]** The scikit-learn documentation encodes a periodic time feature as a sine and cosine pair with the matching period, so that the two features carry the same information without a jump between the end and the start of the period [REF-104].
 
@@ -354,7 +354,7 @@ REF-007, REF-012, REF-047, REF-048\*, REF-076, REF-077, REF-104 — see [`../ref
 | `card1`–`card6`, `addr1`, `addr2` | Organiser card and address fields (categorical) |
 | `cat_features`, `categorical_feature` | CatBoost and LightGBM arguments naming the categorical columns |
 | `cat_l2`, `cat_smooth`, `max_cat_threshold`, `min_data_per_group` | LightGBM categorical-regularisation parameters (tuned elsewhere) |
-| `D9` | Organiser time-delta field; equals hour of the relative day ÷ 24 on 94.9 % of non-missing development rows |
+| `D9` | Organiser time-delta field; equals hour of the relative day ÷ 24 on 100 % of non-missing development rows, to its six stored decimal places |
 | `DeviceType`, `DeviceInfo` | Organiser device fields (categorical) |
 | DR | Decision Record |
 | `float64` | 64-bit floating-point numeric type |

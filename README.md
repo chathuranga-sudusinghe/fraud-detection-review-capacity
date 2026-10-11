@@ -82,11 +82,13 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
 3. Obtain the raw data from Kaggle by accepting the Competition Rules, and place both files in `data/raw/` ([dataset documentation](docs/dataset.md)). The data are never committed.
 
-4. Validate the raw data and prepare the development files (run by the project owner; [execution rules](AGENTS.md#experiment-execution-responsibility)):
+4. Validate the raw data and prepare the development files, **once** (run by the project owner; [execution rules](AGENTS.md#experiment-execution-responsibility)):
 
    ```bash
    .venv/bin/review-capacity --log-file logs/prepare-data.log prepare-data
    ```
+
+   This one-time build ran on 10 October 2026. After it, every step reads only the verified processed files in `data/processed/`, and the raw files are read again only by the confirmatory Test evaluation ([data access rule](docs/dataset.md#data-access-after-the-parquet-build)).
 
    Every command logs its progress with timestamps to the terminal; `--log-file PATH` (before the command name) also keeps the log in a file, as an evidence-producing run should. `review-capacity --help` lists the options and exit codes.
 
