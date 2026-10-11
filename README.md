@@ -32,7 +32,7 @@ The data are used exactly as published: no rows are generated, simulated or alte
 
 ## Research path
 
-The study is organised along the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085](docs/references.md#ref-085), adapted to a confirmatory research design. This framing is proposed and pending supervisor review; the adaptations below will be recorded in a Decision Record after that review.
+The study is organised along the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085](docs/references.md#ref-085), adapted to a confirmatory research design. This framing is proposed and awaits the project owner's decision (protocol design item 7); the accepted adaptation will be recorded in a Decision Record.
 
 - Stages 1–8 carry the confirmatory research; stage 9 (Deployment) is realised as a local demonstration application and stage 10 (Feedback) as supervisor review and reporting.
 - Iteration between stages is allowed only before the protocol freeze, only on the development partitions (Train, Validation 1 and Validation 2), and only within each partition's fixed role ([protocol: Experimental Split Structure](docs/protocol.md#experimental-split-structure)).
@@ -40,9 +40,9 @@ The study is organised along the ten stages of the Foundational Methodology for 
 
 | # | Stage (IBM) | In this study | Status | Evidence |
 |---|---|---|---|---|
-| 1 | Business understanding | Research problem, gap, RQ1–RQ3, H1–H3; structured literature review | Done; design review with the supervisor pending | [Protocol](docs/protocol.md), [research foundation](docs/research-foundation.md), [literature review](docs/literature-review.md) |
-| 2 | Analytic approach | Predictive, prescriptive, inferential and descriptive components, each mapped to RQ1–RQ3 and H1–H3 | Done; design review with the supervisor pending | [Protocol: Analytic Approach](docs/protocol.md#analytic-approach) |
-| 3 | Data requirements | Data each research question and hypothesis needs, and how the dataset's limits are handled (no real costs, real capacity, label-report dates or account identifiers) | Done; design review with the supervisor pending | [Protocol: Data Requirements](docs/protocol.md#data-requirements) |
+| 1 | Business understanding | Research problem, gap, RQ1–RQ3, H1–H3; structured literature review | Done; accepted by the project owner | [Protocol](docs/protocol.md), [research foundation](docs/research-foundation.md), [literature review](docs/literature-review.md) |
+| 2 | Analytic approach | Predictive, prescriptive, inferential and descriptive components, each mapped to RQ1–RQ3 and H1–H3 | Done; accepted by the project owner | [Protocol: Analytic Approach](docs/protocol.md#analytic-approach) |
+| 3 | Data requirements | Data each research question and hypothesis needs, and how the dataset's limits are handled (no real costs, real capacity, label-report dates or account identifiers) | Done; accepted by the project owner | [Protocol: Data Requirements](docs/protocol.md#data-requirements) |
 | 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; dataset manifest generated and committed (Issue #62) | [Dataset](docs/dataset.md#dataset-manifest), [`data/datapackage.json`](data/datapackage.json), notebooks 01–02 |
 | 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
 | 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based input representation fixed; neural-network representation proposed; validation contract and data-preparation pipeline implemented and verified on the raw data (Issue #62) | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md), [`src/review_capacity/`](src/review_capacity/) |
@@ -101,6 +101,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | [`docs/research-foundation.md`](docs/research-foundation.md) | Research problem, aim, objectives, contribution |
 | [`docs/literature-review.md`](docs/literature-review.md) | Literature review and research gap |
 | [`docs/literature-evidence-matrix.md`](docs/literature-evidence-matrix.md) | Field-by-field comparison of the selected studies |
+| [`docs/greenwich-criteria-checklist.md`](docs/greenwich-criteria-checklist.md) | University of Greenwich requirements mapped to the repository, with open points |
 | [`docs/literature-search-method.md`](docs/literature-search-method.md) | How the literature was searched, screened and selected |
 | [`docs/references.md`](docs/references.md) | Reference register with verification status |
 | [`docs/dataset.md`](docs/dataset.md) | Dataset source, provenance, data-use terms, version-control policy, dataset manifest |
@@ -119,12 +120,12 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
 ## Status
 
-**Research design documented; supervisor review and remaining design items pending; protocol not yet frozen.**
+**Research design documented and accepted by the project owner in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); remaining design items pending; protocol not yet frozen.**
 
 The ethics and governance status is documented in the [protocol](docs/protocol.md#ethics); no formal ethics approval or exemption is claimed.
 
 Next steps:
 
-1. Design review with the supervisor (Issue #56) and resolution of the protocol's design items.
+1. Resolution of the protocol's remaining design items, in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); supervisor feedback welcome throughout.
 2. Training rules: search procedure, early stopping, tie handling, seeds, neural-network representation, calibration details.
 3. Development runs on Train, Validation 1 (V1) and Validation 2 (V2); protocol freeze; single Test evaluation; statistical analysis and reporting.

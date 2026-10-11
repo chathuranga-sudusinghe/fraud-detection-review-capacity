@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | **Proposed** for the design review with the supervisor (Issue #56); not yet accepted |
+| Status | **Proposed**; not yet accepted (protocol design item 2, owner decision pending) |
 | Date | 2026-10-09 (Issue #54, as DR-008 §9); separate record 2026-10-10 (Issue #57); revised 2026-10-10 (Issue #59: indicator count from notebook 04) and 2026-10-10 (Issue #64: time-of-day inputs; numeric-transformation specification) |
 | Evidence source | Primary source of both neural architectures [REF-087] (REF-NNN = reference identifier in `references.md`; arXiv v5, Appendix B.2) and its reference implementation [REF-103]; scikit-learn documentation of the quantile transformation [REF-105]; tabular benchmark evidence on skewed and heavy-tailed features [REF-089]; Train missingness counts and patterns ([notebook 04](../../notebooks/04_development_data_corrections.ipynb)) [D]; Train value counts of the [feature catalog](../feature-catalog.md) [D]; synthetic checks of the quantile transformation; the graphics processing unit (GPU) memory feasibility probe on synthetic tensors (Issue #50). No labels, model scores or Test-period data were used. |
 | Related | [DR-008](DR-008-feature-declaration-and-model-input-policy.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md), [`config/features.yaml`](../../config/features.yaml) |
@@ -100,7 +100,7 @@ The reasons below are inferences **[I]** from the evidence above.
 
 ## Threats and limitations
 
-- **Proposed, not accepted.** The representation is subject to the design review (Issue #56).
+- **Proposed, not accepted.** The representation awaits the project owner's decision (protocol design item 2).
 - **Representation differences between families.** Trees and neural networks receive the same information in family-specific forms; these differences are part of the family contrast ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)). The comparison is therefore between model-and-representation pipelines, not between architectures alone.
 - **Missing and unseen categories share an index** in the neural networks, whereas LightGBM and CatBoost keep them apart (Decision). The raw information is identical; its form is part of the family contrast.
 - **Missingness that first appears after Train.** An input without missing Train values has no indicator, so a later missing value is set to 0 with no indicator, the centre of the output distribution. The diagnostic above reports how often this occurs.
