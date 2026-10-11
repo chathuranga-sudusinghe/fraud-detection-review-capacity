@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted |
-| Date | 2026-09-23 (Issue #6); revised 2026-10-09 (Issue #57: AI assistants) |
+| Date | 2026-09-23 (Issue #6); revised 2026-10-09 (Issue #57: AI assistants) and 2026-10-11 (Issue #68: command execution and assistant roles) |
 | Evidence source | Project governance (GitHub Issue #6); GitHub documentation on linking pull requests to issues |
 | Related | [`AGENTS.md`](../../AGENTS.md), [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
@@ -20,6 +20,8 @@ Work is carried out by the student with the help of artificial intelligence (AI)
 - debugging;
 - reproducibility review;
 - decision-record preparation.
+
+Their respective implementation and review roles, and who runs terminal commands, are defined in [`AGENTS.md`](../../AGENTS.md#experiment-execution-responsibility).
 
 AI assistants can produce large, plausible-looking changes quickly, across many files at once. Without a scoping mechanism, several things become hard:
 - reviewing each change;
@@ -71,7 +73,7 @@ GitHub Issue
   - code;
   - documentation structure.
 - **Methodological changes** additionally need an update to the relevant research document(s) and Decision Record(s) in `docs/decisions/`, following the [record maintenance policy](README.md#record-maintenance-policy): revised in place before the protocol freeze, superseded by a new record after it. Where external evidence is introduced, `docs/references.md` must also be updated.
-- **AI assistants do not commit or push** unless the student explicitly instructs them to for that task.
+- **Commits, pushes, pull requests and merges are performed by the project owner**; assistant permissions are defined in [`AGENTS.md`](../../AGENTS.md#git-rules).
 
 ## Automatic issue closure via PR keywords
 

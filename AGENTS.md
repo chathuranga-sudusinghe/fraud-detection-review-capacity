@@ -1,6 +1,6 @@
 # AGENTS.md — Working Rules for AI-Assisted Work
 
-Stable working rules for **Claude, Codex, ChatGPT, and any future AI assistant** working in this repository, and for the student directing them. Read this file before making any change.
+Stable working rules for **Claude, Codex, ChatGPT, and any future artificial intelligence (AI) assistant** working in this repository, and for the student directing them. Read this file before making any change.
 
 Rationale for these rules: [DR-004 — GitHub issue-driven workflow](docs/decisions/DR-004-github-issue-driven-workflow.md).
 
@@ -11,9 +11,9 @@ If this file conflicts with [`docs/protocol.md`](docs/protocol.md) on a methodol
 ## Project scope
 
 - **Repository:** `fraud-detection-review-capacity`
-- **Nature:** standalone MSc Data Science research project, University of Greenwich, COMP1885 Individual Project.
+- **Nature:** standalone Master of Science (MSc) Data Science research project, University of Greenwich, COMP1885 Individual Project.
 - **Title:** *Fraud Detection Under Limited Review Capacity: A Temporally Validated Study of Tree-Based and Neural Models and Decision Policies*
-- **Dataset:** IEEE-CIS Fraud Detection labelled training data.
+- **Dataset:** IEEE-CIS (IEEE Computational Intelligence Society) Fraud Detection labelled training data.
 - **Research basis:** this repository, local project data, University of Greenwich guidance, and verified literature.
 
 ---
@@ -89,7 +89,7 @@ The temporal partitions are defined in [DR-001](docs/decisions/DR-001-temporal-s
 
 The research design is defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze) and the [Decision Records](docs/decisions/README.md); the definitions are not repeated here. In brief:
 
-- **Models:** tree-based (LightGBM, CatBoost) and neural (ResNet-style multilayer perceptron, MLP; FT-Transformer), each trained unweighted and with balanced class weighting: eight configurations under one common training procedure ([DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md)).
+- **Models:** tree-based (LightGBM, CatBoost) and neural (ResNet-style multilayer perceptron, MLP; FT-Transformer, Feature Tokenizer + Transformer), each trained unweighted and with balanced class weighting: eight configurations under one common training procedure ([DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md)).
 - **Review capacity:** simulated scenarios of 1 %, 2 % (primary), 5 % and 10 % of transactions, each turned into a fixed daily review budget K ([DR-002](docs/decisions/DR-002-review-capacity-definition.md)).
 - **Decision policies:** R0–R4, defined in the protocol.
 
@@ -294,44 +294,29 @@ In addition:
 
 ## Experiment execution responsibility
 
-These rules apply to every AI assistant (Claude, Codex, ChatGPT and any future assistant). They govern who runs what; they do **not** override `docs/protocol.md` or any Decision Record.
+These rules apply to every AI assistant (Claude, Codex, ChatGPT and any future assistant). They govern who runs commands and who edits files; they do **not** override `docs/protocol.md` or any Decision Record.
 
-**AI assistants may support:**
+**Terminal commands are run by the project owner.**
 
-- creating and editing source code;
-- creating and updating documentation;
-- creating and updating tests;
-- implementing experiment runners and reproducible pipelines;
-- repository inspection;
-- static validation;
-- lightweight engineering tests (defined below);
-- preparing exact, reproducible terminal commands.
+- No AI assistant runs a terminal command for the project or the research. The assistant gives the project owner the exact command, one command per block, with what it does and its expected result. The project owner runs it and shares the output. Claude uses that output to create, edit or update files; Codex and ChatGPT use it to produce review findings, suggested commands and proposed replacement text in their responses, without changing files.
+- **First use.** A command used for the first time in the project is always run first by the project owner.
+- **Prior owner execution.** An earlier run by the project owner may be established by the owner's statement or recorded output from any branch or session of this project. It must cover the same command with the same options and environment settings. A different branch or session alone does not require another first run. Before repeating a command, the reviewing assistant checks that its current implementation still meets every condition of the review exception.
+- **Review exception.** When the project owner asks for a review, the reviewing assistant may run verification commands that the project owner has already run at least once (for example linting, type checking, unit and integration tests, validation commands in check-only mode and link checks), to detect errors and to compare its results with the owner's output. Such a command must not:
+  - train, tune or score a model;
+  - write research output (processed data, evidence files, the dataset manifest) or change the environment (installing, locking or synchronising packages);
+  - read sealed Test labels.
+- **Read-only inspection.** Every assistant may read and search repository content and inspect Git status, diffs, history and GitHub issues, including through read-only commands such as `git status`, `git diff`, `git show` and `gh issue view`. This permission applies independently of the review exception and its first-use requirement; it does not authorise verification runs, changes to any file or to the environment, or access to sealed Test labels.
+- **GitHub issues** are the one exception to the terminal-command rule: Claude may create, update and comment on issues itself, with `gh` or GitHub tools ([Git rules](#git-rules)).
 
-**AI assistants must not independently execute or authorise:**
+In particular, only the project owner runs:
 
-- model-training runs;
-- hyperparameter-search runs;
-- full V1 or V2 experimental runs;
-- confirmatory Test-period evaluation;
-- long-running data-analysis jobs;
-- computationally expensive research experiments;
+- model-training, hyperparameter-search, V1 and V2 runs;
+- the confirmatory Test-period evaluation;
+- data-preparation and data-analysis runs that produce research outputs or research evidence; integration tests and check-only validation are governed by the review exception above;
+- commands that install packages, create or modify lock files, or synchronise or otherwise change the environment; checks that only verify an existing lock file are governed by the review exception above;
 - any run that may produce evidence used for model selection, hypothesis testing or final research conclusions.
 
-These consequential experiment commands are normally **run manually by the project owner** (the student), after the methodology, the implementation and the experiment protocol have been reviewed and approved.
-
-An AI assistant may prepare the exact terminal command and explain what it will do, but **must stop before running it** unless the project owner explicitly authorises that **specific run**.
-
-Approval to implement code, modify documentation, fix bugs or review methodology does **not** imply approval to execute research experiments.
-
-**Lightweight engineering validation** is allowed when it does not constitute a research experiment, for example:
-
-- linting;
-- type checking;
-- unit tests;
-- import checks;
-- small deterministic tests on synthetic or non-research inputs.
-
-Such checks must not train research models, inspect sealed Test labels or generate confirmatory research evidence.
+Consequential runs follow only after the methodology, the implementation and the experiment protocol have been reviewed and approved. Approval to implement code, modify documentation, fix bugs or review methodology does **not** imply approval to run anything.
 
 ---
 
@@ -341,13 +326,14 @@ Such checks must not train research models, inspect sealed Test labels or genera
 - Work on issue-specific branches, e.g. `docs/issue-6-agent-workflow`.
 - Keep changes scoped to the active issue.
 - Use pull requests for review. The PR description must link the issue with `Closes #N` or `Fixes #N`.
-- **AI assistants do not commit or push unless explicitly instructed** by the student for that task.
+- **AI assistants do not commit, push, open or merge pull requests.** The project owner does, using the commands the assistant provides.
+- **GitHub issues.** Claude may create, update and comment on GitHub issues itself, with `gh` or GitHub tools. It asks the project owner before creating a new issue; updating an existing issue needs no separate approval. Codex and ChatGPT propose issue content in their review output.
 
 ---
 
 ## AI-assisted research workflow
 
-This project uses AI assistants such as **Claude**, **Codex** and **ChatGPT**; these rules apply equally to any future assistant. They support:
+This project uses AI assistants, **Claude**, **Codex** and **ChatGPT**, within the permissions defined in [Human review and approval authority](#human-review-and-approval-authority); these rules apply equally to any future assistant. Claude supports implementation and file updates; Codex and ChatGPT review the following activities and report recommendations without changing files:
 
 - research planning;
 - methodological review;
@@ -399,10 +385,11 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 - final Test unsealing and evaluation;
 - commits, pushes, pull requests, merges and releases.
 
-**Typical roles.** These describe usual support, not authority:
+**Assistant roles.** The following permissions and restrictions apply; final approval remains with the project owner:
 
-- **Claude** and **Codex** work on the local repository and on GitHub, and may support implementation, documentation, tests, repository inspection and the preparation of reproducible commands.
-- **ChatGPT** reads the GitHub repository only (committed and pushed content), and may support planning, research synthesis, literature review, methodology review, explanation, drafting, and code and documentation review.
+- **Claude** works with the project owner on the local repository and on GitHub. It is the **only assistant that creates, edits and updates files** (code, tests, configuration, documentation), and it prepares the terminal commands for the project owner to run.
+- **Codex** reads the local repository and GitHub and **reviews only**: it reports findings and does not edit files.
+- **ChatGPT** reads the GitHub repository only (committed and pushed content) and **reviews only**: it may support planning, research synthesis, literature review, methodology review, explanation, and code and documentation review, and does not edit files.
 - Any future assistant follows the same rules.
 
 **No AI assistant may treat its own output, proposal, implementation or analysis as approved because it created it.** A proposal becomes a project decision only after explicit human review and approval.
@@ -416,8 +403,9 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 - silently expand the project scope;
 - change frozen methodology without a GitHub Issue and a Decision Record;
 - inspect sealed Test labels before this is permitted;
-- execute consequential experiments without explicit, run-specific approval (see [Experiment execution responsibility](#experiment-execution-responsibility));
-- commit, push, merge or otherwise finalise repository changes without explicit authorisation (see [Git rules](#git-rules));
+- run terminal commands except for read-only inspection, GitHub-issue handling by Claude and the review exception (see [Experiment execution responsibility](#experiment-execution-responsibility));
+- edit files, unless it is Claude working with the project owner (see the assistant roles above);
+- commit, push, merge or otherwise finalise repository changes (see [Git rules](#git-rules));
 - treat AI-generated text, analysis or results as authoritative research evidence without human review.
 
 **When approval is unclear, stop and ask the project owner** rather than assuming approval.
@@ -432,8 +420,11 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 | AIR | AI Reflection: the University of Greenwich declaration of AI use |
 | CI | Confidence Interval |
 | DR / DR-NNN | Decision Record, numbered NNN |
+| FT-Transformer | Feature Tokenizer + Transformer (a neural model of DR-011) |
+| IEEE-CIS | IEEE Computational Intelligence Society |
 | [D], [L], [G], [I] | Evidence tags: dataset, literature, University guidance, inference |
 | K | Fixed daily review budget (reviews per relative day) |
+| MSc | Master of Science |
 | MLP | Multilayer perceptron (ResNet-style MLP: a neural model of DR-011) |
 | MAE, RMSE | Mean Absolute Error, Root Mean Squared Error (named as examples of standard academic equations) |
 | PR | Pull request |
