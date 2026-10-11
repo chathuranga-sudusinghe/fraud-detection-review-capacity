@@ -149,6 +149,26 @@ review-capacity prepare-data --check-only  # validate and print the summary; wri
 
 **Processed files.** The stage also writes the development partitions to `data/processed/`: the joined development rows and one model-input file each for Train, Validation 1 and Validation 2, in Parquet format. Each file has a provenance record (`*.provenance.json`) with its SHA-256, row and column counts, the raw-file and configuration checksums, the Git commit, a fingerprint of the code that produced it and the software versions. These files are row-level derived data: they stay local and are never committed ([Data-Use Terms](#data-use-terms)). No Test-period file is written before the protocol freeze.
 
+## Data Access After the Parquet Build
+
+**Rule (project owner's decision, 11 October 2026; Issue #70).** The raw files are read only to build the processed development files. That build ran once, on 10 October 2026 ([Dataset Manifest](#dataset-manifest)). From then until the confirmatory Test evaluation:
+
+- every step, including data profiling, the integration tests, training, tuning, calibration, threshold selection and every Validation 1 and Validation 2 analysis, reads the development data only from `data/processed/`, through the verified reader of the `review_capacity` package;
+- no step reads `data/raw/`; this includes `prepare-data --check-only`, which validates the raw files;
+- if the feature declaration changes before the protocol freeze, the partition files are rebuilt from the joined development file `development_joined.parquet`, never from the raw files;
+- the raw files are read once more, by the confirmatory Test evaluation after the protocol freeze, which prepares the whole Test period (relative days 155–182) with the same preparation code as the development partitions.
+
+No separate copy of the Test rows is made: they stay only in the raw files, whose Test-period labels the preparation code does not parse.
+
+**How the code enforces the rule.**
+
+- **Verified reader.** Before it returns any data, the reader checks each processed file against its provenance record: SHA-256, rows, columns, the raw-file checksums declared in `config/dataset.yaml`, the checksum of `config/features.yaml` (a file built under another feature declaration is rejected as stale), the declared columns and their storage types, and the [DR-001](decisions/DR-001-temporal-split-strategy.md) anchors recomputed from the file's identifier and time columns before any label is read.
+- **One raw-data module.** Only the module that reads the raw files can open them, and only the data-preparation stage and its validation contract use it; an automated test enforces this boundary.
+- **Built once.** The data-preparation stage refuses to write over processed files that already exist.
+- **Development labels only.** Labels are parsed only up to the last development row ([Dataset Manifest](#dataset-manifest)).
+
+**Verification.** **[D]** On 11 October 2026 the project owner ran the integration tests on the processed files only, with the raw-file paths disabled. The DR-001 anchors were reproduced from the files' content, and the stored Train, Validation 1 and Validation 2 files were reproduced value for value from `development_joined.parquet` by the current code.
+
 ## Research Split Policy
 
 The chronological partitions and their roles are defined in [DR-001](decisions/DR-001-temporal-split-strategy.md) and the [protocol](protocol.md#experimental-split-structure). The final Test period is never used to select any model, input, policy, capacity or cost setting.
@@ -165,7 +185,7 @@ Local Parquet copies are derivative storage formats and should not be described 
 
 ## Status
 
-**Dataset source documented; data understanding complete** (notebooks 01–04); **dataset manifest and data preparation complete** (Issue #62; [Dataset Manifest](#dataset-manifest)).
+**Dataset source documented; data understanding complete** (notebooks 01–04); **dataset manifest and data preparation complete** (Issue #62; [Dataset Manifest](#dataset-manifest)); **raw data read again only by the confirmatory Test evaluation** (Issue #70; [Data Access After the Parquet Build](#data-access-after-the-parquet-build)).
 
 Computation findings in the data-understanding notebooks are corrected in development-only notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)).
 
@@ -180,6 +200,7 @@ Computation findings in the data-understanding notebooks are corrected in develo
 | Parquet | Column-oriented file format used for the local processed files |
 | Provenance record | `*.provenance.json` file describing how a processed file was produced |
 | IEEE-CIS | IEEE Computational Intelligence Society |
+| [D] | Evidence tag: observed dataset evidence |
 | [I] | Evidence tag: inference or recommendation |
 | `isFraud` | Binary target: 1 = fraud, 0 = legitimate |
 | `TransactionDT` | Time offset from an undisclosed reference point (seconds) |
