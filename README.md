@@ -78,7 +78,7 @@ Two gates separate development from confirmation: **(1)** training, policy and a
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (433 inputs: 431 declared columns and 2 time-of-day inputs) |
 | [`config/dataset.yaml`](config/dataset.yaml) | Machine-readable raw files, DR-001 partitions and their integrity anchors |
 | [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs (`features/`); command `review-capacity` |
-| [`tests/`](tests/) | Unit tests on synthetic data; integration tests on the local raw data (run by the project owner) |
+| [`tests/`](tests/) | Unit tests on synthetic data; integration tests on the local raw data, subject to the execution rules in [`AGENTS.md`](AGENTS.md#experiment-execution-responsibility) |
 | [`notebooks/`](notebooks/README.md) | Data-understanding notebooks 01–04 |
 | [`scripts/`](scripts/) | Engineering scripts (GPU memory feasibility probe, Issue #50) |
 | [`AGENTS.md`](AGENTS.md) | Working rules for the project and AI-assisted work |
