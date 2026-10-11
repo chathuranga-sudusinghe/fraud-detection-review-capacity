@@ -1,4 +1,4 @@
-"""Checks on the local raw data, run by the project owner.
+"""Checks on the local raw data, subject to the execution rules in AGENTS.md.
 
 Skipped unless ``data/raw/`` holds both files **and** ``REVIEW_CAPACITY_INTEGRATION=1`` is set, so
 that the real data are never read by an ordinary test run:
