@@ -11,6 +11,7 @@ clean, committed working tree.
 from __future__ import annotations
 
 import hashlib
+import logging
 import platform
 import subprocess
 from importlib import metadata
@@ -23,13 +24,16 @@ from review_capacity.files import write_json
 
 RECORDED_PACKAGES = ("numpy", "pandas", "pyarrow", "PyYAML")
 
+logger = logging.getLogger(__name__)
+
 
 def _git(root: Path, *args: str) -> str | None:
     try:
         result = subprocess.run(
             ["git", *args], cwd=root, capture_output=True, text=True, check=True
         )
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError) as error:
+        logger.warning("git %s unavailable (%s); recorded as null", " ".join(args), error)
         return None
     return result.stdout.strip()
 
@@ -58,8 +62,14 @@ def code_provenance(root: Path) -> dict[str, Any]:
         try:
             packages[name] = metadata.version(name)
         except metadata.PackageNotFoundError:
+            logger.warning("Package %s is not installed; recorded as null", name)
             packages[name] = None
     source_dir = package_directory()
+    if status:
+        logger.warning(
+            "The working tree has uncommitted changes; research evidence should come from a "
+            "clean, committed working tree"
+        )
     return {
         "package": {
             "name": "review_capacity",

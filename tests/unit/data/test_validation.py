@@ -8,8 +8,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from review_capacity.data.loading import load_raw
-from review_capacity.data.validation import check_file_checksums, validate
+from review_capacity.data.loading import check_file_checksums, load_raw
+from review_capacity.data.validation import validate
 from review_capacity.errors import DataValidationError
 from support.synthetic import Synthetic, build_synthetic, with_partition
 

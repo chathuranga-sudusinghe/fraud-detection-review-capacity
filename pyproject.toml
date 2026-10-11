@@ -94,10 +94,17 @@ where = ["src"]
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
-extend-exclude = ["notebooks"]
+# scripts/: gpu_feasibility_probe.py is kept exactly as it ran to produce the committed evidence in
+# evidence/gpu_probe/; Issue #66 replaces it with a package command under these rules.
+extend-exclude = ["notebooks", "scripts"]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF"]
+# T20: no print (the package logs; see review_capacity.logging_setup); LOG, G: logging usage;
+# BLE: no broad except unless it re-raises.
+select = [
+    "E", "W", "F", "I", "B", "UP", "SIM", "RUF",
+    "T20", "LOG", "G", "C4", "RET", "PIE", "PT", "N", "ARG", "PERF", "PTH", "BLE",
+]
 allowed-confusables = ["–", "−", "×"]
 
 [tool.mypy]
@@ -115,5 +122,5 @@ testpaths = ["tests"]
 pythonpath = ["tests"]
 addopts = "-ra --import-mode=importlib"
 markers = [
-    "integration: tests on the local raw data (skipped when data/raw/ is absent)",
+    "integration: checks on the processed development files (opt-in: REVIEW_CAPACITY_INTEGRATION=1)",
 ]

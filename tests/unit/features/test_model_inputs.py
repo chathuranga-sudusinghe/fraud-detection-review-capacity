@@ -27,7 +27,8 @@ def _canonical(synthetic: Synthetic) -> pd.DataFrame:
 def test_columns_follow_declared_input_order(synthetic: Synthetic) -> None:
     frame = _canonical(synthetic)
     assert tuple(frame.columns) == synthetic.features.model_inputs
-    assert "TransactionDT" not in frame.columns and "isFraud" not in frame.columns
+    assert "TransactionDT" not in frame.columns
+    assert "isFraud" not in frame.columns
 
 
 def test_categorical_labels(synthetic: Synthetic) -> None:

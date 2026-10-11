@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import importlib
+import logging
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ import pandas as pd
 import pytest
 
 from review_capacity.data.loading import NUMERIC_MISSING_TOKENS, load_labels, load_raw
-from review_capacity.errors import DataValidationError, SealedTestError
+from review_capacity.errors import DataValidationError, FileAccessError, SealedTestError
 from support.synthetic import Synthetic, build_synthetic
 
 
@@ -136,14 +137,15 @@ def test_empty_text_field_is_missing(synthetic: Synthetic) -> None:
     assert raw.joined["ProductCD"].isna().tolist()[:4] == [False, False, True, False]
 
 
-def test_numeric_missing_tokens_follow_pandas_defaults(tmp_path: Path) -> None:
-    pandas_defaults = importlib.import_module("pandas._libs.parsers").STR_NA_VALUES
-    assert set(NUMERIC_MISSING_TOKENS) == set(pandas_defaults)
+@pytest.mark.parametrize("token", NUMERIC_MISSING_TOKENS)
+def test_every_documented_numeric_missing_token_reads_as_missing(
+    tmp_path: Path, token: str
+) -> None:
     data = build_synthetic(
-        tmp_path, edit_transaction=lambda f: f.assign(V1=["NA", 1.0, "", 2.0] * (len(f) // 4))
+        tmp_path, edit_transaction=lambda f: f.assign(V1=[token, 1.0, 0.0, 2.0] * (len(f) // 4))
     )
     raw = load_raw(data.features, data.dataset)
-    assert raw.joined["V1"].isna().tolist()[:4] == [True, False, True, False]
+    assert raw.joined["V1"].isna().tolist()[:4] == [True, False, False, False]
 
 
 def test_unparseable_numeric_value_stops(tmp_path: Path) -> None:
@@ -152,3 +154,40 @@ def test_unparseable_numeric_value_stops(tmp_path: Path) -> None:
     )
     with pytest.raises(DataValidationError, match="cannot be parsed"):
         load_raw(data.features, data.dataset)
+
+
+def test_loading_logs_progress(synthetic: Synthetic, caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.INFO, logger="review_capacity"):
+        load_raw(synthetic.features, synthetic.dataset)
+    messages = " | ".join(r.getMessage() for r in caplog.records)
+    assert "train_transaction.csv" in messages
+    assert "train 8, v1 4, v2 4, test 4" in messages
+
+
+def test_feature_reads_never_include_the_target(
+    synthetic: Synthetic, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[dict[str, Any]] = []
+    read_csv = pd.read_csv
+
+    def recording_read_csv(*args: Any, **kwargs: Any) -> pd.DataFrame:
+        calls.append(kwargs)
+        frame: pd.DataFrame = read_csv(*args, **kwargs)
+        return frame
+
+    monkeypatch.setattr(pd, "read_csv", recording_read_csv)
+    load_raw(synthetic.features, synthetic.dataset)
+    assert calls
+    assert all("isFraud" not in call["usecols"] for call in calls)
+
+
+def test_identity_columns_must_match_the_declaration(synthetic: Synthetic) -> None:
+    dataset = replace(synthetic.dataset, identity_columns=("id_01", "id_13", "DeviceInfo"))
+    with pytest.raises(DataValidationError, match="columns_besides_key"):
+        load_raw(synthetic.features, dataset)
+
+
+def test_missing_raw_file_is_a_file_access_error(synthetic: Synthetic) -> None:
+    synthetic.dataset.identity.path.unlink()
+    with pytest.raises(FileAccessError):
+        load_raw(synthetic.features, synthetic.dataset)

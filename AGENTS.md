@@ -258,6 +258,8 @@ first use with short meaning
 - Notebooks are research evidence and analysis tools, not the whole project architecture. Save executed notebooks with their outputs when they serve as evidence.
 - Keep experiments deterministic where practical: fixed seeds, recorded package versions, hashed data splits.
 - Add tests for reusable implementation code when appropriate.
+- **Logging, not printing.** Code reports progress, timing and diagnostics through logging ([`src/review_capacity/logging_setup.py`](src/review_capacity/logging_setup.py)): library modules create loggers and never configure logging. Each long step (data preparation, training, evaluation) is wrapped in `log_step`, which logs its start, duration, failure or interruption; each long loop (columns, folds, trials, epochs) reports bounded periodic progress through `ProgressLogger`, so that a running process always shows what it is doing. `print` is not used in the package or its tests (enforced by the ruff rule T20). Evidence-producing runs keep a log file (`--log-file`), which also records the traceback of any failure.
+- **Errors are raised, never hidden.** Expected operational and validation failures are raised as project exceptions ([`src/review_capacity/errors.py`](src/review_capacity/errors.py)) with a clear message and their cause, and the command line summarises each in one line with its own exit code, while the log file keeps its traceback and cause. An `except` clause only adds context and re-raises, or handles an expected, documented case and logs it; an error is never silently swallowed (enforced by the ruff rule BLE). Any other exception is a defect and keeps its traceback.
 
 ---
 

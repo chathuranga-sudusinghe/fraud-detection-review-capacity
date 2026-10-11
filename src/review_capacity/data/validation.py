@@ -1,13 +1,15 @@
 """The data validation contract (protocol design item 8; DR-001; DR-008).
 
-Checks that need only the raw files are applied while loading (``loading.load_raw``): headers
-against ``config/features.yaml``, unique keys, the one-to-one join, the ``TransactionDT`` rule and
-its file order. This module adds the checks against the recorded integrity anchors and the
-column-value rules, and returns a label-free summary for the dataset manifest.
+Checks that need the raw files are applied while loading (``data.loading``): the raw-file
+checksums, headers against ``config/features.yaml``, unique keys, the one-to-one join, the
+``TransactionDT`` rule and its file order. This module adds the checks against the recorded
+integrity anchors and the column-value rules, and returns a label-free summary for the dataset
+manifest.
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import numpy as np
@@ -16,7 +18,10 @@ import pandas as pd
 from review_capacity.config import DatasetSpec, FeatureSpec
 from review_capacity.data.loading import RawData
 from review_capacity.errors import DataValidationError
-from review_capacity.hashing import file_sha256, id_set_sha256
+from review_capacity.hashing import id_set_sha256
+from review_capacity.logging_setup import log_step
+
+logger = logging.getLogger(__name__)
 
 # Largest magnitude up to which every whole number is exactly representable in float64 (2**53);
 # numeric codes beyond it could not be converted to their exact integer labels.
@@ -34,19 +39,6 @@ class PartitionSummary:
     transaction_dt_min: int
     transaction_dt_max: int
     transaction_id_sha256: str
-
-
-def check_file_checksums(dataset: DatasetSpec) -> dict[str, str]:
-    """SHA-256 of both raw files; they must equal the recorded values."""
-    observed: dict[str, str] = {}
-    for spec in (dataset.transaction, dataset.identity):
-        digest = file_sha256(spec.path)
-        if digest != spec.sha256:
-            raise DataValidationError(
-                f"{spec.path.name}: SHA-256 {digest} differs from the recorded {spec.sha256}"
-            )
-        observed[spec.path.name] = digest
-    return observed
 
 
 def summarise_partitions(
@@ -97,6 +89,10 @@ def check_partition_anchors(summaries: list[PartitionSummary], dataset: DatasetS
         problems.append(f"{total} rows in total, {dataset.total_rows} recorded")
     if problems:
         raise DataValidationError("Partition anchors not reproduced: " + "; ".join(problems))
+    logger.info(
+        "Partition anchors reproduced (rows, TransactionDT bounds, hash prefixes): %s",
+        ", ".join(s.name for s in summaries),
+    )
 
 
 def check_categorical_values(joined: pd.DataFrame, features: FeatureSpec) -> None:
@@ -133,8 +129,9 @@ def check_numeric_types(joined: pd.DataFrame, features: FeatureSpec) -> None:
 
 def validate(raw: RawData, features: FeatureSpec, dataset: DatasetSpec) -> list[PartitionSummary]:
     """Run the value checks of the contract on loaded data; return the partition summaries."""
-    check_categorical_values(raw.joined, features)
-    check_numeric_types(raw.joined, features)
-    summaries = summarise_partitions(raw, features, dataset)
-    check_partition_anchors(summaries, dataset)
+    with log_step(logger, "Running the data validation contract"):
+        check_categorical_values(raw.joined, features)
+        check_numeric_types(raw.joined, features)
+        summaries = summarise_partitions(raw, features, dataset)
+        check_partition_anchors(summaries, dataset)
     return summaries

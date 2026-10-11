@@ -8,15 +8,20 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from review_capacity.errors import FileAccessError
+
 _CHUNK_BYTES = 1 << 22
 
 
 def file_sha256(path: Path) -> str:
     """Hexadecimal SHA-256 of a file's bytes."""
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while block := handle.read(_CHUNK_BYTES):
-            digest.update(block)
+    try:
+        with path.open("rb") as handle:
+            while block := handle.read(_CHUNK_BYTES):
+                digest.update(block)
+    except OSError as error:
+        raise FileAccessError(f"{path}: cannot be read ({error.strerror})") from error
     return digest.hexdigest()
 
 

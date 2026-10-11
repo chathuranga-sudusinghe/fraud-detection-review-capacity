@@ -1,5 +1,8 @@
 """Reading and joining the raw files, with the Test period sealed in code.
 
+The only module that opens the raw files (checked by ``tests/unit/test_architecture.py``); only
+the Parquet build (``data.preparation``) and the raw-data contract (``data.validation``) use it.
+
 Feature columns are read for all rows; the target is never read with them. Labels are read
 separately and only for the leading rows of the requested development partitions: the file is
 ordered by ``TransactionDT`` (checked), so the CSV parser stops before the first Test row and
@@ -13,6 +16,7 @@ the key use the missing-value tokens that pandas recognises by default.
 from __future__ import annotations
 
 import csv
+import logging
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -27,7 +31,11 @@ from review_capacity.data.partitions import (
     relative_day,
     validate_transaction_dt,
 )
-from review_capacity.errors import DataValidationError, SealedTestError
+from review_capacity.errors import DataValidationError, FileAccessError, SealedTestError
+from review_capacity.hashing import file_sha256
+from review_capacity.logging_setup import log_step
+
+logger = logging.getLogger(__name__)
 
 # The default missing-value tokens of pandas.read_csv, as documented for pandas 3.0
 # (https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html, parameter na_values).
@@ -38,10 +46,30 @@ NUMERIC_MISSING_TOKENS = (
 TEXT_MISSING_TOKENS = ("",)
 
 
+def check_file_checksums(dataset: DatasetSpec) -> dict[str, str]:
+    """SHA-256 of both raw files; they must equal the recorded values."""
+    observed: dict[str, str] = {}
+    for spec in (dataset.transaction, dataset.identity):
+        with log_step(logger, f"Computing SHA-256 of {spec.path.name}"):
+            digest = file_sha256(spec.path)
+        if digest != spec.sha256:
+            raise DataValidationError(
+                f"{spec.path.name}: SHA-256 {digest} differs from the recorded {spec.sha256}"
+            )
+        observed[spec.path.name] = digest
+        logger.info("%s: SHA-256 matches the recorded value", spec.path.name)
+    return observed
+
+
 def read_header(path: Path) -> list[str]:
     """Column names in the first line of a CSV file."""
-    with path.open(newline="", encoding="utf-8") as handle:
-        return next(csv.reader(handle))
+    try:
+        with path.open(newline="", encoding="utf-8") as handle:
+            return next(csv.reader(handle))
+    except OSError as error:
+        raise FileAccessError(f"{path}: cannot be read ({error.strerror})") from error
+    except StopIteration as error:
+        raise DataValidationError(f"{path.name}: the file is empty") from error
 
 
 def check_headers(features: FeatureSpec, dataset: DatasetSpec) -> None:
@@ -63,6 +91,8 @@ def check_headers(features: FeatureSpec, dataset: DatasetSpec) -> None:
     shared = (set(tx_cols) & set(id_cols)) - {features.key}
     if shared:
         problems.append(f"columns in both files besides the key: {sorted(shared)}")
+    if set(id_cols) - {features.key} != set(dataset.identity_columns):
+        problems.append("identity columns differ from columns_besides_key in config/dataset.yaml")
     if features.target not in tx_cols:
         problems.append(f"target {features.target} not in the transaction file")
     joined = set(tx_cols) | set(id_cols)
@@ -76,6 +106,7 @@ def check_headers(features: FeatureSpec, dataset: DatasetSpec) -> None:
         raise DataValidationError(
             "Raw headers do not match the declaration: " + "; ".join(problems)
         )
+    logger.info("Raw headers match the declaration: %d joined columns", len(joined))
 
 
 def _dtypes(features: FeatureSpec, columns: Sequence[str]) -> dict[str, str]:
@@ -104,6 +135,8 @@ def _read_csv(path: Path, **options: object) -> pd.DataFrame:
     """``pandas.read_csv`` with parsing failures reported as ``DataValidationError``."""
     try:
         frame: pd.DataFrame = pd.read_csv(path, keep_default_na=False, **options)  # type: ignore[call-overload]
+    except OSError as error:
+        raise FileAccessError(f"{path}: cannot be read ({error.strerror})") from error
     except (ValueError, pd.errors.ParserError) as error:
         raise DataValidationError(f"{path.name}: cannot be parsed as declared") from error
     return frame
@@ -119,14 +152,16 @@ def _check_key(frame: pd.DataFrame, key: str, name: str) -> None:
 def read_feature_table(path: Path, features: FeatureSpec) -> pd.DataFrame:
     """Read every column except the target, with declared types."""
     columns = [c for c in read_header(path) if c != features.target]
-    frame = _read_csv(
-        path,
-        usecols=columns,
-        dtype=_dtypes(features, columns),
-        na_values=_missing_tokens(features, columns),
-    )
+    with log_step(logger, f"Reading {path.name} (features only, no target)"):
+        frame = _read_csv(
+            path,
+            usecols=columns,
+            dtype=_dtypes(features, columns),
+            na_values=_missing_tokens(features, columns),
+        )
     _check_key(frame, features.key, path.name)
     frame[features.key] = frame[features.key].astype("int64")
+    logger.info("%s: %d rows, %d columns", path.name, len(frame), len(frame.columns))
     return frame
 
 
@@ -138,6 +173,11 @@ def join_tables(transaction: pd.DataFrame, identity: pd.DataFrame, key: str) -> 
     joined = transaction.merge(identity, on=key, how="left", validate="one_to_one", sort=False)
     if len(joined) != len(transaction) or not joined[key].equals(transaction[key]):
         raise DataValidationError("The join changed the transaction rows or their order")
+    logger.info(
+        "Joined %d transaction rows with %d identity rows (one-to-one, row-preserving)",
+        len(transaction),
+        len(identity),
+    )
     return joined
 
 
@@ -162,12 +202,15 @@ def load_raw(features: FeatureSpec, dataset: DatasetSpec) -> RawData:
     if not time.is_monotonic_increasing:
         raise DataValidationError(f"{features.time} is not in non-decreasing file order")
     joined[features.time] = time.astype("int64")
+    logger.info("%s valid and in file order on all %d rows", features.time, len(joined))
     days = relative_day(joined[features.time])
+    partition = assign_partitions(days, dataset)
+    logger.info(
+        "Rows per partition: %s",
+        ", ".join(f"{name} {count}" for name, count in partition.value_counts(sort=False).items()),
+    )
     return RawData(
-        joined=joined,
-        relative_day=days,
-        partition=assign_partitions(days, dataset),
-        identity_rows=len(identity),
+        joined=joined, relative_day=days, partition=partition, identity_rows=len(identity)
     )
 
 
@@ -195,13 +238,18 @@ def load_labels(
     sealed_names = {p.name for p in dataset.partitions if p.sealed}
     if parsed_partitions & sealed_names and not unseal_test_labels:
         raise SealedTestError("Reading these labels would parse sealed rows")
-    labels = _read_csv(
-        dataset.transaction.path,
-        usecols=[features.key, features.target],
-        dtype={features.key: "int64", features.target: "str"},
-        na_values={features.key: [""], features.target: [""]},
-        nrows=n_rows,
-    )
+    scope = "sealed rows explicitly unsealed" if unseal_test_labels else "no sealed row"
+    with log_step(
+        logger,
+        f"Reading labels of {[p.name for p in requested]} (first {n_rows} rows; {scope})",
+    ):
+        labels = _read_csv(
+            dataset.transaction.path,
+            usecols=[features.key, features.target],
+            dtype={features.key: "int64", features.target: "str"},
+            na_values={features.key: [""], features.target: [""]},
+            nrows=n_rows,
+        )
     if not labels[features.key].equals(
         raw.joined[features.key].iloc[:n_rows].reset_index(drop=True)
     ):

@@ -47,6 +47,11 @@ class ProjectPaths:
         return self.config_dir / "dataset.yaml"
 
     @property
+    def feature_catalog(self) -> Path:
+        """The human-readable feature catalog, whose statistics ``profile-data`` checks."""
+        return self.root / "docs" / "feature-catalog.md"
+
+    @property
     def data_dir(self) -> Path:
         return self.root / "data"
 

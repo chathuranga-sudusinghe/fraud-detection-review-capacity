@@ -85,8 +85,10 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 4. Validate the raw data and prepare the development files (run by the project owner; [execution rules](AGENTS.md#experiment-execution-responsibility)):
 
    ```bash
-   .venv/bin/review-capacity prepare-data
+   .venv/bin/review-capacity --log-file logs/prepare-data.log prepare-data
    ```
+
+   Every command logs its progress with timestamps to the terminal; `--log-file PATH` (before the command name) also keeps the log in a file, as an evidence-producing run should. `review-capacity --help` lists the options and exit codes.
 
 ## Repository map
 
@@ -106,7 +108,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs (`features/`); command `review-capacity` |
 | [`pyproject.toml`](pyproject.toml), [`uv.lock`](uv.lock), [`.python-version`](.python-version) | Pinned dependencies, locked environment (uv) and Python version |
 | [`evidence/`](evidence/gpu_probe/README.md) | Engineering evidence: GPU memory probe results (Issue #50) |
-| [`tests/`](tests/) | Unit tests on synthetic data; integration tests on the local raw data, subject to the execution rules in [`AGENTS.md`](AGENTS.md#experiment-execution-responsibility) |
+| [`tests/`](tests/) | Unit tests on synthetic data; opt-in integration tests on the local processed development files (no raw file is read), subject to the execution rules in [`AGENTS.md`](AGENTS.md#experiment-execution-responsibility) |
 | [`notebooks/`](notebooks/README.md) | Data-understanding notebooks 01–04 |
 | [`scripts/`](scripts/) | Engineering scripts (GPU memory feasibility probe, Issue #50) |
 | [`AGENTS.md`](AGENTS.md) | Working rules for the project and AI-assisted work |
