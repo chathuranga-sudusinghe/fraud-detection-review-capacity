@@ -108,6 +108,7 @@ Important files:
 - [`docs/feature-catalog.md`](docs/feature-catalog.md) — column-by-column data dictionary; model-input roles are machine-readable in [`config/features.yaml`](config/features.yaml)
 - [`docs/literature-review.md`](docs/literature-review.md)
 - [`docs/references.md`](docs/references.md)
+- [`docs/greenwich-criteria-checklist.md`](docs/greenwich-criteria-checklist.md)
 - [`docs/decisions/`](docs/decisions/README.md)
 - [`notebooks/`](notebooks/README.md) — index of the data-understanding notebooks and the notebook 01 section map
 
@@ -128,6 +129,7 @@ Saved research evidence (executed notebooks) is exempt: it is never edited to ma
 | Literature synthesis and research gap | [`docs/literature-review.md`](docs/literature-review.md) |
 | Literature search, screening and selection | [`docs/literature-search-method.md`](docs/literature-search-method.md) |
 | Field-by-field comparison of selected studies | [`docs/literature-evidence-matrix.md`](docs/literature-evidence-matrix.md) |
+| University of Greenwich requirements and how the project meets them | [`docs/greenwich-criteria-checklist.md`](docs/greenwich-criteria-checklist.md) |
 | Sources and their verification status | [`docs/references.md`](docs/references.md) |
 | Dataset source, provenance, use terms, version control and manifest | [`docs/dataset.md`](docs/dataset.md) |
 | Column roles (canonical declaration) | [`config/features.yaml`](config/features.yaml); [`docs/feature-catalog.md`](docs/feature-catalog.md) is its human-readable companion and reads every role from it. If the two disagree, `features.yaml` is correct and the catalog is fixed |
@@ -352,7 +354,7 @@ This project uses AI assistants, **Claude**, **Codex** and **ChatGPT**, within t
 1. reviewed by the student;
 2. checked against the dataset, the literature or University guidance where relevant;
 3. corrected where necessary;
-4. disclosed according to University of Greenwich requirements (the AI Reflection, AIR; see `REF-053` in [`docs/references.md`](docs/references.md)).
+4. disclosed according to University of Greenwich requirements: an AI Reflection (AIR), which from 2026/27 replaces the Declaration of AI use (see `REF-109` and `REF-111` in [`docs/references.md`](docs/references.md) and the [criteria checklist](docs/greenwich-criteria-checklist.md#5-use-of-ai)).
 
 **The student remains responsible** for the final research design, implementation, analysis, interpretation and submission. What AI assistants must not do, and who holds approval authority, is set out in [Human review and approval authority](#human-review-and-approval-authority).
 
@@ -419,7 +421,7 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 | Symbol / abbreviation | Meaning |
 |---|---|
 | AI | Artificial intelligence |
-| AIR | AI Reflection: the University of Greenwich declaration of AI use |
+| AIR | AI Reflection: the University of Greenwich statement of how AI was used, replacing the Declaration of AI use from 2026/27 |
 | CI | Confidence Interval |
 | DR / DR-NNN | Decision Record, numbered NNN |
 | FT-Transformer | Feature Tokenizer + Transformer (a neural model of DR-011) |

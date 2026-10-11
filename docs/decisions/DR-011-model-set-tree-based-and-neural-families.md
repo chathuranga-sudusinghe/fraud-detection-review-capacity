@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner (Issue #54); supervisor review pending (Issue #56) |
+| Status | Accepted (pre-freeze) by the project owner (Issue #54) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-10-09 (Issue #54); revised 2026-10-10 (Issue #64: 433 model inputs), 2026-10-10 (Issue #60: link to the probe results) |
 | Evidence source | Structured literature search and evidence matrix (Issue #52: [`literature-search-method.md`](../literature-search-method.md), [`literature-evidence-matrix.md`](../literature-evidence-matrix.md)); GPU memory feasibility probe on synthetic inputs (Issue #50, `scripts/gpu_feasibility_probe.py`; results table in [`evidence/gpu_probe/`](../../evidence/gpu_probe/README.md)). No labels, model scores or Test-period data were used. |
 | Related | [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-008](DR-008-feature-declaration-and-model-input-policy.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md) |

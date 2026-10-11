@@ -240,7 +240,7 @@ Defined in [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md
 
 The tree-vs-neural family question is open in the literature for tabular data: no family is universally superior, and the gap is often small relative to tuning effects [REF-013, REF-014, REF-087, REF-088, REF-089, REF-090] ([literature review](literature-review.md), Section 2).
 
-Optional reference (descriptive only, outside H1–H3; inclusion decided at the design review):
+Optional reference (descriptive only, outside H1–H3; inclusion is an owner decision, design item 5):
 
 - L2-regularised (ridge-penalised) logistic regression. Any preprocessing pipeline is fitted on Train only.
 
@@ -675,9 +675,9 @@ The study uses secondary, anonymised data and does not recruit human participant
 
 The University of Greenwich Research Ethics Policy applies to master's students' research (§1.2) [REF-050]. It lists research involving "harmful, criminal, particularly sensitive … subject matters" as requiring ethical consideration (§1.3.4) and as **Higher Risk** (§2.2.1 iv) [REF-050]. Separate guidance states that fully anonymised secondary data should not normally need approval, and that taught students are advised on the route by their programme or module leader [REF-051].
 
-**Ethics and governance status (Issue #31).** The supervisor has given written approval of the project topic. A separate, explicit determination of the ethics route (including whether §1.3.4 applies) was requested but was not provided. The project therefore proceeds under the available University of Greenwich research-governance guidance [REF-050, REF-051] and the project data-governance controls below. **No formal ethics approval, ethics exemption or ethics identifier is claimed.** The competition data-use terms have been verified [REF-049]: the Rules permit non-commercial use for academic research and education (Section 7A) and prohibit making the Competition Data available to any party not participating in the competition (Section 7B). As a stricter project policy, raw data and row-level derived data stay local, out of Git, and are not shared with anyone, including supervisors or examiners; aggregate results may be published ([`dataset.md`](dataset.md#data-use-terms)).
+**Ethics and governance status (Issues #31 and #63).** The supervisor has given written approval of the project topic; a separate determination of the ethics route was requested but was not provided. **The project owner decided on 11 October 2026 to follow the anonymised secondary-data route** described in the University guidance [REF-051]. The criminal-subject-matter provision [REF-050 §1.3.4] is included in the documented ethical considerations below. Written confirmation of the route, including whether §1.3.4 and the review of Higher-Risk student projects (§2.4) apply, has been requested from the module leader and remains outstanding ([criteria checklist](greenwich-criteria-checklist.md#4-ethics)). **No formal ethics approval, ethics exemption or ethics identifier is claimed.** The competition data-use terms have been verified [REF-049]: the Rules permit non-commercial use for academic research and education (Section 7A) and prohibit making the Competition Data available to any party not participating in the competition (Section 7B). As a stricter project policy, raw data and row-level derived data stay local, out of Git, and are not shared with anyone, including supervisors or examiners; aggregate results may be published ([`dataset.md`](dataset.md#data-use-terms)).
 
-**Ethical considerations.** Following the University of Greenwich guidance and the supervisor's or Faculty Research Ethics Committee's requirements, the ethics assessment considers:
+**Ethical considerations.** Following the University of Greenwich guidance [REF-050, REF-051], the ethics assessment considers:
 - the status and anonymisation of the secondary data;
 - permitted use under the competition rules ([`dataset.md`](dataset.md#data-use-terms));
 - privacy and re-identification risk;
@@ -686,11 +686,11 @@ The University of Greenwich Research Ethics Policy applies to master's students'
 - human oversight;
 - responsible interpretation of model outputs.
 
-Artificial intelligence (AI) assistance used in this project must be declared in the AI Reflection (AIR) required by University guidance [REF-053].
+Artificial intelligence (AI) assistance used in this project will be declared at submission in an AI Reflection (AIR), which replaces the Declaration of AI use from 2026/27 [REF-109, REF-111]; the AI-use tier is Tier 2 ("Supported by AI") as the owner's working basis, to be confirmed against the COMP1885 assessment brief ([criteria checklist](greenwich-criteria-checklist.md#5-use-of-ai)).
 
 ## Design items before protocol freeze
 
-**Fixed design elements** (recorded in Decision Records; supervisor review pending):
+**Fixed design elements** (recorded in Decision Records and accepted by the project owner in line with the University of Greenwich criteria; supervisor feedback welcome, not a precondition):
 
 | Element | Specification | Record |
 |---|---|---|
@@ -711,13 +711,13 @@ Artificial intelligence (AI) assistance used in this project must be declared in
 
 | # | Item | Notes |
 |---|---|---|
-| 1 | Supervisor review of the design (DR-001–DR-012) | Design review with the supervisor (Issue #56) |
+| 1 | University of Greenwich criteria | Resolved (Issue #63): requirements mapped in the [criteria checklist](greenwich-criteria-checklist.md); supervisor feedback on the design (DR-001–DR-012) welcome, not a precondition (Issue #56) |
 | 2 | Neural-network input representation | [DR-012](decisions/DR-012-neural-network-input-representation.md), proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise formula and 1,000 quantiles [REF-103], missingness indicators; one fixed noise seed shared by all neural configurations (value fixed in the training rules); inputs constant in Train need no special rule; an input entirely missing in Train stops data preparation |
 | 3 | Training rules | Search method and budget, V1 objective, early-stopping rule, seeds, aggregation of neural-network seeds, tie rule for equal scores, calibration details |
 | 4 | Feature-engineering policy | Resolved (Issue #64): declared inputs plus the two time-of-day inputs; no other engineered feature ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §4) |
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
-| 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Tier set by the assessment brief; confirmed with the supervisor [REF-053] |
-| 7 | Research-methodology framing | IBM Foundational Methodology adaptation [REF-085], recorded after the design review |
+| 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Resolved as a working basis (Issue #63): Tier 2, AIR at submission [REF-109, REF-111]; tier to be confirmed against the COMP1885 assessment brief |
+| 7 | Research-methodology framing | IBM Foundational Methodology adaptation [REF-085]; owner decision pending |
 | 8 | Dataset manifest | Resolved (Issue #62): SHA-256 (Secure Hash Algorithm, 256-bit) values and partition hashes reproduced by the data-preparation code and recorded in `data/datapackage.json` ([dataset manifest](dataset.md#dataset-manifest)) |
 
 ## Protocol Freeze
@@ -752,7 +752,7 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 
 Full entries and verification status are in [`docs/references.md`](references.md).
 
-REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-037, REF-039, REF-040, REF-043, REF-044, REF-046, REF-047, REF-048\*, REF-049, REF-050, REF-051, REF-053, REF-061, REF-062, REF-063, REF-064, REF-065, REF-068, REF-070, REF-071, REF-072, REF-073, REF-074, REF-076, REF-077, REF-078, REF-081\*, REF-082, REF-083, REF-084, REF-085, REF-087, REF-088, REF-089, REF-090, REF-103.
+REF-001, REF-002, REF-003, REF-004, REF-005, REF-006, REF-008, REF-009, REF-010, REF-011, REF-012, REF-013, REF-014, REF-015, REF-016, REF-017, REF-018, REF-019, REF-020, REF-021, REF-022, REF-024, REF-025, REF-026, REF-027, REF-028, REF-029, REF-030, REF-033, REF-034, REF-035, REF-037, REF-039, REF-040, REF-043, REF-044, REF-046, REF-047, REF-048\*, REF-049, REF-050, REF-051, REF-061, REF-062, REF-063, REF-064, REF-065, REF-068, REF-070, REF-071, REF-072, REF-073, REF-074, REF-076, REF-077, REF-078, REF-081\*, REF-082, REF-083, REF-084, REF-085, REF-087, REF-088, REF-089, REF-090, REF-103, REF-109, REF-111.
 
 \* Partially verified.
 
@@ -776,7 +776,9 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | # { · } | Number of bootstrap replicates satisfying a condition |
 | bf16 | bfloat16: 16-bit floating-point format used for mixed-precision neural-network training |
 | arg max | The argument (here, configuration) at which a quantity is largest |
-| AI, AIR | Artificial intelligence; AI Reflection (University of Greenwich AI-use declaration) |
+| AI, AIR | Artificial intelligence; AI Reflection (University of Greenwich statement of AI use, replacing the Declaration of AI use from 2026/27) |
+| COMP1885 | University of Greenwich Individual Project module for which this research is conducted |
+| Tier 2 | University of Greenwich AI-use tier "Supported by AI": AI may support planning, clarification and feedback; analysis and final work remain the student's |
 | B | Number of bootstrap replicates (10,000) |
 | c | Review-capacity share (1 %, 2 %, 5 % or 10 %) |
 | C_FP | Extra false-alert/customer-friction cost of reviewing a legitimate transaction (sensitivity only) |
