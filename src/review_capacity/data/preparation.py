@@ -6,6 +6,10 @@ through the command line (``review_capacity.cli``):
     review-capacity prepare-data               # validate, processed files and manifest
     review-capacity prepare-data --check-only  # validate and print; write nothing
 
+This is the one step that reads the raw files before the confirmatory Test run; every later step
+reads the processed files through ``data.processed`` (Issue #70 data-access rule). The processed
+files are built once: the stage refuses to write over processed files that already exist.
+
 Test-period labels are never read: the stage refuses to start unless the Test partition is
 declared sealed. Only development partitions are written to the processed directory; no
 Test-period file is written before the protocol freeze.
@@ -18,6 +22,7 @@ processed files.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,17 +31,21 @@ from typing import Any, Final, Literal
 import pandas as pd
 
 from review_capacity.config import DatasetSpec, FeatureSpec
-from review_capacity.data.loading import RawData, load_labels, load_raw
+from review_capacity.data.loading import RawData, check_file_checksums, load_labels, load_raw
 from review_capacity.data.manifest import build_datapackage, write_datapackage
-from review_capacity.data.validation import PartitionSummary, check_file_checksums, validate
-from review_capacity.errors import SealedTestError
+from review_capacity.data.processed import DAY_COLUMN, JOINED, PARTITION_COLUMN, stems
+from review_capacity.data.validation import PartitionSummary, validate
+from review_capacity.errors import FileAccessError, SealedTestError
 from review_capacity.features.model_inputs import build_canonical_frame
 from review_capacity.files import write_atomically
 from review_capacity.hashing import file_sha256, id_set_sha256
+from review_capacity.logging_setup import log_step
 from review_capacity.paths import ProjectPaths
 from review_capacity.provenance import code_provenance, write_record
 
 PARQUET_ENGINE: Final[Literal["pyarrow"]] = "pyarrow"
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -56,19 +65,19 @@ def _development_frames(
     meta = pd.DataFrame(
         {
             features.key: raw.joined.loc[dev_index, features.key],
-            "relative_day": raw.relative_day.loc[dev_index],
-            "partition": raw.partition.loc[dev_index].astype(str),
+            DAY_COLUMN: raw.relative_day.loc[dev_index],
+            PARTITION_COLUMN: raw.partition.loc[dev_index].astype(str),
             features.target: labels.loc[dev_index],
         }
     )
     joined = pd.concat([meta, raw.joined.loc[dev_index].drop(columns=[features.key])], axis=1)
-    yield "development_joined", "development", joined
+    yield JOINED, "development", joined
     del joined
     for name in development:
-        index = meta.index[(meta["partition"] == name).to_numpy()]
+        index = meta.index[(meta[PARTITION_COLUMN] == name).to_numpy()]
         inputs = build_canonical_frame(raw.joined.loc[index], features)
         frame = pd.concat(
-            [meta.loc[index, [features.key, "relative_day", features.target]], inputs], axis=1
+            [meta.loc[index, [features.key, DAY_COLUMN, features.target]], inputs], axis=1
         )
         yield name, name, frame
 
@@ -77,10 +86,14 @@ def _write_processed(
     frame: pd.DataFrame, path: Path, record_path: Path, provenance: dict[str, Any]
 ) -> None:
     """Replace the data file and its provenance record in the safe order."""
-    record_path.unlink(missing_ok=True)
-    write_atomically(
-        path, lambda target: frame.to_parquet(target, index=False, engine=PARQUET_ENGINE)
-    )
+    try:
+        record_path.unlink(missing_ok=True)
+    except OSError as error:
+        raise FileAccessError(f"{record_path}: cannot be removed ({error.strerror})") from error
+    with log_step(logger, f"Writing {path.name} ({len(frame)} rows, {len(frame.columns)} columns)"):
+        write_atomically(
+            path, lambda target: frame.to_parquet(target, index=False, engine=PARQUET_ENGINE)
+        )
     record = {
         "file": path.name,
         "sha256": file_sha256(path),
@@ -90,6 +103,7 @@ def _write_processed(
         **provenance,
     }
     write_record(record_path, record)
+    logger.info("%s: provenance record written", record_path.name)
 
 
 def prepare_data(
@@ -111,6 +125,18 @@ def prepare_data(
         raise SealedTestError("Data preparation requires the Test partition to be sealed")
     if config_files is None:
         config_files = (paths.features_spec, paths.dataset_spec)
+    if write_processed:
+        existing = [
+            path.name
+            for stem in stems(dataset)
+            for path in (paths.processed_file(stem), paths.provenance_file(stem))
+            if path.exists()
+        ]
+        if existing:
+            raise FileAccessError(
+                f"Processed files already exist in {paths.processed_dir}: {existing}. They are "
+                "built once; remove them deliberately only to rebuild from the raw data"
+            )
 
     checksums = check_file_checksums(dataset)
     raw = load_raw(features, dataset)
@@ -118,6 +144,7 @@ def prepare_data(
     labels = load_labels(raw, features, dataset, [p.name for p in dataset.development])
     written: list[Path] = []
     if not write_processed:
+        logger.info("Check only: nothing written")
         return PreparationResult(checksums, summaries, written)
 
     common: dict[str, Any] = {
@@ -146,5 +173,6 @@ def prepare_data(
     write_datapackage(
         paths.manifest, build_datapackage(dataset, checksums, summaries, rows, paths.data_dir)
     )
+    logger.info("Dataset manifest written: %s", paths.manifest)
     written.append(paths.manifest)
     return PreparationResult(checksums, summaries, written)

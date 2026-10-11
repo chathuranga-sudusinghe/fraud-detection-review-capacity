@@ -11,6 +11,7 @@ Canonical frame, identical for every model:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 
 import numpy as np
@@ -22,6 +23,8 @@ from review_capacity.errors import DataValidationError
 from review_capacity.features.time_of_day import time_of_day
 
 TEXT_DTYPE = "str"
+
+logger = logging.getLogger(__name__)
 
 
 def _categorical_labels(values: pd.Series, numeric_coded: bool, missing_label: str) -> pd.Series:
@@ -52,6 +55,7 @@ def build_canonical_frame(joined: pd.DataFrame, features: FeatureSpec) -> pd.Dat
     frame = pd.DataFrame(columns, index=joined.index)
     if tuple(frame.columns) != features.model_inputs:
         raise DataValidationError("Canonical columns differ from the declared model inputs")
+    logger.info("Model inputs built: %d rows, %d inputs", len(frame), len(frame.columns))
     return frame
 
 

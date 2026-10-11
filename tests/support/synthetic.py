@@ -5,17 +5,21 @@ target, an identity file joined on ``TransactionID``, four partitions of one or 
 (the last one sealed), text and numeric-coded categoricals, numeric columns and missing values.
 Sealed-period labels are written as the invalid value ``"X"``; whether the label read stops
 before the sealed rows is tested directly (``tests/unit/data/test_loading.py``).
+``build_processed`` also runs the Parquet build and then removes the raw files.
 """
 
 from __future__ import annotations
 
+import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
 from review_capacity.config import DatasetSpec, FeatureSpec, PartitionSpec, RawFileSpec
+from review_capacity.data.preparation import prepare_data
 from review_capacity.hashing import file_sha256, id_set_sha256
 from review_capacity.paths import ProjectPaths
 
@@ -46,11 +50,12 @@ class Synthetic:
 
 
 def _transactions(test_label: str) -> pd.DataFrame:
-    rows = []
-    for name, (first, last) in PARTITION_DAYS.items():
-        for day in range(first, last + 1):
-            for offset in OFFSETS:
-                rows.append({"TransactionDT": day * DAY + offset, "partition": name})
+    rows = [
+        {"TransactionDT": day * DAY + offset, "partition": name}
+        for name, (first, last) in PARTITION_DAYS.items()
+        for day in range(first, last + 1)
+        for offset in OFFSETS
+    ]
     frame = pd.DataFrame(rows)
     n = len(frame)
     frame.insert(0, "TransactionID", range(3_000_000, 3_000_000 + n))
@@ -131,6 +136,7 @@ def build_synthetic(
         seconds_per_day=DAY,
         total_rows=sum(p.rows for p in partitions),
         partitions=tuple(partitions),
+        identity_columns=tuple(c for c in identity.columns if c != "TransactionID"),
     )
     dataset.validate()
     FEATURES.validate()
@@ -144,3 +150,21 @@ def with_partition(dataset: DatasetSpec, name: str, **changes: object) -> Datase
         for p in dataset.partitions
     )
     return replace(dataset, partitions=parts)
+
+
+def build_processed(root: Path, *, remove_raw: bool = True, **options: Any) -> Synthetic:
+    """Synthetic data after the Parquet build: the processed files exist and, by default, the
+    raw files are removed, so that a test proves its step reads no raw file. Copies of the
+    project's configuration files stand in for the declarations the records hash."""
+    data = build_synthetic(root, **options)
+    data.paths.config_dir.mkdir(exist_ok=True)
+    configs: list[Path] = []
+    for source in (REPO_PATHS.features_spec, REPO_PATHS.dataset_spec):  # hashed into the records
+        target = data.paths.config_dir / source.name
+        shutil.copy(source, target)
+        configs.append(target)
+    prepare_data(data.features, data.dataset, data.paths, config_files=configs)
+    if remove_raw:
+        for spec in (data.dataset.transaction, data.dataset.identity):
+            spec.path.unlink()
+    return data

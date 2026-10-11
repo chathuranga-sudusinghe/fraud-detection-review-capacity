@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 from review_capacity.config import load_dataset_spec, load_feature_spec
-from review_capacity.errors import SpecificationError
+from review_capacity.errors import FileAccessError, SpecificationError
 from review_capacity.paths import ProjectPaths
 from support.synthetic import REPO_PATHS
 
@@ -111,3 +111,73 @@ def test_missing_label_comes_from_the_declaration(tmp_path: Path) -> None:
     path.write_text(yaml.safe_dump(content), encoding="utf-8")
     with pytest.raises(SpecificationError, match="malformed declaration"):
         load_feature_spec(path)
+
+
+def test_missing_declaration_is_a_file_access_error(tmp_path: Path) -> None:
+    with pytest.raises(FileAccessError):
+        load_dataset_spec(ProjectPaths(tmp_path))
+
+
+def test_repeated_yaml_key_rejected(tmp_path: Path) -> None:
+    text = REPO_PATHS.dataset_spec.read_text(encoding="utf-8")
+    assert "\ntotal_rows: 590540\n" in text
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "dataset.yaml").write_text(
+        text.replace("\ntotal_rows: 590540\n", "\ntotal_rows: 590540\ntotal_rows: 1\n"),
+        encoding="utf-8",
+    )
+    with pytest.raises(SpecificationError, match="cannot be read as YAML"):
+        load_dataset_spec(ProjectPaths(tmp_path))
+
+
+def _write_features(tmp_path: Path, edit: Callable[[dict[str, Any]], None]) -> Path:
+    content = yaml.safe_load(REPO_PATHS.features_spec.read_text(encoding="utf-8"))
+    edit(content)
+    path = tmp_path / "features.yaml"
+    path.write_text(yaml.safe_dump(content), encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize(
+    ("edit", "message"),
+    [
+        (lambda c: c["numeric"].update(columns="TransactionAmt"), "must be a list"),
+        (lambda c: c["categorical"].update(identity={"DeviceType": 1}), "must be a list"),
+        (lambda c: c["categorical"]["numeric_coded"].append("TransactionAmt"), "not categorical"),
+        (lambda c: c["numeric"]["columns"].append("isFraud"), "Repeated joined columns"),
+        (lambda c: c["derived"]["numeric"][0].update(name="TransactionID"), "reuse joined"),
+        (lambda c: c["source"].update(model_input_count=432), "432 expected"),
+        (lambda c: c["source"].update(joined_column_count="434"), "must be an integer"),
+    ],
+)
+def test_malformed_feature_declaration_rejected(
+    tmp_path: Path, edit: Callable[[dict[str, Any]], None], message: str
+) -> None:
+    with pytest.raises(SpecificationError, match=message):
+        load_feature_spec(_write_features(tmp_path, edit))
+
+
+@pytest.mark.parametrize(
+    ("edit", "message"),
+    [
+        (lambda c: c["raw_files"]["identity"]["columns_besides_key"].pop(), "40 expected"),
+        (
+            lambda c: c["raw_files"]["identity"]["columns_besides_key"].append("TransactionID"),
+            "must not list the key",
+        ),
+        (lambda c: c["partitions"][1].update(transaction_dt=[9158441, 9158440]), "reversed"),
+        (lambda c: c["partitions"][0].update(sealed=True), "lies after the sealed period"),
+    ],
+)
+def test_malformed_split_or_identity_declaration_rejected(
+    tmp_path: Path, edit: Callable[[dict[str, Any]], None], message: str
+) -> None:
+    with pytest.raises(SpecificationError, match=message):
+        load_dataset_spec(_write_dataset(tmp_path, edit))
+
+
+def test_identity_columns_give_table_membership() -> None:
+    spec = load_dataset_spec(REPO_PATHS)
+    assert spec.source_table("DeviceInfo") == "identity"
+    assert spec.source_table("id_38") == "identity"
+    assert spec.source_table("V339") == "transaction"

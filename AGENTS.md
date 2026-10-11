@@ -229,6 +229,7 @@ Do not repeat the same definitions after every algebraic step in the same local 
 - Every Markdown file that uses mathematical notation ends with a final content section headed **`## Symbols and notation`**.
 - Every symbol, variable and abbreviation used in that document appears in that table.
 - Do **not** place the full table near the beginning of a document. It is a reference index, not the introduction.
+- **Exception:** only the repository-root [`README.md`](README.md), the project's landing page, has no final "Symbols and notation" table; it links to the owner documents, which define the notation in full.
 
 ### 5. Keep notation consistent
 
@@ -251,12 +252,14 @@ first use with short meaning
 
 ## Coding and notebook rules
 
-- Use the project virtual environment (`.venv`).
-- Follow [`pyproject.toml`](pyproject.toml) for dependencies. Add a dependency only when the active issue requires it.
+- Use the project environment (`.venv`), created by the project owner with `uv sync --locked` as described in [`README.md`](README.md#environment-setup).
+- Follow [`pyproject.toml`](pyproject.toml) for dependencies. Add a dependency only when the active issue requires it, pinned to an exact version; the project owner then updates [`uv.lock`](uv.lock).
 - Put reusable logic in reusable code rather than copying it between notebooks.
 - Notebooks are research evidence and analysis tools, not the whole project architecture. Save executed notebooks with their outputs when they serve as evidence.
 - Keep experiments deterministic where practical: fixed seeds, recorded package versions, hashed data splits.
 - Add tests for reusable implementation code when appropriate.
+- **Logging, not printing.** Code reports progress, timing and diagnostics through logging ([`src/review_capacity/logging_setup.py`](src/review_capacity/logging_setup.py)): library modules create loggers and never configure logging. Each long step (data preparation, training, evaluation) is wrapped in `log_step`, which logs its start, duration, failure or interruption; each long loop (columns, folds, trials, epochs) reports bounded periodic progress through `ProgressLogger`, so that a running process always shows what it is doing. `print` is not used in the package or its tests (enforced by the ruff rule T20). Evidence-producing runs keep a log file (`--log-file`), which also records the traceback of any failure.
+- **Errors are raised, never hidden.** Expected operational and validation failures are raised as project exceptions ([`src/review_capacity/errors.py`](src/review_capacity/errors.py)) with a clear message and their cause, and the command line summarises each in one line with its own exit code, while the log file keeps its traceback and cause. An `except` clause only adds context and re-raises, or handles an expected, documented case and logs it; an error is never silently swallowed (enforced by the ruff rule BLE). Any other exception is a defect and keeps its traceback.
 
 ---
 

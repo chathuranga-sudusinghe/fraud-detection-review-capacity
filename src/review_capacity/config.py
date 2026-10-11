@@ -3,22 +3,23 @@
 * ``config/features.yaml``: column roles and derived inputs (DR-008).
 * ``config/dataset.yaml``: raw files, temporal partitions and integrity anchors (DR-001).
 
-Each loader reads values with their exact types (no silent coercion), checks the file's internal
-consistency and raises ``SpecificationError`` for any malformed or inconsistent declaration.
+Each loader reads values with their exact types (no silent coercion), rejects a key repeated in
+one YAML mapping and a scalar where a list is required, checks the file's internal consistency and
+raises ``SpecificationError`` for any malformed or inconsistent declaration.
 """
 
 from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from review_capacity.errors import SpecificationError
+from review_capacity.errors import FileAccessError, SpecificationError
 from review_capacity.paths import ProjectPaths
 
 SECONDS_PER_DAY = 86_400  # DR-001: relative day = TransactionDT // 86400; not configurable
@@ -26,11 +27,30 @@ _HEX_16 = re.compile(r"[0-9a-f]{16}")
 _HEX_64 = re.compile(r"[0-9a-f]{64}")
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """Safe YAML loader that rejects a key repeated in one mapping (no last-key-wins)."""
+
+    def construct_mapping(
+        self, node: yaml.nodes.MappingNode, deep: bool = False
+    ) -> dict[Hashable, Any]:
+        seen: set[object] = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in seen:
+                raise yaml.constructor.ConstructorError(
+                    None, None, f"repeated key {key!r}", key_node.start_mark
+                )
+            seen.add(key)
+        return super().construct_mapping(node, deep=deep)
+
+
 def _read_yaml(path: Path) -> dict[str, Any]:
     try:
         with path.open(encoding="utf-8") as handle:
-            content = yaml.safe_load(handle)
-    except (OSError, yaml.YAMLError) as error:
+            content = yaml.load(handle, Loader=_UniqueKeyLoader)
+    except OSError as error:
+        raise FileAccessError(f"{path}: cannot be read ({error.strerror})") from error
+    except yaml.YAMLError as error:
         raise SpecificationError(f"{path}: cannot be read as YAML") from error
     if not isinstance(content, dict):
         raise SpecificationError(f"{path} does not contain a mapping")
@@ -135,7 +155,9 @@ def load_feature_spec(
     return _parse(path, lambda: _feature_spec(raw, key, time))
 
 
-def _names(values: Sequence[object], what: str) -> tuple[str, ...]:
+def _names(values: object, what: str) -> tuple[str, ...]:
+    if not isinstance(values, list):
+        raise SpecificationError(f"{what} entries must be a list, not {values!r}")
     return tuple(_text(value, what) for value in values)
 
 
@@ -146,7 +168,10 @@ def _feature_spec(raw: Mapping[str, Any], key: str, time: str) -> FeatureSpec:
         time=time,
         target=_text(raw["target"], "target"),
         excluded=tuple(_text(item["name"], "excluded column") for item in raw["excluded"]),
-        categorical=_names((*categorical["transaction"], *categorical["identity"]), "categorical"),
+        categorical=(
+            *_names(categorical["transaction"], "categorical column"),
+            *_names(categorical["identity"], "categorical column"),
+        ),
         numeric_coded=frozenset(_names(categorical["numeric_coded"], "numeric_coded column")),
         numeric=_names(raw["numeric"]["columns"], "numeric column"),
         derived=tuple(_text(item["name"], "derived input") for item in raw["derived"]["numeric"]),
@@ -205,6 +230,12 @@ class DatasetSpec:
     seconds_per_day: int
     total_rows: int
     partitions: tuple[PartitionSpec, ...]
+    identity_columns: tuple[str, ...]  # identity-file columns besides the key
+
+    def source_table(self, column: str) -> str:
+        """Raw file a joined column comes from: ``identity`` if declared there, else
+        ``transaction`` (the key is in both)."""
+        return "identity" if column in self.identity_columns else "transaction"
 
     @property
     def first_day(self) -> int:
@@ -245,6 +276,14 @@ class DatasetSpec:
                 raise SpecificationError(f"{raw_file.path.name}: sha256 must be 64 hex characters")
             if raw_file.columns <= 0:
                 raise SpecificationError(f"{raw_file.path.name}: columns must be positive")
+        _require_unique(self.identity_columns, "identity columns")
+        if self.key in self.identity_columns:
+            raise SpecificationError(f"identity_columns must not list the key {self.key}")
+        if len(self.identity_columns) != self.identity.columns - 1:
+            raise SpecificationError(
+                f"{len(self.identity_columns)} identity columns declared besides the key, "
+                f"{self.identity.columns - 1} expected"
+            )
         if not self.partitions[-1].sealed:
             raise SpecificationError("The last partition (Test) must be sealed before the freeze")
         if not self.development:
@@ -319,6 +358,9 @@ def load_dataset_spec(paths: ProjectPaths) -> DatasetSpec:
             seconds_per_day=_integer(raw["seconds_per_day"], "seconds_per_day"),
             total_rows=_integer(raw["total_rows"], "total_rows"),
             partitions=tuple(_partition(p) for p in raw["partitions"]),
+            identity_columns=_names(
+                raw["raw_files"]["identity"]["columns_besides_key"], "identity column"
+            ),
         )
         spec.validate()
         return spec

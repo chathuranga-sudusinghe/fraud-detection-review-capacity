@@ -12,7 +12,7 @@ import pytest
 
 from review_capacity.data import preparation
 from review_capacity.data.preparation import prepare_data
-from review_capacity.errors import SpecificationError
+from review_capacity.errors import FileAccessError, SpecificationError
 from review_capacity.hashing import file_sha256
 from support.synthetic import Synthetic, with_partition
 
@@ -37,7 +37,8 @@ def test_manifest_is_a_label_free_data_package(synthetic: Synthetic) -> None:
     paths = [r["path"] for r in package["resources"]]
     assert paths == ["raw/train_transaction.csv", "raw/train_identity.csv"]
     for resource in package["resources"]:
-        assert resource["hash"].startswith("sha256:") and len(resource["hash"]) == 7 + 64
+        assert resource["hash"].startswith("sha256:")
+        assert len(resource["hash"]) == 7 + 64
         assert resource["bytes"] > 0
     partitions = package["_split"]["partitions"]
     assert [p["name"] for p in partitions] == ["train", "v1", "v2", "test"]
@@ -78,13 +79,16 @@ def test_processed_files_cover_development_only(synthetic: Synthetic) -> None:
     train = pd.read_parquet(processed / "train.parquet")
     expected = ["TransactionID", "relative_day", "isFraud", *synthetic.features.model_inputs]
     assert list(train.columns) == expected
-    assert len(train) == 8 and train["relative_day"].between(1, 2).all()
+    assert len(train) == 8
+    assert train["relative_day"].between(1, 2).all()
 
     joined = pd.read_parquet(processed / "development_joined.parquet")
-    assert len(joined) == 16 and set(joined["partition"]) == {"train", "v1", "v2"}
+    assert len(joined) == 16
+    assert set(joined["partition"]) == {"train", "v1", "v2"}
 
     record = json.loads((processed / "train.provenance.json").read_text(encoding="utf-8"))
-    assert record["rows"] == 8 and record["scope"] == "train"
+    assert record["rows"] == 8
+    assert record["scope"] == "train"
     assert len(record["sha256"]) == 64
     assert set(record["sources"]) == {"train_transaction.csv", "train_identity.csv"}
     assert record["code"]["package"]["name"] == "review_capacity"
@@ -113,21 +117,41 @@ def test_every_development_file_round_trips_with_matching_record(synthetic: Synt
             assert frame["isFraud"].isin([0, 1]).all()
 
 
-def test_interrupted_write_leaves_no_stale_record(
+def test_processed_files_are_built_once(synthetic: Synthetic) -> None:
+    prepare_data(synthetic.features, synthetic.dataset, synthetic.paths, config_files=())
+    before = file_sha256(synthetic.paths.processed_file("train"))
+    with pytest.raises(FileAccessError, match="built once"):
+        prepare_data(synthetic.features, synthetic.dataset, synthetic.paths, config_files=())
+    assert file_sha256(synthetic.paths.processed_file("train")) == before
+    # Validation alone writes nothing and remains possible.
+    prepare_data(
+        synthetic.features,
+        synthetic.dataset,
+        synthetic.paths,
+        write_processed=False,
+        config_files=(),
+    )
+
+
+def test_interrupted_write_leaves_no_file_without_its_record(
     synthetic: Synthetic, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    prepare_data(synthetic.features, synthetic.dataset, synthetic.paths, config_files=())
-    record = synthetic.paths.provenance_file("development_joined")
-    assert record.exists()
-
-    def failing_write(path: Path, content: dict[str, Any]) -> None:
+    def failing_write(_path: Path, _content: dict[str, Any]) -> None:
         raise RuntimeError("simulated failure")
 
     monkeypatch.setattr(preparation, "write_record", failing_write)
     with pytest.raises(RuntimeError, match="simulated failure"):
         prepare_data(synthetic.features, synthetic.dataset, synthetic.paths, config_files=())
-    assert not record.exists()  # the old record no longer sits beside the replaced data file
+    assert not synthetic.paths.provenance_file("development_joined").exists()
     assert not list(synthetic.paths.processed_dir.glob(".*.tmp"))
+
+
+def test_configuration_hashes_are_recorded(synthetic: Synthetic, tmp_path: Path) -> None:
+    config = tmp_path / "declared.yaml"
+    config.write_text("version: 1\n", encoding="utf-8")
+    prepare_data(synthetic.features, synthetic.dataset, synthetic.paths, config_files=(config,))
+    record = json.loads(synthetic.paths.provenance_file("v1").read_text(encoding="utf-8"))
+    assert record["configuration"] == {"declared.yaml": file_sha256(config)}
 
 
 def test_unsealed_configuration_refused_before_reading(synthetic: Synthetic) -> None:

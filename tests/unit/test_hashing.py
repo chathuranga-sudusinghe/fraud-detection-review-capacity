@@ -7,7 +7,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
+from review_capacity.errors import FileAccessError
 from review_capacity.hashing import file_sha256, id_set_sha256
 
 
@@ -22,3 +24,8 @@ def test_id_hash_is_order_invariant_and_uses_little_endian_int64() -> None:
     expected = hashlib.sha256(np.array(sorted(ids), dtype="<i8").tobytes()).hexdigest()
     assert id_set_sha256(ids) == expected
     assert id_set_sha256(ids.iloc[::-1]) == expected
+
+
+def test_missing_file_is_a_file_access_error(tmp_path: Path) -> None:
+    with pytest.raises(FileAccessError, match="cannot be read"):
+        file_sha256(tmp_path / "absent.csv")

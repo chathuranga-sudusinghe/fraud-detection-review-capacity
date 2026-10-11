@@ -55,12 +55,40 @@ Two gates separate development from confirmation: **(1)** training, policy and a
 
 ## Reading order
 
-1. This page: overview, research path, status and repository map.
+1. This page: overview, research path, environment setup, repository map and status.
 2. [Research protocol](docs/protocol.md): research questions, hypotheses, analytic approach, data requirements, methods, statistical plan, design items and freeze conditions.
 3. [Research foundation](docs/research-foundation.md): research problem, aim, objectives and contribution.
 4. [Decision Records](docs/decisions/README.md): why each design choice was made.
 5. [Literature review](docs/literature-review.md): evidence base and research gap.
 6. [Dataset](docs/dataset.md) and [notebooks](notebooks/README.md): the data, its use terms and the data-understanding evidence.
+
+## Environment setup
+
+The environment is pinned for reproducibility: every direct dependency has an exact version in [`pyproject.toml`](pyproject.toml), and the complete environment, including indirect dependencies, is locked with SHA-256 hashes in [`uv.lock`](uv.lock). It is managed with [uv](https://docs.astral.sh/uv/), a Python package and project manager.
+
+**Tested platform:** Linux x86-64 (Ubuntu 24.04 on Windows Subsystem for Linux 2, WSL2), Python 3.12.3 (pinned in [`.python-version`](.python-version)), uv 0.13.0, and an NVIDIA GPU with a driver that supports CUDA 12.8 (NVIDIA's GPU computing platform; check with `nvidia-smi`). The lock covers this platform only.
+
+1. Install uv:
+
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. Create the environment exactly as locked, with the tree-based (`ml`), neural (`dl`, PyTorch for CUDA 12.8) and development (`dev`) groups:
+
+   ```bash
+   uv sync --locked --extra ml --extra dl --extra dev
+   ```
+
+3. Obtain the raw data from Kaggle by accepting the Competition Rules, and place both files in `data/raw/` ([dataset documentation](docs/dataset.md)). The data are never committed.
+
+4. Validate the raw data and prepare the development files (run by the project owner; [execution rules](AGENTS.md#experiment-execution-responsibility)):
+
+   ```bash
+   .venv/bin/review-capacity --log-file logs/prepare-data.log prepare-data
+   ```
+
+   Every command logs its progress with timestamps to the terminal; `--log-file PATH` (before the command name) also keeps the log in a file, as an evidence-producing run should. `review-capacity --help` lists the options and exit codes.
 
 ## Repository map
 
@@ -78,7 +106,9 @@ Two gates separate development from confirmation: **(1)** training, policy and a
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (433 inputs: 431 declared columns and 2 time-of-day inputs) |
 | [`config/dataset.yaml`](config/dataset.yaml) | Machine-readable raw files, DR-001 partitions and their integrity anchors |
 | [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs (`features/`); command `review-capacity` |
-| [`tests/`](tests/) | Unit tests on synthetic data; integration tests on the local raw data, subject to the execution rules in [`AGENTS.md`](AGENTS.md#experiment-execution-responsibility) |
+| [`pyproject.toml`](pyproject.toml), [`uv.lock`](uv.lock), [`.python-version`](.python-version) | Pinned dependencies, locked environment (uv) and Python version |
+| [`evidence/`](evidence/gpu_probe/README.md) | Engineering evidence: GPU memory probe results (Issue #50) |
+| [`tests/`](tests/) | Unit tests on synthetic data; opt-in integration tests on the local processed development files (no raw file is read), subject to the execution rules in [`AGENTS.md`](AGENTS.md#experiment-execution-responsibility) |
 | [`notebooks/`](notebooks/README.md) | Data-understanding notebooks 01–04 |
 | [`scripts/`](scripts/) | Engineering scripts (GPU memory feasibility probe, Issue #50) |
 | [`AGENTS.md`](AGENTS.md) | Working rules for the project and AI-assisted work |
@@ -96,24 +126,3 @@ Next steps:
 1. Design review with the supervisor (Issue #56) and resolution of the protocol's design items.
 2. Training rules: search procedure, early stopping, tie handling, seeds, neural-network representation, calibration details.
 3. Development runs on Train, Validation 1 (V1) and Validation 2 (V2); protocol freeze; single Test evaluation; statistical analysis and reporting.
-
-## Symbols and notation
-
-| Symbol / abbreviation | Meaning |
-|---|---|
-| AI | Artificial intelligence |
-| API | Application programming interface (local demonstration only) |
-| DR-NNN | Decision Record NNN in `docs/decisions/` |
-| Frictionless Data Package | Open standard for describing a dataset in a `datapackage.json` descriptor |
-| FT-Transformer | Feature Tokenizer + Transformer (a neural model for tabular data) |
-| GPU | Graphics processing unit |
-| H1, H2, H3 | Confirmatory hypotheses: model-family effect; class-weighting effect; alert-rate transfer fidelity |
-| H3 configuration | The model × weighting configuration on which H3 is tested, selected on V2 by a fixed rule before Test access |
-| IEEE-CIS | IEEE Computational Intelligence Society |
-| MLP | Multilayer perceptron |
-| REF-NNN | Reference identifier in `docs/references.md` |
-| Relative day | `TransactionDT` (the dataset's time offset in seconds from an undisclosed reference point) divided by 86,400 seconds and rounded down; no calendar date is inferred |
-| RQ1–RQ3 | Research questions 1–3 |
-| Test | Final partition (relative days 155–182), sealed until one confirmatory evaluation after the protocol freeze |
-| Train | Model-fitting partition (relative days 1–105) |
-| V1, V2 | Validation 1 (relative days 106–126); Validation 2 (relative days 127–154) |
