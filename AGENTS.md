@@ -252,8 +252,8 @@ first use with short meaning
 
 ## Coding and notebook rules
 
-- Use the project virtual environment (`.venv`).
-- Follow [`pyproject.toml`](pyproject.toml) for dependencies. Add a dependency only when the active issue requires it.
+- Use the project environment (`.venv`), created by the project owner with `uv sync --locked` as described in [`README.md`](README.md#environment-setup).
+- Follow [`pyproject.toml`](pyproject.toml) for dependencies. Add a dependency only when the active issue requires it, pinned to an exact version; the project owner then updates [`uv.lock`](uv.lock).
 - Put reusable logic in reusable code rather than copying it between notebooks.
 - Notebooks are research evidence and analysis tools, not the whole project architecture. Save executed notebooks with their outputs when they serve as evidence.
 - Keep experiments deterministic where practical: fixed seeds, recorded package versions, hashed data splits.
