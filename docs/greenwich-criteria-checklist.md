@@ -31,7 +31,7 @@ Each source, with its access details and verification status, is recorded in the
 | Merit at a 60 % and Distinction at a 70 % programme average, rounded to the nearest whole number | REF-108 D6.8–D6.10 | — | Noted |
 | Level 7 dissertations are double-marked (blind when the supervisor is the first marker); COMP1885 is a postgraduate dissertation | REF-107 Appendix 3; REF-114 | Every claim in the dissertation is traceable to a repository document, Decision Record or evidence file, so a second marker can check it without the author | Met by design |
 | Dissertation length: a 30-credit Level 7 dissertation is 8,000–10,000 words; COMP1885 has 30 credits | REF-107 Appendix 7; REF-114 | **Owner decision:** plan to 8,000–10,000 words | **To confirm** whether the 2025 or 2019 policy applies to the programme (REF-107 policy page) |
-| Submission through Moodle/Turnitin. Late work: the Regulations accept first-attempt coursework at full mark up to 2 calendar days late, capped at the pass mark up to 14 calendar days late, and not after that; the Policy states a capped period of up to 10 working days (resubmissions excluded) | REF-108 D5.7–D5.8; REF-107 §5 b; REF-113 | Submit by the deadline stated in the COMP1885 brief | **To confirm** the applicable rule with the module leader |
+| Submission through Moodle/Turnitin by the deadline | REF-113; REF-108 D5.2 | Submit by the deadline stated in the COMP1885 brief | Planned |
 | Word limit: a tolerance of +10 %; beyond it, markers do not consider the content | REF-107 §18 | Dissertation planned to stay within 8,000–10,000 words (+10 %) | Planned |
 | Referencing normally in the Harvard style, consistent across the programme | REF-107 §30 | Dissertation references in the Harvard style unless the module states otherwise | Planned |
 
@@ -67,8 +67,8 @@ Referencing counts for at most 5 % of the marks where it is assessed (REF-107 §
 | Requirement [G] | Source | Where the project meets it | Status |
 |---|---|---|---|
 | The Research Ethics Policy applies to master's students' research | REF-050 §1.2 | [Protocol, Ethics](protocol.md#ethics) | Met |
-| Fully anonymised secondary data should not need ethical approval; a taught student is advised by the programme or module leader | REF-051 | **Owner decision:** anonymised secondary-data route, as recorded in the [protocol](protocol.md#ethics); no formal approval or exemption claimed | Written confirmation requested from the module leader; response outstanding |
-| Research involving criminal subject matter requires ethical consideration and is Higher Risk; Higher-Risk student projects are reviewed by the Faculty Research Ethics Committee and then the University Research Ethics Board, and research should not commence until the relevant approval has been granted | REF-050 §1.3.4, §2.2.1 iv, §2.4, §2.13 | Documented ethical considerations: false-positive and false-negative harms, re-identification risk, fairness limits ([protocol, Ethics](protocol.md#ethics)) | **Open:** the confirmation request asks whether §1.3.4 and §2.4 apply to analysis of anonymised fraud records |
+| Fully anonymised secondary data should not need ethical approval; a taught student is advised by the programme or module leader | REF-051 | No ethics application required: the supervisor's written guidance of 3 October 2026 (no personal data or personally identifiable information, PII; no restrictions on data use, reporting, code or storage), recorded in Issue #31 and the [protocol](protocol.md#ethics); no formal approval or exemption claimed | Met; the supervisor's comment on the dataset is pending |
+| Research involving criminal subject matter requires ethical consideration and is Higher Risk; Higher-Risk student projects are reviewed by the Faculty Research Ethics Committee and then the University Research Ethics Board, and research should not commence until the relevant approval has been granted | REF-050 §1.3.4, §2.2.1 iv, §2.4, §2.13 | Documented ethical considerations: false-positive and false-negative harms, re-identification risk, fairness limits ([protocol, Ethics](protocol.md#ethics)) | Met as a documented consideration under the supervisor's guidance |
 | Data stored securely: University OneDrive where possible; laptops used for data must be encrypted | REF-051 | Raw and row-level data stay on the student's machine and are never committed ([dataset](dataset.md#data-use-terms)) | **Action:** confirm that the laptop's disk is encrypted |
 
 ## 5. Use of AI
@@ -96,11 +96,10 @@ Referencing counts for at most 5 % of the marks where it is assessed (REF-107 §
 | 1 | COMP1885 AI-use tier | Confirm Tier 2 against the assessment brief | Student, with the module leader |
 | 2 | Applicable Assessment and Feedback Policy (2025 or 2019) and the word count | Confirm with the module leader | Student |
 | 3 | COMP1885 module handbook, brief and customised rubric (REF-055) | Obtain from Moodle when available; until then the generic Level 7 rubric is the working standard | Student |
-| 4 | Ethics route | Written confirmation requested of the anonymised secondary-data route, including whether REF-050 §1.3.4 and §2.4 apply; response outstanding | Student, with the module leader |
+| 4 | Supervisor's comment on the dataset | Requested after the supervisor's ethics guidance of 3 October 2026; record it when received | Student, with the supervisor |
 | 5 | Encrypted storage of the local data | Confirm disk encryption on the laptop | Student |
 | 6 | AI Reflection | Write the AIR at submission from the recorded workflow | Student |
 | 7 | Supervision schedule and presentation | Agree the meeting schedule; confirm presentation dates and requirements | Student, with the supervisor |
-| 8 | Late-submission rule | Confirm which rule applies to COMP1885 (Regulations D5.7–D5.8 or Policy §5 b) | Student, with the module leader |
 
 ## Symbols and notation
 
@@ -114,6 +113,7 @@ Referencing counts for at most 5 % of the marks where it is assessed (REF-107 §
 | H1–H3 | Confirmatory hypotheses of the protocol |
 | Level 7 | Master's level of the UK qualifications framework |
 | MSc | Master of Science |
+| PII | Personally identifiable information |
 | REF-NNN | Reference identifier in `references.md` |
 | Test | Sealed final evaluation partition, defined in the protocol |
 | Tier 1–3 | University AI-use tiers: independent of AI; supported by AI; augmented with AI |
