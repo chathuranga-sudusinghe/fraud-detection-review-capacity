@@ -96,24 +96,3 @@ Next steps:
 1. Design review with the supervisor (Issue #56) and resolution of the protocol's design items.
 2. Training rules: search procedure, early stopping, tie handling, seeds, neural-network representation, calibration details.
 3. Development runs on Train, Validation 1 (V1) and Validation 2 (V2); protocol freeze; single Test evaluation; statistical analysis and reporting.
-
-## Symbols and notation
-
-| Symbol / abbreviation | Meaning |
-|---|---|
-| AI | Artificial intelligence |
-| API | Application programming interface (local demonstration only) |
-| DR-NNN | Decision Record NNN in `docs/decisions/` |
-| Frictionless Data Package | Open standard for describing a dataset in a `datapackage.json` descriptor |
-| FT-Transformer | Feature Tokenizer + Transformer (a neural model for tabular data) |
-| GPU | Graphics processing unit |
-| H1, H2, H3 | Confirmatory hypotheses: model-family effect; class-weighting effect; alert-rate transfer fidelity |
-| H3 configuration | The model × weighting configuration on which H3 is tested, selected on V2 by a fixed rule before Test access |
-| IEEE-CIS | IEEE Computational Intelligence Society |
-| MLP | Multilayer perceptron |
-| REF-NNN | Reference identifier in `docs/references.md` |
-| Relative day | `TransactionDT` (the dataset's time offset in seconds from an undisclosed reference point) divided by 86,400 seconds and rounded down; no calendar date is inferred |
-| RQ1–RQ3 | Research questions 1–3 |
-| Test | Final partition (relative days 155–182), sealed until one confirmatory evaluation after the protocol freeze |
-| Train | Model-fitting partition (relative days 1–105) |
-| V1, V2 | Validation 1 (relative days 106–126); Validation 2 (relative days 127–154) |

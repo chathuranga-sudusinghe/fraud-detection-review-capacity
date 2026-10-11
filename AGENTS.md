@@ -229,6 +229,7 @@ Do not repeat the same definitions after every algebraic step in the same local 
 - Every Markdown file that uses mathematical notation ends with a final content section headed **`## Symbols and notation`**.
 - Every symbol, variable and abbreviation used in that document appears in that table.
 - Do **not** place the full table near the beginning of a document. It is a reference index, not the introduction.
+- **Exception:** only the repository-root [`README.md`](README.md), the project's landing page, has no final "Symbols and notation" table; it links to the owner documents, which define the notation in full.
 
 ### 5. Keep notation consistent
 

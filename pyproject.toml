@@ -1,23 +1,25 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools==78.1.0", "wheel==0.48.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "fraud-detection-review-capacity"
 version = "0.1.0"
 description = "MSc Data Science research project on fraud detection under limited review capacity."
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 
+# Every direct dependency is pinned to the version that produced the project's evidence
+# (Issue #60). Application dependencies, including indirect dependencies, are locked in uv.lock.
 dependencies = [
-    "numpy",
-    "pandas",
-    "scipy",
-    "scikit-learn",
-    "matplotlib",
-    "pyarrow",
-    "pyyaml",
-    "jupyter",
-    "ipykernel",
+    "numpy==2.5.3",
+    "pandas==3.0.6",
+    "scipy==1.18.1",
+    "scikit-learn==1.9.1",
+    "matplotlib==3.11.2",
+    "pyarrow==25.0.1",
+    "pyyaml==6.0.3",
+    "jupyter==1.1.1",
+    "ipykernel==7.3.0",
 ]
 
 [project.scripts]
@@ -25,24 +27,65 @@ review-capacity = "review_capacity.cli:main"
 
 [project.optional-dependencies]
 ml = [
-    "lightgbm",
-    "catboost",
+    "lightgbm==4.7.0",
+    "catboost==1.2.10",
 ]
 
-# PyTorch for the neural models. The RTX 50-series GPU (compute capability 12.0)
-# needs a CUDA 12.8 build: install torch from https://download.pytorch.org/whl/cu128
-# before this group (see GitHub Issue #50).
+# PyTorch for the neural models. The RTX 50-series GPU (compute capability 12.0) needs the
+# CUDA 12.8 build, taken from the PyTorch index below (see GitHub Issue #50).
 dl = [
-    "torch>=2.7",
+    "torch==2.11.0",
 ]
 
 dev = [
-    "pytest",
-    "ruff",
-    "mypy",
-    "pandas-stubs",
-    "types-PyYAML",
+    "pytest==9.1.1",
+    "ruff==0.16.8",
+    "mypy==2.4.0",
+    "pandas-stubs==3.0.5.260914",
+    "types-PyYAML==6.0.12.20260906",
 ]
+
+[tool.uv]
+# The study runs on Linux x86-64 (WSL2); the lock covers that platform only, where the
+# CUDA 12.8 PyTorch build exists.
+environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+# Pins the isolated environment that builds this project: setuptools and wheel are pinned in
+# [build-system]; packaging is the remaining build dependency (required by wheel).
+build-constraint-dependencies = ["packaging==26.3"]
+# Indirect dependencies held at the versions installed in the environment that produced the
+# project's evidence (Issue #60); without these, uv would resolve them to the newest versions.
+constraint-dependencies = [
+    "charset-normalizer==3.5.1",
+    "cuda-bindings==12.9.7",
+    "cuda-pathfinder==1.6.0",
+    "executing==2.2.1",
+    "filelock==3.32.3",
+    "fonttools==4.65.0",
+    "fqdn==1.5.1",
+    "fsspec==2026.7.0",
+    "iniconfig==2.3.0",
+    "json5==0.15.0",
+    "jsonpointer==3.1.1",
+    "markupsafe==3.0.3",
+    "narwhals==2.26.0",
+    "nest-asyncio2==1.7.3",
+    "networkx==3.6.1",
+    "platformdirs==4.11.12",
+    "pycparser==3.0",
+    "rpds-py==2026.6.3",
+    "setuptools==78.1.0",
+    "soupsieve==2.9.2",
+    "tzdata==2026.4",
+    "wcwidth==0.8.4",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128", extra = "dl" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
