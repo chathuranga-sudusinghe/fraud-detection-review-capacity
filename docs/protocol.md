@@ -675,7 +675,7 @@ The study uses secondary, anonymised data and does not recruit human participant
 
 The University of Greenwich Research Ethics Policy applies to master's students' research (§1.2) [REF-050]. It lists research involving "harmful, criminal, particularly sensitive … subject matters" as requiring ethical consideration (§1.3.4) and as **Higher Risk** (§2.2.1 iv) [REF-050]. Separate guidance states that fully anonymised secondary data should not normally need approval, and that taught students are advised on the route by their programme or module leader [REF-051].
 
-**Ethics and governance status (Issues #31 and #63).** The supervisor has given written approval of the project topic; a separate determination of the ethics route was requested but was not provided. **The project owner decided on 11 October 2026 to follow the anonymised secondary-data route** described in the University guidance [REF-051]. The criminal-subject-matter provision [REF-050 §1.3.4] is included in the documented ethical considerations below. Written confirmation of the route, including whether §1.3.4 and the review of Higher-Risk student projects (§2.4) apply, has been requested from the module leader and remains outstanding ([criteria checklist](greenwich-criteria-checklist.md#4-ethics)). **No formal ethics approval, ethics exemption or ethics identifier is claimed.** The competition data-use terms have been verified [REF-049]: the Rules permit non-commercial use for academic research and education (Section 7A) and prohibit making the Competition Data available to any party not participating in the competition (Section 7B). As a stricter project policy, raw data and row-level derived data stay local, out of Git, and are not shared with anyone, including supervisors or examiners; aggregate results may be published ([`dataset.md`](dataset.md#data-use-terms)).
+**Ethics and governance status (Issues #31 and #63).** The supervisor has given written approval of the project topic. **In written guidance of 3 October 2026, the supervisor confirmed that no ethics application is required, because the project uses no personal data or personally identifiable information (PII), and that there are no restrictions on the use of the data, the reporting of results, the publication of code or the storage of derived outputs** (Issue #31); the supervisor's comment on the dataset itself is pending. This is the anonymised secondary-data route of the University guidance [REF-051]. The criminal-subject-matter provision [REF-050 §1.3.4] is addressed through the documented ethical considerations below ([criteria checklist](greenwich-criteria-checklist.md#4-ethics)). **No formal ethics approval, ethics exemption or ethics identifier is claimed; none is required under that guidance.** The competition data-use terms have been verified [REF-049]: the Rules permit non-commercial use for academic research and education (Section 7A) and prohibit making the Competition Data available to any party not participating in the competition (Section 7B). As a stricter project policy, raw data and row-level derived data stay local, out of Git, and are not shared with anyone, including supervisors or examiners; aggregate results may be published ([`dataset.md`](dataset.md#data-use-terms)).
 
 **Ethical considerations.** Following the University of Greenwich guidance [REF-050, REF-051], the ethics assessment considers:
 - the status and anonymisation of the secondary data;
@@ -705,7 +705,7 @@ Artificial intelligence (AI) assistance used in this project will be declared at
 | H3 configuration | Highest pooled V2 Recall@2% under R3 among eight configurations; committed before Test access | [DR-010](decisions/DR-010-h3-confirmatory-configuration.md) |
 | Model set | LightGBM, CatBoost, ResNet-style MLP, FT-Transformer × unweighted/balanced; common-procedure fairness | [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) |
 | Data-use terms | Non-commercial academic use (Rules Section 7A); no redistribution (Section 7B); raw and row-level data stay local | [`dataset.md`](dataset.md#data-use-terms) |
-| Ethics and governance | Documented status: topic approval received; no formal ethics approval, exemption or identifier claimed | [Ethics](#ethics) |
+| Ethics and governance | Topic approval received; no ethics application required (supervisor's written guidance, 3 October 2026; Issue #31); no formal ethics approval, exemption or identifier claimed | [Ethics](#ethics) |
 
 **Items to resolve before the freeze:**
 
@@ -820,6 +820,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | φ | False-alert-to-review cost ratio, C_FP / C_R |
 | π | A decision policy (R3 or R4) in J_π and N_π |
 | pp | Percentage points |
+| PII | Personally identifiable information |
 | Parquet | Column-oriented file format of the local processed development files ([`dataset.md`](dataset.md#data-access-after-the-parquet-build)) |
 | PR-AUC | Precision–Recall Area Under the Curve |
 | Precision@K | Share of reviewed transactions that are fraud |
