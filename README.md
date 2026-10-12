@@ -46,7 +46,7 @@ The study is organised along the ten stages of the Foundational Methodology for 
 | 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; dataset manifest generated and committed (Issue #62) | [Dataset](docs/dataset.md#dataset-manifest), [`data/datapackage.json`](data/datapackage.json), notebooks 01–02 |
 | 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
 | 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based input representation fixed; neural-network representation proposed; validation contract and data-preparation pipeline implemented and verified on the raw data (Issue #62) | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md), [`src/review_capacity/`](src/review_capacity/) |
-| 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; graphics processing unit (GPU) feasibility verified (Issue #50); training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
+| 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; neural graphics processing unit (GPU) memory probe completed (Issue #50); training-device policy fixed ([DR-013](docs/decisions/DR-013-training-device-policy.md), Issue #66), with its synthetic acceptance probe pending; training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
 | 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after freeze | Design defined; runs after freeze | [Protocol: Statistical Plan](docs/protocol.md#statistical-plan) |
 | 9 | Deployment (demonstration) | Research report; local demonstration application programming interface (API) on synthetic example requests (not IEEE-CIS rows) | Planned | — |
 | 10 | Feedback (review) | Supervisor review; limitations; future work | Ongoing | — |
@@ -64,7 +64,7 @@ Two gates separate development from confirmation: **(1)** training, policy and a
 
 ## Environment setup
 
-The environment is pinned for reproducibility: every direct dependency has an exact version in [`pyproject.toml`](pyproject.toml), and the complete environment, including indirect dependencies, is locked with SHA-256 hashes in [`uv.lock`](uv.lock). It is managed with [uv](https://docs.astral.sh/uv/), a Python package and project manager.
+The environment is pinned for reproducibility: every direct dependency has an exact version in [`pyproject.toml`](pyproject.toml), and the Python dependencies, including indirect ones, are locked with artifact SHA-256 hashes in [`uv.lock`](uv.lock). Isolated build dependencies are version-constrained in `pyproject.toml`; the system prerequisites and the native build toolchain are recorded separately (step 2). It is managed with [uv](https://docs.astral.sh/uv/), a Python package and project manager.
 
 **Tested platform:** Linux x86-64 (Ubuntu 24.04 on Windows Subsystem for Linux 2, WSL2), Python 3.12.3 (pinned in [`.python-version`](.python-version)), uv 0.13.0, and an NVIDIA GPU with a driver that supports CUDA 12.8 (NVIDIA's GPU computing platform; check with `nvidia-smi`). The lock covers this platform only.
 
@@ -74,15 +74,40 @@ The environment is pinned for reproducibility: every direct dependency has an ex
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. Create the environment exactly as locked, with the tree-based (`ml`), neural (`dl`, PyTorch for CUDA 12.8) and development (`dev`) groups:
+2. Install the system prerequisites of LightGBM's CUDA build ([DR-013](docs/decisions/DR-013-training-device-policy.md) §2). LightGBM is built from source for the project GPU (compute capability sm_120), because the standard wheel has no CUDA support:
+
+   - the CUDA Toolkit 12.8 from NVIDIA's WSL-Ubuntu repository, with the compiler at `/usr/local/cuda-12.8/bin/nvcc` (tested: 12.8.93), and GCC, the GNU Compiler Collection (tested: 13.3.0);
+   - NCCL (the NVIDIA Collective Communications Library) 2.26.2 for CUDA 12.8. The WSL-Ubuntu repository has no NCCL packages, so the two packages are taken from NVIDIA's Ubuntu 24.04 repository, installed at this exact version and held, so that an upgrade cannot pull in another CUDA version:
+
+     ```bash
+     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/libnccl2_2.26.2-1+cuda12.8_amd64.deb
+     ```
+
+     ```bash
+     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/libnccl-dev_2.26.2-1+cuda12.8_amd64.deb
+     ```
+
+     ```bash
+     sudo apt-get install -y ./libnccl2_2.26.2-1+cuda12.8_amd64.deb ./libnccl-dev_2.26.2-1+cuda12.8_amd64.deb
+     ```
+
+     ```bash
+     sudo apt-mark hold libnccl2 libnccl-dev
+     ```
+
+     SHA-256 of the tested packages: `libnccl2` `91a95bb422b54fa6603f481ab72e6b2aa2bb805b9210053efc2dac91132a5274`; `libnccl-dev` `45824393a1e70d3407537e6f168186f312fd3d588edabd836d01fef4198e1c0c`.
+
+   The build settings (CUDA on, target architecture 120, compiler path) and the versions of the build tools (scikit-build-core, CMake, Ninja) are fixed in [`pyproject.toml`](pyproject.toml); CMake and Ninja are required at those versions even when other versions are installed on the system, and a build is accepted only under the acceptance rule of [DR-013](docs/decisions/DR-013-training-device-policy.md) §2 (Ninja generator, matching tool versions, no conflicting overrides). The CUDA runtime and NCCL are linked statically into LightGBM.
+
+3. Create the environment exactly as locked, with the tree-based (`ml`), neural (`dl`, PyTorch for CUDA 12.8) and development (`dev`) groups. This step builds LightGBM from source:
 
    ```bash
    uv sync --locked --extra ml --extra dl --extra dev
    ```
 
-3. Obtain the raw data from Kaggle by accepting the Competition Rules, and place both files in `data/raw/` ([dataset documentation](docs/dataset.md)). The data are never committed.
+4. Obtain the raw data from Kaggle by accepting the Competition Rules, and place both files in `data/raw/` ([dataset documentation](docs/dataset.md)). The data are never committed.
 
-4. Validate the raw data and prepare the development files, **once** (run by the project owner; [execution rules](AGENTS.md#experiment-execution-responsibility)):
+5. Validate the raw data and prepare the development files, **once** (run by the project owner; [execution rules](AGENTS.md#experiment-execution-responsibility)):
 
    ```bash
    .venv/bin/review-capacity --log-file logs/prepare-data.log prepare-data
@@ -97,7 +122,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | Path | Contents |
 |---|---|
 | [`docs/protocol.md`](docs/protocol.md) | Research protocol: questions, hypotheses, analytic approach, data requirements, methods, statistical plan, design items, freeze conditions |
-| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-012: the reason for each design choice |
+| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-013: the reason for each design choice |
 | [`docs/research-foundation.md`](docs/research-foundation.md) | Research problem, aim, objectives, contribution |
 | [`docs/literature-review.md`](docs/literature-review.md) | Literature review and research gap |
 | [`docs/literature-evidence-matrix.md`](docs/literature-evidence-matrix.md) | Field-by-field comparison of the selected studies |
@@ -108,7 +133,8 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | [`docs/feature-catalog.md`](docs/feature-catalog.md) | Column-by-column data dictionary |
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (433 inputs: 431 declared columns and 2 time-of-day inputs) |
 | [`config/dataset.yaml`](config/dataset.yaml) | Machine-readable raw files, DR-001 partitions and their integrity anchors |
-| [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs (`features/`); command `review-capacity` |
+| [`config/models.yaml`](config/models.yaml) | Machine-readable DR-013 device and numerical settings and the recorded LightGBM build |
+| [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs (`features/`), model device controls (`models/`); command `review-capacity` |
 | [`pyproject.toml`](pyproject.toml), [`uv.lock`](uv.lock), [`.python-version`](.python-version) | Pinned dependencies, locked environment (uv) and Python version |
 | [`evidence/`](evidence/gpu_probe/README.md) | Engineering evidence: GPU memory probe results (Issue #50) |
 | [`tests/`](tests/) | Unit tests on synthetic data; opt-in integration tests on the local processed development files (no raw file is read), subject to the execution rules in [`AGENTS.md`](AGENTS.md#experiment-execution-responsibility) |

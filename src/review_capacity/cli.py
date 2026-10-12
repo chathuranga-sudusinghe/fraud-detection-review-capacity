@@ -15,10 +15,11 @@ file kept with the run's evidence. --verbose adds detail; --quiet shows warnings
 
 Exit codes: 0 success; 1 profile-data found differences; 2 configuration or project-root error;
 3 data-validation error; 4 sealed Test period; 5 file access (a required file cannot be read or an
-output or log file cannot be written); 130 interrupted. An expected failure is summarised in one
-line with its exit code (steps that were running also log that they failed); the log file always
-keeps its traceback and cause, the terminal only with --debug. Any other error is a defect: it is
-logged with its traceback and raised.
+output or log file cannot be written); 6 environment mismatch (for example, a LightGBM library
+that is not the recorded build); 130 interrupted. An expected failure is summarised in one line
+with its exit code (steps that were running also log that they failed); the log file always keeps
+its traceback and cause, the terminal only with --debug. Any other error is a defect: it is logged
+with its traceback and raised.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ from review_capacity.data.processed import JOINED, read_development_features
 from review_capacity.data.profiling import compare_with_catalog
 from review_capacity.errors import (
     DataValidationError,
+    EnvironmentMismatchError,
     FileAccessError,
     ProjectRootNotFoundError,
     ReviewCapacityError,
@@ -56,6 +58,7 @@ EXIT_CODES: tuple[tuple[type[ReviewCapacityError], int], ...] = (
     (DataValidationError, 3),
     (SealedTestError, 4),
     (FileAccessError, 5),
+    (EnvironmentMismatchError, 6),
 )
 EXIT_INTERRUPTED = 130
 

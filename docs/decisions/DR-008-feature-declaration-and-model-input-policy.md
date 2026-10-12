@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) by the project owner (Issue #23) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54), 2026-10-10 (Issue #57: neural-network representation moved to DR-012) and 2026-10-10 (Issue #64: time-of-day inputs) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54), 2026-10-10 (Issue #57: neural-network representation moved to DR-012) and 2026-10-10 (Issue #64: time-of-day inputs) and 2026-10-12 (Issue #66: CatBoost row order) |
 | Evidence source | Raw-file headers (schema only); development-period values (relative days 1–154) for type, missingness and cardinality checks, **with the target column never loaded**; organiser data description; LightGBM and CatBoost documentation; input-type checks on synthetic data; `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 2.6, 8, 9 (§2.6: label-free completeness of `TransactionDT` over all 182 relative days); fraud-detection and software literature on periodic time features [REF-007, REF-104] |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md), [`config/features.yaml`](../../config/features.yaml), [feature catalog](../feature-catalog.md) |
 
@@ -137,6 +137,9 @@ Then, for each tree-based library (the neural-network form is in [DR-012](DR-012
 | Category unseen in Train | Becomes NaN **during preprocessing**, because it is absent from the Train-fixed pandas category list; LightGBM then treats it as missing. This reproduces LightGBM's own documented predict-time behaviour [REF-076] | Passed as its text label; handled natively by CatBoost as a value not seen in training |
 | Numeric missing value | Native (`use_missing = true`, `zero_as_missing = false`; library defaults) | Native (`nan_mode = Min`; library default) |
 | Extra encodings | None | None. CatBoost's internal ordered target statistics are part of the model family, not preprocessing [REF-012] |
+| Row order | No order-dependent statistics | `has_time = true`: the training rows are passed in time order (`TransactionDT`, with `TransactionID` as a deterministic tie-break), and the ordered target-dependent statistics follow this Train order instead of a random permutation [REF-012; REF-118] |
+
+**Why CatBoost uses the time order [I].** CatBoost's ordered target statistics follow an online-learning principle: each example's statistic uses only the "history" before it, and for data without a time order the method introduces an artificial time, a random permutation of the training examples [REF-012, Section 3.2]. These data have a recorded time order, and the study's design is temporal throughout. With `has_time = true`, CatBoost uses the supplied Train order for its ordered target-dependent categorical statistics. Ordering by `TransactionDT` with a `TransactionID` tie-break is an ordering convention: it does not establish strictly earlier timestamps for tied rows, nor when fraud labels became available. CatBoost's frequency statistics (Counter on the central processing unit (CPU), FeatureFreq on the graphics processing unit (GPU)) remain computed over the whole Train set under `counter_calc_method = SkipTest` and use no labels. Both the time order and random permutations stay within Train, so neither leaks information from the validation or Test periods; the time order is chosen for consistency with the study's temporal design.
 
 **Why the missing-value label is explicit for categoricals [I].** CatBoost cannot accept NaN in a categorical column (checked under [Library requirements](#library-requirements-l-checked-on-synthetic-data)), so some label is technically required. Using the **same** label in both libraries gives them identical categorical information. For LightGBM a missing value simply becomes one more category it can split on. Numeric missing values stay native in both libraries, as the protocol prefers.
 
@@ -257,7 +260,8 @@ Observed value types in development data [D]:
 - **CatBoost** [REF-077]:
   - numeric missing values are handled natively, by default as the minimum value (`nan_mode = Min`);
   - "CatBoost does not process categorical features in any specific way" with respect to missing values;
-  - one-hot encoding before training is discouraged.
+  - one-hot encoding before training is discouraged;
+  - `has_time` uses the order of objects in the input data, without random permutations, when categorical features are transformed and tree structures are chosen; it is supported on CPU and GPU [REF-118].
 - **Type check on synthetic data, CatBoost 1.2.10** (installed version):
   - a categorical column containing float values or NaN is rejected with the message "cat_features must be integer or string, real number values and NaN values should be converted to string";
   - integer and string values are accepted, including the pandas 3 default string type.
@@ -316,12 +320,14 @@ Observed value types in development data [D]:
 | Periodic spline features [REF-104] | More inputs per period and researcher-chosen knots, with no evidence of benefit here |
 | An additional seven-day phase | Weekdays are unknown, because the reference point is undisclosed. A relative seven-day phase could be computed, but it adds inputs without a documented weekly meaning |
 | Fill or correct `D9` from `TransactionDT` | Would alter an organiser field. `D9` is kept as observed, and its missingness remains information |
+| CatBoost's default random permutations (`has_time = false`) | The permutation is the method's artificial time for data without a time order [REF-012, Section 3.2]. Both settings stay within Train, so neither is leakage into the validation or Test periods; the time order is chosen for consistency with the temporal design. It is fixed before any run, not tuned |
 | Entity-level aggregates (counts, frequencies, past-window statistics) | Depend on heuristic pseudo-entity keys and on assumptions about label availability, and add a leakage surface; outside the scope of this study |
 
 ## Consequences
 
 - The implementation must read [`config/features.yaml`](../../config/features.yaml). It must assert that the loaded columns match the declaration exactly and that numeric-coded categorical values are whole numbers.
 - LightGBM category lists are built from **Train rows only** and stored with each model.
+- The CatBoost training rows are asserted to be in time order (`TransactionDT`, ties by `TransactionID`) before the two columns are dropped.
 - The implementation validates `TransactionDT` and computes `tod_sin` and `tod_cos` as in §4, before the partitions are assigned and the raw time column is dropped; the validation stops data preparation on any invalid value.
 - Any later change to feature roles requires a new GitHub Issue. Before the protocol freeze, this record is revised in place; after the freeze, the change requires a record that supersedes this one ([record maintenance policy](README.md#record-maintenance-policy)).
 
@@ -331,13 +337,14 @@ Observed value types in development data [D]:
 - **Organiser list taken as authoritative.** Some integer-coded identity fields may be ordinal in reality. Treating them as nominal can cost some efficiency but introduces no leakage.
 - **Different unseen-category handling** between the libraries remains. The raw information is identical. For LightGBM the unseen-to-missing mapping is applied in preprocessing by the Train-fixed category list, deliberately reproducing LightGBM's documented default rather than adding any information. CatBoost uses its native handling.
 - **The `D9` interpretation** (hour-of-day) is inferred from the data [D], not documented.
+- **CatBoost time order.** With one ordering instead of several random permutations, the earliest Train rows have higher-variance target statistics, a property of ordered statistics noted by its authors [REF-012, Section 3.2]. Its effect on predictive performance is not assumed in advance.
 - **Relative time of day.** `tod_sin` and `tod_cos` describe the phase within the relative day defined by an undisclosed reference point. They support no claim about local clock times, time zones or calendar effects.
 - **No ablation of the time-of-day inputs.** The study does not estimate their incremental contribution. Results are conditional on the fixed 433-input design.
 - **Look-back windows** of the C, D and V groups remain undocumented, a known threat to validity (protocol, Leakage Controls).
 
 ## References
 
-REF-007, REF-012, REF-047, REF-048\*, REF-076, REF-077, REF-104 — see [`../references.md`](../references.md).
+REF-007, REF-012, REF-047, REF-048\*, REF-076, REF-077, REF-104, REF-118 — see [`../references.md`](../references.md).
 
 \* Partially verified.
 
@@ -354,11 +361,15 @@ REF-007, REF-012, REF-047, REF-048\*, REF-076, REF-077, REF-104 — see [`../ref
 | `card1`–`card6`, `addr1`, `addr2` | Organiser card and address fields (categorical) |
 | `cat_features`, `categorical_feature` | CatBoost and LightGBM arguments naming the categorical columns |
 | `cat_l2`, `cat_smooth`, `max_cat_threshold`, `min_data_per_group` | LightGBM categorical-regularisation parameters (tuned elsewhere) |
+| Counter, FeatureFreq | CatBoost's label-free category-frequency statistics on CPU and GPU |
+| CPU, GPU | Central processing unit; graphics processing unit |
+| `counter_calc_method = SkipTest` | CatBoost setting that computes frequency statistics on the training data only |
 | `D9` | Organiser time-delta field; equals hour of the relative day ÷ 24 on 100 % of non-missing development rows, to its six stored decimal places |
 | `DeviceType`, `DeviceInfo` | Organiser device fields (categorical) |
 | DR | Decision Record |
 | `float64` | 64-bit floating-point numeric type |
 | H1 | Confirmatory hypothesis 1 (model-family effect) |
+| `has_time` | CatBoost setting: use the given row order instead of random permutations for ordered target statistics |
 | `id_01`–`id_38` | Organiser identity fields; `id_12`–`id_38` categorical, `id_01`–`id_11` numeric |
 | `isFraud` | Target: 1 = fraud, 0 = legitimate |
 | Int32.MaxValue | Largest 32-bit signed integer (2,147,483,647) |

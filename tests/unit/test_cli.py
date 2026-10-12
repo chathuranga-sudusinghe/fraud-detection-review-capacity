@@ -14,6 +14,7 @@ from review_capacity.data.processed import read_development_features
 from review_capacity.data.profiling import profile_columns
 from review_capacity.errors import (
     DataValidationError,
+    EnvironmentMismatchError,
     FileAccessError,
     ProjectRootNotFoundError,
     ReviewCapacityError,
@@ -118,6 +119,7 @@ def test_interruption_exits_with_code_130(monkeypatch: pytest.MonkeyPatch) -> No
         (DataValidationError("d"), 3),
         (SealedTestError("t"), 4),
         (FileAccessError("f"), 5),
+        (EnvironmentMismatchError("e"), 6),
     ],
 )
 def test_every_project_error_has_its_exit_code(

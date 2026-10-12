@@ -297,7 +297,7 @@ In words, R4 wins if the reviews it left unused contained frauds at a lower rate
 
 ### 7. Statistical treatment
 
-**RQ3 is estimation and sensitivity analysis, with no confirmatory hypothesis. The confirmatory hypotheses H1 (model family), H2 (class weighting) and H3 (alert-rate transfer), the SESOI (smallest effect size of interest), the Holm family and the H1/H2 bootstrap ([DR-006](DR-006-bootstrap-inference-strategy.md)) are not affected by RQ3.**
+**RQ3 is estimation and sensitivity analysis, with no confirmatory hypothesis. The confirmatory hypotheses H1 (model family), H2 (class weighting) and H3 (alert-rate transfer), the Smallest Effect Size Of Interest (SESOI), the Holm family and the H1/H2 bootstrap ([DR-006](DR-006-bootstrap-inference-strategy.md)) are not affected by RQ3.**
 
 Why [I]:
 - ρ is an assumption, not a population parameter. A test at each ratio would test a family of assumption-conditional nulls.

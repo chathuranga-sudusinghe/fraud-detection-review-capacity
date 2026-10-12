@@ -49,9 +49,16 @@ dev = [
 # The study runs on Linux x86-64 (WSL2); the lock covers that platform only, where the
 # CUDA 12.8 PyTorch build exists.
 environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
-# Pins the isolated environment that builds this project: setuptools and wheel are pinned in
-# [build-system]; packaging is the remaining build dependency (required by wheel).
-build-constraint-dependencies = ["packaging==26.3"]
+# Constrains the isolated build environments. This project: setuptools and wheel are pinned in
+# [build-system]; packaging is the remaining build dependency (required by wheel). LightGBM's
+# CUDA source build (below): scikit-build-core and its dependencies, CMake and Ninja.
+build-constraint-dependencies = [
+    "cmake==4.4.4",
+    "ninja==1.13.2",
+    "packaging==26.3",
+    "pathspec==1.1.1",
+    "scikit-build-core==1.1.1",
+]
 # Indirect dependencies held at the versions installed in the environment that produced the
 # project's evidence (Issue #60); without these, uv would resolve them to the newest versions.
 constraint-dependencies = [
@@ -78,6 +85,21 @@ constraint-dependencies = [
     "tzdata==2026.4",
     "wcwidth==0.8.4",
 ]
+# LightGBM's CUDA implementation is not in the standard wheel (REF-116): it is built from source
+# for the project GPU (compute capability sm_120) with the CUDA 12.8 Toolkit and NCCL 2.26.2,
+# both installed on the system as described in README.md (DR-013 §2).
+no-binary-package = ["lightgbm"]
+
+[tool.uv.config-settings-package.lightgbm]
+"cmake.define.USE_CUDA" = "ON"
+"cmake.define.CMAKE_CUDA_ARCHITECTURES" = "120"
+"cmake.define.CMAKE_CUDA_COMPILER" = "/usr/local/cuda-12.8/bin/nvcc"
+# Require these executable versions during normal discovery and disable automatic
+# fallback from Ninja to Make. Build constraints apply when the Python packages
+# are requested; matching system executables may be used (DR-013 §2).
+"cmake.version" = "==4.4.4"
+"ninja.version" = "==1.13.2"
+"ninja.make-fallback" = "false"
 
 [[tool.uv.index]]
 name = "pytorch-cu128"

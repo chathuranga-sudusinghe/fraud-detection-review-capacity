@@ -1,0 +1,79 @@
+# Device and numerical settings of the eight configurations: the machine-readable form of
+# DR-013 (docs/decisions/DR-013-training-device-policy.md), read by review_capacity.config.
+# Hyperparameter values and search spaces are fixed in the training rules, not here.
+# Each library has settings shared by both devices and settings for each device. A shared key
+# must not also appear in a device section; a key may appear in both device sections with
+# device-specific values. The code (review_capacity.config) fixes which keys each section must
+# declare and their types, so that no setting can fall back silently to a library default.
+
+reproducibility:
+  main_seed: 42                     # DR-013 §6; additional seeds: training rules
+
+lightgbm:
+  build:                            # DR-013 §2: verified at start-up of every run
+    version: "4.7.0"
+    library_sha256: 716e9be697f5a703a16a2e1ffc795ec463fa97583d535faae570f38b10185952
+  shared:
+    objective: binary
+    max_bin: 255
+    min_data_in_bin: 3
+    bin_construct_sample_cnt: 200000
+    enable_bundle: false
+    is_enable_sparse: false
+    force_row_wise: true
+    force_col_wise: false
+    feature_pre_filter: false
+    use_missing: true
+    zero_as_missing: false
+    use_quantized_grad: false
+    linear_tree: false
+    forcedsplits_filename: ""
+    forcedbins_filename: ""
+    histogram_pool_size: -1
+  gpu:
+    device_type: cuda
+    gpu_device_id: 0
+    num_gpu: 1
+    gpu_use_dp: true
+  cpu:                              # supportive CPU refit (DR-013 §7)
+    device_type: cpu
+    deterministic: true
+    num_threads: 24
+
+catboost:
+  shared:
+    loss_function: Logloss
+    border_count: 254
+    feature_border_type: GreedyLogSum
+    nan_mode: Min
+    bootstrap_type: Bayesian
+    boosting_type: Plain
+    has_time: true                  # DR-008 §5: training rows in time order
+    max_ctr_complexity: 4
+    one_hot_max_size: 2
+    counter_calc_method: SkipTest
+    grow_policy: SymmetricTree
+    score_function: Cosine
+    random_score_type: NormalWithModelSizeDecrease
+    leaf_estimation_method: Newton
+    leaf_estimation_backtracking: AnyImprovement
+    sampling_unit: Object
+  gpu:
+    task_type: GPU
+    devices: "0"
+    simple_ctr: [Borders, FeatureFreq]
+    combinations_ctr: [Borders, FeatureFreq]
+  cpu:                              # supportive CPU refit (DR-013 §7)
+    task_type: CPU
+    thread_count: 24
+    simple_ctr: [Borders, Counter]
+    combinations_ctr: [Borders, Counter]
+
+neural:                             # DR-013 §4, both neural models
+  matmul_fp32_precision: ieee
+  allow_bf16_reduced_precision_reduction: false
+  deterministic_algorithms: true
+  cudnn_benchmark: false
+  training_dtype: bfloat16
+  prediction_dtype: float32
+  gpu_attention_backend: efficient  # FT-Transformer, GPU training and GPU study prediction

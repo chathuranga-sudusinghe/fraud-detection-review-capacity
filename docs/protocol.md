@@ -4,7 +4,7 @@
 
 **Working protocol — pre-freeze. Not yet confirmatory.**
 
-This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-012).
+This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-013).
 
 The remaining items are listed under [Design items before protocol freeze](#design-items-before-protocol-freeze). The protocol becomes confirmatory only when every item is resolved and the file is tagged in Git.
 
@@ -262,13 +262,15 @@ The model set is fixed by DR-011; no further model families are added.
    - the same V1 objective, early-stopping rule and seeds;
    - the same decision policies, capacity settings and evaluation.
 2. **Identical within each family:**
-   - tree-based: native categorical and missing-value handling ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5), weighted log-loss, CPU training;
-   - neural: the representation of [DR-012](decisions/DR-012-neural-network-input-representation.md) (proposed), weighted binary cross-entropy, bf16 mixed precision on the GPU.
-3. **Model-specific:** each model's architecture and internal computation (self-attention, residual blocks, ordered boosting, leaf-wise growth) and its own search space (neural models: the large-dataset spaces (B) of REF-087, used by the authors for datasets of this size), tuned under the Level 1 method and budget.
+   - tree-based: native categorical and missing-value handling ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5), weighted log-loss, GPU training with the device settings of [DR-013](decisions/DR-013-training-device-policy.md);
+   - neural: the representation of [DR-012](decisions/DR-012-neural-network-input-representation.md) (proposed), weighted binary cross-entropy, bf16 mixed-precision training and float32 prediction on the GPU ([DR-013](decisions/DR-013-training-device-policy.md)).
+3. **Model-specific:** each model's architecture and internal computation (self-attention, residual blocks, ordered target statistics, leaf-wise growth) and its own search space (neural models: the large-dataset spaces (B) of REF-087, used by the authors for datasets of this size), tuned under the Level 1 method and budget.
 
-The values of these elements (search method, budget, objective, patience, seeds, aggregation of neural-network seeds, tie rule for equal scores) are fixed in the training rules before the development runs ([Design items](#design-items-before-protocol-freeze)).
+**Seeds.** All eight configurations use the main seed 42, fixed before any model run, and every main result is computed with it. A common list of additional seeds, identical for all configurations, measures stochastic training variation only; it never replaces the main seed and is not used for model selection ([DR-013](decisions/DR-013-training-device-policy.md) §6). Before the development runs, the training rules fix which stages the additional seeds repeat (the hyperparameter search, or refits at the selected hyperparameters with or without early stopping) and the partition on which seed sensitivity is evaluated.
 
-**Training environment.** Tree-based models train on CPU, with the CatBoost device fixed. Neural models train on the local GPU (8 GB) with bf16 mixed precision (bfloat16 computation, float32 weights), with memory-efficient attention for FT-Transformer. The engineering probe of Issue #50 (synthetic tensors) covered the width and depth grid of the FT-Transformer space (B), with its feed-forward size factor of 4/3. Under these settings, at 431 input tokens, FT-Transformer fits at batch sizes 512 (default setting) to 128 (largest setting); at 800 input tokens the largest setting fits at batch size 64, and at 128 with gradient checkpointing. float32 with standard attention runs out of memory for the larger settings ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) §4).
+The values of the remaining elements (search method, budget, objective, patience, the list of additional seeds, tie rule for equal scores) are fixed in the training rules before the development runs ([Design items](#design-items-before-protocol-freeze)).
+
+**Training environment.** All eight configurations train on the local graphics processing unit (GPU; 8 gigabytes) through CUDA (NVIDIA's GPU computing platform), using the model-specific precision and device settings, scoped determinism rules and prediction backends specified in [DR-013](decisions/DR-013-training-device-policy.md); an owner-run synthetic probe must confirm the required capabilities before development runs. The engineering probe of Issue #50 (synthetic tensors) covered the width and depth grid of the FT-Transformer space (B), with its feed-forward size factor of 4/3. Under these settings, at 431 input tokens, FT-Transformer fits at batch sizes 512 (default setting) to 128 (largest setting); at 800 input tokens the largest setting fits at batch size 64, and at 128 with gradient checkpointing. float32 with standard attention runs out of memory for the larger settings ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) §4).
 
 ## Feature Policy
 
@@ -292,7 +294,7 @@ The values of these elements (search method, budget, objective, patience, seeds,
 
   The inputs are row-local and label-free, and every model receives them as ordinary numeric inputs. θ is a position within the relative day, not the local clock time. Data preparation stops with an error if any `TransactionDT` value is missing, non-finite or not a whole number of seconds, or if its relative day lies outside 1–182; no row is dropped or imputed. The organiser column `D9`, which partly encodes the hour of the relative day and is missing on 87.3 % of development rows [D], is kept unchanged.
 - **No future-looking aggregate features.** Any frequency, count or entity-level aggregate would have to be computed from Train only or with past-only windows. None is planned for the primary design.
-- **No manual target encoding.** Categorical handling is native to each model family: CatBoost ordered target statistics [REF-012]; LightGBM categorical splits [REF-011]; learned category embeddings in the neural networks ([DR-012](decisions/DR-012-neural-network-input-representation.md), proposed).
+- **No manual target encoding.** Categorical handling is native to each model family: CatBoost ordered target statistics, computed in the time order of the Train rows [REF-012] ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5); LightGBM categorical splits [REF-011]; learned category embeddings in the neural networks ([DR-012](decisions/DR-012-neural-network-input-representation.md), proposed).
 - **No engineered entity identifiers as features.** Heuristic keys such as card + address + implied account-start day are used **only** for audit and slicing.
 - **Feature declaration** ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md); machine-readable in [`config/features.yaml`](../config/features.yaml); column-by-column reference in the [feature catalog](feature-catalog.md)). Of the 434 joined columns:
   - 1 is the target (`isFraud`) and 2 are excluded (`TransactionID`, `TransactionDT`);
@@ -534,9 +536,11 @@ Precision@K is a rescaling of Recall@K (share of all frauds reviewed under budge
 - lift over random review;
 - utilisation of the capped policies R3 and R4; alert demand, overflow, unused capacity and load ratio of the threshold policies R0–R2 (see RQ2 and [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md));
 - Average Precision / PR-AUC (Precision–Recall Area Under the Curve) [REF-010] and ROC-AUC (Receiver Operating Characteristic Area Under the Curve);
+- precision, recall and F1 of the threshold policies R0–R2 at their thresholds, uncapped (descriptive);
 - amount-weighted recall;
 - scenario cost;
-- calibration metrics for R4.
+- calibration metrics for R4;
+- **computational cost** (descriptive, every configuration): training time (one fit including early stopping, and the total hyperparameter search), scoring time for V1, V2 and Test, batch throughput (transactions scored per second), single-transaction latency (median, 95th and 99th percentiles over a fixed sample of rows scored one at a time, after warm-up runs) and peak GPU and host memory. Every timing is taken on the project machine without concurrent workload, with GPU work synchronised before each clock reading, and records its device. Tree-based models score on CPU and neural models on the GPU ([DR-013](decisions/DR-013-training-device-policy.md) §5); the neural models' scoring time and latency are additionally measured on CPU (timing only; these scores are not used), so that all eight configurations are also compared on the same device. Before the development runs, the training rules fix the complete timing procedure: the fit that is timed, batch sizes, thread settings and CPU affinity, warm-up and repetition counts, the label-independent selection of latency rows, the timing boundaries (model-only inference and end-to-end scoring including preprocessing and host–device transfer are reported separately) and the scope of memory measurement. Warm-up and repeated latency measurements use a fixed sample of development-period rows; Test scoring time is measured only during the single authorised Test scoring pass after the protocol freeze, without consulting Test labels.
 
 ### Daily-budget fidelity (RQ2)
 
@@ -629,6 +633,8 @@ It is higher under lower discordance or clustering, and lower otherwise (see [DR
 
 Statistical significance will not be treated as equivalent to practical importance.
 
+**Supportive analysis: training device (tree-based models).** Each of the four tree configurations is refitted once on CPU with its GPU-selected hyperparameters and GPU-fitted tree count. The CPU − GPU difference in Recall@2% under R3 on V2 is reported with the paired bootstrap of [DR-006](decisions/DR-006-bootstrap-inference-strategy.md); other metrics are reported as point differences, alongside same-seed and different-seed variation. The analysis estimates the difference between the two specified training procedures, not a hardware effect alone; it is descriptive, outside H1–H3 and the Holm family, and cannot change any decision ([DR-013](decisions/DR-013-training-device-policy.md) §7).
+
 ## False-Negative Analysis
 
 Exploratory, descriptive and non-causal. False negatives are defined under **R3 at the primary capacity** (frauds outside the daily top-K, K = 56). Frauds among threshold alerts in excess of K under R0–R2 are not false negatives in this analysis ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)). Pre-declared slices:
@@ -711,9 +717,9 @@ Artificial intelligence (AI) assistance used in this project will be declared at
 
 | # | Item | Notes |
 |---|---|---|
-| 1 | University of Greenwich criteria | Resolved (Issue #63): requirements mapped in the [criteria checklist](greenwich-criteria-checklist.md); supervisor feedback on the design (DR-001–DR-012) welcome, not a precondition (Issue #56) |
+| 1 | University of Greenwich criteria | Resolved (Issue #63): requirements mapped in the [criteria checklist](greenwich-criteria-checklist.md); supervisor feedback on the design (DR-001–DR-013) welcome, not a precondition (Issue #56) |
 | 2 | Neural-network input representation | [DR-012](decisions/DR-012-neural-network-input-representation.md), proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise formula and 1,000 quantiles [REF-103], missingness indicators; one fixed noise seed shared by all neural configurations (value fixed in the training rules); inputs constant in Train need no special rule; an input entirely missing in Train stops data preparation |
-| 3 | Training rules | Search method and budget, V1 objective, early-stopping rule, seeds, aggregation of neural-network seeds, tie rule for equal scores, calibration details |
+| 3 | Training rules | Search method and budget, V1 objective, early-stopping rule, the list of additional seeds (main seed 42 fixed), tie rule for equal scores, calibration details |
 | 4 | Feature-engineering policy | Resolved (Issue #64): declared inputs plus the two time-of-day inputs; no other engineered feature ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §4) |
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
 | 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Resolved as a working basis (Issue #63): Tier 2, AIR at submission [REF-109, REF-111]; tier to be confirmed against the COMP1885 assessment brief |
@@ -747,6 +753,7 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-010 — Confirmatory configuration for H3](decisions/DR-010-h3-confirmatory-configuration.md)
 - [DR-011 — Model set: tree-based and neural model families](decisions/DR-011-model-set-tree-based-and-neural-families.md)
 - [DR-012 — Neural-network input representation](decisions/DR-012-neural-network-input-representation.md) (proposed)
+- [DR-013 — Training-device policy](decisions/DR-013-training-device-policy.md)
 
 ## References
 
@@ -786,6 +793,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | C_R | Cost of reviewing one transaction, charged on every review |
 | Cat, LGB, RES, FTT | CatBoost, LightGBM, ResNet-style MLP, FT-Transformer |
 | CPU, GPU | Central and graphics processing units |
+| CUDA | NVIDIA's GPU computing platform |
 | [CLS] | Classification token that FT-Transformer adds to its feature tokens |
 | CI | Confidence interval |
 | d | A relative day |
