@@ -47,6 +47,11 @@ class ProjectPaths:
         return self.config_dir / "dataset.yaml"
 
     @property
+    def models_spec(self) -> Path:
+        """Device and numerical settings of the models (DR-013)."""
+        return self.config_dir / "models.yaml"
+
+    @property
     def feature_catalog(self) -> Path:
         """The human-readable feature catalog, whose statistics ``profile-data`` checks."""
         return self.root / "docs" / "feature-catalog.md"

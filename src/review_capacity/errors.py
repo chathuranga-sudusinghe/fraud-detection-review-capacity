@@ -27,3 +27,8 @@ class ProjectRootNotFoundError(ReviewCapacityError, FileNotFoundError):
 
 class FileAccessError(ReviewCapacityError, OSError):
     """A required file cannot be read or an output file cannot be written."""
+
+
+class EnvironmentMismatchError(ReviewCapacityError, RuntimeError):
+    """The installed environment differs from the recorded one (for example, a LightGBM library
+    that is not the recorded CUDA build, DR-013 §2), or a required device is unavailable."""

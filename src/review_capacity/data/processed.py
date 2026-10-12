@@ -113,8 +113,7 @@ def _count(record: dict[str, Any], name: str, path: Path) -> int:
 def _hashes(record: dict[str, Any], name: str, path: Path) -> dict[str, str]:
     value = record.get(name)
     if not isinstance(value, dict) or not all(
-        isinstance(k, str) and isinstance(v, str) and _HEX_64.fullmatch(v)
-        for k, v in value.items()
+        isinstance(k, str) and isinstance(v, str) and _HEX_64.fullmatch(v) for k, v in value.items()
     ):
         raise DataValidationError(f"{path.name}: {name} must map file names to SHA-256 values")
     return dict(value)

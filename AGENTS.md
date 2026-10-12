@@ -134,6 +134,7 @@ Saved research evidence (executed notebooks) is exempt: it is never edited to ma
 | Dataset source, provenance, use terms, version control and manifest | [`docs/dataset.md`](docs/dataset.md) |
 | Column roles (canonical declaration) | [`config/features.yaml`](config/features.yaml); [`docs/feature-catalog.md`](docs/feature-catalog.md) is its human-readable companion and reads every role from it. If the two disagree, `features.yaml` is correct and the catalog is fixed |
 | Raw-file checksums, partition boundaries and integrity anchors, for the code | [`config/dataset.yaml`](config/dataset.yaml): the machine-readable form of the DR-001 split that the code reads. It must match [DR-001](docs/decisions/DR-001-temporal-split-strategy.md) and the protocol; a difference is a defect, resolved through an issue |
+| Model device and numerical settings and the recorded LightGBM build, for the code | [`config/models.yaml`](config/models.yaml): the machine-readable form of [DR-013](docs/decisions/DR-013-training-device-policy.md) that the code reads. It must match DR-013 and the protocol; a difference is a defect, resolved through an issue |
 | Orientation, status, research path and repository map | [`README.md`](README.md) |
 | Working rules | This file |
 
