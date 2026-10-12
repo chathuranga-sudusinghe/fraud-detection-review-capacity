@@ -33,7 +33,13 @@ constraints = [
     { name = "tzdata", specifier = "==2026.4" },
     { name = "wcwidth", specifier = "==0.8.4" },
 ]
-build-constraints = [{ name = "packaging", specifier = "==26.3" }]
+build-constraints = [
+    { name = "cmake", specifier = "==4.4.4" },
+    { name = "ninja", specifier = "==1.13.2" },
+    { name = "packaging", specifier = "==26.3" },
+    { name = "pathspec", specifier = "==1.1.1" },
+    { name = "scikit-build-core", specifier = "==1.1.1" },
+]
 
 [[package]]
 name = "anyio"
