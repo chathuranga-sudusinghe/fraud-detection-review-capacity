@@ -46,7 +46,7 @@ The study is organised along the ten stages of the Foundational Methodology for 
 | 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; dataset manifest generated and committed (Issue #62) | [Dataset](docs/dataset.md#dataset-manifest), [`data/datapackage.json`](data/datapackage.json), notebooks 01–02 |
 | 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
 | 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based input representation fixed; neural-network representation proposed; validation contract and data-preparation pipeline implemented and verified on the raw data (Issue #62) | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md), [`src/review_capacity/`](src/review_capacity/) |
-| 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; graphics processing unit (GPU) feasibility verified (Issue #50); training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
+| 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; neural graphics processing unit (GPU) memory probe completed (Issue #50); training-device policy fixed ([DR-013](docs/decisions/DR-013-training-device-policy.md), Issue #66), with its synthetic acceptance probe pending; training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
 | 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after freeze | Design defined; runs after freeze | [Protocol: Statistical Plan](docs/protocol.md#statistical-plan) |
 | 9 | Deployment (demonstration) | Research report; local demonstration application programming interface (API) on synthetic example requests (not IEEE-CIS rows) | Planned | — |
 | 10 | Feedback (review) | Supervisor review; limitations; future work | Ongoing | — |
@@ -97,7 +97,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | Path | Contents |
 |---|---|
 | [`docs/protocol.md`](docs/protocol.md) | Research protocol: questions, hypotheses, analytic approach, data requirements, methods, statistical plan, design items, freeze conditions |
-| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-012: the reason for each design choice |
+| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-013: the reason for each design choice |
 | [`docs/research-foundation.md`](docs/research-foundation.md) | Research problem, aim, objectives, contribution |
 | [`docs/literature-review.md`](docs/literature-review.md) | Literature review and research gap |
 | [`docs/literature-evidence-matrix.md`](docs/literature-evidence-matrix.md) | Field-by-field comparison of the selected studies |
