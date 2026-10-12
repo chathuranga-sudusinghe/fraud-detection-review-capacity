@@ -209,9 +209,13 @@ def test_gpu_record_with_a_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
     monkeypatch.setattr(torch.cuda, "get_device_properties", lambda _index: properties)
+    # cudnn.version() checks the visible devices itself, so it is mocked too: the test must not
+    # depend on a real GPU (it runs in CI on a CPU-only runner).
+    monkeypatch.setattr(torch.backends.cudnn, "version", lambda: 91900)
     monkeypatch.setattr(device, "_nvidia_driver_version", lambda: "592.01")
     record = device._gpu_record()
     assert record["available"] is True
+    assert record["cudnn"] == 91900
     assert record["compute_capability"] == "12.0"
     assert record["memory_bytes"] == 8 * 2**30
     assert record["driver"] == "592.01"
