@@ -1,0 +1,142 @@
+# Code checks for every push and pull request to main that changes code (Issue #79).
+# CI runs only the checks the project owner runs locally: ruff, strict mypy and the unit tests.
+# It never trains or scores a model and never reads research data. Only the synthetic unit tests
+# are collected; the integration tests and the GPU probe are excluded. Rules: AGENTS.md.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "config/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "config/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.13.0"
+  CUDA_HOME: /usr/local/cuda-12.8
+
+jobs:
+  lint:
+    name: ruff
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+            .python-version
+            .github/workflows/ci.yml
+          cache-suffix: lint
+      # Only the core and development packages: ruff at the locked version, no model libraries.
+      - run: uv sync --locked --extra dev
+      - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync ruff format --check .
+
+  checks:
+    name: mypy and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      # The LightGBM build follows DR-013 §2: GCC 13 and the Ninja generator.
+      CC: /usr/bin/gcc-13
+      CXX: /usr/bin/g++-13
+      CMAKE_GENERATOR: Ninja
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Free disk space for the PyTorch and CUDA packages
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      # Retain downloaded distributions and locally built wheels for reuse (no pruning, which
+      # would drop the downloaded PyTorch wheels). Cache restoration does not guarantee a
+      # compatible LightGBM wheel, so the native build prerequisites are installed on every run.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+            .python-version
+            .github/workflows/ci.yml
+          cache-suffix: full
+          prune-cache: false
+
+      - run: uv lock --check
+
+      # The CUDA compiler and NCCL build LightGBM from source (DR-013 §2; README step 2). The
+      # runner has no GPU; the tests run on CPU.
+      - name: Install the CUDA 12.8 compiler and NCCL 2.26.2 for the LightGBM build
+        run: |
+          set -euo pipefail
+          repo=https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64
+          wget -q "$repo/cuda-keyring_1.1-1_all.deb"
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            cuda-nvcc-12-8=12.8.93-1 cuda-cudart-dev-12-8=12.8.90-1 cuda-cccl-12-8=12.8.90-1
+          wget -q "$repo/libnccl2_2.26.2-1+cuda12.8_amd64.deb"
+          wget -q "$repo/libnccl-dev_2.26.2-1+cuda12.8_amd64.deb"
+          sha256sum -c - <<'SUMS'
+          91a95bb422b54fa6603f481ab72e6b2aa2bb805b9210053efc2dac91132a5274  libnccl2_2.26.2-1+cuda12.8_amd64.deb
+          45824393a1e70d3407537e6f168186f312fd3d588edabd836d01fef4198e1c0c  libnccl-dev_2.26.2-1+cuda12.8_amd64.deb
+          SUMS
+          sudo apt-get install -y -q ./libnccl2_2.26.2-1+cuda12.8_amd64.deb ./libnccl-dev_2.26.2-1+cuda12.8_amd64.deb
+          "$CUDA_HOME/bin/nvcc" --version
+
+      # DR-013 §2 build acceptance: no conflicting CMake overrides, Ninja generator, GCC 13.3.0.
+      - name: Check the LightGBM build environment
+        run: |
+          set -euo pipefail
+          for variable in CMAKE_EXECUTABLE CMAKE_MAKE_PROGRAM CMAKE_ARGS; do
+            if [[ -v "$variable" ]]; then
+              echo "::error::$variable must be unset for this CI build"
+              exit 1
+            fi
+            echo "$variable=<unset>"
+          done
+          test "$CMAKE_GENERATOR" = Ninja
+          echo "CMAKE_GENERATOR=$CMAKE_GENERATOR CC=$CC CXX=$CXX"
+          test "$("$CC" -dumpfullversion)" = 13.3.0
+          test "$("$CXX" -dumpfullversion)" = 13.3.0
+
+      # --verbose logs the build backend's CMake and Ninja versions and the CMake command when
+      # LightGBM is built (a cold run); a cached run reuses that build.
+      - run: uv sync --locked --extra ml --extra dl --extra dev --verbose
+
+      - name: Report disk and cache usage
+        run: |
+          df -h / "$GITHUB_WORKSPACE"
+          du -sh "$(uv cache dir)" .venv
+
+      - run: uv run --no-sync mypy
+      - run: uv run --no-sync pytest tests/unit -q
