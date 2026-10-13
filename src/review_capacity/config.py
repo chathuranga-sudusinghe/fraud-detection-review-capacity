@@ -46,19 +46,22 @@ class _UniqueKeyLoader(yaml.SafeLoader):
         return super().construct_mapping(node, deep=deep)
 
 
-def _read_yaml(path: Path) -> dict[str, Any]:
+def _read_yaml(path: Path, *, content: bytes | None = None) -> dict[str, Any]:
+    """The mapping in ``path``, or in ``content`` (bytes already read from ``path``)."""
     try:
-        with path.open(encoding="utf-8") as handle:
-            content = yaml.load(handle, Loader=_UniqueKeyLoader)
+        if content is None:
+            content = path.read_bytes()
+        raw = yaml.load(content.decode("utf-8"), Loader=_UniqueKeyLoader)
     except OSError as error:
         raise FileAccessError(f"{path}: cannot be read ({error.strerror})") from error
     except (yaml.YAMLError, KeyError, IndexError, TypeError, ValueError) as error:
         # PyYAML raises TypeError for an unhashable mapping key (a sequence used as a key) and
-        # ValueError for a malformed explicitly tagged scalar (e.g. ``!!int invalid``).
+        # ValueError for a malformed explicitly tagged scalar (e.g. ``!!int invalid``); invalid
+        # UTF-8 is a ValueError too.
         raise SpecificationError(f"{path}: cannot be read as YAML") from error
-    if not isinstance(content, dict):
+    if not isinstance(raw, dict):
         raise SpecificationError(f"{path} does not contain a mapping")
-    return content
+    return raw
 
 
 def _integer(value: object, what: str) -> int:
@@ -653,11 +656,12 @@ def _neural(raw: object) -> NeuralSettings:
     )
 
 
-def load_model_settings(paths: ProjectPaths) -> ModelSettings:
+def load_model_settings(paths: ProjectPaths, *, content: bytes | None = None) -> ModelSettings:
     """Read ``config/models.yaml``: exact keys and value types in every section, and the device
-    selectors of each library (DR-013)."""
+    selectors of each library (DR-013). ``content``: the file's bytes, already read, so that the
+    settings are parsed from exactly the bytes a run records."""
     path = paths.models_spec
-    raw = _read_yaml(path)
+    raw = _read_yaml(path, content=content)
 
     def build() -> ModelSettings:
         top = _mapping(raw, "models.yaml", ("reproducibility", "lightgbm", "catboost", "neural"))

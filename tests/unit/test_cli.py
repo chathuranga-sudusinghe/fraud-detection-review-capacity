@@ -16,6 +16,7 @@ from review_capacity.errors import (
     DataValidationError,
     EnvironmentMismatchError,
     FileAccessError,
+    ModelError,
     ProjectRootNotFoundError,
     ReviewCapacityError,
     SealedTestError,
@@ -120,6 +121,7 @@ def test_interruption_exits_with_code_130(monkeypatch: pytest.MonkeyPatch) -> No
         (SealedTestError("t"), 4),
         (FileAccessError("f"), 5),
         (EnvironmentMismatchError("e"), 6),
+        (ModelError("m"), 7),
     ],
 )
 def test_every_project_error_has_its_exit_code(
