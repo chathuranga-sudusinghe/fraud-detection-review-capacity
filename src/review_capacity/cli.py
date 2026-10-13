@@ -9,6 +9,12 @@ Commands:
                    development file (no labels, no raw file) and report every difference from
                    docs/feature-catalog.md (--save: also write the profile and its provenance
                    record to the processed directory)
+    audit-duplicates
+                   count repeated input vectors (identical model inputs under different
+                   TransactionID values) within and across the development partitions, from
+                   the verified processed development file (no labels, no raw file); report
+                   only, nothing is removed (--save: also write the counts with their provenance
+                   to the processed directory)
 
 Every message is logged with a timestamp to the terminal and, with --log-file PATH, also to a
 file kept with the run's evidence. --verbose adds detail; --quiet shows warnings and errors only.
@@ -32,6 +38,7 @@ from pathlib import Path
 
 from review_capacity.config import load_dataset_spec, load_feature_spec
 from review_capacity.data.catalog import read_catalog
+from review_capacity.data.duplicates import audit_duplicates, audit_summary
 from review_capacity.data.preparation import prepare_data
 from review_capacity.data.processed import JOINED, read_development_features
 from review_capacity.data.profiling import compare_with_catalog
@@ -45,7 +52,7 @@ from review_capacity.errors import (
     SealedTestError,
     SpecificationError,
 )
-from review_capacity.files import write_atomically
+from review_capacity.files import write_atomically, write_json
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import configure_logging
 from review_capacity.paths import ProjectPaths
@@ -146,6 +153,53 @@ def _profile_data(args: argparse.Namespace) -> int:
     return EXIT_DIFFERENCES if report.differences else 0
 
 
+def _audit_duplicates(args: argparse.Namespace) -> int:
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    features = load_feature_spec(paths.features_spec)
+    dataset = load_dataset_spec(paths)
+    data = read_development_features(paths, features, dataset)
+    audit = audit_duplicates(data, features, dataset)
+    logger.info(
+        "Development rows only (relative days 1-%d); no labels read; nothing removed",
+        dataset.last_development_day,
+    )
+    for d in audit.definitions:
+        logger.info("Definition %s: %d compared columns", d.definition, len(d.columns))
+        for name, c in d.within.items():
+            logger.info(
+                "  %s: %d rows, %d repeated vectors, %d rows in them, %d excess rows",
+                name,
+                c.rows,
+                c.groups,
+                c.rows_in_groups,
+                c.excess_rows,
+            )
+        logger.info(
+            "  across partitions: %d vectors in more than one partition, on %d rows",
+            d.vectors_in_several_partitions,
+            d.rows_with_such_vectors,
+        )
+        for s in d.shared:
+            logger.info("  shared by %s: %d vectors", " and ".join(s.partitions), s.vectors)
+    if args.save:
+        path = paths.processed_dir / "duplicate_audit.json"
+        write_json(
+            path,
+            {
+                "audit": audit_summary(audit),
+                "inputs": {paths.processed_file(JOINED).name: data.record.sha256},
+                "configuration": {
+                    config.name: file_sha256(config)
+                    for config in (paths.features_spec, paths.dataset_spec)
+                },
+                "code": code_provenance(paths.root),
+            },
+        )
+        logger.info("Written: %s", path)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="review-capacity",
@@ -180,6 +234,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--save", action="store_true", help="also write the profile to data/processed/"
     )
     profile.set_defaults(handler=_profile_data)
+    duplicates = commands.add_parser(
+        "audit-duplicates",
+        help="count repeated input vectors in the development partitions (report only)",
+    )
+    duplicates.add_argument("--root", type=Path, default=None, help="project root directory")
+    duplicates.add_argument(
+        "--save", action="store_true", help="also write the counts to data/processed/"
+    )
+    duplicates.set_defaults(handler=_audit_duplicates)
     return parser
 
 
