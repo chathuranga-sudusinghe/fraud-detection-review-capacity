@@ -4,7 +4,7 @@
 
 **Working protocol — pre-freeze. Not yet confirmatory.**
 
-This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-013).
+This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-014).
 
 The remaining items are listed under [Design items before protocol freeze](#design-items-before-protocol-freeze). The protocol becomes confirmatory only when every item is resolved and the file is tagged in Git.
 
@@ -717,13 +717,13 @@ Artificial intelligence (AI) assistance used in this project will be declared at
 
 | # | Item | Notes |
 |---|---|---|
-| 1 | University of Greenwich criteria | Resolved (Issue #63): requirements mapped in the [criteria checklist](greenwich-criteria-checklist.md); supervisor feedback on the design (DR-001–DR-013) welcome, not a precondition (Issue #56) |
+| 1 | University of Greenwich criteria | Resolved (Issue #63): requirements mapped in the [criteria checklist](greenwich-criteria-checklist.md); supervisor feedback on the design (DR-001–DR-014) welcome, not a precondition (Issue #56) |
 | 2 | Neural-network input representation | [DR-012](decisions/DR-012-neural-network-input-representation.md), proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise formula and 1,000 quantiles [REF-103], missingness indicators; one fixed noise seed shared by all neural configurations (value fixed in the training rules); inputs constant in Train need no special rule; an input entirely missing in Train stops data preparation |
 | 3 | Training rules | Search method and budget, V1 objective, early-stopping rule, the list of additional seeds (main seed 42 fixed), tie rule for equal scores, calibration details |
 | 4 | Feature-engineering policy | Resolved (Issue #64): declared inputs plus the two time-of-day inputs; no other engineered feature ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §4) |
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
 | 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Resolved as a working basis (Issue #63): Tier 2, AIR at submission [REF-109, REF-111]; tier to be confirmed against the COMP1885 assessment brief |
-| 7 | Research-methodology framing | IBM Foundational Methodology adaptation [REF-085]; owner decision pending |
+| 7 | Research-methodology framing | Resolved (Issue #85): the ten stages of the Foundational Methodology for Data Science published by International Business Machines Corporation (IBM) [REF-085], adapted to the confirmatory design ([DR-014](decisions/DR-014-research-methodology-framing.md)) |
 | 8 | Dataset manifest | Resolved (Issue #62): SHA-256 (Secure Hash Algorithm, 256-bit) values and partition hashes reproduced by the data-preparation code and recorded in `data/datapackage.json` ([dataset manifest](dataset.md#dataset-manifest)) |
 
 ## Protocol Freeze
@@ -754,6 +754,7 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-011 — Model set: tree-based and neural model families](decisions/DR-011-model-set-tree-based-and-neural-families.md)
 - [DR-012 — Neural-network input representation](decisions/DR-012-neural-network-input-representation.md) (proposed)
 - [DR-013 — Training-device policy](decisions/DR-013-training-device-policy.md)
+- [DR-014 — Research-methodology framing](decisions/DR-014-research-methodology-framing.md)
 
 ## References
 
@@ -816,6 +817,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | N, T | Neural family {RES, FTT}; tree-based family {LGB, Cat} |
 | FN, FN_π | False negatives: frauds not reviewed (by policy π) |
 | H1, H2, H3 | Confirmatory hypotheses: model family; class weighting; alert-rate transfer fidelity. Subscript ₀ = null, ₁ = alternative |
+| IBM | International Business Machines Corporation, publisher of the methodology framework of REF-085 |
 | J_π(ρ) | Scenario cost of policy π, in units of one review cost |
 | K | Fixed daily review budget (28 / 56 / 139 / 278 reviews per relative day) |
 | ℓ | Block length of a moving-block bootstrap, in days |
