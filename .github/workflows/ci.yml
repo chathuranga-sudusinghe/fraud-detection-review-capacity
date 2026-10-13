@@ -1,7 +1,8 @@
 # Code checks for every push and pull request to main that changes code (Issue #79).
 # CI runs only the checks the project owner runs locally: ruff, strict mypy and the unit tests.
-# It never trains or scores a model and never reads research data. Only the synthetic unit tests
-# are collected; the integration tests and the GPU probe are excluded. Rules: AGENTS.md.
+# It never trains or scores a model on research data and never reads research data; unit tests fit
+# only small models on synthetic data. Only the synthetic unit tests are collected; the
+# integration tests and the GPU probe are excluded. Rules: AGENTS.md.
 
 name: CI
 

@@ -9,8 +9,9 @@
   hyperparameters, after mapping each library's parameter aliases to canonical names; a
   hyperparameter can never override a fixed setting, under any name;
 * ``ScoringModel``: what every model implements. A model is created with its configuration, seed,
-  the loaded model settings and its device, and fitted either with early stopping on V1 or at a
-  fixed iteration count without validation (the CPU refit of DR-013 §7);
+  the loaded model settings, the feature declaration (DR-008: the categorical inputs are named
+  from ``config/features.yaml``, never inferred) and its device, and fitted either with early
+  stopping on V1 or at a fixed iteration count without validation (the CPU refit of DR-013 §7);
 * ``checked_scores``: every score a model returns is a real number, finite and within [0, 1].
 
 The model settings are loaded once per run and passed in explicitly; no model reads YAML.
@@ -29,7 +30,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
-from review_capacity.config import DEVICES, SEED_LIMIT, Device, ModelSettings
+from review_capacity.config import DEVICES, SEED_LIMIT, Device, FeatureSpec, ModelSettings
 from review_capacity.errors import DataValidationError, ModelError, SpecificationError
 from review_capacity.models.registry import Configuration, Weighting
 
@@ -181,14 +182,21 @@ class ScoringModel(ABC):
     """What every configuration implements.
 
     A model is created with its configuration, seed, the loaded model settings (from which each
-    adapter takes its own library or neural settings) and its device. It is fitted once and then
-    scores any partition. Scores are the model's raw fraud scores in [0, 1] (calibration, for R4
-    only, is separate). Tree models always score through their CPU prediction backend (DR-013
-    §5); neural models score in float32 on their device.
+    adapter takes its own library or neural settings), the feature declaration and its device.
+    Its inputs are the canonical model inputs of DR-008, in declared order. It is fitted once and
+    then scores any partition. Scores are the model's raw fraud scores in [0, 1] (calibration,
+    for R4 only, is separate). Tree models always score through their CPU prediction backend
+    (DR-013 §5); neural models score in float32 on their device.
     """
 
     def __init__(
-        self, configuration: Configuration, seed: int, *, settings: ModelSettings, device: Device
+        self,
+        configuration: Configuration,
+        seed: int,
+        *,
+        settings: ModelSettings,
+        features: FeatureSpec,
+        device: Device,
     ) -> None:
         if device not in DEVICES:
             raise ValueError(f"Unsupported device {device!r}; expected one of {DEVICES}")
@@ -199,7 +207,13 @@ class ScoringModel(ABC):
         self.configuration = configuration
         self.seed = seed
         self.settings = settings
+        self.features = features
         self.device = device
+
+    def check_inputs(self, frame: pd.DataFrame) -> None:
+        """Check that ``frame`` holds the canonical model inputs of DR-008, in declared order."""
+        if tuple(frame.columns) != self.features.model_inputs:
+            raise DataValidationError("Model inputs differ from the declared canonical inputs")
 
     @abstractmethod
     def fit(
@@ -231,6 +245,7 @@ class ScoringModel(ABC):
         seed: int,
         *,
         settings: ModelSettings,
+        features: FeatureSpec,
         device: Device,
     ) -> Self:
         """A fitted model saved by ``save``; its manifest must match ``configuration`` and

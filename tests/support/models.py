@@ -10,7 +10,7 @@ from typing import Any, Self
 import numpy as np
 import pandas as pd
 
-from review_capacity.config import Device, ModelSettings
+from review_capacity.config import Device, FeatureSpec, ModelSettings
 from review_capacity.errors import ModelError
 from review_capacity.models.base import (
     ModelData,
@@ -76,6 +76,7 @@ class MeanModel(ScoringModel):
         seed: int,
         *,
         settings: ModelSettings,
+        features: FeatureSpec,
         device: Device,
     ) -> Self:
         payload = json.loads((directory / "model.json").read_text(encoding="utf-8"))
@@ -83,7 +84,7 @@ class MeanModel(ScoringModel):
             raise ModelError(f"Unsupported format version {payload['format_version']}")
         if (payload["configuration"], payload["seed"]) != (configuration.name, seed):
             raise ModelError("Saved model does not match the requested configuration and seed")
-        model = cls(configuration, seed, settings=settings, device=device)
+        model = cls(configuration, seed, settings=settings, features=features, device=device)
         model.rate = payload["rate"]
         model.rows = payload["rows"]
         model.iterations = payload["iterations"]

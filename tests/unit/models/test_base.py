@@ -27,12 +27,23 @@ from review_capacity.models.base import (
 )
 from review_capacity.models.registry import Weighting, configuration
 from support.models import MeanModel
-from support.synthetic import REPO_PATHS
+from support.synthetic import FEATURES, REPO_PATHS
 
 
 @pytest.fixture(scope="module")
 def settings() -> ModelSettings:
     return load_model_settings(REPO_PATHS)
+
+
+def _model(name: str, settings: ModelSettings, *, seed: Any = 42, device: Any = "gpu") -> MeanModel:
+    return MeanModel(configuration(name), seed, settings=settings, features=FEATURES, device=device)
+
+
+def _reload(tmp_path: Path, name: str, seed: int, settings: ModelSettings) -> MeanModel:
+    directory = tmp_path / "model"
+    return MeanModel.load(
+        directory, configuration(name), seed, settings=settings, features=FEATURES, device="gpu"
+    )
 
 
 def _data(labels: list[int], weights: list[float] | None = None) -> ModelData:
@@ -198,7 +209,7 @@ def test_invalid_fixed_iteration_count(iterations: Any) -> None:
 def test_interface_is_abstract(settings: ModelSettings) -> None:
     with pytest.raises(TypeError):
         ScoringModel(  # type: ignore[abstract]
-            configuration("LGB-u"), 42, settings=settings, device="gpu"
+            configuration("LGB-u"), 42, settings=settings, features=FEATURES, device="gpu"
         )
 
 
@@ -216,19 +227,17 @@ def test_invalid_seed_or_device_is_a_defect(
     settings: ModelSettings, seed: Any, device: Any, error: type[Exception]
 ) -> None:
     with pytest.raises(error):
-        MeanModel(configuration("LGB-u"), seed, settings=settings, device=device)
+        _model("LGB-u", settings, seed=seed, device=device)
 
 
 def test_a_model_fits_scores_saves_and_reloads(tmp_path: Path, settings: ModelSettings) -> None:
     train = _data([0, 1, 0, 0, 0], [1.0, 3.0, 1.0, 1.0, 1.0])  # weighted fraud rate 3 / 7
-    model = MeanModel(configuration("LGB-b"), 42, settings=settings, device="gpu")
+    model = _model("LGB-b", settings, seed=42, device="gpu")
     model.fit(train, train, {"num_leaves": 31})
     scores = model.predict(train.features)
     assert scores.tolist() == pytest.approx([3 / 7] * 5)
     model.save(tmp_path / "model")
-    reloaded = MeanModel.load(
-        tmp_path / "model", configuration("LGB-b"), 42, settings=settings, device="gpu"
-    )
+    reloaded = _reload(tmp_path, "LGB-b", 42, settings)
     assert reloaded.predict(train.features).tolist() == scores.tolist()
     assert reloaded.parameters == model.parameters
     assert (reloaded.configuration, reloaded.seed) == (model.configuration, model.seed)
@@ -237,19 +246,17 @@ def test_a_model_fits_scores_saves_and_reloads(tmp_path: Path, settings: ModelSe
 
 
 def test_reload_rejects_another_configuration(tmp_path: Path, settings: ModelSettings) -> None:
-    model = MeanModel(configuration("LGB-b"), 42, settings=settings, device="gpu")
+    model = _model("LGB-b", settings, seed=42, device="gpu")
     model.fit(_data([0, 1]), None, {}, iterations=10)
     assert model.fitted_iterations == 10
     model.save(tmp_path / "model")
     with pytest.raises(ModelError, match="does not match"):
-        MeanModel.load(
-            tmp_path / "model", configuration("Cat-b"), 42, settings=settings, device="gpu"
-        )
+        _reload(tmp_path, "Cat-b", 42, settings)
 
 
 @pytest.mark.parametrize("access", ["predict", "save", "parameters", "fitted_iterations"])
 def test_unfitted_access_is_rejected(access: str, settings: ModelSettings, tmp_path: Path) -> None:
-    model = MeanModel(configuration("LGB-u"), 42, settings=settings, device="cpu")
+    model = _model("LGB-u", settings, seed=42, device="cpu")
     actions: dict[str, Callable[[], object]] = {
         "predict": lambda: model.predict(pd.DataFrame({"x": [0.0]})),
         "save": lambda: model.save(tmp_path / "model"),
@@ -261,17 +268,13 @@ def test_unfitted_access_is_rejected(access: str, settings: ModelSettings, tmp_p
 
 
 def test_reload_rejects_another_seed_or_format(tmp_path: Path, settings: ModelSettings) -> None:
-    model = MeanModel(configuration("LGB-b"), 42, settings=settings, device="gpu")
+    model = _model("LGB-b", settings, seed=42, device="gpu")
     model.fit(_data([0, 1]), None, {}, iterations=10)
     model.save(tmp_path / "model")
     with pytest.raises(ModelError, match="does not match"):
-        MeanModel.load(
-            tmp_path / "model", configuration("LGB-b"), 7, settings=settings, device="gpu"
-        )
+        _reload(tmp_path, "LGB-b", 7, settings)
     manifest = tmp_path / "model" / "model.json"
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     manifest.write_text(json.dumps({**payload, "format_version": 99}), encoding="utf-8")
     with pytest.raises(ModelError, match="Unsupported format version"):
-        MeanModel.load(
-            tmp_path / "model", configuration("LGB-b"), 42, settings=settings, device="gpu"
-        )
+        _reload(tmp_path, "LGB-b", 42, settings)
