@@ -97,6 +97,52 @@ def test_model_data_rejects_empty_and_duplicate_columns() -> None:
         ModelData(duplicate, np.array([1], dtype=np.int8), np.ones(1))
 
 
+def _ordered(times: list[int], ids: list[int]) -> ModelData:
+    n = len(times)
+    return ModelData(
+        pd.DataFrame({"x": np.zeros(n)}),
+        np.zeros(n, dtype=np.int8),
+        np.ones(n),
+        times=np.array(times, dtype=np.int64),
+        ids=np.array(ids, dtype=np.int64),
+    )
+
+
+@pytest.mark.parametrize(
+    ("times", "ids", "ordered"),
+    [
+        ([10, 20, 30], [3, 1, 2], True),  # time increases; identifiers do not matter
+        ([10, 10, 20], [1, 2, 3], True),  # equal times: identifiers increase
+        ([10, 10, 20], [2, 1, 3], False),  # equal times: identifiers decrease
+        ([10, 10, 20], [1, 1, 3], False),  # equal times and equal identifiers
+        ([20, 10, 30], [1, 2, 3], False),  # time decreases
+        ([10], [1], True),
+        ([-(2**63), 2**63 - 1], [2**63 - 1, -(2**63)], True),  # no overflow at the int64 limits
+        ([2**63 - 1, -(2**63)], [1, 2], False),
+        ([10, 10], [-(2**63), 2**63 - 1], True),  # tied times, identifiers at the int64 limits
+        ([10, 10], [2**63 - 1, -(2**63)], False),
+    ],
+)
+def test_time_order_is_time_then_identifier(
+    times: list[int], ids: list[int], ordered: bool
+) -> None:
+    assert _ordered(times, ids).in_time_order() is ordered
+
+
+def test_time_order_needs_both_keys() -> None:
+    features, labels, weights = pd.DataFrame({"x": [0.0, 1.0]}), np.zeros(2, np.int8), np.ones(2)
+    times = np.array([1, 2], dtype=np.int64)
+    with pytest.raises(DataValidationError, match="together"):
+        ModelData(features, labels, weights, times=times)
+    floats: Any = np.array([1.0, 2.0])
+    with pytest.raises(DataValidationError, match="one int64 value per row"):
+        ModelData(features, labels, weights, times=times, ids=floats)
+    with pytest.raises(DataValidationError, match="one int64 value per row"):
+        ModelData(features, labels, weights, times=times[:1], ids=times[:1])
+    with pytest.raises(DataValidationError, match="needed to check row order"):
+        ModelData(features, labels, weights).in_time_order()
+
+
 def test_balanced_weights_follow_the_protocol() -> None:
     labels = np.array([0, 0, 0, 1, 0, 0, 1], dtype=np.int8)  # 5 legitimate, 2 fraud
     weights = class_weights(labels, Weighting.BALANCED)

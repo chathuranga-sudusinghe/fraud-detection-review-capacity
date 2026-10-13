@@ -136,7 +136,7 @@ mypy_path = "tests"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*"]
+module = ["pyarrow", "pyarrow.*", "catboost", "catboost.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
