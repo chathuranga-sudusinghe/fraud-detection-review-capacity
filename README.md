@@ -32,7 +32,7 @@ The data are used exactly as published: no rows are generated, simulated or alte
 
 ## Research path
 
-The study is organised along the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085](docs/references.md#ref-085), adapted to a confirmatory research design. This framing is proposed and awaits the project owner's decision (protocol design item 7); the accepted adaptation will be recorded in a Decision Record.
+The study is organised along the ten stages of the Foundational Methodology for Data Science published by International Business Machines Corporation (IBM) [REF-085](docs/references.md#ref-085), adapted to a confirmatory research design ([DR-014](docs/decisions/DR-014-research-methodology-framing.md)).
 
 - Stages 1–8 carry the confirmatory research; stage 9 (Deployment) is realised as a local demonstration application and stage 10 (Feedback) as supervisor review and reporting.
 - Iteration between stages is allowed only before the protocol freeze, only on the development partitions (Train, Validation 1 and Validation 2), and only within each partition's fixed role ([protocol: Experimental Split Structure](docs/protocol.md#experimental-split-structure)).
@@ -124,7 +124,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | Path | Contents |
 |---|---|
 | [`docs/protocol.md`](docs/protocol.md) | Research protocol: questions, hypotheses, analytic approach, data requirements, methods, statistical plan, design items, freeze conditions |
-| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-013: the reason for each design choice |
+| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-014: the reason for each design choice |
 | [`docs/research-foundation.md`](docs/research-foundation.md) | Research problem, aim, objectives, contribution |
 | [`docs/literature-review.md`](docs/literature-review.md) | Literature review and research gap |
 | [`docs/literature-evidence-matrix.md`](docs/literature-evidence-matrix.md) | Field-by-field comparison of the selected studies |
