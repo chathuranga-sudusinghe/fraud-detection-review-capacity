@@ -26,7 +26,7 @@ from review_capacity.models.run_record import (
 )
 from review_capacity.paths import ProjectPaths
 from support.models import MeanModel
-from support.synthetic import REPO_PATHS
+from support.synthetic import FEATURES, REPO_PATHS
 
 BUILD = LightGBMIdentity(version="4.7.0", library=Path("/lib/lib_lightgbm.so"), sha256="a" * 64)
 
@@ -114,7 +114,7 @@ def test_jsonable_rejects_unrecordable_values(value: object, error: type[Excepti
 def _fitted(name: str, settings: ModelSettings) -> MeanModel:
     labels = np.array([0, 1, 0, 0], dtype=np.int8)
     train = ModelData(pd.DataFrame({"x": [0.0, 1.0, 2.0, 3.0]}), labels, np.ones(4))
-    model = MeanModel(configuration(name), 42, settings=settings, device="gpu")
+    model = MeanModel(configuration(name), 42, settings=settings, features=FEATURES, device="gpu")
     model.fit(train, train, {"depth": 6})
     return model
 
