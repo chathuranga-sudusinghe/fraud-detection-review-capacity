@@ -1,5 +1,5 @@
-"""Command-line parsing, the error boundary, exit codes and profile-data on synthetic processed
-files (no project data is read)."""
+"""Command-line parsing, the error boundary, exit codes, profile-data and audit-duplicates on
+synthetic processed files (no project data is read)."""
 
 from __future__ import annotations
 
@@ -25,7 +25,12 @@ from review_capacity.errors import (
 from review_capacity.hashing import file_sha256
 from review_capacity.paths import ProjectPaths
 from support.catalog import catalog_text
-from support.synthetic import Synthetic, build_processed
+from support.synthetic import (
+    Synthetic,
+    build_processed,
+    repeat_identity_values,
+    repeat_transaction_values,
+)
 
 pytestmark = pytest.mark.usefixtures("restore_logging")
 
@@ -205,3 +210,49 @@ def test_profile_data_without_processed_files_is_a_file_access_error(
     data = _profile_project(tmp_path, monkeypatch)
     data.paths.processed_file("development_joined").unlink()
     assert main(["profile-data"]) == 5
+
+
+def test_audit_duplicates_reads_no_raw_file_and_saves_counts_with_provenance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    data = build_processed(
+        tmp_path,
+        edit_transaction=repeat_transaction_values,
+        edit_identity=repeat_identity_values,
+    )
+    monkeypatch.setattr(ProjectPaths, "discover", lambda _root=None: data.paths)
+    monkeypatch.setattr(cli, "load_feature_spec", lambda _path: data.features)
+    monkeypatch.setattr(cli, "load_dataset_spec", lambda _paths: data.dataset)
+    assert not data.paths.raw_dir.joinpath("train_transaction.csv").exists()
+    assert main(["audit-duplicates", "--save"]) == 0
+    saved = json.loads(
+        (data.paths.processed_dir / "duplicate_audit.json").read_text(encoding="utf-8")
+    )
+    primary, secondary = saved["audit"]["definitions"]
+    assert primary["within"]["development"] == {
+        "rows": 16,
+        "groups": 1,
+        "rows_in_groups": 3,
+        "excess_rows": 2,
+    }
+    assert secondary["within"]["train"]["rows_in_groups"] == 3
+    assert saved["inputs"]["development_joined.parquet"] == file_sha256(
+        data.paths.processed_file("development_joined")
+    )
+    assert set(saved["configuration"]) == {"features.yaml", "dataset.yaml"}
+
+
+def test_audit_duplicates_without_save_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    data = _profile_project(tmp_path, monkeypatch)
+    assert main(["audit-duplicates"]) == 0
+    assert not (data.paths.processed_dir / "duplicate_audit.json").exists()
+
+
+def test_audit_duplicates_without_processed_files_is_a_file_access_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    data = _profile_project(tmp_path, monkeypatch)
+    data.paths.processed_file("development_joined").unlink()
+    assert main(["audit-duplicates"]) == 5

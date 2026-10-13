@@ -143,6 +143,29 @@ def build_synthetic(
     return Synthetic(FEATURES, dataset, paths, transaction, identity)
 
 
+def repeat_transaction_values(transaction: pd.DataFrame) -> pd.DataFrame:
+    """Give rows 2, 4 and 8 the supplied transaction values of row 0 (for ``edit_transaction``).
+
+    Rows 0 and 4 (Train) and 8 (Validation 1) are at the start of their relative day, as row 0
+    is; row 2 (Train) is at noon, so it differs from row 0 only in the time of day. Identifiers
+    and times are unchanged, so the partition anchors still hold."""
+    out = transaction.copy()
+    for row in (2, 4, 8):
+        for column in ("TransactionAmt", "ProductCD", "card1", "V1"):
+            out.loc[row, column] = out.loc[0, column]
+    return out
+
+
+def repeat_identity_values(identity: pd.DataFrame) -> pd.DataFrame:
+    """The identity values of rows 2, 4 and 8 (identity rows 1, 2 and 4) set to those of row 0
+    (identity row 0), for ``edit_identity``."""
+    out = identity.copy()
+    for row in (1, 2, 4):
+        for column in ("id_01", "id_13", "DeviceType"):
+            out.loc[row, column] = out.loc[0, column]
+    return out
+
+
 def with_partition(dataset: DatasetSpec, name: str, **changes: object) -> DatasetSpec:
     """Copy of ``dataset`` with one partition's anchors changed."""
     parts = tuple(

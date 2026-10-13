@@ -1,0 +1,145 @@
+{
+  "audit": {
+    "partitions": [
+      "train",
+      "v1",
+      "v2"
+    ],
+    "definitions": [
+      {
+        "definition": "primary",
+        "columns": 433,
+        "within": {
+          "train": {
+            "rows": 368632,
+            "groups": 1,
+            "rows_in_groups": 2,
+            "excess_rows": 1
+          },
+          "v1": {
+            "rows": 65544,
+            "groups": 0,
+            "rows_in_groups": 0,
+            "excess_rows": 0
+          },
+          "v2": {
+            "rows": 77822,
+            "groups": 1,
+            "rows_in_groups": 2,
+            "excess_rows": 1
+          },
+          "development": {
+            "rows": 511998,
+            "groups": 2,
+            "rows_in_groups": 4,
+            "excess_rows": 2
+          }
+        },
+        "vectors_in_several_partitions": 0,
+        "rows_with_such_vectors": 0,
+        "shared": [
+          {
+            "partitions": [
+              "train",
+              "v1"
+            ],
+            "vectors": 0
+          },
+          {
+            "partitions": [
+              "train",
+              "v2"
+            ],
+            "vectors": 0
+          },
+          {
+            "partitions": [
+              "v1",
+              "v2"
+            ],
+            "vectors": 0
+          }
+        ]
+      },
+      {
+        "definition": "secondary",
+        "columns": 431,
+        "within": {
+          "train": {
+            "rows": 368632,
+            "groups": 206,
+            "rows_in_groups": 430,
+            "excess_rows": 224
+          },
+          "v1": {
+            "rows": 65544,
+            "groups": 18,
+            "rows_in_groups": 36,
+            "excess_rows": 18
+          },
+          "v2": {
+            "rows": 77822,
+            "groups": 13,
+            "rows_in_groups": 26,
+            "excess_rows": 13
+          },
+          "development": {
+            "rows": 511998,
+            "groups": 332,
+            "rows_in_groups": 699,
+            "excess_rows": 367
+          }
+        },
+        "vectors_in_several_partitions": 110,
+        "rows_with_such_vectors": 238,
+        "shared": [
+          {
+            "partitions": [
+              "train",
+              "v1"
+            ],
+            "vectors": 52
+          },
+          {
+            "partitions": [
+              "train",
+              "v2"
+            ],
+            "vectors": 39
+          },
+          {
+            "partitions": [
+              "v1",
+              "v2"
+            ],
+            "vectors": 23
+          }
+        ]
+      }
+    ]
+  },
+  "inputs": {
+    "development_joined.parquet": "8c657e5c4094915cf4d1271d52d36fe61e3366489f44174cac845589c0ee8d85"
+  },
+  "configuration": {
+    "features.yaml": "93fa480a5f7cf324fa438545df29a63d3ba1226259ad30cac3d51ddf59a7da54",
+    "dataset.yaml": "4c25e27e0f6b9c049784296de50a92efc8cf46ae1dbd6fbd367efca2ddfa9c23"
+  },
+  "code": {
+    "package": {
+      "name": "review_capacity",
+      "version": "0.1.0",
+      "location": "/home/chathuranga/projects/fraud-detection-review-capacity/src/review_capacity",
+      "source_sha256": "34a9b12cfd752562956785a63b387512a24dabd198cc838f1070534ae03383e5"
+    },
+    "git_commit": "01f0d8ff77ada5608ca7a6d970c2d550692a857e",
+    "git_uncommitted_changes": false,
+    "python": "3.12.3",
+    "packages": {
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "pyarrow": "25.0.1",
+      "PyYAML": "6.0.3"
+    }
+  }
+}
