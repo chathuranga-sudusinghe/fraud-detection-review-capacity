@@ -45,7 +45,7 @@ The study is organised along the ten stages of the Foundational Methodology for 
 | 3 | Data requirements | Data each research question and hypothesis needs, and how the dataset's limits are handled (no real costs, real capacity, label-report dates or account identifiers) | Done; accepted by the project owner | [Protocol: Data Requirements](docs/protocol.md#data-requirements) |
 | 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; dataset manifest generated and committed (Issue #62) | [Dataset](docs/dataset.md#dataset-manifest), [`data/datapackage.json`](data/datapackage.json), notebooks 01–02 |
 | 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
-| 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based input representation fixed; neural-network representation proposed; validation contract and data-preparation pipeline implemented and verified on the raw data (Issue #62) | [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md), [`src/review_capacity/`](src/review_capacity/) |
+| 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based input representation fixed; neural-network representation proposed; validation contract and data-preparation pipeline implemented and verified on the raw data (Issue #62) | [Data-preparation record](docs/data-preparation.md), [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md), [`src/review_capacity/`](src/review_capacity/) |
 | 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; neural graphics processing unit (GPU) memory probe completed (Issue #50); training-device policy fixed ([DR-013](docs/decisions/DR-013-training-device-policy.md), Issue #66), with its synthetic acceptance probe pending; training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
 | 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after freeze | Design defined; runs after freeze | [Protocol: Statistical Plan](docs/protocol.md#statistical-plan) |
 | 9 | Deployment (demonstration) | Research report; local demonstration application programming interface (API) on synthetic example requests (not IEEE-CIS rows) | Planned | — |
@@ -61,6 +61,7 @@ Two gates separate development from confirmation: **(1)** training, policy and a
 4. [Decision Records](docs/decisions/README.md): why each design choice was made.
 5. [Literature review](docs/literature-review.md): evidence base and research gap.
 6. [Dataset](docs/dataset.md) and [notebooks](notebooks/README.md): the data, its use terms and the data-understanding evidence.
+7. [Data-preparation record](docs/data-preparation.md): how the data are integrated, validated, cleaned and represented, with the evidence.
 
 ## Environment setup
 
@@ -132,6 +133,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | [`docs/literature-search-method.md`](docs/literature-search-method.md) | How the literature was searched, screened and selected |
 | [`docs/references.md`](docs/references.md) | Reference register with verification status |
 | [`docs/dataset.md`](docs/dataset.md) | Dataset source, provenance, data-use terms, version-control policy, dataset manifest |
+| [`docs/data-preparation.md`](docs/data-preparation.md) | Data-preparation implementation and evidence record (methodology stage 6) |
 | [`docs/feature-catalog.md`](docs/feature-catalog.md) | Column-by-column data dictionary |
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (433 inputs: 431 declared columns and 2 time-of-day inputs) |
 | [`config/dataset.yaml`](config/dataset.yaml) | Machine-readable raw files, DR-001 partitions and their integrity anchors |

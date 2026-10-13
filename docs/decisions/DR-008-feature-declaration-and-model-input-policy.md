@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) by the project owner (Issue #23) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54), 2026-10-10 (Issue #57: neural-network representation moved to DR-012) and 2026-10-10 (Issue #64: time-of-day inputs) and 2026-10-12 (Issue #66: CatBoost row order) |
-| Evidence source | Raw-file headers (schema only); development-period values (relative days 1–154) for type, missingness and cardinality checks, **with the target column never loaded**; organiser data description; LightGBM and CatBoost documentation; input-type checks on synthetic data; `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 2.6, 8, 9 (§2.6: label-free completeness of `TransactionDT` over all 182 relative days); fraud-detection and software literature on periodic time features [REF-007, REF-104] |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54), 2026-10-10 (Issue #57: neural-network representation moved to DR-012) and 2026-10-10 (Issue #64: time-of-day inputs) and 2026-10-12 (Issue #66: CatBoost row order) and 2026-10-13 (Issue #87: population preservation, §9) |
+| Evidence source | Raw-file headers (schema only); development-period values (relative days 1–154) for type, missingness and cardinality checks, **with the target column never loaded**; organiser data description; LightGBM and CatBoost documentation; input-type checks on synthetic data; `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 2.6, 8, 9 (§2.6: label-free completeness of `TransactionDT` over all 182 relative days); fraud-detection and software literature on periodic time features [REF-007, REF-104]; the label-free audit of repeated input vectors in the development rows (Issue #86) |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md), [`config/features.yaml`](../../config/features.yaml), [feature catalog](../feature-catalog.md) |
 
 ## Context
@@ -173,6 +173,17 @@ Then, for each tree-based library (the neural-network form is in [DR-012](DR-012
 
 The human-readable counterpart is the [feature catalog](../feature-catalog.md). It documents every column's official meaning (or states that it is masked), observed type, missingness, cardinality, role and cautions, using development data only.
 
+### 9. Population preservation
+
+**Rule.** Data preparation applies only the declared parsing and input-representation conversions of §§4–5. It discards no transaction by content-based filtering, de-duplication or outlier-row removal, and alters no numeric model-input value as corrective cleaning: no clipping, winsorising, numeric imputation or scaling in the canonical frame. Assigning rows to the temporal partitions ([DR-001](DR-001-temporal-split-strategy.md)) is not cleaning. Repeated input vectors are counted descriptively and kept (Issue #86). The neural-network representation transforms values under its own record ([DR-012](DR-012-neural-network-input-representation.md), proposed).
+
+**Why [I].**
+
+- **Workload denominators.** Removing transactions changes daily volumes and the population used for fitting or evaluation, and can change workload and outcome denominators. The fixed daily review budget K uses only the mean daily transaction volume of Validation 2 ([DR-002](DR-002-review-capacity-definition.md)); removing Validation 2 rows changes that input and may change K after rounding, while removal from other partitions does not directly change K.
+- **One rule for every period.** Any row filter would need a fixed rule available at prediction time and applied consistently across partitions. Filtering only the retrospective research data, without applying the same rule when scoring transactions, would make the evaluated and intended scoring populations differ.
+- **No reliable repair rule.** For masked model inputs, the available semantics do not justify treating an extreme value or a repeated input vector as an error [REF-048, partially verified]. Invalid time values and malformed categorical codes instead stop validation (§§4–5).
+- **Fewer data-dependent choices.** Each cleaning decision taken after seeing the data adds a researcher degree of freedom; preservation keeps preparation fixed by the declaration.
+
 ## Evidence
 
 ### Test-sealing and data use
@@ -321,6 +332,7 @@ Observed value types in development data [D]:
 | An additional seven-day phase | Weekdays are unknown, because the reference point is undisclosed. A relative seven-day phase could be computed, but it adds inputs without a documented weekly meaning |
 | Fill or correct `D9` from `TransactionDT` | Would alter an organiser field. `D9` is kept as observed, and its missingness remains information |
 | CatBoost's default random permutations (`has_time = false`) | The permutation is the method's artificial time for data without a time order [REF-012, Section 3.2]. Both settings stay within Train, so neither is leakage into the validation or Test periods; the time order is chosen for consistency with the temporal design. It is fixed before any run, not tuned |
+| Content-based cleaning: removing repeated or extreme rows; clipping, winsorising or imputing numeric values in the canonical frame | Row removal changes the transaction population and daily volumes; the available semantics do not justify corrective alteration of masked inputs (§9). Tree-based models handle numeric missing values natively (§5); the proposed neural transformation and zero fill are governed by [DR-012](DR-012-neural-network-input-representation.md) |
 | Entity-level aggregates (counts, frequencies, past-window statistics) | Depend on heuristic pseudo-entity keys and on assumptions about label availability, and add a leakage surface; outside the scope of this study |
 
 ## Consequences
@@ -328,6 +340,7 @@ Observed value types in development data [D]:
 - The implementation must read [`config/features.yaml`](../../config/features.yaml). It must assert that the loaded columns match the declaration exactly and that numeric-coded categorical values are whole numbers.
 - LightGBM category lists are built from **Train rows only** and stored with each model.
 - The CatBoost training rows are asserted to be in time order (`TransactionDT`, ties by `TransactionID`) before the two columns are dropped.
+- Data preparation removes no row and changes no numeric model-input value as cleaning (§9); repeated input vectors are reported, not removed.
 - The implementation validates `TransactionDT` and computes `tod_sin` and `tod_cos` as in §4, before the partitions are assigned and the raw time column is dropped; the validation stops data preparation on any invalid value.
 - Any later change to feature roles requires a new GitHub Issue. Before the protocol freeze, this record is revised in place; after the freeze, the change requires a record that supersedes this one ([record maintenance policy](README.md#record-maintenance-policy)).
 
@@ -372,6 +385,7 @@ REF-007, REF-012, REF-047, REF-048\*, REF-076, REF-077, REF-104, REF-118 — see
 | `has_time` | CatBoost setting: use the given row order instead of random permutations for ordered target statistics |
 | `id_01`–`id_38` | Organiser identity fields; `id_12`–`id_38` categorical, `id_01`–`id_11` numeric |
 | `isFraud` | Target: 1 = fraud, 0 = legitimate |
+| K | Fixed daily review budget (reviews per relative day), derived from the mean daily transaction volume of Validation 2 (DR-002) |
 | Int32.MaxValue | Largest 32-bit signed integer (2,147,483,647) |
 | N_joined | Number of columns after the join (434) |
 | N_tx, N_id | Numbers of columns in the transaction (394) and identity (41) files |

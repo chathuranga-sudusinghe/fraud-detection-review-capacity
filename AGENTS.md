@@ -105,6 +105,7 @@ Important files:
 - [`docs/research-foundation.md`](docs/research-foundation.md)
 - [`docs/protocol.md`](docs/protocol.md)
 - [`docs/dataset.md`](docs/dataset.md)
+- [`docs/data-preparation.md`](docs/data-preparation.md) — data-preparation implementation and evidence record (methodology stage 6)
 - [`docs/feature-catalog.md`](docs/feature-catalog.md) — column-by-column data dictionary; model-input roles are machine-readable in [`config/features.yaml`](config/features.yaml)
 - [`docs/literature-review.md`](docs/literature-review.md)
 - [`docs/references.md`](docs/references.md)
@@ -132,6 +133,7 @@ Saved research evidence (executed notebooks) is exempt: it is never edited to ma
 | University of Greenwich requirements and how the project meets them | [`docs/greenwich-criteria-checklist.md`](docs/greenwich-criteria-checklist.md) |
 | Sources and their verification status | [`docs/references.md`](docs/references.md) |
 | Dataset source, provenance, use terms, version control and manifest | [`docs/dataset.md`](docs/dataset.md) |
+| Data-preparation implementation record: what the implemented preparation does and does not do, development-only preparation diagnostics and their evidence, with links to the governing rules | [`docs/data-preparation.md`](docs/data-preparation.md) |
 | Column roles (canonical declaration) | [`config/features.yaml`](config/features.yaml); [`docs/feature-catalog.md`](docs/feature-catalog.md) is its human-readable companion and reads every role from it. If the two disagree, `features.yaml` is correct and the catalog is fixed |
 | Raw-file checksums, partition boundaries and integrity anchors, for the code | [`config/dataset.yaml`](config/dataset.yaml): the machine-readable form of the DR-001 split that the code reads. It must match [DR-001](docs/decisions/DR-001-temporal-split-strategy.md) and the protocol; a difference is a defect, resolved through an issue |
 | Model device and numerical settings and the recorded LightGBM build, for the code | [`config/models.yaml`](config/models.yaml): the machine-readable form of [DR-013](docs/decisions/DR-013-training-device-policy.md) that the code reads. It must match DR-013 and the protocol; a difference is a defect, resolved through an issue |
