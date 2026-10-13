@@ -14,7 +14,8 @@ class DataValidationError(ReviewCapacityError, ValueError):
 
 
 class SpecificationError(ReviewCapacityError, ValueError):
-    """A configuration file (``config/*.yaml``) is malformed or internally inconsistent."""
+    """A research or model specification is malformed or inconsistent, or would override a fixed
+    setting (for example, a hyperparameter naming a DR-013 setting)."""
 
 
 class SealedTestError(ReviewCapacityError, PermissionError):
@@ -27,6 +28,10 @@ class ProjectRootNotFoundError(ReviewCapacityError, FileNotFoundError):
 
 class FileAccessError(ReviewCapacityError, OSError):
     """A required file cannot be read or an output file cannot be written."""
+
+
+class ModelError(ReviewCapacityError, RuntimeError):
+    """A model failed to fit or produced invalid output (for example, non-finite scores)."""
 
 
 class EnvironmentMismatchError(ReviewCapacityError, RuntimeError):
