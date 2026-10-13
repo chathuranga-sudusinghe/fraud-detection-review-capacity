@@ -1,7 +1,9 @@
 """The common interface of the eight model configurations (DR-011 §3, common procedure).
 
-* ``ModelData``: the inputs, binary labels and sample weights of one partition, checked once.
-  Rows are matched by position: features, labels and weights come from the same ordered source;
+* ``ModelData``: the inputs, binary labels and sample weights of one partition, checked once,
+  with each row's ``TransactionDT`` and ``TransactionID`` where row order matters (CatBoost's
+  ``has_time``, DR-008 §5). Rows are matched by position: all arrays come from the same ordered
+  source;
 * ``class_weights`` and ``sample_weights``: the protocol's explicit Train-only class weighting
   (each fraud row weighted n_neg / n_pos, each legitimate row 1), identical for all models,
   rather than any library's own "balanced" switch;
@@ -37,6 +39,7 @@ from review_capacity.models.registry import Configuration, Weighting
 type Labels = npt.NDArray[np.int8]
 type Weights = npt.NDArray[np.float64]
 type Scores = npt.NDArray[np.float64]
+type Keys = npt.NDArray[np.int64]
 
 
 def _check_labels(labels: object) -> None:
@@ -54,14 +57,18 @@ def _check_labels(labels: object) -> None:
 class ModelData:
     """Model inputs, labels (1 = fraud, 0 = legitimate) and sample weights of one partition.
 
-    Rows are matched by position, not by index: build all three from the same ordered source.
+    Rows are matched by position, not by index: build all arrays from the same ordered source.
     V1 evaluation weights are an explicit input set by the training rules; balanced weights are
-    never recomputed from V1 labels.
+    never recomputed from V1 labels. ``times`` and ``ids`` (each row's ``TransactionDT`` and
+    ``TransactionID``) are given together or not at all; they are never model inputs and serve
+    only to check row order (``in_time_order``).
     """
 
     features: pd.DataFrame
     labels: Labels
     weights: Weights
+    times: Keys | None = None
+    ids: Keys | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.features, pd.DataFrame):
@@ -81,6 +88,23 @@ class ModelData:
             )
         if not (np.isfinite(self.weights).all() and (self.weights > 0).all()):
             raise DataValidationError("Sample weights must be finite and positive")
+        if (self.times is None) != (self.ids is None):
+            raise DataValidationError("Row times and identifiers must be given together")
+        for name, keys in (("times", self.times), ("ids", self.ids)):
+            if keys is not None and (
+                not isinstance(keys, np.ndarray) or keys.dtype != np.int64 or keys.shape != (rows,)
+            ):
+                raise DataValidationError(f"Row {name} must be one int64 value per row")
+
+    def in_time_order(self) -> bool:
+        """Whether the rows are in time order: ``TransactionDT`` non-decreasing, and
+        ``TransactionID`` increasing among rows with the same time (DR-008 §5)."""
+        if self.times is None or self.ids is None:
+            raise DataValidationError("Row times and identifiers are needed to check row order")
+        times, ids = self.times, self.ids  # compared, never subtracted: no int64 overflow
+        later = times[1:] > times[:-1]
+        tie_ordered = (times[1:] == times[:-1]) & (ids[1:] > ids[:-1])
+        return bool((later | tie_ordered).all())
 
 
 @dataclass(frozen=True)
