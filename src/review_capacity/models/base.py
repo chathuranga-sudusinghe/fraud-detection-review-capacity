@@ -191,9 +191,10 @@ def checked_scores(scores: npt.ArrayLike, rows: int, model: str) -> Scores:
     return values
 
 
-def check_fit_arguments(valid: ModelData | None, iterations: int | None) -> None:
-    """Exactly one of V1 early stopping (``valid``) or a fixed positive iteration count without
-    validation (``iterations``, the CPU refit of DR-013 §7)."""
+def check_fit_arguments(valid: object, iterations: int | None) -> None:
+    """Exactly one of V1 early stopping (``valid``: the V1 data of any model, tree or neural) or a
+    fixed positive iteration count without validation (``iterations``, e.g. the CPU refit of
+    DR-013 §7)."""
     if (valid is None) == (iterations is None):
         raise ValueError("Fit with exactly one of valid (early stopping) or iterations")
     if iterations is not None and (

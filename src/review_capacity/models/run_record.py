@@ -16,20 +16,35 @@ import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 
-from review_capacity.config import ModelSettings, load_model_settings
+from review_capacity.config import Device, ModelSettings, load_model_settings
 from review_capacity.errors import FileAccessError
-from review_capacity.models.base import ScoringModel
 from review_capacity.models.device import LightGBMIdentity
+from review_capacity.models.registry import Configuration
 from review_capacity.paths import ProjectPaths
 from review_capacity.provenance import write_record
 
 type JSON = bool | int | float | str | list[JSON] | dict[str, JSON] | None
 
 RECORD_SCHEMA_VERSION = 1
+
+
+class RecordedModel(Protocol):
+    """What a record reads from a fitted model: a ``models.base.ScoringModel`` (tree models) or a
+    ``models.neural_training.NeuralModel`` (neural models)."""
+
+    configuration: Configuration
+    seed: int
+    device: Device
+
+    @property
+    def parameters(self) -> dict[str, Any]: ...
+
+    @property
+    def fitted_iterations(self) -> int: ...
 
 
 @dataclass(frozen=True)
@@ -96,7 +111,7 @@ def jsonable(value: object) -> JSON:
 
 def model_run_record(
     *,
-    model: ScoringModel,
+    model: RecordedModel,
     settings: SettingsSnapshot,
     hyperparameters: Mapping[str, Any],
     lightgbm_build: LightGBMIdentity | None,

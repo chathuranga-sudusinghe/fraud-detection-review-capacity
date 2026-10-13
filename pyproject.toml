@@ -136,7 +136,8 @@ mypy_path = "tests"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*", "catboost", "catboost.*"]
+# Libraries without type information (no py.typed marker or stubs).
+module = ["pyarrow", "pyarrow.*", "catboost", "catboost.*", "sklearn", "sklearn.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
