@@ -54,7 +54,7 @@ import logging
 import math
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -516,6 +516,30 @@ class TrainingResult:
     optimizer_state_dtypes: dict[str, tuple[str, ...]]
 
 
+def parameter_group_record(
+    network: nn.Module, groups: Sequence[Mapping[str, Any]]
+) -> list[dict[str, Any]]:
+    """The optimiser's parameter groups by parameter name, with each group's weight decay. Every
+    parameter of ``network`` must be in exactly one group."""
+    names = {id(parameter): name for name, parameter in network.named_parameters()}
+    seen: set[int] = set()
+    record: list[dict[str, Any]] = []
+    for group in groups:
+        ids = [id(parameter) for parameter in group["params"]]
+        if any(key not in names or key in seen for key in ids) or len(set(ids)) != len(ids):
+            raise ValueError("Parameter groups must hold each network parameter exactly once")
+        seen.update(ids)
+        record.append(
+            {
+                "weight_decay": float(group["weight_decay"]),
+                "parameters": [names[key] for key in ids],
+            }
+        )
+    if seen != set(names):
+        raise ValueError("Parameter groups must hold every network parameter")
+    return record
+
+
 def optimizer_state_dtypes(optimizer: torch.optim.Optimizer) -> dict[str, tuple[str, ...]]:
     """The data types of the optimiser's state tensors, by state name (e.g. AdamW's moments
     ``exp_avg`` and ``exp_avg_sq``), as observed after training."""
@@ -714,7 +738,8 @@ class NeuralModel(ABC):
 
     def parameter_groups(self, network: nn.Module, weight_decay: float) -> list[dict[str, Any]]:
         """The optimiser's parameter groups: by default one group, with weight decay applied to
-        every parameter."""
+        every parameter (the ResNet-style MLP, as REF-103). The groups are recorded by parameter
+        name and checked again when a saved model is reloaded."""
         return [{"params": list(network.parameters()), "weight_decay": weight_decay}]
 
     def _split(
@@ -780,8 +805,10 @@ class NeuralModel(ABC):
             with log_step(logger, f"Fit {name} on {self.device} ({rows})"), float32_default():
                 seed_everything(self.seed)
                 network = self._new_network(architecture).to(device)
+                groups = self.parameter_groups(network, training.weight_decay)
+                group_record = parameter_group_record(network, groups)
                 optimizer = torch.optim.AdamW(
-                    self.parameter_groups(network, training.weight_decay),
+                    groups,
                     lr=training.lr,
                     betas=ADAMW_BETAS,
                     eps=ADAMW_EPS,
@@ -825,7 +852,11 @@ class NeuralModel(ABC):
             },
             "seeds": {"run": self.seed, **seeds},
             "data_loading": "index batches in the main process; no DataLoader, no workers",
-            "optimizer": {"class": "AdamW", **optimizer.defaults},
+            "optimizer": {
+                "class": "AdamW",
+                **optimizer.defaults,
+                "parameter_groups": group_record,
+            },
             "batches_per_epoch": math.ceil(train.inputs.rows / training.batch_size),
             "schedule": {
                 "mode": "early_stopping" if early else "fixed",
@@ -1028,6 +1059,9 @@ class NeuralModel(ABC):
         except (RuntimeError, ValueError, TypeError) as error:
             message = f"{directory}: saved network state cannot be loaded: {error}"
             raise ModelError(message) from error
+        groups = self.parameter_groups(network, loop_settings.weight_decay)
+        if training["optimizer"].get("parameter_groups") != parameter_group_record(network, groups):
+            raise ModelError("Saved optimiser parameter groups differ from those of the network")
         self._network = network.to(device).eval()
         self._hyperparameters = hyperparameters
         self._architecture = architecture

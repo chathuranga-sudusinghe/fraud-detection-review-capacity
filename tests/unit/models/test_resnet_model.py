@@ -353,6 +353,9 @@ def test_dr013_settings_are_applied_and_recorded(
     assert (optimizer["betas"], optimizer["eps"]) == ((0.9, 0.999), 1e-8)
     assert (optimizer["foreach"], optimizer["fused"], optimizer["amsgrad"]) == (False,) * 3
     assert resolved["batches_per_epoch"] == 10
+    names = [name for name, _ in fitted._network_or_raise().named_parameters()]
+    groups = optimizer["parameter_groups"]  # one group: weight decay on every parameter
+    assert groups == [{"weight_decay": TRAINING["weight_decay"], "parameters": names}]
     observed = resolved["observed_dtypes"]  # what training actually used
     assert observed["training_logits"] == ["torch.bfloat16"]
     assert observed["optimizer_state"] == {
