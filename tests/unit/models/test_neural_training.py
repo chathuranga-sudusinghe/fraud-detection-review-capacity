@@ -34,6 +34,7 @@ from review_capacity.models.neural_training import (
     epoch_batches,
     float32_default,
     generator,
+    parameter_group_record,
     predict_logits,
     probabilities,
     torch_device,
@@ -396,3 +397,28 @@ def test_non_finite_loss_stops_before_the_batch_updates_the_network() -> None:
         )
     assert torch.equal(network.weight.detach(), before)
     assert not optimizer.state  # no optimiser step was taken
+
+
+def test_parameter_groups_are_recorded_by_name() -> None:
+    network = nn.Linear(2, 1)
+    groups: list[dict[str, Any]] = [
+        {"params": [network.weight], "weight_decay": 1e-4},
+        {"params": [network.bias], "weight_decay": 0},
+    ]
+    record = parameter_group_record(network, groups)
+    assert record == [
+        {"weight_decay": 1e-4, "parameters": ["weight"]},
+        {"weight_decay": 0.0, "parameters": ["bias"]},
+    ]
+    foreign = nn.Parameter(torch.zeros(1))
+    for invalid in (
+        [{"params": [network.weight], "weight_decay": 0.0}],  # the bias is missing
+        [{"params": [network.weight, network.bias, foreign], "weight_decay": 0.0}],
+        [{"params": [network.weight, network.weight, network.bias], "weight_decay": 0.0}],
+        [
+            {"params": [network.weight, network.bias], "weight_decay": 0.0},
+            {"params": [network.bias], "weight_decay": 0.0},  # in two groups
+        ],
+    ):
+        with pytest.raises(ValueError, match="Parameter groups must hold"):
+            parameter_group_record(network, invalid)

@@ -48,6 +48,18 @@ RESNET: dict[str, Any] = {
 
 HYPERPARAMETERS: dict[str, Any] = {**TRAINING, **RESNET}
 
+# d_token 24 gives heads of 3, padded to 8 for the attention kernel.
+FT_TRANSFORMER: dict[str, Any] = {
+    "n_layers": 2,
+    "d_token": 24,
+    "d_ffn_factor": 2.0,
+    "attention_dropout": 0.1,
+    "ffn_dropout": 0.1,
+    "residual_dropout": 0.05,
+}
+
+FT_HYPERPARAMETERS: dict[str, Any] = {**TRAINING, "lr": 3e-3, "max_epochs": 20, **FT_TRANSFORMER}
+
 
 def neural_inputs(rows: int, seed: int) -> NeuralInputs:
     rng = np.random.default_rng(seed)
