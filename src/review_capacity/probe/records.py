@@ -28,7 +28,7 @@ CHECKS: dict[str, str] = {
     "C1": "Backend identity",
     "C2": "Ignored-option and unsupported-option warnings",
     "C3": "Resolved settings",
-    "C4": "Dataset identity",
+    "C4": "LightGBM Dataset reproducibility",
     "C5": "Categorical behaviour",
     "C6": "All eight configurations, non-uniform weights",
     "C7": "Neural computation under strict determinism",

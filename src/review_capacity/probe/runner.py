@@ -1,21 +1,23 @@
 """The GPU acceptance probe: checks C1–C13 and tolerances T1–T4 of
 ``docs/gpu-acceptance-probe.md`` (approved before implementation, Issue #77).
 
-``run_probe`` builds the synthetic inputs, fits all eight configurations on the training device
-with V1 early stopping, refits the tree configurations on the CPU, runs every check, and writes
-the records after every fit and on failure (``probe.json``, the generated ``probe.md`` and the
-comparison files). A first run ends as ``pending second run``: only a second run, in a fresh
-process and a separate output directory, given the first run's ``probe.json``, completes C11.
+``run_probe`` builds the synthetic inputs, fits all eight configurations on their training
+devices of DR-013 §1 with V1 early stopping (LightGBM on the CPU, the others on the GPU), refits
+CatBoost on the CPU, runs every check, and writes the records before and after every fit and on
+failure (``probe.json``, the generated ``probe.md`` and the comparison files). A first run ends
+as ``pending second run``: only a second run, in a fresh process and a separate output directory,
+given the first run's ``probe.json``, completes C11.
 
-The study device is the GPU. The CPU device exists for the unit tests of this module only: it runs
-the same code paths on small inputs, with every check that needs the GPU evaluated against the CPU
-instead; a CPU run is marked as not being acceptance evidence.
+A GPU run is the acceptance run. A CPU run exists for the unit tests of this module only: it runs
+the same code paths on small inputs with every model on the CPU, so that every check that needs the
+GPU is evaluated against the CPU instead; a CPU run is marked as not being acceptance evidence.
 """
 
 from __future__ import annotations
 
 import copy
 import gc
+import hashlib
 import json
 import logging
 import os
@@ -105,6 +107,15 @@ PREDICTION_THREADS = 24  # the CPU thread count of config/models.yaml
 PROCESS_TOKEN = uuid.uuid4().hex  # identifies this process, so that a run never compares itself
 LIGHTGBM_LOGGER = "review_capacity.models.lightgbm_model"
 ACCEPTED_WARNING = "No further splits with positive gain"
+LIGHTGBM_WARNING_PREFIX = "[LightGBM] [Warning] "
+# LightGBM's notice that a categorical feature has more bins than max_bin, which does not cap
+# categorical features (DR-013 §2; [L] REF-117: dataset_loader.cpp). Accepted only when the probe's
+# own Dataset has such a feature (C4).
+CATEGORICAL_BIN_WARNINGS = (
+    "Categorical features with more bins than the configured maximum bin number found.",
+    "For categorical features, max_bin and max_bin_by_feature may be ignored with a large number "
+    "of categories.",
+)
 FAILING_WARNING = re.compile(r"ignor|unsupported|not supported|fall ?back", re.IGNORECASE)
 SAMPLING_UNIT_NOTE = (
     "CatBoost 1.2.10 does not serialise sampling_unit (bootstrap_options.h), so its effective "
@@ -228,10 +239,19 @@ class Probe:
     scores: dict[str, dict[str, Any]] = field(default_factory=dict)
     arrays: dict[str, tuple[Scores, Ids]] = field(default_factory=dict)
     checkpoint: Callable[[str], object] = _no_checkpoint
+    # Largest LightGBM bin count of a categorical feature in the probe's Dataset (C4), or None
+    categorical_bins: int | None = None
+    # SHA-256 of each LightGBM fit's saved model text, by configuration and repetition (C11)
+    model_hashes: dict[str, str] = field(default_factory=dict)
 
     @property
     def gpu(self) -> bool:
         return self.device == "gpu"
+
+    def training_device(self, model: str) -> Device:
+        """The device ``model`` trains on: its training device of DR-013 §1 on a GPU run, the CPU
+        on a CPU run (unit tests)."""
+        return self.settings.training_device(model) if self.gpu else "cpu"
 
     def synchronise(self) -> None:
         if self.gpu:
@@ -488,6 +508,7 @@ def _fit_tree(
     )
     subject = f"{name} {device}" + (" refit" if iterations is not None else "")
     probe.capture.phase = subject
+    probe.checkpoint(f"fitting {subject}")  # a native abort leaves the running fit in the record
     start = time.perf_counter()
     model.fit(data[0], data[1], TREE_HYPERPARAMETERS[library], iterations=iterations)
     probe.synchronise()
@@ -527,35 +548,81 @@ def _unseen_item(probe: Probe, model: LightGBMModel, tree: TreeData, subject: st
     )
 
 
+def _model_text(model: LightGBMModel | CatBoostModel) -> str | None:
+    """LightGBM's saved model text (trees and parameters); None for CatBoost."""
+    return model._model_text() if isinstance(model, LightGBMModel) else None
+
+
+def _keep_model_hash(probe: Probe, key: str, text: str | None) -> None:
+    """C11: the SHA-256 of a LightGBM fit's complete saved model text, for the run comparison."""
+    if text is not None:
+        probe.model_hashes[key] = hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _tree_fit_checks(
+    probe: Probe, model: LightGBMModel | CatBoostModel, tree: TreeData, weighting: Weighting
+) -> str:
+    """C1, C3, C5 and C6 of a fit on the training device; its subject."""
+    train, valid = tree.train[weighting], tree.valid[weighting]
+    subject = f"{model.configuration.name} {model.device}"
+    received = _received_weights(model, train)
+    weights_item(probe, subject, train, valid, weighting, model.fitted_iterations, received)
+    _tree_checks(probe, model, model.device, subject)
+    if isinstance(model, LightGBMModel):
+        _unseen_item(probe, model, tree, subject)
+    else:
+        combinations = catboost_combinations(_catboost_json(model))
+        probe.book.add("C5", f"{subject} combinations", combinations > 0, count=combinations)
+    return subject
+
+
 def run_trees(probe: Probe, tree: TreeData) -> None:
-    """All four tree configurations: training device with V1 early stopping, then the CPU refit
-    at the kept tree count (DR-013 §7); a checkpoint after every fit."""
+    """All four tree configurations on their training devices with V1 early stopping (DR-013
+    §1). LightGBM, trained deterministically on the CPU, is fitted twice with the same seed (C11);
+    CatBoost is refitted on the CPU at the kept tree count (DR-013 §7). A checkpoint before and
+    after every fit."""
     for library in ("lightgbm", "catboost"):
+        device = probe.training_device(library)
         for weighting in (Weighting.UNWEIGHTED, Weighting.BALANCED):
             name = f"{LABELS[library]}-{weighting.value}"
             train, valid = tree.train[weighting], tree.valid[weighting]
-            model = _fit_tree(probe, library, name, probe.device, (train, valid), None)
-            subject = f"{name} {probe.device}"
-            received = _received_weights(model, train)
-            weights_item(probe, subject, train, valid, weighting, model.fitted_iterations, received)
-            _tree_checks(probe, model, probe.device, subject)
-            if isinstance(model, LightGBMModel):
-                _unseen_item(probe, model, tree, subject)
-            else:
-                combinations = catboost_combinations(_catboost_json(model))
-                probe.book.add(
-                    "C5", f"{subject} combinations", combinations > 0, count=combinations
-                )
 
-            def key(path: str, name: str = name) -> str:
-                return score_key(name, "default", probe.device, "fit1", path)
+            def key(
+                path: str, repetition: str = "fit1", name: str = name, device: Device = device
+            ) -> str:
+                return score_key(name, "default", device, repetition, path)
 
+            model = _fit_tree(probe, library, name, device, (train, valid), None)
+            subject = _tree_fit_checks(probe, model, tree, weighting)
             scores = _tree_scores(probe, model, tree, subject, key)
             timing = _tree_timing(probe, model, tree.score)
             probe.book.add("C13", f"{subject} scoring", None, **timing)
             kept = model.fitted_iterations
+            text = _model_text(model)
+            _keep_model_hash(probe, score_key(name, "default", device, "fit1", "model"), text)
             del model
             probe.checkpoint(f"{subject} fitted")
+            if library == "lightgbm":
+                again = _fit_tree(probe, library, name, device, (train, valid), None)
+                repeated = again.predict(tree.score)
+                probe.keep_scores(key("score", "fit2"), repeated, tree.score_ids)
+                same_scores = diagnostics.bitwise_equal(scores, repeated)
+                again_text = _model_text(again)
+                _keep_model_hash(
+                    probe, score_key(name, "default", device, "fit2", "model"), again_text
+                )
+                same_text = again_text == text
+                probe.book.add(
+                    "C11",
+                    f"{subject} same seed, same process",
+                    same_scores and same_text,
+                    identical_scores=same_scores,
+                    identical_model_text=same_text,
+                )
+                del again
+                gc.collect()
+                probe.checkpoint(f"{subject} fit 2 checked")
+                continue
             refit = _fit_tree(probe, library, name, "cpu", (train, None), kept)
             refit_subject = f"{name} cpu refit"
             _tree_checks(probe, refit, "cpu", refit_subject)
@@ -567,15 +634,16 @@ def run_trees(probe: Probe, tree: TreeData) -> None:
             comparison = diagnostics.compare_scores(
                 scores, refit_scores, tree.score_ids, top_k(len(scores))
             )
-            probe.book.add("C9", f"{name} {probe.device} against cpu refit", None, **comparison)
+            probe.book.add("C9", f"{subject} against cpu refit", None, **comparison)
             del refit
             gc.collect()
             probe.checkpoint(f"{refit_subject} fitted")
 
 
-def dataset_identity(probe: Probe, train: Any) -> None:
-    """C4 and T4: LightGBM Datasets built independently with the CPU and the training-device
-    construction settings and saved with ``save_binary`` to fresh files must be byte-identical.
+def dataset_reproducibility(probe: Probe, train: Any) -> None:
+    """C4 and T4: two LightGBM Datasets built independently from the same rows, weights, category
+    mappings, seed and CPU construction settings, and saved with ``save_binary`` to fresh files,
+    must be byte-identical. Records the largest bin count of a categorical feature (C2).
     LightGBM's messages go to the run log, warnings included."""
     import lightgbm
     from lightgbm.basic import LightGBMError
@@ -583,12 +651,13 @@ def dataset_identity(probe: Probe, train: Any) -> None:
     _route_library_messages()
     categories = fit_category_lists(train.features, probe.features)
     data = to_lightgbm(train.features, probe.features, categories)
+    params = {**probe.settings.lightgbm.params("cpu"), "seed": MODEL_SEED, "verbosity": 1}
     digests: dict[str, str] = {}
     paths: list[Path] = []
+    bins: list[int] = []
     with tempfile.TemporaryDirectory() as directory:
-        for index, device in enumerate(("cpu", probe.device)):
-            params = {**probe.settings.lightgbm.params(device), "seed": MODEL_SEED, "verbosity": 1}
-            path = Path(directory) / f"{index}-{device}.bin"  # a fresh file per Dataset
+        for index in range(2):
+            path = Path(directory) / f"{index}-cpu.bin"  # a fresh file per Dataset
             try:
                 dataset = lightgbm.Dataset(
                     data,
@@ -600,14 +669,22 @@ def dataset_identity(probe: Probe, train: Any) -> None:
                 )
                 dataset.construct()
                 dataset.save_binary(str(path))
+                bins.append(max(dataset.feature_num_bin(n) for n in probe.features.categorical))
             except LightGBMError as error:
-                raise ModelError(f"LightGBM Dataset on {device} failed: {error}") from error
-            digests[f"{device} construction ({index + 1})"] = file_sha256(path)
+                raise ModelError(f"LightGBM Dataset construction failed: {error}") from error
+            digests[f"cpu construction {index + 1}"] = file_sha256(path)
             paths.append(path)
             del dataset
         identical = diagnostics.files_identical(paths[0], paths[1])
-    subject = f"LightGBM Datasets, cpu and {probe.device}"
-    probe.book.add("C4", subject, identical, sha256=digests)
+    probe.categorical_bins = max(bins)
+    probe.book.add(
+        "C4",
+        "LightGBM Datasets, two cpu constructions",
+        identical,
+        sha256=digests,
+        largest_categorical_bins=probe.categorical_bins,
+        max_bin=params["max_bin"],
+    )
 
 
 # --- Neural models --------------------------------------------------------------------------------
@@ -680,6 +757,7 @@ def _fit_neural(
         device=probe.device,
     )
     probe.capture.phase = subject
+    probe.checkpoint(f"fitting {subject}")
     probe.reset_peak()
     start = time.perf_counter()
     model.fit(data.train[weighting], data.valid[weighting], hyperparameters)
@@ -1071,6 +1149,10 @@ def compare_runs(probe: Probe, current: Mapping[str, Any], previous_path: Path) 
         differences.append("same process")
     if set(previous["scores"]) != set(probe.arrays):
         differences.append("score keys")
+    recorded = previous.get("model_hashes")
+    previous_hashes: dict[str, Any] = recorded if isinstance(recorded, dict) else {}
+    if not isinstance(recorded, dict) or set(previous_hashes) != set(probe.model_hashes):
+        differences.append("model hash keys")
     if current["run"]["acceptance_evidence"] and (
         _value(previous, ("code", "git_uncommitted_changes")) is not False
         or _value(current, ("code", "git_uncommitted_changes")) is not False
@@ -1094,21 +1176,43 @@ def compare_runs(probe: Probe, current: Mapping[str, Any], previous_path: Path) 
             continue
         comparison = diagnostics.compare_scores(first, scores, ids, top_k(len(scores)))
         results[key] = comparison
-        neural = key.startswith(("RES", "FTT"))
-        outcome = comparison["bitwise_identical"] if neural else None  # trees: descriptive
+        # LightGBM (deterministic CPU training) and the neural models must repeat bit for bit;
+        # CatBoost's GPU training is non-deterministic, so its differences are descriptive (T3)
+        deterministic = key.startswith(("LGB", "RES", "FTT"))
+        outcome = comparison["bitwise_identical"] if deterministic else None
         probe.book.add("C11", f"{key} across runs", outcome, **comparison)
+    # LightGBM's deterministic training must also repeat its complete saved model (DR-013 §8)
+    if not probe.model_hashes:
+        probe.book.add("C11", "LightGBM model text across runs", False, model_hashes=0)
+    for key, digest in probe.model_hashes.items():
+        probe.book.add(
+            "C11",
+            f"{key} across runs",
+            previous_hashes[key] == digest,
+            first_run_sha256=previous_hashes[key],
+            this_run_sha256=digest,
+        )
     return {"comparable": True, "first_run": previous_path.as_posix(), "scores": results}
 
 
 def classify_warnings(probe: Probe) -> None:
-    """C2: failing warnings fail; LightGBM's "no further splits" warning, from LightGBM's own
-    logger, is accepted (C6 is checked separately); any other warning needs a recorded review."""
+    """C2. From LightGBM's own logger, either categorical ``max_bin`` notice, exactly, is accepted
+    when the probe's Dataset has a categorical feature with more bins than ``max_bin`` (C4). Any
+    other warning of an ignored setting, an unsupported capability or a fallback fails. Then, from
+    LightGBM's own logger, "no further splits" is accepted (C6 is checked separately). Any other
+    warning needs a recorded review."""
+    max_bin = probe.settings.lightgbm.params("cpu")["max_bin"]
+    above = probe.categorical_bins is not None and probe.categorical_bins > max_bin
     for item in probe.capture.records:
         text = item["text"]
+        lightgbm_message = item["logger"] == LIGHTGBM_LOGGER
+        message = text.removeprefix(LIGHTGBM_WARNING_PREFIX).strip()
         outcome: bool | str
-        if FAILING_WARNING.search(text):
+        if lightgbm_message and above and message in CATEGORICAL_BIN_WARNINGS:
+            outcome = True
+        elif FAILING_WARNING.search(text):
             outcome = False
-        elif item["logger"] == LIGHTGBM_LOGGER and ACCEPTED_WARNING in text:
+        elif lightgbm_message and ACCEPTED_WARNING in text:
             outcome = True
         else:
             outcome = "review"
@@ -1163,6 +1267,7 @@ def run_probe(
         "host_peak_bytes": None,
         "fits": [],
         "scores": {},
+        "model_hashes": {},
         "comparison": None,
         "checks": CheckBook().to_json(),
         "overall": "in progress",
@@ -1175,6 +1280,7 @@ def run_probe(
         record["run"]["stage"] = stage
         if probe is not None:
             record["fits"], record["scores"] = probe.fits, probe.scores
+            record["model_hashes"] = probe.model_hashes
             record["checks"] = probe.book.to_json()
         record["gpu_memory"] = None if sampler is None else sampler.snapshot()
         record["host_peak_bytes"] = diagnostics.host_peak_bytes()
@@ -1228,10 +1334,10 @@ def run_probe(
                 del unweighted
                 write("synthetic inputs")
                 mark = time.perf_counter()
-                with log_step(logger, "Probe dataset identity (C4)"):
-                    capture.phase = "dataset identity"
-                    dataset_identity(probe, tree.train[Weighting.BALANCED])
-                write("dataset identity")
+                with log_step(logger, "Probe LightGBM Dataset reproducibility (C4)"):
+                    capture.phase = "dataset reproducibility"
+                    dataset_reproducibility(probe, tree.train[Weighting.BALANCED])
+                write("dataset reproducibility")
                 with log_step(logger, "Probe tree-based models"):
                     run_trees(probe, tree)
                 phases["tree_seconds"] = time.perf_counter() - mark
