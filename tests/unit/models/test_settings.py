@@ -9,15 +9,15 @@ from typing import Any
 import pytest
 import yaml
 
-from review_capacity.config import load_model_settings
+from review_capacity.config import TRAINED_MODELS, load_model_settings
 from review_capacity.errors import SpecificationError
+from review_capacity.models.registry import MODELS
 from review_capacity.paths import ProjectPaths
 from support.synthetic import REPO_PATHS
 
 
 def test_lightgbm_settings_match_dr013() -> None:
     settings = load_model_settings(REPO_PATHS)
-    gpu = settings.lightgbm.params("gpu")
     cpu = settings.lightgbm.params("cpu")
     construction = {
         "max_bin": 255,
@@ -25,8 +25,8 @@ def test_lightgbm_settings_match_dr013() -> None:
         "bin_construct_sample_cnt": 200_000,
         "enable_bundle": False,
         "is_enable_sparse": False,
-        "force_row_wise": True,
-        "force_col_wise": False,
+        "force_row_wise": False,
+        "force_col_wise": True,
         "feature_pre_filter": False,
         "use_missing": True,
         "zero_as_missing": False,
@@ -37,16 +37,31 @@ def test_lightgbm_settings_match_dr013() -> None:
         "histogram_pool_size": -1,
         "objective": "binary",
     }
-    for params in (gpu, cpu):
-        assert construction.items() <= params.items()
-    assert gpu["device_type"] == "cuda"
-    assert (gpu["gpu_device_id"], gpu["num_gpu"]) == (0, 1)
-    assert gpu["gpu_use_dp"] is True
+    assert construction.items() <= cpu.items()
     assert cpu["device_type"] == "cpu"
     assert cpu["deterministic"] is True
     assert cpu["num_threads"] == 24
     assert "gpu_use_dp" not in cpu
-    assert "seed" not in gpu  # seeds come from the run, never from the device settings
+    assert "seed" not in cpu  # seeds come from the run, never from the device settings
+    # DR-013 §2: LightGBM's CUDA learner fails on categorical features above 256 categories
+    assert settings.lightgbm.devices == ("cpu",)
+    with pytest.raises(SpecificationError, match="no gpu settings"):
+        settings.lightgbm.params("gpu")
+
+
+def test_training_devices_match_dr013() -> None:
+    settings = load_model_settings(REPO_PATHS)
+    assert settings.training_devices == {
+        "lightgbm": "cpu",
+        "catboost": "gpu",
+        "resnet": "gpu",
+        "ft_transformer": "gpu",
+    }
+    assert {model.name for model in MODELS} == set(TRAINED_MODELS)
+    assert settings.training_device("lightgbm") == "cpu"
+    assert settings.catboost.devices == ("gpu", "cpu")
+    with pytest.raises(ValueError, match="Unknown model"):
+        settings.training_device("xgboost")
 
 
 def test_catboost_settings_match_dr013() -> None:
@@ -115,8 +130,12 @@ def _write_models(root: Path, edit: Callable[[dict[str, Any]], None]) -> Project
 @pytest.mark.parametrize(
     ("edit", "message"),
     [
-        (lambda c: c["lightgbm"]["gpu"].update(max_bin=63), r"unexpected keys \['max_bin'\]"),
-        (lambda c: c["lightgbm"]["gpu"].pop("gpu_use_dp"), r"missing keys \['gpu_use_dp'\]"),
+        (lambda c: c["lightgbm"]["cpu"].update(max_bin=63), r"unexpected keys \['max_bin'\]"),
+        (lambda c: c["lightgbm"]["cpu"].pop("deterministic"), r"missing keys \['deterministic'\]"),
+        (lambda c: c["lightgbm"].update(gpu={"device_type": "cuda"}), r"unexpected keys \['gpu'\]"),
+        (lambda c: c["training_devices"].update(lightgbm="gpu"), "settings for"),
+        (lambda c: c["training_devices"].update(resnet="tpu"), "must be one of"),
+        (lambda c: c["training_devices"].pop("catboost"), r"missing keys \['catboost'\]"),
         (lambda c: c["lightgbm"]["shared"].update(max_bin="255"), "must be an integer"),
         (lambda c: c["lightgbm"]["shared"].update(max_bin=1), "greater than 1"),
         (lambda c: c["lightgbm"]["shared"].update(enable_bundle=0), "true or false"),
@@ -131,7 +150,7 @@ def _write_models(root: Path, edit: Callable[[dict[str, Any]], None]) -> Project
         (lambda c: c["reproducibility"].update(main_seed=-1), "between 0 and"),
         (lambda c: c["reproducibility"].update(main_seed=2**32), "between 0 and"),
         (lambda c: c["lightgbm"]["build"].update(commit="x"), "unexpected keys"),
-        (lambda c: c["lightgbm"]["gpu"].update(device_type="gpu"), "device_type='cuda'"),
+        (lambda c: c["lightgbm"]["cpu"].update(device_type="cuda"), "device_type='cpu'"),
         (lambda c: c["catboost"]["cpu"].update(task_type="GPU"), "task_type='CPU'"),
         (lambda c: c["lightgbm"]["build"].update(library_sha256="abc"), "64 hex"),
         (lambda c: c["reproducibility"].update(main_seed=True), "must be an integer"),

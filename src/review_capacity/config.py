@@ -386,11 +386,14 @@ TRAINING_DTYPES = ("bfloat16",)  # the values the neural-model code supports (DR
 PREDICTION_DTYPES = ("float32",)
 GPU_ATTENTION_BACKENDS = ("efficient",)
 
-# The parameter that selects each library's device, and its value for each device (DR-013).
+# The parameter that selects each library's device, and its value for each device the library is
+# declared for (DR-013): LightGBM trains on the CPU only (§2).
 _DEVICE_KEYS: dict[str, tuple[str, dict[Device, str]]] = {
-    "lightgbm": ("device_type", {"gpu": "cuda", "cpu": "cpu"}),
+    "lightgbm": ("device_type", {"cpu": "cpu"}),
     "catboost": ("task_type", {"gpu": "GPU", "cpu": "CPU"}),
 }
+# The models of DR-011, by package name (``models.registry``), each with a training device.
+TRAINED_MODELS = ("lightgbm", "catboost", "resnet", "ft_transformer")
 
 
 def _possibly_empty_text(value: object, what: str) -> str:
@@ -473,12 +476,6 @@ _SCHEMAS: dict[str, dict[str, dict[str, ParameterParser]]] = {
             "forcedbins_filename": _possibly_empty_text,
             "histogram_pool_size": _number,
         },
-        "gpu": {
-            "device_type": _text,
-            "gpu_device_id": _non_negative,
-            "num_gpu": _positive,
-            "gpu_use_dp": _boolean,
-        },
         "cpu": {"device_type": _text, "deterministic": _boolean, "num_threads": _positive},
     },
     "catboost": {
@@ -538,38 +535,54 @@ def _parameters(
 
 @dataclass(frozen=True)
 class LibrarySettings:
-    """Parameters of one tree library: shared by both devices, and for each device (DR-013).
+    """Parameters of one tree library: shared by its devices, and for each device it is declared
+    for (DR-013); ``gpu`` is None for a library without GPU settings (LightGBM, §2).
 
-    A shared key appears in neither device section; a device key (the device selector, CTR
-    lists) may appear in both device sections with device-specific values."""
+    A shared key appears in no device section; a device key (the device selector, CTR lists) may
+    appear in both device sections with device-specific values."""
 
     library: str
     shared: Mapping[str, ParameterValue]
-    gpu: Mapping[str, ParameterValue]
+    gpu: Mapping[str, ParameterValue] | None
     cpu: Mapping[str, ParameterValue]
+
+    @property
+    def devices(self) -> tuple[Device, ...]:
+        """The devices this library has settings for."""
+        return tuple(device for device in DEVICES if self._own(device) is not None)
+
+    def _own(self, device: Device) -> Mapping[str, ParameterValue] | None:
+        return self.gpu if device == "gpu" else self.cpu
 
     def params(self, device: Device) -> dict[str, Any]:
         """The parameters for ``device``: the shared ones and the device's own, with lists as
         Python lists (the form both libraries accept)."""
         if device not in DEVICES:
             raise ValueError(f"Unsupported device {device!r}; expected one of {DEVICES}")
-        own = self.gpu if device == "gpu" else self.cpu
+        own = self._own(device)
+        if own is None:
+            raise SpecificationError(
+                f"{self.library} has no {device} settings: it is declared for {self.devices} "
+                "only (DR-013)"
+            )
         return {
             key: list(value) if isinstance(value, tuple) else value
             for key, value in {**self.shared, **own}.items()
         }
 
     def validate(self) -> None:
-        for device in DEVICES:
-            own = self.gpu if device == "gpu" else self.cpu
+        key, expected = _DEVICE_KEYS[self.library]
+        if self.devices != tuple(expected):
+            raise SpecificationError(
+                f"{self.library} must have settings for {tuple(expected)}, not {self.devices}"
+            )
+        for device in self.devices:
+            own = self._own(device) or {}
             overlap = sorted(set(self.shared) & set(own))
             if overlap:
                 raise SpecificationError(
                     f"{self.library}: keys both shared and {device}-specific: {overlap}"
                 )
-        key, expected = _DEVICE_KEYS[self.library]
-        for device in DEVICES:
-            own = self.gpu if device == "gpu" else self.cpu
             if own.get(key) != expected[device]:
                 raise SpecificationError(
                     f"{self.library} {device} settings must set {key}={expected[device]!r}"
@@ -602,10 +615,17 @@ class ModelSettings:
     """Device and numerical settings of the models (``config/models.yaml``, DR-013)."""
 
     main_seed: int
+    training_devices: Mapping[str, Device]
     lightgbm_build: LightGBMBuild
     lightgbm: LibrarySettings
     catboost: LibrarySettings
     neural: NeuralSettings
+
+    def training_device(self, model: str) -> Device:
+        """The device ``model`` (a package name of ``models.registry``) trains on (DR-013 §1)."""
+        if model not in self.training_devices:
+            raise ValueError(f"Unknown model {model!r}; expected one of {TRAINED_MODELS}")
+        return self.training_devices[model]
 
 
 def _library(raw: Mapping[str, Any], library: str, extra: tuple[str, ...] = ()) -> LibrarySettings:
@@ -614,7 +634,11 @@ def _library(raw: Mapping[str, Any], library: str, extra: tuple[str, ...] = ()) 
     settings = LibrarySettings(
         library=library,
         shared=_parameters(section["shared"], f"{library}.shared", schema["shared"]),
-        gpu=_parameters(section["gpu"], f"{library}.gpu", schema["gpu"]),
+        gpu=(
+            _parameters(section["gpu"], f"{library}.gpu", schema["gpu"])
+            if "gpu" in schema
+            else None
+        ),
         cpu=_parameters(section["cpu"], f"{library}.cpu", schema["cpu"]),
     )
     settings.validate()
@@ -656,17 +680,41 @@ def _neural(raw: object) -> NeuralSettings:
     )
 
 
+def _training_devices(
+    raw: object, lightgbm: LibrarySettings, catboost: LibrarySettings
+) -> dict[str, Device]:
+    """The training device of every model (DR-013 §1); a tree library trains on a device it has
+    settings for."""
+    section = _mapping(raw, "training_devices", TRAINED_MODELS)
+    devices: dict[str, Device] = {}
+    for model in TRAINED_MODELS:
+        device = _choice(section[model], f"training_devices.{model}", DEVICES)
+        devices[model] = "gpu" if device == "gpu" else "cpu"
+    for library in (lightgbm, catboost):
+        if devices[library.library] not in library.devices:
+            raise SpecificationError(
+                f"training_devices.{library.library}: {library.library} has settings for "
+                f"{library.devices} only"
+            )
+    return devices
+
+
 def load_model_settings(paths: ProjectPaths, *, content: bytes | None = None) -> ModelSettings:
-    """Read ``config/models.yaml``: exact keys and value types in every section, and the device
-    selectors of each library (DR-013). ``content``: the file's bytes, already read, so that the
-    settings are parsed from exactly the bytes a run records."""
+    """Read ``config/models.yaml``: exact keys and value types in every section, the training
+    device of every model and the device selectors of each library (DR-013). ``content``: the
+    file's bytes, already read, so that the settings are parsed from exactly the bytes a run
+    records."""
     path = paths.models_spec
     raw = _read_yaml(path, content=content)
 
     def build() -> ModelSettings:
-        top = _mapping(raw, "models.yaml", ("reproducibility", "lightgbm", "catboost", "neural"))
+        top = _mapping(
+            raw,
+            "models.yaml",
+            ("reproducibility", "training_devices", "lightgbm", "catboost", "neural"),
+        )
         reproducibility = _mapping(top["reproducibility"], "reproducibility", ("main_seed",))
-        lightgbm = _mapping(top["lightgbm"], "lightgbm", ("build", "shared", "gpu", "cpu"))
+        lightgbm = _mapping(top["lightgbm"], "lightgbm", ("build", "shared", "cpu"))
         build_entry = _mapping(lightgbm["build"], "lightgbm.build", ("version", "library_sha256"))
         lightgbm_build = LightGBMBuild(
             version=_text(build_entry["version"], "lightgbm.build.version"),
@@ -674,11 +722,16 @@ def load_model_settings(paths: ProjectPaths, *, content: bytes | None = None) ->
         )
         if not _HEX_64.fullmatch(lightgbm_build.library_sha256):
             raise SpecificationError("lightgbm.build.library_sha256 must be 64 hex characters")
+        lightgbm_settings = _library(top, "lightgbm", extra=("build",))
+        catboost_settings = _library(top, "catboost")
         return ModelSettings(
             main_seed=_seed(reproducibility["main_seed"], "reproducibility.main_seed"),
+            training_devices=_training_devices(
+                top["training_devices"], lightgbm_settings, catboost_settings
+            ),
             lightgbm_build=lightgbm_build,
-            lightgbm=_library(top, "lightgbm", extra=("build",)),
-            catboost=_library(top, "catboost"),
+            lightgbm=lightgbm_settings,
+            catboost=catboost_settings,
             neural=_neural(top["neural"]),
         )
 

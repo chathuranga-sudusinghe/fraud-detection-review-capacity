@@ -325,6 +325,9 @@ def test_early_stopping_metric_must_be_set(
         "random_state",
         "device",
         "gpu_use_dp",
+        "gpu_device_id",
+        "gpu_device_id_list",
+        "num_gpu",
         "data_seed",
         "bagging_seed",
         "is_unbalance",
@@ -467,8 +470,16 @@ def test_reload_rejects_another_request(
     _saved(settings, train, tmp_path / "model")
     with pytest.raises(ModelError, match="does not match the requested"):
         _reload(settings, tmp_path / "model", seed=7)
-    with pytest.raises(ModelError, match="does not match the requested"):
+    with pytest.raises(SpecificationError, match="CPU only"):
         _reload(settings, tmp_path / "model", device="gpu")
+
+
+def test_lightgbm_trains_on_the_cpu_only(settings: ModelSettings) -> None:
+    # DR-013 §2: LightGBM's CUDA learner fails on categorical features above 256 categories.
+    with pytest.raises(SpecificationError, match="CPU only"):
+        LightGBMModel(
+            configuration("LGB-u"), 42, settings=settings, features=FEATURES, device="gpu"
+        )
 
 
 def test_native_load_failure_is_a_model_error(
