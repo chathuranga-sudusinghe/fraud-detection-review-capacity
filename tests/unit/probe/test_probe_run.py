@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -19,7 +20,7 @@ import numpy as np
 import pytest
 import torch
 
-from review_capacity.cli import _log_file, _probe_gpu, build_parser, main
+from review_capacity.cli import _log_file, _probe_gpu, _probe_paths, build_parser, main
 from review_capacity.config import load_feature_spec
 from review_capacity.data.catalog import read_catalog
 from review_capacity.errors import EnvironmentMismatchError, ModelError, SpecificationError
@@ -520,13 +521,18 @@ def test_probe_command_is_registered() -> None:
     args = build_parser().parse_args(["probe-gpu", "--output", "out", "--previous", "p.json"])
     assert args.handler is _probe_gpu
     assert (args.output, args.previous) == (Path("out"), Path("p.json"))
-    with pytest.raises(SystemExit):
-        build_parser().parse_args(["probe-gpu"])  # --output is required
+    assert build_parser().parse_args(["probe-gpu"]).output is None  # dated default
 
 
 def test_the_probe_log_is_in_the_output_directory() -> None:
     args = build_parser().parse_args(["probe-gpu", "--output", "evidence/x"])
     assert _log_file(args) == REPO_PATHS.root / "evidence" / "x" / "probe.log"
+    args = build_parser().parse_args(["probe-gpu"])
+    log_file = _log_file(args)
+    assert log_file is not None
+    assert log_file.parent.parent == REPO_PATHS.root / "outputs" / "gpu_acceptance_probe"
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{6}Z", log_file.parent.name)
+    assert _probe_paths(args, REPO_PATHS)[0] == log_file.parent  # one directory per run
     args = build_parser().parse_args(["--log-file", "a.log", "probe-gpu", "--output", "x"])
     with pytest.raises(SpecificationError, match="omit --log-file"):
         _log_file(args)
