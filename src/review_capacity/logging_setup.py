@@ -56,10 +56,18 @@ def _install(handlers: list[logging.Handler], level: int) -> None:
 
 
 def configure_logging(
-    level: int = logging.INFO, log_file: Path | None = None, *, terminal_tracebacks: bool = False
+    level: int = logging.INFO,
+    log_file: Path | None = None,
+    *,
+    terminal_tracebacks: bool = False,
+    file_level: int | None = None,
+    new_file: bool = False,
 ) -> None:
     """Send package messages, and Python warnings, to standard error and an optional file.
 
+    ``level`` applies to standard error; ``file_level`` (``level`` when not given) to the file, so
+    that a run's evidence log can keep every message while the terminal stays quiet. With
+    ``new_file`` the log file is created, never appended to: an existing file is an error.
     The file always receives tracebacks; standard error only with ``terminal_tracebacks``.
     If the log file cannot be opened, logging to standard error is kept and ``FileAccessError``
     is raised, so that the caller can report it and stop.
@@ -69,18 +77,22 @@ def configure_logging(
     terminal.setFormatter(
         formatter if terminal_tracebacks else _ConciseFormatter(LOG_FORMAT, DATE_FORMAT)
     )
+    terminal.setLevel(level)
     handlers: list[logging.Handler] = [terminal]
+    file_threshold = level if file_level is None else file_level
     logging.captureWarnings(True)
     if log_file is not None:
         try:
             log_file.parent.mkdir(parents=True, exist_ok=True)
-            file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
+            mode = "x" if new_file else "a"
+            file_handler = logging.FileHandler(log_file, mode=mode, encoding="utf-8")
         except OSError as error:
-            _install(handlers, level)
+            _install(handlers, min(level, file_threshold))
             raise FileAccessError(f"Log file {log_file} cannot be opened: {error}") from error
         file_handler.setFormatter(formatter)
+        file_handler.setLevel(file_threshold)
         handlers.append(file_handler)
-    _install(handlers, level)
+    _install(handlers, min(level, file_threshold))
 
 
 @contextmanager

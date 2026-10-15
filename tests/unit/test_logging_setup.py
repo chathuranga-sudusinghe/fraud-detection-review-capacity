@@ -38,6 +38,34 @@ def test_quiet_level_drops_info(tmp_path: Path) -> None:
     assert "attention" in text
 
 
+def test_a_new_log_file_is_never_appended_to(tmp_path: Path) -> None:
+    log_file = tmp_path / "run.log"
+    log_file.write_text("an earlier run\n", encoding="utf-8")
+    with pytest.raises(FileAccessError, match="cannot be opened"):
+        configure_logging(logging.INFO, log_file, new_file=True)
+    logging.getLogger("review_capacity.example").warning("after the refusal")
+    assert log_file.read_text(encoding="utf-8") == "an earlier run\n"
+    fresh = tmp_path / "fresh.log"
+    configure_logging(logging.INFO, fresh, new_file=True)
+    logging.getLogger("review_capacity.example").info("first line")
+    assert "first line" in fresh.read_text(encoding="utf-8")
+
+
+def test_a_quiet_terminal_can_keep_a_complete_log_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    log_file = tmp_path / "run.log"
+    configure_logging(logging.WARNING, log_file, file_level=logging.INFO)
+    logging.getLogger("review_capacity.example").info("progress for the evidence log")
+    logging.getLogger("review_capacity.example").warning("a warning for both")
+    text = log_file.read_text(encoding="utf-8")
+    assert "progress for the evidence log" in text
+    assert "a warning for both" in text
+    terminal = capsys.readouterr().err
+    assert "progress for the evidence log" not in terminal
+    assert "a warning for both" in terminal
+
+
 def test_repeated_configuration_does_not_duplicate_lines(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

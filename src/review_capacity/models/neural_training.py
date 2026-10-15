@@ -84,7 +84,7 @@ from review_capacity.models.run_record import jsonable
 
 logger = logging.getLogger(__name__)
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2  # 2: per-epoch train_seconds in the training history
 STATE_FILE = "model.pt"
 MANIFEST_FILE = "manifest.json"
 
@@ -126,7 +126,7 @@ SCHEDULE_KEYS = (
     "epochs_kept",
     "best_v1_score",
 )
-HISTORY_KEYS = ("epoch", "train_loss", "v1_score", "seconds")
+HISTORY_KEYS = ("epoch", "train_loss", "v1_score", "train_seconds", "seconds")
 
 
 # --- Inputs ---------------------------------------------------------------------------------------
@@ -497,9 +497,14 @@ class EarlyStopping:
 
 @dataclass(frozen=True)
 class EpochRecord:
+    """One epoch: its mean weighted Train loss, its V1 score (None without early stopping), the
+    seconds of its training batches alone (up to the synchronising read of the loss) and of the
+    whole epoch including V1 scoring."""
+
     epoch: int
     train_loss: float
     v1_score: float | None
+    train_seconds: float
     seconds: float
 
 
@@ -623,7 +628,8 @@ def train_network(
             optimizer.step()
             loss_sum += loss.detach().double() * len(index)
             batch_progress.advance()
-        train_loss = float(loss_sum.item()) / rows
+        train_loss = float(loss_sum.item()) / rows  # waits for the epoch's GPU work
+        train_seconds = time.perf_counter() - start_time
         if not math.isfinite(train_loss):
             raise ModelError(f"{name}: Train loss is not finite in epoch {epoch}")
         score = None
@@ -640,7 +646,7 @@ def train_network(
             if tracker.update(epoch, score):
                 best_state = _state_copy(network)
         seconds = time.perf_counter() - start_time
-        history.append(EpochRecord(epoch, train_loss, score, seconds))
+        history.append(EpochRecord(epoch, train_loss, score, train_seconds, seconds))
         if tracker is None:
             logger.info("%s epoch %d: Train loss %.6f (%.1f s)", name, epoch, train_loss, seconds)
         else:
@@ -873,6 +879,7 @@ class NeuralModel(ABC):
                     "epoch": record.epoch,
                     "train_loss": record.train_loss,
                     "v1_score": record.v1_score,
+                    "train_seconds": record.train_seconds,
                     "seconds": record.seconds,
                 }
                 for record in result.history
@@ -1161,6 +1168,10 @@ class NeuralModel(ABC):
                 or any(key not in entry for key in HISTORY_KEYS)
                 or not _finite_number(entry["train_loss"])
                 or not (_finite_number(entry["seconds"]) and entry["seconds"] >= 0)
+                or not (
+                    _finite_number(entry["train_seconds"])
+                    and 0 <= entry["train_seconds"] <= entry["seconds"]
+                )
                 or not (_finite_number(entry["v1_score"]) if early else entry["v1_score"] is None)
             ):
                 raise ModelError(f"Saved history entry {number} is malformed")

@@ -1,0 +1,165 @@
+# GPU acceptance probe (DR-013 §8)
+
+| Field | Value |
+|---|---|
+| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; results are added after the runs |
+| Governing record | Decision Record (DR) [DR-013](decisions/DR-013-training-device-policy.md) §8: what the probe must confirm. This document owns how: the synthetic inputs, the checks, the acceptance criteria and the tolerances |
+| Command | `review-capacity probe-gpu` (package command) |
+| Evidence | `evidence/gpu_acceptance_probe/` (after the runs) |
+
+Statements are tagged by source: **[L]** library documentation or source code, cited with its reference identifier (REF-NNN, [`references.md`](references.md)); **[D]** documented dataset facts; **[I]** an engineering choice of this probe.
+
+## Purpose and boundaries
+
+The graphics processing unit (GPU) acceptance probe confirms, on the project hardware (NVIDIA RTX 5060 Laptop, 8 gigabytes (GB), compute capability sm_120), that every device setting of DR-013 works as specified for the eight configurations of [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md), before any development run.
+
+- **Synthetic data only.** No IEEE-CIS (IEEE Computational Intelligence Society) row, label or partition is read; the synthetic inputs take only the shape of the study's inputs (names, roles, counts and documented category counts).
+- **Engineering behaviour only:** not model performance, and not the size of variation on the research data (DR-013 §8).
+- **No fallback.** The probe fails visibly on an unsupported required capability: it never falls back to the central processing unit (CPU), removes categorical inputs, reduces a model or reduces a batch size (DR-013 §8). A failure is resolved on its evidence before any development run, and the response is recorded in Issue #77.
+- **Probe values.** The hyperparameters, batch sizes and measurement counts below are probe values [I], chosen to exercise the code paths within a bounded run time. They are not research values: the training rules (Issue #91) fix those, including the protocol's timing procedure.
+
+## 1. Synthetic inputs
+
+All synthetic data are drawn from one generator with its own recorded seed (the data seed), separate from the model seeds, so that refitting a model never changes its inputs.
+
+**Category counts [D].** Each of the 49 categorical inputs has as many synthetic labels as it has levels in the study's Train (model-fitting) partition in the [feature catalog](feature-catalog.md) (column "Levels in Train", read by `review_capacity.data.catalog`): for example 11,870 for `card1`, 1,470 for `DeviceInfo` and 5 for `ProductCD`, 16,797 levels in total. The embedding tables therefore have the study's dimensions.
+
+**Tree-based models** receive the canonical model inputs of [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md): the 433 inputs of [`config/features.yaml`](../config/features.yaml), with their declared names and roles (49 categorical and 384 numeric, including the time-of-day inputs `tod_sin` and `tod_cos`, the sine and cosine of the time of day).
+
+| Partition | Rows | Purpose |
+|---|---|---|
+| Train | 368,632 (the size of the study's Train partition) | Fitting, resources and timing at the study's scale |
+| Validation 1 (V1) | 100,000 | Early stopping |
+| Score set | 100,000 | Prediction checks, including categories unseen in Train |
+
+- **Categorical inputs:** in every input, 5 % of values are the missing label `"__MISSING__"`. In the score set, 1 % of values per input are labels absent from Train (unseen categories).
+- **Numeric inputs:** a mixture of normal, log-normal and zero-inflated columns, with 10 % missing values (NaN, not-a-number) in half of them; `tod_sin` and `tod_cos` from uniformly drawn times of day.
+- **Labels:** drawn from a logistic model of a few numeric and categorical inputs, including one interaction of two categorical inputs, with a fraud rate of about 3.5 %.
+- **Row order:** increasing `TransactionDT` (synthetic transaction time), ties by increasing `TransactionID` (synthetic transaction identifier) (CatBoost's `has_time`, DR-008 §5); each row has a synthetic row identifier for ranking ties.
+- **Weights:** the protocol's Train-only class-weight rule through `models.base.class_weights`. The unweighted configurations receive unit weights; the balanced ones weight each fraud row by the ratio of legitimate to fraud Train rows. The synthetic row counts and the resulting weights are recorded.
+
+**Neural models** receive inputs in the form of [DR-012](decisions/DR-012-neural-network-input-representation.md):
+- 708 numeric inputs: 384 transformed values (standard normal) and 324 binary missingness indicators;
+- the 49 categorical inputs as indices. Each vocabulary holds the input's documented Train levels plus the reserved `"__MISSING__"` entry: 16,846 embedding rows in total.
+
+This gives 757 inputs and, for the Feature Tokenizer + Transformer (FT-Transformer), 758 tokens including the classification token [CLS].
+
+Neural fits use a row subset (16,384 Train rows, 4,096 V1 rows; the score set's first 4,096 rows for scoring) [I]. The Issue #50 probe estimated about half an hour for one full Train epoch of the largest FT-Transformer setting ([`gpu_probe_full.csv`](../evidence/gpu_probe/gpu_probe_full.csv): 800 tokens, embedding size 512, 6 layers, batch size 64). Its batch limits do not establish feasibility here, because it measured other vocabulary sizes, ResNet hidden factors and attention-backend settings. The batch sizes below are therefore proposed acceptance workloads, confirmed or refuted by this probe.
+
+## 2. Configurations and probe values [I]
+
+Architecture variables: `n_layers` (layer count), `d` (ResNet width), `d_token` (FT-Transformer token width), `d_embedding` (ResNet category-embedding width), `d_hidden_factor` and `d_ffn_factor` (hidden-width ratios). The other parameters are named as in their libraries:
+
+| Parameter names | Meaning |
+|---|---|
+| `num_iterations`, `iterations` | Maximum tree counts (LightGBM, CatBoost) |
+| `early_stopping_round`, `od_wait` | Early-stopping waits: rounds without improvement before stopping |
+| `metric`, `eval_metric` | Evaluation metrics |
+| `learning_rate`, `lr` | Learning rates (trees; neural optimiser) |
+| `num_leaves`, `depth` | Maximum LightGBM leaves per tree; CatBoost tree depth |
+| `metric_period` | CatBoost metric-reporting interval |
+| `model_size_reg` | CatBoost model-size regularisation |
+| `fold_permutation_block`, `permutation_count` | CatBoost permutation block size; number of permutations |
+| `random_strength` | CatBoost split-score randomisation strength |
+| `l2_leaf_reg`, `leaf_estimation_iterations` | CatBoost leaf-value regularisation; leaf-estimation steps |
+| `bagging_temperature` | CatBoost Bayesian-bootstrap temperature |
+| `hidden_dropout`, `attention_dropout`, `ffn_dropout`, `residual_dropout` | Dropout probabilities of hidden activations, attention weights, feed-forward activations and residual branches |
+| `eval_batch_size` | Evaluation batch size |
+| `weight_decay` | Decoupled optimiser weight decay |
+| `max_epochs`, `patience` | Training epoch limit; consecutive epochs without V1 improvement allowed before stopping |
+
+| Model | Probe values |
+|---|---|
+| LightGBM | `num_iterations` 300, `early_stopping_round` 20, `metric` `binary_logloss`, `learning_rate` 0.1, `num_leaves` 63 |
+| CatBoost | `iterations` 300, `od_wait` 20, `eval_metric` `Logloss`, `metric_period` 1, `learning_rate` 0.1, `depth` 6, `model_size_reg` 0.5, `fold_permutation_block` 1, `permutation_count` 4, `random_strength` 1, `l2_leaf_reg` 3, `leaf_estimation_iterations` 10, `bagging_temperature` 1 |
+| ResNet-style multilayer perceptron (MLP) | Small (`n_layers` 2, `d` 256, `d_hidden_factor` 2) and the largest of the large-dataset search space (B) of [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) (`n_layers` 16, `d` 1024, `d_hidden_factor` 4); both with `d_embedding` 64, `hidden_dropout` 0.1, `residual_dropout` 0.1, training batch size 1024 and `eval_batch_size` 4096 |
+| FT-Transformer | The paper's default (`n_layers` 3, `d_token` 192, training batch size 256); the largest of space (B) (`n_layers` 6, `d_token` 512, training batch size 64); and a padded-head setting (`n_layers` 2, `d_token` 200, so heads of 25 units padded to 32, training batch size 128). All with `d_ffn_factor` 4/3, `attention_dropout` 0.1, `ffn_dropout` 0.1, `residual_dropout` 0.1 and `eval_batch_size` 16 |
+| Neural loop | The Adam optimiser with decoupled weight decay (AdamW) with `lr` 1e-4 and `weight_decay` 1e-5; `max_epochs` 3, `patience` 1, `metric` `binary_logloss` |
+
+`metric_period` is 1 because, with early stopping and an evaluation set, CatBoost computes the evaluation metric on every iteration and warns that a larger `metric_period` is ignored for it ([L] REF-119: `catboost/libs/train_lib/train_model.cpp`, v1.2.10); revised on 14 October 2026 (Issue #77) after the probe's own check C2 reported that warning in a CPU test run.
+
+- All eight configurations (four models, unweighted and balanced) run on the GPU with V1 early stopping, with the main seed 42. The four tree configurations are also refitted on the CPU at the GPU-kept tree count (DR-013 §7).
+- Neural variants and repetitions run one after another; each finished network and optimiser is released before the next fit.
+
+## 3. Checks and acceptance criteria
+
+Each check is pass/fail (P/F) or descriptive (D: recorded, no pass or fail). The probe passes when every P/F check passes.
+
+| ID | DR-013 §8 item | Method | Criterion |
+|---|---|---|---|
+| C1 | Backend identity | Tree models: a successful fit with the build verified at start-up (LightGBM) and the native resolved training device (LightGBM `device_type`, CatBoost `task_type`); device-identification messages of the libraries are kept. PyTorch: the CUDA (NVIDIA's GPU computing platform) device of inputs, outputs and parameters, and one forward and backward pass of each FT-Transformer variant through the required attention backend (`sdpa_kernel`, which raises an error if that backend cannot run, [L] REF-121). GPU activity and timing are recorded as corroboration only | P/F: LightGBM `cuda` with the recorded build; CatBoost `GPU`; all neural tensors on CUDA; no attention-backend error |
+| C2 | Ignored-option and unsupported-option warnings | Every warning is kept with its library, phase and text | P/F: any warning of an ignored setting, an unsupported capability or a fallback fails. LightGBM's "No further splits with positive gain" is the only warning accepted automatically, provided C6 passes; any other warning blocks acceptance until its classification is reviewed and recorded |
+| C3 | Resolved settings | The probe compares every fixed setting of `config/models.yaml` with each library's native resolved record, for both devices, after mapping aliases and representations. Settings missing from that record are checked through their documented native metadata or by observation. Precision flags are included | P/F: every fixed setting is confirmed; requested values alone are not evidence; missing or contradictory evidence fails |
+| C4 | Dataset identity | Two LightGBM Datasets, one with the CPU and one with the GPU construction settings, are built independently from the same rows, weights, category mappings, seed and shared settings, and saved with `save_binary` to fresh files. The file holds the header, the metadata and every feature group, whose bin mappers hold the bin boundaries or categorical mappings and are followed by the binned values; alignment padding is zero-filled, and no device setting is serialised ([L] REF-117: `Dataset::SaveBinaryFile`, `SerializeHeader`, `FeatureGroup::SerializeToBinary`, `BinaryWriter::AlignedWrite`) | P/F: the two files are byte-identical (T4) |
+| C5 | Categorical behaviour | The realised cardinalities and the missing and unseen counts are recorded. LightGBM's conversion of unseen categories to missing is verified; the neural inputs use the reserved `"__MISSING__"` index. CatBoost's saved model is inspected for categorical-combination statistics over two or more inputs | P/F: every fit and prediction succeeds with scores in [0, 1]; a combination over two or more inputs is present in CatBoost's model, otherwise the combination path counts as not exercised and the check fails. No performance threshold |
+| C6 | All eight configurations, non-uniform weights | GPU fits with V1 early stopping; the weights reaching training and V1 are verified | P/F: each configuration keeps at least one tree or epoch; its V1 and score-set scores pass `checked_scores`; balanced fits receive the non-uniform weights and unweighted fits unit weights |
+| C7 | Neural computation under strict determinism | Every neural fit runs with `torch.use_deterministic_algorithms(True, warn_only=False)`, through embeddings, normalisation, category dropout (0.01), and forward and backward passes, including FT-Transformer at 758 tokens and the padded-head setting. The category-dropout replacements are counted by replaying the recorded seeds through the same batching and dropout functions. Gradients, parameters and optimiser-state tensors are inspected | P/F: no determinism error; category-dropout replacements occur; gradients and parameters finite; training logits observed in bfloat16 (bf16, a 16-bit floating-point format) and optimiser state in float32 (32-bit floating point) |
+| C8 | float32 evaluation path | For each fitted neural model, the scores of 4,096 rows on the required float32 path are compared with a float32 reference, with identical parameters and buffers (including batch-normalisation running statistics), in evaluation mode, with autocast and gradients disabled, in identical batch partitions. ResNet reference: the CPU in float32. FT-Transformer reference: a second network built with `SDPBackend.MATH` as its attention backend and loaded with the same state, on the GPU, keeping the head padding and the true-head scale. An outer backend context cannot replace the network's own; the required path is confirmed to use memory-efficient attention | P/F: the maximum absolute logit difference is within T1. D: logit magnitudes, maximum and mean absolute differences, differences relative to the logit scale, score differences, and the peak GPU memory of both paths |
+| C9 | Numerical behaviour | All scores of every configuration. Rankings are by descending score, ties broken by ascending synthetic row identifier. K (number of top-scored rows compared) is 2 % of the scored rows, rounded up to the next integer: 82 for the neural score set and 2,000 for the tree-model score set [I]. This is a probe diagnostic, not the study's daily review budget | P/F: all scores finite. D: ties among the top-K scores, the score margin at the cutoff, and changes in top-K membership across the two runs (C11) and between each float32 path and its reference (C8). Numerical closeness does not guarantee identical top-K membership |
+| C10 | Prediction repeatability and backend | Every model scores the same rows twice in the same process; tree models through their CPU prediction backend with the kept tree count (DR-013 §5) | P/F: identical scores, bit for bit (T2) |
+| C11 | Same-seed repeats | Each neural configuration is fitted twice with the same seed in one process; the whole probe is run twice, in fresh processes (Section 6) | P/F (neural): identical scores within a process and across the two runs (T3). D (trees): GPU training is non-deterministic ([L] REF-116; REF-118), so the maximum score difference and the top-K membership changes across runs are recorded |
+| C12 | Persistence | Every fitted model is saved, reloaded and scores the same rows again | P/F: identical scores, bit for bit (T2) |
+| C13 | Resources and timing | GPU memory: the device capacity, the baseline use, and the sampled whole-device maximum from `nvidia-smi` every 0.5 seconds (recorded as a sampled maximum, with interval and units). PyTorch peak allocated and reserved memory per phase; peak host memory and its scope. Timing: GPU work synchronised at every timing boundary; start-up, input preparation, fitting and prediction separately; model-only and end-to-end scoring separately; neural scoring also timed on the CPU, with those scores discarded. Three warm-up calls, five timed repetitions, and repeated single-row latency on 128 fixed synthetic rows (median, 95th and 99th percentiles) [I]. Neural per-step times extrapolated to a full Train epoch, labelled as extrapolations that exclude validation and other unmeasured work | P/F: no out-of-memory error at the fixed workload. D: every measurement |
+
+**Gradient checkpointing** is not implemented. If the training rules adopt it, its implementation and a revised probe specification are reviewed, and the acceptance checks are rerun with checkpointing enabled before a development run uses it.
+
+## 4. Tolerances
+
+| ID | Quantity | Tolerance | Basis |
+|---|---|---|---|
+| T1 | float32 logits against the float32 reference (C8) | Maximum absolute difference at most 1e-4, with no relative allowance | A pre-specified engineering acceptance budget [I], not a numerical error bound guaranteed by PyTorch. Error accumulated through 16 residual layers or 6 Transformer layers is not bounded by the sources: the memory-efficient kernel computes float32 products in a fast float32 multiply-add mode ([L] REF-121), and the GPU and CPU sum in different orders ([L] REF-120). The budget implies a score difference of at most 2.5e-5 (the sigmoid's slope is at most 0.25). A failure requires numerical diagnosis and prevents acceptance; it does not by itself establish an implementation defect. The tolerance is never widened after the results are seen |
+| T2 | Repeated prediction and prediction after reload (C10, C12) | Bit-for-bit identical | Required for the fixed-model prediction path with identical input bytes, row order, backend, batch partitions, threads, precision settings and software and hardware environment [I] |
+| T3 | Neural same-seed repeats (C11) | Bit-for-bit identical | Required for compatible same-seed fits within one process and across the two fresh-process runs, with every data and training generator controlled and identical execution order and settings (strict deterministic mode, DR-013 §4). A mismatch fails this gate and requires diagnosis of input, configuration, random-state, implementation or backend differences; it is not automatically classified as a code defect. No blanket `CUBLAS_WORKSPACE_CONFIG` setting is introduced (DR-013 §4) |
+| T4 | LightGBM CPU and GPU Datasets (C4) | Byte-identical | Identical rows, weights, category mappings, seed and construction settings, with bundling and sparse optimisation disabled on both devices (DR-013 §2). Identical files establish identical bin boundaries and binned values; different files can also reflect differences in metadata or construction settings ([L] REF-117) |
+
+## 5. Records
+
+The probe writes, step by step:
+
+- `probe.log`: the run log, with every library message and warning;
+- `probe.json`: the record of every check. It includes:
+  - the environment of DR-013 §6;
+  - the run identity: code commit, the SHA-256 (Secure Hash Algorithm, 256-bit) of this specification and of `config/models.yaml`, the data seed and the model seeds;
+  - for every set of scores, a record keyed by configuration, architecture variant, device, repetition and scoring path, holding the path, SHA-256, dtype, shape and row-order hash of its comparison file;
+- comparison files: each run keeps its synthetic score arrays, with their ordered synthetic row identifiers, as local comparison files. Their hashes are computed from a documented canonical byte representation. Being synthetic, they are not research data;
+- `probe.md`: a summary generated by code from `probe.json`, never written by hand (as for the development runs, Issue #96).
+
+## 6. Run procedure
+
+1. This specification and its tolerances are approved before the implementation begins. The implementation is then reviewed and committed before either acceptance run. A change of settings, tolerances or exercised paths requires an approved revision of this specification and new acceptance evidence.
+2. `review-capacity probe-gpu` runs from the clean committed tree.
+3. A first run alone records the result "pending second run", never a pass. Each run writes to a new directory of its own, with its log file `probe.log`. A second run, in a fresh process, receives the first run's `probe.json` and comparison files. Before any numerical comparison, it verifies that the code, this specification, the settings, the synthetic inputs, labels, weights, layouts and execution conditions match. An incompatible pair is reported as not comparable and cannot satisfy C11. A compatible pair gives bit-for-bit equality, the maximum score difference and the top-K membership changes.
+4. The records of both runs are added to `evidence/gpu_acceptance_probe/` and reviewed, and the result is recorded in this document and in Issue #77.
+
+## Symbols and notation
+
+| Symbol / abbreviation | Meaning |
+|---|---|
+| [D], [I], [L] | Source tags: documented dataset fact; engineering choice of this probe; library documentation or source code |
+| AdamW | Adam optimiser with decoupled weight decay |
+| bf16, float32 | bfloat16 (16-bit) and 32-bit floating-point formats |
+| C1–C13 | Probe checks (Section 3) |
+| [CLS] | Classification token of FT-Transformer |
+| CPU, GPU | Central processing unit; graphics processing unit |
+| CUDA | NVIDIA's GPU computing platform |
+| `d`, `d_token`, `d_embedding` | ResNet width; FT-Transformer token width; ResNet category-embedding width |
+| `d_hidden_factor`, `d_ffn_factor` | Hidden-width ratios of the ResNet blocks and the FT-Transformer feed-forward modules |
+| D, P/F | Descriptive check; pass-or-fail check |
+| DR, DR-NNN | Decision Record; Decision Record NNN in `docs/decisions/` |
+| FT-Transformer | Feature Tokenizer + Transformer |
+| GB | Gigabyte |
+| IEEE-CIS | IEEE Computational Intelligence Society (the dataset's source) |
+| K | Number of top-scored rows compared in C9 and C11: 2 % of the scored rows, rounded up (82 neural rows; 2,000 tree-model rows) |
+| MLP | Multilayer perceptron |
+| `n_layers` | Number of layers (residual blocks or Transformer layers) |
+| Probe parameter names | `num_iterations`, `iterations`, `early_stopping_round`, `od_wait`, `metric`, `eval_metric`, `learning_rate`, `lr`, `num_leaves`, `depth`, `metric_period`, `model_size_reg`, `fold_permutation_block`, `permutation_count`, `random_strength`, `l2_leaf_reg`, `leaf_estimation_iterations`, `bagging_temperature`, the four dropouts, `eval_batch_size`, `weight_decay`, `max_epochs`, `patience`: defined in the parameter table of Section 2 |
+| NaN | Not-a-number: a missing numeric value |
+| REF-NNN | Reference identifier in [`references.md`](references.md) |
+| SHA-256 | Secure Hash Algorithm, 256-bit |
+| sm_120 | Compute capability of the project GPU |
+| space (B) | The large-dataset hyperparameter search space of REF-087 used by DR-011 |
+| T1–T4 | Tolerances (Section 4) |
+| `tod_sin`, `tod_cos` | Sine and cosine of the time of day (DR-008 §4) |
+| Train | The study's model-fitting partition (relative days 1–105); here, the synthetic fitting partition |
+| `TransactionDT`, `TransactionID` | Transaction time and transaction identifier; here, synthetic |
+| V1 | Validation 1 (relative days 106–126); here, the synthetic early-stopping partition |

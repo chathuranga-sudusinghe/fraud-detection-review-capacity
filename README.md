@@ -134,6 +134,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | [`docs/references.md`](docs/references.md) | Reference register with verification status |
 | [`docs/dataset.md`](docs/dataset.md) | Dataset source, provenance, data-use terms, version-control policy, dataset manifest |
 | [`docs/data-preparation.md`](docs/data-preparation.md) | Data-preparation implementation and evidence record (methodology stage 6) |
+| [`docs/gpu-acceptance-probe.md`](docs/gpu-acceptance-probe.md) | GPU acceptance probe of DR-013 §8: checks, tolerances and results |
 | [`docs/feature-catalog.md`](docs/feature-catalog.md) | Column-by-column data dictionary |
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (433 inputs: 431 declared columns and 2 time-of-day inputs) |
 | [`config/dataset.yaml`](config/dataset.yaml) | Machine-readable raw files, DR-001 partitions and their integrity anchors |
