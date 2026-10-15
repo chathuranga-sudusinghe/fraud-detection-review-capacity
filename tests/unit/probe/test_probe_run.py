@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
@@ -23,11 +25,12 @@ from review_capacity.data.catalog import read_catalog
 from review_capacity.errors import EnvironmentMismatchError, ModelError, SpecificationError
 from review_capacity.models import neural_training
 from review_capacity.models.base import ModelData
+from review_capacity.models.lightgbm_model import LightGBMModel
 from review_capacity.models.neural_training import NeuralModel
 from review_capacity.models.registry import Weighting, configuration
 from review_capacity.models.resnet_model import ResNetModel
 from review_capacity.models.run_record import load_settings_with_snapshot
-from review_capacity.probe import runner
+from review_capacity.probe import diagnostics, runner
 from review_capacity.probe.records import CHECKS
 from review_capacity.probe.synthetic import category_levels, neural_data, neural_layout, tree_data
 from support.neural import preserved_torch_state
@@ -111,7 +114,10 @@ def test_the_deterministic_checks_pass_on_the_cpu(runs: Runs) -> None:
 def test_all_eight_configurations_refits_and_scores_are_recorded(runs: Runs) -> None:
     first, _, _ = runs
     subjects = [fit["subject"] for fit in first["fits"]]
-    for name in ("LGB-u", "LGB-b", "Cat-u", "Cat-b"):
+    for name in ("LGB-u", "LGB-b"):
+        assert subjects.count(f"{name} cpu") == 2  # fitted twice with the same seed (C11)
+        assert f"{name} cpu refit" not in subjects  # LightGBM trains on the CPU only
+    for name in ("Cat-u", "Cat-b"):
         assert f"{name} cpu" in subjects
         assert f"{name} cpu refit" in subjects
     for name in ("RES-u", "RES-b"):
@@ -123,17 +129,22 @@ def test_all_eight_configurations_refits_and_scores_are_recorded(runs: Runs) -> 
     assert all("parameters" in fit for fit in first["fits"])
     keys = set(first["scores"])
     assert "LGB-u.default.cpu.fit1.reload" in keys
+    assert "LGB-b.default.cpu.fit2.score" in keys
     assert "Cat-b.default.cpu.refit.repeat" in keys
     assert "FTT-b.padded.cpu.fit1.reference" in keys
     assert "RES-u.small.cpu.fit2.score" in keys
-    assert len(keys) == 4 * 6 + 6 * 5  # trees: fit and refit x 3 paths; neural: 5 arrays
+    # LightGBM: fit 1 x 3 paths and fit 2; CatBoost: fit and refit x 3 paths; neural: 5 arrays
+    assert len(keys) == 2 * 4 + 2 * 6 + 6 * 5
 
 
 def test_c4_tolerances_and_timing_are_recorded(runs: Runs) -> None:
     first, _, _ = runs
     (dataset,) = _items(first, "C4")
     assert dataset["outcome"] is True
+    assert dataset["subject"] == "LightGBM Datasets, two cpu constructions"
+    assert len(dataset["sha256"]) == 2
     assert len(set(dataset["sha256"].values())) == 1
+    assert dataset["largest_categorical_bins"] >= 2
     for item in _items(first, "C8"):
         assert item["tolerance"] == 1e-4
         assert item["max_abs_logit_difference"] <= 1e-4
@@ -150,12 +161,16 @@ def test_the_second_run_compares_with_the_first_across_processes(runs: Runs) -> 
     assert comparison["comparable"] is True
     assert set(comparison["scores"]) == set(first["scores"])
     across = [item for item in _items(second, "C11") if item["subject"].endswith("across runs")]
-    neural = [item for item in across if item["subject"].startswith(("RES", "FTT"))]
-    assert neural
-    assert all(item["outcome"] is True for item in neural)  # T3 across fresh processes
-    trees = [item for item in across if item["subject"].startswith(("LGB", "Cat"))]
-    assert trees
-    assert all(item["outcome"] is None for item in trees)  # descriptive
+    deterministic = [item for item in across if item["subject"].startswith(("LGB", "RES", "FTT"))]
+    assert any(item["subject"].startswith("LGB") for item in deterministic)
+    assert all(item["outcome"] is True for item in deterministic)  # T3 across fresh processes
+    catboost = [item for item in across if item["subject"].startswith("Cat")]
+    assert catboost
+    assert all(item["outcome"] is None for item in catboost)  # descriptive
+    models = [item for item in across if item["subject"].endswith(".model across runs")]
+    assert len(models) == 4  # LGB-u and LGB-b, fits 1 and 2: identical saved model text (T3)
+    assert all(item["outcome"] is True for item in models)
+    assert set(first["model_hashes"]) == set(second["model_hashes"])
     assert second["overall"] != "pending second run"
 
 
@@ -194,6 +209,29 @@ def test_an_incomparable_first_run_fails_c11(
     result = runner.compare_runs(probe, second, path)
     assert result["comparable"] is False
     assert difference in result["differences"]
+    assert probe.book.status("C11") == "fail"
+
+
+def test_a_changed_lightgbm_model_fails_c11_across_runs(runs: Runs, tmp_path: Path) -> None:
+    """Identical scores are not enough: LightGBM's complete saved model must repeat (DR-013 §8)."""
+    first, second, root = runs
+    changed = json.loads(json.dumps(first))
+    model = next(key for key in changed["model_hashes"] if key.startswith("LGB-u"))
+    changed["model_hashes"][model] = "0" * 64
+    shutil.copytree(root / "run-1" / "scores", tmp_path / "first" / "scores")
+    (tmp_path / "first" / "probe.json").write_text(json.dumps(changed), encoding="utf-8")
+    probe = _probe(tmp_path / "second")
+    probe.arrays = {
+        key: diagnostics.load_scores(root / "run-2" / "scores", record)
+        for key, record in second["scores"].items()
+    }
+    probe.model_hashes = dict(second["model_hashes"])
+    result = runner.compare_runs(probe, second, tmp_path / "first" / "probe.json")
+    assert result["comparable"] is True
+    outcomes = {item["subject"]: item["outcome"] for item in probe.book.items["C11"]}
+    assert outcomes[f"{model} across runs"] is False
+    scores = [o for subject, o in outcomes.items() if subject.startswith("LGB-u.default.cpu.fit1.")]
+    assert scores.count(True) == 3  # the score, repeat and reload arrays are unchanged
     assert probe.book.status("C11") == "fail"
 
 
@@ -241,6 +279,131 @@ def test_warnings_are_classified(tmp_path: Path) -> None:
     runner.classify_warnings(probe)
     outcomes = [item["outcome"] for item in probe.book.items["C2"]]
     assert outcomes == [True, "review", False, "review"]
+
+
+@pytest.mark.parametrize(
+    ("bins", "outcomes"),
+    [
+        (300, [True, True]),
+        # without a categorical feature above max_bin, the notices follow the general rule: the
+        # first needs a recorded review, the second ("may be ignored") fails
+        (255, ["review", False]),
+        (None, ["review", False]),
+    ],
+)
+def test_categorical_bin_notices_need_a_categorical_feature_above_max_bin(
+    tmp_path: Path, bins: int | None, outcomes: list[bool | str]
+) -> None:
+    probe = _probe(tmp_path)
+    probe.categorical_bins = bins  # max_bin is 255 (config/models.yaml)
+    probe.capture.records = [
+        {"logger": runner.LIGHTGBM_LOGGER, "phase": "a", "text": f"[LightGBM] [Warning] {text}"}
+        for text in runner.CATEGORICAL_BIN_WARNINGS
+    ]
+    runner.classify_warnings(probe)
+    assert [item["outcome"] for item in probe.book.items["C2"]] == outcomes
+
+
+@pytest.mark.parametrize(
+    ("logger", "text", "outcome"),
+    [
+        # an approved notice with anything appended is not the notice: the failure rule applies
+        (
+            runner.LIGHTGBM_LOGGER,
+            f"{runner.CATEGORICAL_BIN_WARNINGS[0]} option x is ignored",
+            False,
+        ),
+        (runner.LIGHTGBM_LOGGER, f"{runner.CATEGORICAL_BIN_WARNINGS[0]} and more", "review"),
+        # the notices are accepted from LightGBM's own logger only
+        ("py.warnings", runner.CATEGORICAL_BIN_WARNINGS[0], "review"),
+        ("py.warnings", runner.CATEGORICAL_BIN_WARNINGS[1], False),
+        # the failure rule takes precedence over "no further splits"
+        (runner.LIGHTGBM_LOGGER, f"{runner.ACCEPTED_WARNING}; option x is ignored", False),
+    ],
+)
+def test_only_the_exact_notices_are_accepted(
+    tmp_path: Path, logger: str, text: str, outcome: bool | str
+) -> None:
+    probe = _probe(tmp_path)
+    probe.categorical_bins = 300  # above max_bin 255
+    probe.capture.records = [{"logger": logger, "phase": "a", "text": text}]
+    runner.classify_warnings(probe)
+    assert [item["outcome"] for item in probe.book.items["C2"]] == [outcome]
+
+
+def test_a_gpu_run_trains_lightgbm_on_the_cpu(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The routing of run_trees on a GPU run, with fitting, checking and scoring replaced by stand-
+    ins (no CUDA): LightGBM twice on the CPU, CatBoost on the GPU with its CPU refit only."""
+    fits: list[tuple[str, str, str, int | None]] = []
+    ids = np.arange(3, dtype=np.int64)
+
+    def fit(
+        _state: Any, library: str, name: str, device: str, _data: Any, iterations: int | None
+    ) -> Any:
+        fits.append((library, name, device, iterations))
+        return SimpleNamespace(
+            configuration=configuration(name),
+            device=device,
+            fitted_iterations=5,
+            predict=lambda _frame: np.zeros(3),
+        )
+
+    monkeypatch.setattr(runner, "_fit_tree", fit)
+    monkeypatch.setattr(runner, "_tree_fit_checks", lambda _p, m, _t, _w: f"{m.device}")
+    monkeypatch.setattr(runner, "_tree_scores", lambda *_args: np.zeros(3))
+    monkeypatch.setattr(runner, "_tree_timing", lambda *_args: {})
+    monkeypatch.setattr(runner, "_tree_checks", lambda *_args: None)
+    monkeypatch.setattr(
+        runner,
+        "_model_text",
+        lambda model: "model text" if model.configuration.model.name == "lightgbm" else None,
+    )
+    probe = _probe(tmp_path)
+    probe.device = "gpu"
+    weightings = dict.fromkeys(Weighting)
+    tree: Any = SimpleNamespace(train=weightings, valid=weightings, score=None, score_ids=ids)
+    runner.run_trees(probe, tree)
+    assert fits == [
+        ("lightgbm", "LGB-u", "cpu", None),
+        ("lightgbm", "LGB-u", "cpu", None),
+        ("lightgbm", "LGB-b", "cpu", None),
+        ("lightgbm", "LGB-b", "cpu", None),
+        ("catboost", "Cat-u", "gpu", None),
+        ("catboost", "Cat-u", "cpu", 5),
+        ("catboost", "Cat-b", "gpu", None),
+        ("catboost", "Cat-b", "cpu", 5),
+    ]
+    assert set(probe.model_hashes) == {
+        f"{name}.default.cpu.{fit}.model" for name in ("LGB-u", "LGB-b") for fit in ("fit1", "fit2")
+    }
+
+
+def test_each_model_trains_on_its_device(tmp_path: Path) -> None:
+    probe = _probe(tmp_path)
+    devices = {model: probe.training_device(model) for model in runner.LABELS}
+    assert devices == dict.fromkeys(runner.LABELS, "cpu")  # a CPU run trains everything on the CPU
+    probe.device = "gpu"  # no CUDA needed: only the device map is read
+    assert probe.training_device("lightgbm") == "cpu"  # DR-013 §1-§2
+    assert probe.training_device("catboost") == "gpu"
+    assert probe.training_device("ft_transformer") == "gpu"
+
+
+def test_the_record_names_the_running_fit(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A native abort ends the process without a Python handler: the checkpoint before each fit
+    leaves the running fit in the record."""
+    seen: list[str] = []
+
+    def aborted(_self: Any, *_args: Any, **_kwargs: Any) -> None:
+        record = json.loads((tmp_path / "abort" / "probe.json").read_text(encoding="utf-8"))
+        seen.append(record["run"]["stage"])
+        raise ModelError("native abort")
+
+    monkeypatch.setattr(LightGBMModel, "fit", aborted)
+    with pytest.raises(ModelError, match="native abort"):
+        run_small(tmp_path / "abort")
+    assert seen == ["fitting LGB-u cpu"]
 
 
 def test_a_failure_leaves_a_failed_record(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

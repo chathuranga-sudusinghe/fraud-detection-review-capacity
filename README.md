@@ -141,7 +141,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | [`config/models.yaml`](config/models.yaml) | Machine-readable DR-013 device and numerical settings and the recorded LightGBM build |
 | [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs (`features/`), model interface, configurations and device controls (`models/`); command `review-capacity` |
 | [`pyproject.toml`](pyproject.toml), [`uv.lock`](uv.lock), [`.python-version`](.python-version) | Pinned dependencies, locked environment (uv) and Python version |
-| [`evidence/`](evidence/gpu_probe/README.md) | Engineering evidence: GPU memory probe results (Issue #50) |
+| `evidence/` | Engineering evidence: [GPU memory probe results](evidence/gpu_probe/README.md) (Issue #50); [GPU acceptance probe records](evidence/gpu_acceptance_probe/README.md) (Issue #77) |
 | [`tests/`](tests/) | Unit tests on synthetic data; opt-in integration tests on the local processed development files (no raw file is read), subject to the execution rules in [`AGENTS.md`](AGENTS.md#experiment-execution-responsibility) |
 | [`notebooks/`](notebooks/README.md) | Data-understanding notebooks 01–04 |
 | [`scripts/`](scripts/) | Engineering scripts (GPU memory feasibility probe, Issue #50) |

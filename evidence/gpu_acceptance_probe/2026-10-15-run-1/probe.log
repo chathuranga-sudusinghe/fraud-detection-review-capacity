@@ -1,0 +1,22 @@
+2026-10-15 10:13:15 INFO    review_capacity.cli | review-capacity probe-gpu
+2026-10-15 10:13:17 INFO    review_capacity.cli | Project root: /home/chathuranga/projects/fraud-detection-review-capacity
+2026-10-15 10:13:20 INFO    review_capacity.models.device | LightGBM 4.7.0: the recorded CUDA build (SHA-256 716e9be697f5a703...)
+2026-10-15 10:13:20 INFO    review_capacity.probe.runner | Probe synthetic inputs ...
+2026-10-15 10:13:32 INFO    review_capacity.probe.runner | Probe synthetic inputs: done in 11.5 s
+2026-10-15 10:13:32 INFO    review_capacity.probe.runner | Probe dataset identity (C4) ...
+2026-10-15 10:13:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] Categorical features with more bins than the configured maximum bin number found.
+2026-10-15 10:13:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] For categorical features, max_bin and max_bin_by_feature may be ignored with a large number of categories.
+2026-10-15 10:13:35 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Saving data to binary file /tmp/tmpkpamyh3c/0-cpu.bin
+2026-10-15 10:13:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] Categorical features with more bins than the configured maximum bin number found.
+2026-10-15 10:13:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] For categorical features, max_bin and max_bin_by_feature may be ignored with a large number of categories.
+2026-10-15 10:13:40 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Saving data to binary file /tmp/tmpkpamyh3c/1-gpu.bin
+2026-10-15 10:13:40 INFO    review_capacity.probe.runner | Probe dataset identity (C4): done in 8.3 s
+2026-10-15 10:13:40 INFO    review_capacity.probe.runner | Probe tree-based models ...
+2026-10-15 10:13:42 INFO    review_capacity.models.lightgbm_model | Fit LGB-u on gpu (368632 Train rows, early stopping on 100000 V1 rows) ...
+2026-10-15 10:13:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] Categorical features with more bins than the configured maximum bin number found.
+2026-10-15 10:13:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] For categorical features, max_bin and max_bin_by_feature may be ignored with a large number of categories.
+2026-10-15 10:13:44 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Number of positive: 12986, number of negative: 355646
+2026-10-15 10:13:44 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Total Bins 114495
+2026-10-15 10:13:44 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Number of data points in the train set: 368632, number of used features: 433
+2026-10-15 10:13:44 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] [binary:BoostFromScore]: pavg=0.035228 -> initscore=-3.310064
+2026-10-15 10:13:44 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Start training from score -3.310064
