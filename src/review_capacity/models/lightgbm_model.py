@@ -3,10 +3,12 @@
 * **Inputs (DR-008 §5):** the canonical model inputs; the 49 categorical inputs, named from the
   feature declaration, become pandas categoricals with category lists fixed from Train rows only,
   so a category unseen in Train becomes missing, as in LightGBM's own prediction behaviour.
-* **Settings (DR-013 §2):** the shared and device-specific settings of ``config/models.yaml`` and
-  the run's seed. Hyperparameters are first mapped to canonical names with LightGBM's own alias
-  table; a hyperparameter naming a reserved setting stops the run. Reserved are the settings of
-  both device sections, the seed and every seed LightGBM derives from it, the categorical
+* **Device (DR-013 §1–§2):** training on the CPU only, with deterministic training; LightGBM's
+  CUDA learner fails on categorical features with more than 256 categories, so the GPU is refused.
+* **Settings (DR-013 §2):** the shared and CPU settings of ``config/models.yaml`` and the run's
+  seed. Hyperparameters are first mapped to canonical names with LightGBM's own alias table; a
+  hyperparameter naming a reserved setting stops the run. Reserved are the CPU settings, LightGBM's
+  device parameters, the seed and every seed LightGBM derives from it, the categorical
   declaration, LightGBM's own class weighting (``is_unbalance``, ``scale_pos_weight``), which
   would add to the protocol's explicit sample weights, and class-dependent bagging
   (``pos_bagging_fraction``, ``neg_bagging_fraction``), which is under-sampling. LightGBM passes
@@ -16,8 +18,8 @@
   printable ASCII characters that the library reads unchanged.
 * **Fitting:** with V1 early stopping, the hyperparameters (training rules) must set a positive
   ``num_iterations`` and ``early_stopping_round`` and an explicit ``metric``, so that no library
-  default decides them; with a fixed iteration count (the CPU refit of DR-013 §7), exactly that
-  many trees are grown without validation, or the run stops.
+  default decides them; with a fixed iteration count, exactly that many trees are grown without
+  validation, or the run stops.
 * **Prediction (DR-013 §5):** always through LightGBM's host (CPU) predictor, with the tree count
   the fitted model keeps and the CPU thread count of ``config/models.yaml``.
 * **Logging:** LightGBM's own messages, including its warnings, go to the run log; the fit is a
@@ -77,19 +79,34 @@ DERIVED_SEEDS = frozenset(
         "objective_seed",
     }
 )
+# LightGBM's device parameters: the device is fixed by DR-013 §2, never by a hyperparameter.
+DEVICE_PARAMETERS = frozenset(
+    {
+        "device_type",
+        "gpu_platform_id",
+        "gpu_device_id",
+        "gpu_device_id_list",
+        "num_gpu",
+        "gpu_use_dp",
+    }
+)
 # Reserved besides the device settings: the seeds, the categorical declaration (from the feature
 # declaration), LightGBM's own class weighting and class-dependent bagging (under-sampling): the
 # protocol's class weights are explicit, and resampling is excluded.
-RESERVED = DERIVED_SEEDS | {
-    "seed",
-    "categorical_feature",
-    "is_unbalance",
-    "scale_pos_weight",
-    "pos_bagging_fraction",
-    "neg_bagging_fraction",
-}
+RESERVED = (
+    DERIVED_SEEDS
+    | DEVICE_PARAMETERS
+    | {
+        "seed",
+        "categorical_feature",
+        "is_unbalance",
+        "scale_pos_weight",
+        "pos_bagging_fraction",
+        "neg_bagging_fraction",
+    }
+)
 DISABLED_METRICS = frozenset({"none", "null", "na", "custom"})
-TRAINING_DEVICE_TYPES = {"cpu": "cpu", "gpu": "cuda"}
+TRAINING_DEVICE_TYPES = {"cpu": "cpu"}
 
 
 @cache
@@ -302,7 +319,7 @@ def _manifest_fields(
 
 
 class LightGBMModel(ScoringModel):
-    """LightGBM on the common interface: GPU (CUDA) or CPU training, CPU prediction."""
+    """LightGBM on the common interface: CPU training and CPU prediction (DR-013 §2)."""
 
     def __init__(
         self,
@@ -316,6 +333,11 @@ class LightGBMModel(ScoringModel):
         super().__init__(configuration, seed, settings=settings, features=features, device=device)
         if configuration.model.name != "lightgbm":
             raise ValueError(f"{configuration.name} is not a LightGBM configuration")
+        if device not in TRAINING_DEVICE_TYPES:
+            raise SpecificationError(
+                "LightGBM trains on the CPU only (DR-013 §2: its CUDA learner fails on "
+                f"categorical features above 256 categories), not on {device!r}"
+            )
         self._booster: Any = None
         self._categories: dict[str, list[str]] = {}
         self._requested: dict[str, Any] = {}
@@ -325,8 +347,7 @@ class LightGBMModel(ScoringModel):
         return {**self.settings.lightgbm.params(self.device), "seed": self.seed}
 
     def _reserved(self) -> set[str]:
-        lightgbm = self.settings.lightgbm
-        return set(lightgbm.params("cpu")) | set(lightgbm.params("gpu")) | RESERVED
+        return set(self.settings.lightgbm.params("cpu")) | RESERVED
 
     def _prediction_threads(self) -> int:
         return int(self.settings.lightgbm.params("cpu")["num_threads"])

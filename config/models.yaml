@@ -1,13 +1,21 @@
 # Device and numerical settings of the eight configurations: the machine-readable form of
 # DR-013 (docs/decisions/DR-013-training-device-policy.md), read by review_capacity.config.
 # Hyperparameter values and search spaces are fixed in the training rules, not here.
-# Each library has settings shared by both devices and settings for each device. A shared key
-# must not also appear in a device section; a key may appear in both device sections with
-# device-specific values. The code (review_capacity.config) fixes which keys each section must
+# training_devices fixes the device each model trains on (DR-013 §1). Each tree library has shared
+# settings and settings for each device it supports: LightGBM trains on the CPU only (DR-013 §2:
+# its CUDA learner fails on categorical features above 256 categories), CatBoost on the GPU with a
+# CPU section for the supportive refit (DR-013 §7). A shared key must not also appear in a device
+# section; a key may appear in both device sections with device-specific values. The code (review_capacity.config) fixes which keys each section must
 # declare and their types, so that no setting can fall back silently to a library default.
 
 reproducibility:
   main_seed: 42                     # DR-013 §6; additional seeds: training rules
+
+training_devices:                   # DR-013 §1
+  lightgbm: cpu
+  catboost: gpu
+  resnet: gpu
+  ft_transformer: gpu
 
 lightgbm:
   build:                            # DR-013 §2: verified at start-up of every run
@@ -20,8 +28,8 @@ lightgbm:
     bin_construct_sample_cnt: 200000
     enable_bundle: false
     is_enable_sparse: false
-    force_row_wise: true
-    force_col_wise: false
+    force_row_wise: false
+    force_col_wise: true            # DR-013 §2: many columns and bins, 24 threads
     feature_pre_filter: false
     use_missing: true
     zero_as_missing: false
@@ -30,12 +38,7 @@ lightgbm:
     forcedsplits_filename: ""
     forcedbins_filename: ""
     histogram_pool_size: -1
-  gpu:
-    device_type: cuda
-    gpu_device_id: 0
-    num_gpu: 1
-    gpu_use_dp: true
-  cpu:                              # supportive CPU refit (DR-013 §7)
+  cpu:                              # the training device (DR-013 §2)
     device_type: cpu
     deterministic: true
     num_threads: 24
