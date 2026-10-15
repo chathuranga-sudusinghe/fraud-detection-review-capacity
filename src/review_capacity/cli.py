@@ -15,18 +15,25 @@ Commands:
                    the verified processed development file (no labels, no raw file); report
                    only, nothing is removed (--save: also write the counts with their provenance
                    to the processed directory)
+    probe-gpu      the GPU acceptance probe of DR-013 §8 (docs/gpu-acceptance-probe.md), on
+                   synthetic data only: all eight configurations on the GPU, the checks C1-C13
+                   and the tolerances T1-T4; writes probe.json, the generated probe.md, the
+                   comparison files and its log, always probe.log (--log-file is refused), to
+                   --output, a new directory. A first run ends as "pending second run"; a second
+                   run, in a fresh process and its own directory, with --previous (the first
+                   run's probe.json), completes the comparison
 
 Every message is logged with a timestamp to the terminal and, with --log-file PATH, also to a
 file kept with the run's evidence. --verbose adds detail; --quiet shows warnings and errors only.
 
-Exit codes: 0 success; 1 profile-data found differences; 2 configuration or project-root error;
-3 data-validation error; 4 sealed Test period; 5 file access (a required file cannot be read or an
-output or log file cannot be written); 6 environment mismatch (for example, a LightGBM library
-that is not the recorded build); 7 model failure (a model failed to fit or produced invalid
-output); 130 interrupted. An expected failure is summarised in one line with its exit code (steps
-that were running also log that they failed); the log file always keeps its traceback and cause,
-the terminal only with --debug. Any other error is a defect: it is logged with its traceback and
-raised.
+Exit codes: 0 success (for probe-gpu: pass, or pending second run); 1 profile-data found
+differences, or probe-gpu did not pass; 2 configuration or project-root error; 3 data-validation
+error; 4 sealed Test period; 5 file access (a required file cannot be read or an output or log file
+cannot be written); 6 environment mismatch (for example, a LightGBM library that is not the
+recorded build); 7 model failure (a model failed to fit or produced invalid output); 130
+interrupted. An expected failure is summarised in one line with its exit code (steps that were
+running also log that they failed); the log file always keeps its traceback and cause, the terminal
+only with --debug. Any other error is a defect: it is logged with its traceback and raised.
 """
 
 from __future__ import annotations
@@ -56,6 +63,7 @@ from review_capacity.files import write_atomically, write_json
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import configure_logging
 from review_capacity.paths import ProjectPaths
+from review_capacity.probe.records import LOG_NAME, check_output
 from review_capacity.provenance import code_provenance, write_record
 
 logger = logging.getLogger(__name__)
@@ -200,6 +208,43 @@ def _audit_duplicates(args: argparse.Namespace) -> int:
     return 0
 
 
+def _probe_paths(args: argparse.Namespace, paths: ProjectPaths) -> tuple[Path, Path | None]:
+    """The output directory and the first run's record, relative paths taken from the root."""
+    output: Path = args.output if args.output.is_absolute() else paths.root / args.output
+    previous: Path | None = args.previous
+    if previous is not None and not previous.is_absolute():
+        previous = paths.root / previous
+    return output, previous
+
+
+def _probe_gpu(args: argparse.Namespace) -> int:
+    from review_capacity.probe.runner import run_probe  # PyTorch and both tree libraries
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    output, previous = _probe_paths(args, paths)
+    record = run_probe(paths, output, previous=previous, log_opened=True)
+    logger.info("Probe result: %s", record["overall"])
+    return 0 if record["overall"] in ("pass", "pending second run") else EXIT_DIFFERENCES
+
+
+def _log_file(args: argparse.Namespace) -> Path | None:
+    """The log file: ``--log-file``; for ``probe-gpu`` always ``probe.log`` in its output directory
+    (Section 5 of the probe specification), and only once the directory is shown to be free for a
+    new run, so that no earlier run's log is ever written to. Raises before any file is opened."""
+    if args.command != "probe-gpu":
+        log_file: Path | None = args.log_file
+        return log_file
+    if args.log_file is not None:
+        raise SpecificationError(
+            f"probe-gpu writes its log to {LOG_NAME} in its output directory; omit --log-file"
+        )
+    paths = ProjectPaths.discover(args.root)
+    output, previous = _probe_paths(args, paths)
+    check_output(output, previous)
+    return output / LOG_NAME
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="review-capacity",
@@ -243,6 +288,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--save", action="store_true", help="also write the counts to data/processed/"
     )
     duplicates.set_defaults(handler=_audit_duplicates)
+    probe = commands.add_parser(
+        "probe-gpu",
+        help="run the GPU acceptance probe of DR-013 §8 on synthetic data",
+    )
+    probe.add_argument("--root", type=Path, default=None, help="project root directory")
+    probe.add_argument(
+        "--output", type=Path, required=True, help="directory for this run's records"
+    )
+    probe.add_argument(
+        "--previous",
+        type=Path,
+        default=None,
+        help="the first run's probe.json, to compare a second run with it (check C11)",
+    )
+    probe.set_defaults(handler=_probe_gpu)
     return parser
 
 
@@ -257,8 +317,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     level = logging.DEBUG if args.verbose else logging.WARNING if args.quiet else logging.INFO
     handler: Callable[[argparse.Namespace], int] = args.handler
+    probe = args.command == "probe-gpu"
     try:
-        configure_logging(level, args.log_file, terminal_tracebacks=args.debug)
+        configure_logging(level, terminal_tracebacks=args.debug)  # until the log file is known
+        configure_logging(
+            level,
+            _log_file(args),
+            terminal_tracebacks=args.debug,
+            # the probe's log is part of its evidence: complete even with --quiet, and new
+            file_level=min(level, logging.INFO) if probe else None,
+            new_file=probe,
+        )
         logger.info("review-capacity %s", args.command)
         return handler(args)
     except ReviewCapacityError as error:

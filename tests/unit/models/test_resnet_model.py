@@ -464,7 +464,8 @@ def _edit(key: str, value: Any) -> Callable[[dict[str, Any]], None]:
 @pytest.mark.parametrize(
     ("edit", "message"),
     [
-        (_edit("format_version", 2), "format version"),
+        (_edit("format_version", 1), "format version"),  # version 1 has no train_seconds
+        (_edit("format_version", 3), "format version"),
         (_edit("library_version", "2.10.0"), "does not match"),
         (_edit("seed", 7), "does not match"),
         (_edit("seed", 42.0), "integer"),
@@ -487,6 +488,7 @@ def _edit(key: str, value: Any) -> Callable[[dict[str, Any]], None]:
         (lambda manifest: manifest["training"]["history"][0].pop("v1_score"), "history entry 1"),
         (lambda manifest: manifest["training"]["history"][1].update(train_loss=None), "entry 2"),
         (lambda manifest: manifest["training"]["history"][0].update(seconds=10**400), "entry 1"),
+        (lambda manifest: manifest["training"]["history"][0].update(train_seconds=1e9), "entry 1"),
         (lambda manifest: manifest["training"].update(optimizer=None), "'optimizer' is malformed"),
         (lambda manifest: manifest["training"]["schedule"].pop("stop"), "schedule is malformed"),
         (_edit_record("optimizer", "lr", 0.5), "optimiser settings"),
