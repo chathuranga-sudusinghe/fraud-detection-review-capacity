@@ -16,12 +16,14 @@ Commands:
                    only, nothing is removed (--save: also write the counts with their provenance
                    to the processed directory)
     probe-gpu      the GPU acceptance probe of DR-013 §8 (docs/gpu-acceptance-probe.md), on
-                   synthetic data only: all eight configurations on the GPU, the checks C1-C13
-                   and the tolerances T1-T4; writes probe.json, the generated probe.md, the
-                   comparison files and its log, always probe.log (--log-file is refused), to
-                   --output, a new directory. A first run ends as "pending second run"; a second
-                   run, in a fresh process and its own directory, with --previous (the first
-                   run's probe.json), completes the comparison
+                   synthetic data only: all eight configurations on their training devices
+                   (DR-013 §1), the checks C1-C13 and the tolerances T1-T4; writes probe.json,
+                   the generated probe.md, the comparison files and its log, always probe.log
+                   (--log-file is refused), to a new directory: --output, or by default
+                   outputs/gpu_acceptance_probe/<UTC start time, YYYY-MM-DDTHHMMSSZ>/ (ignored
+                   by Git). A first run ends as "pending second run"; a second run, in a fresh
+                   process and its own directory, with --previous (the first run's
+                   probe.json), completes the comparison
 
 Every message is logged with a timestamp to the terminal and, with --log-file PATH, also to a
 file kept with the run's evidence. --verbose adds detail; --quiet shows warnings and errors only.
@@ -41,6 +43,7 @@ from __future__ import annotations
 import argparse
 import logging
 from collections.abc import Callable, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 from review_capacity.config import load_dataset_spec, load_feature_spec
@@ -69,6 +72,8 @@ from review_capacity.provenance import code_provenance, write_record
 logger = logging.getLogger(__name__)
 
 EXIT_DIFFERENCES = 1
+# Run outputs stay inside the repository, in Git-ignored, dated directories (Issue #96)
+PROBE_OUTPUT_ROOT = Path("outputs") / "gpu_acceptance_probe"
 EXIT_CODES: tuple[tuple[type[ReviewCapacityError], int], ...] = (
     (SpecificationError, 2),
     (ProjectRootNotFoundError, 2),
@@ -209,7 +214,12 @@ def _audit_duplicates(args: argparse.Namespace) -> int:
 
 
 def _probe_paths(args: argparse.Namespace, paths: ProjectPaths) -> tuple[Path, Path | None]:
-    """The output directory and the first run's record, relative paths taken from the root."""
+    """The output directory and the first run's record, relative paths taken from the root.
+    Without ``--output``, a new directory named by the UTC start time under
+    ``PROBE_OUTPUT_ROOT``; it is fixed on ``args`` at the first call, so that the log file and
+    the run use the same directory."""
+    if args.output is None:
+        args.output = PROBE_OUTPUT_ROOT / datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
     output: Path = args.output if args.output.is_absolute() else paths.root / args.output
     previous: Path | None = args.previous
     if previous is not None and not previous.is_absolute():
@@ -294,7 +304,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     probe.add_argument("--root", type=Path, default=None, help="project root directory")
     probe.add_argument(
-        "--output", type=Path, required=True, help="directory for this run's records"
+        "--output",
+        type=Path,
+        default=None,
+        help=f"new directory for this run's records (default: {PROBE_OUTPUT_ROOT}/<UTC time>)",
     )
     probe.add_argument(
         "--previous",
