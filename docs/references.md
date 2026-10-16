@@ -112,6 +112,7 @@ Initial evidence base: the reference list of `notebooks/01_dataset_feasibility_a
 | <a id="ref-102"></a>REF-102 | San Miguel Carrasco, R. & Sicilia-Urban, M.-A. (2020) 'Evaluation of deep neural networks for reduction of credit card fraud alerts', *IEEE Access*, 8, pp. 186421–186432. | doi:10.1109/ACCESS.2020.3026222 | Journal article | Analyst workload: deep networks discard false-positive alerts, keeping 91.79 % of fraud cases with 35.16 % fewer alerts | Verified | Crossref. Only the abstract was read |
 | <a id="ref-125"></a>REF-125 | Martinez, I., Viles, E. & Olaizola, I.G. (2021) 'Data science methodologies: current challenges and future approaches', *Big Data Research*, 24, 100183. | doi:10.1016/j.bdr.2020.100183 | Journal article (critical review of 19 methodologies) | DR-014: the methodology published by International Business Machines Corporation (IBM) (REF-085) extends CRISP-DM (Cross-Industry Standard Process for Data Mining) with new practices and ten phases instead of six; its reported gaps (team roles, reproducibility, knowledge accumulation, data security); CRISP-DM's six phases and age; Microsoft TDSP's (Team Data Science Process) dependence on Microsoft services | Verified | Crossref. Abstract and §§1, 3, 4.1, 4.2 and 4.14 read on 13 October 2026 in the authors' arXiv version (arXiv:2106.07287v2) |
 | <a id="ref-126"></a>REF-126 | Saltz, J.S. & Krasteva, I. (2022) 'Current approaches for executing big data science projects—a systematic literature review', *PeerJ Computer Science*, 8, e862. | doi:10.7717/peerj-cs.862 | Journal article (systematic literature review) | DR-014: the IBM methodology (REF-085) and TDSP as recent methodologies evolved from data-mining process models; CRISP-DM as the most commonly used framework and de facto standard | Verified | Crossref. Full text retrieved on 13 October 2026 through Europe PMC (PubMed Central article identifier PMC9044260); the passages naming process methodologies were read. The IBM methodology is named in the introduction only |
+| <a id="ref-128"></a>REF-128 | Bergstra, J. & Bengio, Y. (2012) 'Random search for hyper-parameter optimization', *Journal of Machine Learning Research*, 13(10), pp. 281–305. | https://jmlr.org/papers/v13/bergstra12a.html | Journal article | DR-015: randomly chosen trials are more efficient for hyper-parameter optimisation than trials on a grid (abstract); basis for random search rather than a predefined grid | Verified | Publisher record (Journal of Machine Learning Research, JMLR) checked on 16 October 2026: title, authors, volume, article number, pages and year; abstract read. The publisher record displays no DOI |
 
 ## 2. Books and book chapters
 
@@ -223,7 +224,8 @@ The notebook text itself is unaffected: it already flags L46/L47 for verificatio
 - 14 October 2026 (REF-103 FT-Transformer code and tuning configuration, REF-087 Section 3.3 and Appendix E.1–E.3, and the REF-121 attention head-size checks; Issue #94);
 - 14 October 2026 (REF-117 Dataset binary serialisation and REF-119 `metric_period` warning condition; Issue #77);
 - 15 October 2026 (REF-127 LightGBM CUDA categorical defect: issue reports, proposed fix and source at four release tags; REF-116 parameter descriptions of `deterministic`, `num_threads`, `force_row_wise`, `force_col_wise`, `histogram_pool_size`, `is_enable_sparse` and `enable_bundle` re-read; Issue #101);
-- 15 October 2026 (REF-117 `dataset_loader.cpp` categorical bin warnings; Issue #77).
+- 15 October 2026 (REF-117 `dataset_loader.cpp` categorical bin warnings; Issue #77);
+- 16 October 2026 (REF-128 added; REF-087 tuning paragraph of the experimental setup, Appendix D.2 and Tables 13–17, and REF-089 experimental design and additional hyperparameter-optimisation appendix re-read for their tuning budgets; Issue #105).
 
 ## Symbols and notation
 
@@ -246,6 +248,7 @@ The notebook text itself is unaffected: it already flags L46/L47 for verificatio
 | FT-Transformer | Feature Tokenizer + Transformer model for tabular data (REF-087) |
 | HIGGS | Large public physics benchmark dataset (REF-090) |
 | IJCNN | International Joint Conference on Neural Networks |
+| JMLR | Journal of Machine Learning Research (REF-128) |
 | k | Number of alerts (or cards) investigators can check per day (REF-086) |
 | `32k+1` | Source notation in the title of LightGBM issue #6784 (REF-127): a category count one greater than a positive multiple of 32; this k is an integer multiplier, not the alert capacity above |
 | `max_cat_value` | Largest stored categorical integer value in LightGBM's CUDA bitset allocation `(max_cat_value + 31) / 32` (REF-127) |
