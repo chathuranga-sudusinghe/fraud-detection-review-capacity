@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted |
-| Date | 2026-09-23 (Issue #6); revised 2026-10-09 (Issue #57: AI assistants) and 2026-10-11 (Issue #68: command execution and assistant roles) |
+| Date | 2026-09-23 (Issue #6); revised 2026-10-09 (Issue #57: AI assistants), 2026-10-11 (Issue #68: command execution and assistant roles) and 2026-10-16 (Issue #92: decision capture) |
 | Evidence source | Project governance (GitHub Issue #6); GitHub documentation on linking pull requests to issues |
 | Related | [`AGENTS.md`](../../AGENTS.md), [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
@@ -35,6 +35,8 @@ These risks matter most before the protocol freeze, when research questions, hyp
 **Every meaningful research, documentation or implementation change must start with a GitHub Issue.**
 
 The working rules that put this into practice, for the student and for every AI assistant, are recorded in the root [`AGENTS.md`](../../AGENTS.md).
+
+**Every decision reached with an AI assistant is recorded in the repository or its GitHub issues, never only in a chat session or an assistant's memory.** A finalized decision enters its owner file through the active issue the same day, or an issue comment where no issue covers it yet; open items are listed in the issue that will decide them; assistants read the owner files and open issues before asking about a design item; and each working session ends with a "current state / next step" comment on the active issue. The operational rule is the "Decision capture" section of [`AGENTS.md`](../../AGENTS.md#decision-capture).
 
 **Claude, Codex and ChatGPT are recorded as the AI-assisted research and implementation tools used in this project.** Their output is never accepted automatically. The student reviews, checks and corrects it, and discloses AI use according to University of Greenwich requirements (AI Reflection, AIR; `REF-053` in [`../references.md`](../references.md)).
 
@@ -96,10 +98,12 @@ Tiny **typo-only** fixes may be made without an issue: spelling, punctuation or 
 | Informal direct commits to `main` | No review step and no link between a change and its purpose. Methodology drift before the freeze would be hard to reconstruct. |
 | Branches and PRs without issues | Records *what* changed but not the objective or acceptance criteria stated beforehand. Weaker as evidence that decisions came before results. |
 | Decision Records only, without issues | Covers methodology but not code, data handling, references or documentation structure. It also gives no scoping mechanism for AI-assisted work. |
+| Decisions kept in chat sessions or in an assistant's own memory until a later write-up | Invisible to other assistants and to new sessions, so settled items are re-discussed; undated, so not evidence of when a decision was made. |
 
 ## Rationale
 
 - **Traceability.** Every change links to a stated objective (issue), a reviewed diff (PR) and, for methodology, a Decision Record. Together these form an auditable timeline of what was decided before the Test period is unsealed. That timeline supports the protocol freeze and its Git tag.
+- **Continuity across sessions and assistants.** Several assistants and many chat sessions work on the same design. Recording each decision where every assistant reads (owner files and issues) keeps settled items settled and makes the decision date part of the record.
 - **Scope control for AI assistance.** An issue gives an AI assistant a bounded task and gives the student a checklist to review against. This reduces unrelated or unreviewed edits.
 - **Research integrity.** A dated issue and PR history is concrete evidence that model, policy and threshold choices were not informed by Test results. This is consistent with the University's commitment to the Concordat to Support Research Integrity (`REF-052`) and with the requirement to disclose AI use (`REF-053`).
 
