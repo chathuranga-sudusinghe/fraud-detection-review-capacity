@@ -4,7 +4,7 @@
 
 **Working protocol — pre-freeze. Not yet confirmatory.**
 
-This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-014).
+This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-015).
 
 The remaining items are listed under [Design items before protocol freeze](#design-items-before-protocol-freeze). The protocol becomes confirmatory only when every item is resolved and the file is tagged in Git.
 
@@ -266,9 +266,27 @@ The model set is fixed by DR-011; no further model families are added.
    - neural: the representation of [DR-012](decisions/DR-012-neural-network-input-representation.md) (proposed), weighted binary cross-entropy, bf16 mixed-precision training and float32 prediction on the graphics processing unit (GPU; [DR-013](decisions/DR-013-training-device-policy.md)).
 3. **Model-specific:** each model's architecture and internal computation (self-attention, residual blocks, ordered target statistics, leaf-wise growth), its training device ([DR-013](decisions/DR-013-training-device-policy.md) §1: LightGBM on the central processing unit (CPU), the other models on the GPU) and its own search space (neural models: the large-dataset spaces (B) of REF-087, used by the authors for datasets of this size), tuned under the Level 1 method and budget.
 
-**Seeds.** All eight configurations use the main seed 42, fixed before any model run, and every main result is computed with it. A common list of additional seeds, identical for all configurations, measures stochastic training variation only; it never replaces the main seed and is not used for model selection ([DR-013](decisions/DR-013-training-device-policy.md) §6). Before the development runs, the training rules fix which stages the additional seeds repeat (the hyperparameter search, or refits at the selected hyperparameters with or without early stopping) and the partition on which seed sensitivity is evaluated.
+**Training rules** ([DR-015](decisions/DR-015-common-training-rules.md); identical for all eight configurations):
 
-The values of the remaining elements (search method, budget, objective, patience, the list of additional seeds, tie rule for equal scores) are fixed in the training rules before the development runs ([Design items](#design-items-before-protocol-freeze)).
+- **Search:** random search with **10 trials per configuration**. Trial 1 is the model's reference configuration; trials 2–10 are drawn from its search space. Each model's candidate list (10 ordered candidates) is generated before any fit and recorded before any V1 result is seen. Sampling uses `numpy.random.default_rng` with the PCG64 bit generator and sampler seed 42. One independent child stream per model is created using `SeedSequence.spawn`, assigned in DR-011 model order (LightGBM, CatBoost, ResNet-style MLP, FT-Transformer). The sampler streams are separate from the training seeds. The unweighted and balanced configurations of a model use the same list. No additional, repeated or replacement trial enters selection after V1 results are seen, and no configuration receives a budget extension. The separate reproducibility checks (Seeds, below) do not alter selection. The search spaces and reference configurations are fixed in Issues #106 (tree-based) and #107 (neural).
+- **Early stopping within each trial:** the V1 objective is evaluated after every boosting round or epoch; training follows the family-specific stopping conditions below, or stops at the maximum; the earliest best checkpoint is retained.
+  - Tree-based: patience 50 boosting rounds (stopping after 50 consecutive rounds without improvement), maximum 2,000 rounds.
+  - Neural: patience 5 epochs (stopping at the sixth consecutive epoch without improvement), maximum 15 epochs.
+- **V1 objective:** V1 Recall@2% under daily top-K review, unweighted, for both weightings. Each V1 relative day's 62 highest-ranked transactions count as reviewed:
+
+  $$
+  \begin{aligned}
+  K_{\mathrm{V1}} &= \operatorname{round}\left(0.02 \times \frac{N_{\mathrm{V1}}}{D_{\mathrm{V1}}}\right) \\
+  &= \operatorname{round}\left(0.02 \times \frac{65{,}544}{21}\right) \\
+  &= 62
+  \end{aligned}
+  $$
+
+  where `K_V1` = daily review count for tuning on V1, `N_V1` = number of V1 transactions and `D_V1` = number of V1 relative days. The objective is the frauds captured in the daily top-62 queues, summed over the 21 days, divided by all V1 frauds. It drives both early stopping and trial selection. `K_V1` is used for tuning only; the daily review budget remains K = 56 from V2 volume ([DR-002](decisions/DR-002-review-capacity-definition.md)).
+- **Ties:** improvement is strict, and equality counts as no improvement. Equal values keep the earliest checkpoint, and equal best trials select the lowest trial number. Comparisons use exact values without rounding or tolerance; no other metric is a secondary selection criterion. Equal scores in review queues follow the R3 tie rule ([Decision Policies](#r3--daily-top-k)).
+- **Implementation and records:** one shared scorer computes the V1 objective for all eight configurations; the CatBoost GPU learner's user-defined evaluation path requires an adapter change and synthetic verification before any development run. Each trial records its retained checkpoint, stopping round or epoch, stopping reason and runtime; a selected trial that reached its maximum is reported as such.
+
+**Seeds.** All eight configurations use the main seed 42 for every search trial and every main result. The additional seeds **43 and 44** repeat each configuration's selected hyperparameters on Train at its retained round or epoch count, without early stopping: 16 refits, without repeating the search. One further fresh-process refit per configuration with seed 42 at the same length gives the same-seed repeats (8 refits): identical scores are expected for LightGBM and the neural models, and CatBoost's GPU differences are measured. All refits are evaluated on V2 only, by Recall@2% under R3 with the same daily budget K. The range over seeds 42, 43 and 44 is compared descriptively with the SESOI of 2 percentage points. The refits never replace the main-seed models and never influence model selection, the H3 configuration or any other decision ([DR-013](decisions/DR-013-training-device-policy.md) §6; [DR-015](decisions/DR-015-common-training-rules.md) §4).
 
 **Training environment.** CatBoost and both neural models (six configurations) train on the local GPU (8 gigabytes) through CUDA (NVIDIA's GPU computing platform). The two LightGBM configurations train on the local CPU (24 cores) with deterministic training, following the documented failure of the pinned CUDA learner on categorical features with more than 256 categories ([DR-013](decisions/DR-013-training-device-policy.md) §2). All configurations use the model-specific precision and device settings, scoped determinism rules and prediction backends specified in [DR-013](decisions/DR-013-training-device-policy.md); a synthetic acceptance probe must confirm the required capabilities before development runs ([`gpu-acceptance-probe.md`](gpu-acceptance-probe.md)). The engineering probe of Issue #50 (synthetic tensors) covered the width and depth grid of the FT-Transformer space (B), with its feed-forward size factor of 4/3. Under these settings, at 431 input tokens, FT-Transformer fits at batch sizes 512 (default setting) to 128 (largest setting); at 800 input tokens the largest setting fits at batch size 64, and at 128 with gradient checkpointing. float32 with standard attention runs out of memory for the larger settings ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) §4).
 
@@ -390,6 +408,8 @@ Purpose: object of RQ2/H3. Is a static validation-selected operating point trans
 Review the K highest-scoring transactions within each relative day.
 
 Purpose: ranking-quality benchmark at full capacity, used for H1/H2. Note that it is an idealised end-of-day batch policy, not a streaming policy [REF-033].
+
+**Tie rule.** Within each relative day, transactions are ranked by raw score, descending, compared exactly without rounding or grouping near-equal scores. Exactly equal scores are ordered by the SHA-256 (Secure Hash Algorithm, 256-bit) hexadecimal digest of the decimal `TransactionID` string encoded in UTF-8 (Unicode Transformation Format, 8-bit), ascending; identical digests are resolved by `TransactionID` ascending. The rule applies to the V1 objective, R3 and R4 for every configuration, seed and capacity. It is fixed, reproducible and label-free, without the time bias of ordering by `TransactionID` alone. It is not used to split ties within whole-ranking metrics or as a model input. The number of days with ties crossing the cutoff, and the sizes of those tied groups, are reported ([DR-015](decisions/DR-015-common-training-rules.md) §5).
 
 R3 is the explicit **hard-capacity** policy: it reviews min(K, N_d) transactions per day, where N_d is the day's transaction volume. It therefore has no overflow by construction. It also has no unused capacity, because the feasibility audit's label-free volume inspection recorded at least 2,048 transactions on every relative day (≥ K for every capacity scenario; notebook §3). R0–R2, by contrast, describe threshold-generated **demand**, which may lie above or below K (DR-009).
 
@@ -711,6 +731,7 @@ Artificial intelligence (AI) assistance used in this project will be declared at
 | Overflow rule | Report-only: R0–R2 evaluated uncapped; demand, overflow, unused capacity and load ratio against K | [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md) |
 | H3 configuration | Highest pooled V2 Recall@2% under R3 among eight configurations; committed before Test access | [DR-010](decisions/DR-010-h3-confirmatory-configuration.md) |
 | Model set | LightGBM, CatBoost, ResNet-style MLP, FT-Transformer × unweighted/balanced; common-procedure fairness | [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) |
+| Common training rules | Random search, 10 trials per configuration (trial 1 = reference configuration; one candidate list per model for both weightings); early stopping: trees 50 / 2,000 rounds, neural 5 / 15 epochs; V1 objective V1 Recall@2% (daily top-62, unweighted); seeds 42 (search and main results), 43 and 44 (descriptive refits); exact tie rules, R3 cutoff ties by SHA-256 of `TransactionID` | [DR-015](decisions/DR-015-common-training-rules.md) |
 | Data-use terms | Non-commercial academic use (Rules Section 7A); no redistribution (Section 7B); raw and row-level data stay local | [`dataset.md`](dataset.md#data-use-terms) |
 | Ethics and governance | Topic approval received; no ethics application required (supervisor's written guidance, 3 October 2026; Issue #31); no formal ethics approval, exemption or identifier claimed | [Ethics](#ethics) |
 
@@ -720,7 +741,7 @@ Artificial intelligence (AI) assistance used in this project will be declared at
 |---|---|---|
 | 1 | University of Greenwich criteria | Resolved (Issue #63): requirements mapped in the [criteria checklist](greenwich-criteria-checklist.md); supervisor feedback on the design (DR-001–DR-014) welcome, not a precondition (Issue #56) |
 | 2 | Neural-network input representation | [DR-012](decisions/DR-012-neural-network-input-representation.md), proposed: vocabularies with reserved `"__MISSING__"` and category dropout, quantile transformation with the reference-implementation noise formula and 1,000 quantiles [REF-103], missingness indicators; one fixed noise seed shared by all neural configurations (value fixed in the training rules); inputs constant in Train need no special rule; an input entirely missing in Train stops data preparation |
-| 3 | Training rules | Search method and budget, V1 objective, early-stopping rule, the list of additional seeds (main seed 42 fixed), tie rule for equal scores, calibration details |
+| 3 | Training rules | Common rules resolved (Issue #105): search method and budget, early stopping, V1 objective, seeds and tie rules ([DR-015](decisions/DR-015-common-training-rules.md)). Open: the search spaces and reference configurations (Issues #106, #107) and the calibration details (Issue #91) |
 | 4 | Feature-engineering policy | Resolved (Issue #64): declared inputs plus the two time-of-day inputs; no other engineered feature ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §4) |
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
 | 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Resolved as a working basis (Issue #63): Tier 2, AIR at submission [REF-109, REF-111]; tier to be confirmed against the COMP1885 assessment brief |
@@ -756,6 +777,7 @@ After that point the protocol is tagged in Git before the final Test evaluation.
 - [DR-012 — Neural-network input representation](decisions/DR-012-neural-network-input-representation.md) (proposed)
 - [DR-013 — Training-device policy](decisions/DR-013-training-device-policy.md)
 - [DR-014 — Research-methodology framing](decisions/DR-014-research-methodology-framing.md)
+- [DR-015 — Common training rules](decisions/DR-015-common-training-rules.md)
 
 ## References
 
@@ -821,6 +843,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | IBM | International Business Machines Corporation, publisher of the methodology framework of REF-085 |
 | J_π(ρ) | Scenario cost of policy π, in units of one review cost |
 | K | Fixed daily review budget (28 / 56 / 139 / 278 reviews per relative day) |
+| `K_V1`, `N_V1`, `D_V1` | Daily review count for tuning on V1 (62); number of V1 transactions (65,544); number of V1 relative days (21) |
 | ℓ | Block length of a moving-block bootstrap, in days |
 | n_d | Number of transactions on day d with score ≥ τ₂ (for confirmatory H3, the H3 configuration's score and τ₂) |
 | N_d | Total number of transactions on day d (volume; not to be confused with N_π) |
@@ -833,6 +856,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | pp | Percentage points |
 | PII | Personally identifiable information |
 | Parquet | Column-oriented file format of the local processed development files ([`dataset.md`](dataset.md#data-access-after-the-parquet-build)) |
+| PCG64 | NumPy bit generator fixed for hyperparameter sampling |
 | PR-AUC | Precision–Recall Area Under the Curve |
 | Precision@K | Share of reviewed transactions that are fraud |
 | r | Realised Test alert rate at τ₂, pooled over Test days; in confirmatory H3, r = r^f*,w* (H3 configuration only) |
@@ -852,6 +876,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | SE | Standard error |
 | SESOI | Smallest Effect Size Of Interest (2 percentage points of Recall@2%) |
 | SHA-256 | Secure Hash Algorithm, 256-bit |
+| UTF-8 | Unicode Transformation Format, 8-bit |
 | sin, cos | Sine and cosine functions |
 | SMOTE | Synthetic Minority Over-sampling Technique |
 | sup | Supremum: the largest value (least upper bound) of a set |
