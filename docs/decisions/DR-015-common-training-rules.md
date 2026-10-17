@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) through Issues #105, #106, #107 and #112, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-10-16 (Issue #105: common rules; Issue #106: tree-based search spaces and reference configurations; Issue #107: neural search spaces, reference configurations and training values); 2026-10-17 (Issue #112: neural preprocessing seed) |
+| Status | Accepted (pre-freeze) through Issues #105, #106, #107, #112 and #115, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Date | 2026-10-16 (Issue #105: common rules; Issue #106: tree-based search spaces and reference configurations; Issue #107: neural search spaces, reference configurations and training values); 2026-10-17 (Issue #112: neural preprocessing seed; Issue #115: logistic-regression reference search, §8) |
 | Evidence source | Gorishniy et al. [REF-087] and McElfresh et al. [REF-089] (tuning protocols, read in full); Bergstra and Bengio [REF-128]; the tree-based tuning spaces of Prokhorenkova et al. [REF-012, arXiv v5 Appendix D.2], Gorishniy et al. [REF-087, Table 17; REF-129, Tables 23–24] and the TabZilla code [REF-130]; LightGBM and CatBoost documentation and source code [REF-116; REF-118; REF-119]; the neural spaces, defaults and batch sizes of REF-087 (Tables 7 and 12–14), the authors' tuning code and configurations [REF-103], the TabZilla ResNet [REF-130] and the `rtdl` package [REF-131]; PyTorch's AdamW documentation [REF-120]; the training-time and memory measurements of the graphics processing unit (GPU) acceptance probe ([`gpu-acceptance-probe.md`](../gpu-acceptance-probe.md), Section 7; Issue #77) and of the GPU memory probe of Issue #50 ([`evidence/gpu_probe/`](../../evidence/gpu_probe/README.md)); the partition sizes of [DR-001](DR-001-temporal-split-strategy.md); independent reviews in Issues #105, #106 and #107. No labels, model scores or Test-period data were used. |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [DR-013](DR-013-training-device-policy.md), [protocol](../protocol.md) |
 
@@ -300,6 +300,15 @@ where:
 
 This gives about **31.2 hours at 7 epochs** and **66.9 hours at 15 epochs**. The refits of §4 (three per configuration, fixed length, no per-epoch V1 evaluation) add up to about 60 hours if the largest setting is selected and retained for 15 epochs (6 × 15 × 40.1 minutes). The ResNet-style MLP takes at most about 2.5 hours for its search at the measured embedding width. These are estimates, not bounds: they do not measure accumulation, padding or the cheaper final FT-Transformer block. The predicted cost of the actual candidate lists is computed from the sampler before any fit and recorded; no list is redrawn and no candidate is rejected for its cost. If the predicted cost is not feasible, the search is paused for an explicit decision before any run.
 
+### 8. Search and fitting of the logistic-regression reference
+
+The logistic-regression reference of [DR-011](DR-011-model-set-tree-based-and-neural-families.md) §5 shares the search budget, the V1 objective (§3) and the trial tie rule (§5) of the eight configurations, with convergence-based fitting in place of checkpoint-based early stopping:
+
+- **Candidates.** Ten: trial 1 uses C (inverse regularisation strength) = 1, the library default; trials 2–10 draw C from LogUniform[10⁻⁴, 10⁴] with the sampling formula of §6. The range is that of scikit-learn's default `LogisticRegressionCV` grid (`np.logspace(-4, 4, Cs)`, where `Cs`, when an integer, is the number of grid values) [REF-135]; the nine log-uniform draws are this study's adaptation [I], not a claim that this range or budget is sufficient for the dataset.
+- **Sampler stream.** The candidates come from a fifth child stream of the sampler of §1, spawned from the same parent after the four model streams (child (4,)). NumPy's `SeedSequence.spawn` continues the parent's child counter, so the four existing streams, and with them the candidate lists of §6 and §7, are unchanged [REF-136].
+- **Fitting.** Each candidate is fitted on Train to convergence with scikit-learn 1.9.1 `LogisticRegression`: `solver="lbfgs"`, L2 penalty through `l1_ratio=0`, `fit_intercept=True`, `class_weight=None` and `warm_start=False` [REF-135] (`penalty` is deprecated in this version); the study fixes `tol=1e-6` and `max_iter=1000`, a tighter tolerance and a larger iteration allowance than the library defaults (1e-4 and 100) [I], which do not guarantee convergence. Individual fits are used rather than `LogisticRegressionCV`'s cross-validation. The iteration count, settings and warnings are recorded. Non-convergence, non-finite coefficients or invalid probabilities (non-finite or outside [0, 1]) stop the analysis for an issue, with no solver substitution, candidate replacement or iteration extension.
+- **Selection.** The highest V1 objective; exact ties to the lowest trial number. The fit is deterministic, so the seed refits and same-seed repeats of §4 do not apply.
+
 ## Evidence
 
 - **[L]** REF-087 tunes with a Tree-structured Parzen Estimator in Optuna: 100 iterations for most models and 50 for FT-Transformer on large datasets, neural patience 16, and CatBoost with 2,000 iterations and 50 early-stopping rounds. Its Appendix D.2 reports good FT-Transformer results after a few randomly sampled configurations [REF-087].
@@ -364,6 +373,7 @@ This gives about **31.2 hours at 7 epochs** and **66.9 hours at 15 epochs**. The
 | ResNet `d_embedding` fixed for every candidate | REF-087 tunes the embedding size whenever categorical features exist; fixing it would also leave the ResNet's category-vector size untuned while FT-Transformer's is searched |
 | ResNet `d_embedding` searched over [192, 512] | Not a published range; removes short vectors, which can overfit less on rare categories |
 | Weight-sum denominator for the training loss | A self-normalised ratio estimator whose denominator varies with the number of frauds in each batch; dividing each micro-batch by its own weight sum would not implement effective-batch normalisation. Reduction A gives the additive row-count objective |
+| `LogisticRegressionCV` with its default grid and internal cross-validation for the logistic-regression reference | Individual Train fits with one default candidate and nine log-uniform draws keep the shared search budget and V1 selection procedure [I] |
 | Neural preprocessing seed 42 | Valid with a separate generator, but reuses the value of the main training seed and the sampler seed, inviting confusion between streams |
 | A preprocessing seed derived from a project root through `SeedSequence` | Adds machinery without a benefit for a single fixed draw |
 | FT-Transformer evaluation batch 8,192, as in REF-103 | Not exercised on the 8 GB GPU in float32 at 758 tokens; 16 is the probe-verified workload |
@@ -378,7 +388,7 @@ Each configuration receives ten candidate positions: one predefined reference co
 - The development pipeline (Issue #96) saves every trial (settings, V1 objective per checkpoint, stopping round or epoch, stopping reason, runtime), the selected settings, the seed refits and the V2 metrics as JSON (JavaScript Object Notation) records, with a Markdown summary generated from them.
 - The search spaces and reference configurations of §6 and §7 complete the search rules of the training rules before any development run; the neural representation is that of [DR-012](DR-012-neural-network-input-representation.md), with the preprocessing seed of §4.
 - Before any neural development run, the neural loop changes and is verified on synthetic data: effective batches split into recorded micro-batches with one AdamW update per effective batch and the loss of §7; the pre-search micro-batch preflight; the shared daily Recall@2% objective of §3 (the loop currently offers only the area under the ROC curve, average precision and log-loss); and the recording of the batch plan. The verification compares accumulated and unsplit gradients with dropout disabled, covers unequal micro-batches, non-uniform weights and the final batch of 1,016 rows, and checks same-seed repeatability for a recorded plan, the largest ResNet `d_embedding` (512) and representative FT-Transformer widths with padded heads. Because these change exercised paths, the synthetic acceptance evidence is extended under [`gpu-acceptance-probe.md`](../gpu-acceptance-probe.md) before any neural development run.
-- The development pipeline (Issue #96) reads the search spaces, sampling order and reference configurations, and the neural preprocessing seed of §4, from one machine-readable declaration that matches §4, §6 and §7.
+- The development pipeline (Issue #96) reads the search spaces, sampling order and reference configurations, and the neural preprocessing seed of §4, from one machine-readable declaration that matches §4, §6, §7 and §8.
 - Before any development run, both tree adapters change and are verified on synthetic data: LightGBM accepts `metric="None"` with the shared V1 objective as a custom evaluation function (its adapter currently requires a built-in metric and passes no evaluation function), and CatBoost accepts the shared objective as a user-defined evaluation metric (its adapter currently requires a metric name). The verification covers the daily grouping, unweighted evaluation, the cutoff tie rule, strict improvement, patience, earliest-best checkpoint retention, and parameter recording and reloading with the custom metric.
 - The synthetic CatBoost verification also fits the largest depth of the space (10) on the GPU at the maximum of 2,000 iterations, because the acceptance probe measured depth 6 only.
 
@@ -397,7 +407,7 @@ Each configuration receives ten candidate positions: one predefined reference co
 
 ## References
 
-REF-012, REF-087, REF-089, REF-103, REF-116, REF-118, REF-119, REF-120, REF-128, REF-129, REF-130, REF-131 — see [`../references.md`](../references.md).
+REF-012, REF-087, REF-089, REF-103, REF-116, REF-118, REF-119, REF-120, REF-128, REF-129, REF-130, REF-131, REF-135, REF-136 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 
@@ -440,13 +450,15 @@ REF-012, REF-087, REF-089, REF-103, REF-116, REF-118, REF-119, REF-120, REF-128,
 | z, w | Continuous uniform draws: the value draw; the mixture-branch draw |
 | U[·, ·) | Continuous uniform distribution on a half-open interval |
 | ⌊·⌋, ln, exp | Rounding down to an integer; natural logarithm; exponential function |
+| C | Inverse regularisation strength of the logistic-regression reference |
+| `lbfgs`, `l1_ratio`, `tol`, `max_iter`, `fit_intercept`, `class_weight`, `warm_start`, `penalty`, `Cs` | scikit-learn logistic-regression settings: quasi-Newton solver; elastic-net mixing (0 = L2); convergence tolerance; iteration limit; whether an intercept is fitted; class weighting (None = none); whether a fit starts from the previous solution; the deprecated penalty selector; the number of `LogisticRegressionCV` grid values |
 | float64 | 64-bit floating-point format |
 | space (B) | The large-dataset search space of REF-087 |
 | TabR, TabZilla | The benchmark of REF-129; the benchmark code of REF-089 (REF-130) |
 | `learning_rate`, `num_leaves`, `min_data_in_leaf`, `min_sum_hessian_in_leaf`, `feature_fraction`, `bagging_fraction`, `bagging_freq`, `lambda_l1`, `lambda_l2` | LightGBM: shrinkage per tree; maximum leaves per tree; minimum rows per leaf; minimum Hessian sum per leaf; share of features per tree; share of rows per bagging draw; bagging interval in rounds; L1 and L2 leaf-value penalties |
 | `depth`, `l2_leaf_reg`, `bagging_temperature`, `leaf_estimation_iterations`, `random_strength` | CatBoost: symmetric-tree depth; L2 leaf-value penalty; Bayesian-bootstrap weight intensity; Newton steps per leaf-value estimate; split-score noise scale |
 | `eval_metric`, `metric_period`, `iterations`; `metric`, `num_iterations` | CatBoost's evaluation metric, its evaluation interval and maximum trees; LightGBM's metric and maximum trees |
-| L1, L2 | Absolute-value and squared-value penalties on leaf values |
+| L1, L2 | Absolute-value and squared-value penalties; applied to tree leaf values and, for L2, logistic-regression coefficients |
 | `η_ref` | CatBoost's reference learning rate (0.032340) |
 | `round_6` | Rounding to six decimal places |
 | `c_N`, `c_0`, `c_I` | Coefficients of CatBoost's automatic learning-rate rule (binary log-loss, GPU, `use_best_model` on, `boost_from_average` off) |

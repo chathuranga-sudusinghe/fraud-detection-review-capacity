@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) by the project owner (Issue #54) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition; revision for the LightGBM training device pending review (Issue #101) |
-| Date | 2026-10-09 (Issue #54); revised 2026-10-10 (Issue #64: 433 model inputs), 2026-10-10 (Issue #60: link to the probe results), 2026-10-12 (Issue #66: training device and main seed, [DR-013](DR-013-training-device-policy.md)), 2026-10-15 (Issue #101: LightGBM training device, [DR-013](DR-013-training-device-policy.md)) |
-| Evidence source | Structured literature search and evidence matrix (Issue #52: [`literature-search-method.md`](../literature-search-method.md), [`literature-evidence-matrix.md`](../literature-evidence-matrix.md)); GPU memory feasibility probe on synthetic inputs (Issue #50, `scripts/gpu_feasibility_probe.py`; results table in [`evidence/gpu_probe/`](../../evidence/gpu_probe/README.md)). No labels, model scores or Test-period data were used. |
+| Date | 2026-10-09 (Issue #54); revised 2026-10-10 (Issue #64: 433 model inputs), 2026-10-10 (Issue #60: link to the probe results), 2026-10-12 (Issue #66: training device and main seed, [DR-013](DR-013-training-device-policy.md)), 2026-10-15 (Issue #101: LightGBM training device, [DR-013](DR-013-training-device-policy.md)); 2026-10-17 (Issue #115: logistic-regression reference baseline, §5) |
+| Evidence source | Structured literature search and evidence matrix (Issue #52: [`literature-search-method.md`](../literature-search-method.md), [`literature-evidence-matrix.md`](../literature-evidence-matrix.md)); GPU memory feasibility probe on synthetic inputs (Issue #50, `scripts/gpu_feasibility_probe.py`; results table in [`evidence/gpu_probe/`](../../evidence/gpu_probe/README.md)). For §5: the logistic-regression use of REF-078 and REF-089 (TabZilla code, REF-130), scikit-learn 1.9.1 sources and documentation [REF-135] and an independent review in Issue #115. No labels, model scores or Test-period data were used. |
 | Related | [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-008](DR-008-feature-declaration-and-model-input-policy.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-012](DR-012-neural-network-input-representation.md), [DR-013](DR-013-training-device-policy.md), [protocol](../protocol.md) |
 
 ## Context
@@ -73,6 +73,16 @@ All eight configurations use the main seed 42, with a common list of additional 
 
   bf16 with memory-efficient attention is therefore the chosen setting. Batch size and gradient checkpointing are fixed in the training rules within these measured limits. Batch limits were found by doubling: where the probe stopped at an out-of-memory failure, the true maximum lies between the listed value and twice it; where it reached its batch cap (ResNet-style MLP), the listed value is a feasible batch size, not a maximum.
 
+### 5. Logistic-regression reference baseline
+
+One **unweighted L2-regularised (ridge-penalised) logistic regression** is added as a descriptive reference, allowing the eight configurations to be compared with a simple model that is linear in its transformed inputs. It is not a ninth configuration: it is outside H1–H3, the Holm family, the H3-configuration selection and RQ2/RQ3, and the fairness rule of §3 governs the eight configurations only.
+
+- **Representation.** The shared Train-fitted preprocessing artifact of [DR-012](DR-012-neural-network-input-representation.md) (quantile-transformed numeric inputs, numeric missing values set to 0, missingness indicators, Train vocabularies), with every categorical input one-hot encoded over all its vocabulary categories, including `"__MISSING__"`; no category is dropped, no category dropout is applied and no further scaling is added. Neural embeddings are not used.
+- **Fitting and search.** Fitted to convergence on Train with fixed solver settings; C (inverse regularisation strength) is selected from ten candidates by the V1 objective of [DR-015](DR-015-common-training-rules.md) §3 ([DR-015](DR-015-common-training-rules.md) §8 fixes the search). It shares the search budget, the V1 objective and the trial tie rule of the eight configurations, but not their checkpoint-based early stopping.
+- **Reporting.** R3 recall at the four capacities with the oracle-normalised recall, the random-review context and the computational cost; V2 descriptively and Test only in the authorised confirmatory evaluation.
+
+The full specification is in the [protocol](../protocol.md#models).
+
 ## Evidence
 
 - **[L]** Tree ensembles remain strong on tabular data [REF-013, REF-014, REF-090], but no family is universally superior: a ResNet-style multilayer perceptron (MLP) is a strong deep baseline and FT-Transformer (Feature Tokenizer + Transformer) the strongest deep model on most of eleven benchmarks [REF-087]. Across 176 datasets the neural-vs-tree gap is often negligible relative to tuning effects, and GBDTs handle skewed, heavy-tailed features better [REF-089]. Well-regularised MLPs can outperform XGBoost [REF-088].
@@ -84,6 +94,11 @@ No study found compares tree-based and neural families under one tuning procedur
 
 | Alternative | Why not chosen |
 |---|---|
+| No simple reference model | The tree-based and neural models could not be compared with a simple linear model; the closest comparator study reports logistic regression [REF-078] |
+| An untuned default logistic regression, as in TabZilla [REF-130] | An untuned reference may underrepresent the model's performance; tuning only its regularisation strength gives a bounded search under the shared V1 objective [I]. Improved later-period performance is not assumed |
+| Logistic regression with both weightings | Weighting is examined by H2 on the four principal models; a second reference configuration adds descriptive work without a design need |
+| Logistic regression as a ninth configuration in H1 | H1 is a tree-versus-neural family contrast; a linear model belongs to neither family |
+| One-hot encoding with one category dropped per input | Under an L2 penalty, dropping a category breaks the symmetry of the representation and can bias the model [REF-135] |
 | Two tree-based libraries only (LightGBM vs CatBoost as H1) | Compares two members of one family; the open family question for tabular data is trees versus neural networks [REF-087, REF-089]. The within-tree contrast is retained as a descriptive result. |
 | One neural model (e.g. FT-Transformer only) against two trees | An unbalanced design confounds the family effect with a single architecture. Two models per family let H1 average over architectures. |
 | TabNet as the neural model (as in REF-078) | Ranked below ResNet-style MLP and FT-Transformer under a common tuning protocol [REF-087]. |
@@ -102,9 +117,11 @@ Two models per family give H1 a family-level estimand that does not rest on one 
 - **H2** covers all four models through one intersection-union equivalence test ([DR-005](DR-005-sesoi-and-h1-h2-inference.md)).
 - **H3** selects its configuration from all eight ([DR-010](DR-010-h3-confirmatory-configuration.md)); threshold transfer is also compared descriptively between families.
 - The Holm family stays {H1, H2, H3} with three members.
+- The logistic-regression reference (§5) is reported descriptively next to the eight configurations; it changes none of H1–H3, the Holm family or the H3 selection.
 
 ## Threats and limitations
 
+- **Reference baseline.** The logistic regression is linear in the transformed representation of [DR-012](DR-012-neural-network-input-representation.md), not in the original values. A `"__MISSING__"` category never observed in Train receives no training evidence in it, because category dropout is not applied. It supports no conclusion about class weighting for logistic regression.
 - **Pipeline-specific conclusions.** H1 concerns these four models under this procedure and input policy. It is not a claim about every tree-based or neural method.
 - **Representation differences.** Trees and neural networks receive the same information in family-specific forms ([DR-008](DR-008-feature-declaration-and-model-input-policy.md), [DR-012](DR-012-neural-network-input-representation.md)). These differences are part of the family contrast.
 - **Tuning efficiency.** A common budget measured in search trials may favour the family that converges faster; run time and the number of completed trials are reported per configuration.
@@ -113,13 +130,14 @@ Two models per family give H1 a family-level estimand that does not rest on one 
 
 ## References
 
-REF-011, REF-012, REF-013, REF-014, REF-078, REF-087, REF-088, REF-089, REF-090, REF-098, REF-099, REF-100, REF-101 — see [`../references.md`](../references.md).
+REF-011, REF-012, REF-013, REF-014, REF-078, REF-087, REF-088, REF-089, REF-090, REF-098, REF-099, REF-100, REF-101, REF-130, REF-135 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 
 | Symbol / abbreviation | Meaning |
 |---|---|
 | [L] | Evidence tag: literature |
+| [I] | Evidence tag: inference or recommendation |
 | bf16 | bfloat16: 16-bit floating-point format with the exponent range of float32 |
 | BatchNorm, Dropout, Linear, ReLU | Batch normalisation; dropout; affine layer; rectified linear unit |
 | `__MISSING__` | Explicit label for a missing categorical value (DR-008); reserved in every neural-network vocabulary (DR-012) |
@@ -143,3 +161,7 @@ REF-011, REF-012, REF-013, REF-014, REF-078, REF-087, REF-088, REF-089, REF-090,
 | u, b | Unweighted; balanced class weighting |
 | V1, V2 | Validation 1 (relative days 106–126); Validation 2 (relative days 127–154) |
 | x | Hidden representation entering a ResNet block |
+| C | Inverse regularisation strength of the logistic-regression reference |
+| L2 | Squared-value (ridge) penalty on the logistic-regression coefficients |
+| R3 | Decision policy: daily top-K review |
+| RQ2, RQ3 | Research questions 2 (policy-transfer fidelity) and 3 (cost-aware capacity use) |
