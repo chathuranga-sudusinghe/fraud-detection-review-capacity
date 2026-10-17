@@ -5,7 +5,7 @@ This document records how stage 6 (Data preparation) of the study's methodology 
 | Content | Owner |
 |---|---|
 | Partition boundaries and roles; feature policy; leakage controls | [Protocol](protocol.md): [Experimental Split Structure](protocol.md#experimental-split-structure), [Feature Policy](protocol.md#feature-policy), [Leakage Controls](protocol.md#leakage-controls) |
-| Why each choice was made | [DR-001](decisions/DR-001-temporal-split-strategy.md) (split), [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) (feature declaration and model inputs), [DR-012](decisions/DR-012-neural-network-input-representation.md) (neural-network inputs, proposed) |
+| Why each choice was made | [DR-001](decisions/DR-001-temporal-split-strategy.md) (split), [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) (feature declaration and model inputs), [DR-012](decisions/DR-012-neural-network-input-representation.md) (neural-network inputs) |
 | Dataset provenance, manifest and data-access rule | [Dataset](dataset.md) |
 | Column roles and meanings | [`config/features.yaml`](../config/features.yaml) and the [feature catalog](feature-catalog.md) |
 
@@ -14,7 +14,7 @@ Evidence tags: **[D]** dataset observation; **[L]** literature, cited by referen
 ## 1. Scope and status
 
 - **Development data: prepared.** The data-preparation stage (`review-capacity prepare-data`, Issue #62) ran once, on 10 October 2026. It wrote the processed development files (Train (the model-fitting partition), Validation 1 (V1) and Validation 2 (V2); relative days 1–154) and the dataset manifest ([Dataset Manifest](dataset.md#dataset-manifest)). Every later step reads only these files ([Data Access After the Parquet Build](dataset.md#data-access-after-the-parquet-build)).
-- **Tree-based input representation: fixed** ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5). **Neural-network input representation: proposed** ([DR-012](decisions/DR-012-neural-network-input-representation.md)).
+- **Tree-based input representation: fixed** ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5). **Neural-network input representation: fixed** ([DR-012](decisions/DR-012-neural-network-input-representation.md)); it is fitted in the development pipeline (Issue #96), not in data preparation.
 - **Test period (relative days 155–182): sealed.** Development preparation wrote no Test-period file and did not parse Test labels ([Dataset Manifest](dataset.md#dataset-manifest)); the earlier one-off full-data structural check of the labels is disclosed in [Data Provenance](dataset.md#data-provenance). Confirmatory preparation is still to come under the data-access rule: after the protocol freeze, the Test period is prepared once with the same code, reusing the fixed row-local transformations and the Train-fitted representations unchanged. Nothing is fitted on, or selected from, the Test period.
 
 ## 2. Integration and temporal organisation
@@ -62,7 +62,7 @@ Preparation performs declared parsing and input-representation conversions; it d
 - no corrective alteration of numeric model inputs: no clipping, winsorising, numeric imputation or scaling in the canonical frame or the tree-based inputs;
 - no resampling and no feature selection beyond the declared exclusions ([Feature Policy](protocol.md#feature-policy)).
 
-**Neural-network inputs (proposed, [DR-012](decisions/DR-012-neural-network-input-representation.md)).** The neural representation does transform values: numeric inputs are quantile-transformed with Train-fitted quantiles, and missing numeric values are set to 0 after the transformation, with a missingness indicator for each numeric input that has missing Train values. The quantile transformations and the indicator list are fitted on Train only; the zero fill after the transformation is a fixed constant, reused in later partitions.
+**Neural-network inputs ([DR-012](decisions/DR-012-neural-network-input-representation.md)).** The neural representation does transform values: numeric inputs are quantile-transformed with Train-fitted quantiles, and missing numeric values are set to 0 after the transformation, with a missingness indicator for each numeric input that has missing Train values. The quantile transformations and the indicator list are fitted on Train only; the zero fill after the transformation is a fixed constant, reused in later partitions.
 
 **Repeated input vectors [D]** (owner-run audit, 13 October 2026; Issue #86; [definitions and evidence](../evidence/duplicate_audit/README.md)). The label-free audit compares exact canonical input values among the 511,998 development rows:
 
@@ -85,7 +85,7 @@ All models start from one canonical frame of the 433 inputs in declared order ([
 
 - **LightGBM:** pandas categoricals whose category lists are fixed from Train rows only, so a category unseen in Train becomes missing; numeric inputs unchanged ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5).
 - **CatBoost:** the implemented conversion preserves the canonical text labels; the training-order requirement is specified separately in [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §5.
-- **ResNet-style multilayer perceptron (MLP) and FT-Transformer (Feature Tokenizer + Transformer):** the representation of [DR-012](decisions/DR-012-neural-network-input-representation.md) (proposed), fitted on Train only.
+- **ResNet-style multilayer perceptron (MLP) and FT-Transformer (Feature Tokenizer + Transformer):** the representation of [DR-012](decisions/DR-012-neural-network-input-representation.md), fitted on Train only.
 
 ## 7. Artifacts and reproducibility
 

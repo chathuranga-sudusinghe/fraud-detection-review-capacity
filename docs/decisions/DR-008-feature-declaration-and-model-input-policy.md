@@ -16,7 +16,7 @@ The declaration is not trivial:
 - the models accept categorical data and missing values in **different technical forms**;
 - no model may be given information that another model does not receive.
 
-This record fixes, before any model is implemented: the target, the excluded columns, the categorical columns, the numeric columns, the two time-of-day inputs derived from `TransactionDT`, the canonical frame and the exact technical conversions for the tree-based libraries. The proposed neural-network representation is in [DR-012](DR-012-neural-network-input-representation.md).
+This record fixes, before any model is implemented: the target, the excluded columns, the categorical columns, the numeric columns, the two time-of-day inputs derived from `TransactionDT`, the canonical frame and the exact technical conversions for the tree-based libraries. The neural-network representation is in [DR-012](DR-012-neural-network-input-representation.md).
 
 **Scope limits.** Apart from the two time-of-day inputs (§4), no feature is engineered, target-encoded, aggregated or created from pseudo-entity keys. No model is trained or tuned. The temporal split ([DR-001](DR-001-temporal-split-strategy.md)), capacity settings ([DR-002](DR-002-review-capacity-definition.md)), class weighting and hypotheses are defined elsewhere.
 
@@ -175,7 +175,7 @@ The human-readable counterpart is the [feature catalog](../feature-catalog.md). 
 
 ### 9. Population preservation
 
-**Rule.** Data preparation applies only the declared parsing and input-representation conversions of §§4–5. It discards no transaction by content-based filtering, de-duplication or outlier-row removal, and alters no numeric model-input value as corrective cleaning: no clipping, winsorising, numeric imputation or scaling in the canonical frame. Assigning rows to the temporal partitions ([DR-001](DR-001-temporal-split-strategy.md)) is not cleaning. Repeated input vectors are counted descriptively and kept (Issue #86). The neural-network representation transforms values under its own record ([DR-012](DR-012-neural-network-input-representation.md), proposed).
+**Rule.** Data preparation applies only the declared parsing and input-representation conversions of §§4–5. It discards no transaction by content-based filtering, de-duplication or outlier-row removal, and alters no numeric model-input value as corrective cleaning: no clipping, winsorising, numeric imputation or scaling in the canonical frame. Assigning rows to the temporal partitions ([DR-001](DR-001-temporal-split-strategy.md)) is not cleaning. Repeated input vectors are counted descriptively and kept (Issue #86). The neural-network representation transforms values under its own record ([DR-012](DR-012-neural-network-input-representation.md)).
 
 **Why [I].**
 
@@ -332,7 +332,7 @@ Observed value types in development data [D]:
 | An additional seven-day phase | Weekdays are unknown, because the reference point is undisclosed. A relative seven-day phase could be computed, but it adds inputs without a documented weekly meaning |
 | Fill or correct `D9` from `TransactionDT` | Would alter an organiser field. `D9` is kept as observed, and its missingness remains information |
 | CatBoost's default random permutations (`has_time = false`) | The permutation is the method's artificial time for data without a time order [REF-012, Section 3.2]. Both settings stay within Train, so neither is leakage into the validation or Test periods; the time order is chosen for consistency with the temporal design. It is fixed before any run, not tuned |
-| Content-based cleaning: removing repeated or extreme rows; clipping, winsorising or imputing numeric values in the canonical frame | Row removal changes the transaction population and daily volumes; the available semantics do not justify corrective alteration of masked inputs (§9). Tree-based models handle numeric missing values natively (§5); the proposed neural transformation and zero fill are governed by [DR-012](DR-012-neural-network-input-representation.md) |
+| Content-based cleaning: removing repeated or extreme rows; clipping, winsorising or imputing numeric values in the canonical frame | Row removal changes the transaction population and daily volumes; the available semantics do not justify corrective alteration of masked inputs (§9). Tree-based models handle numeric missing values natively (§5); the neural transformation and zero fill are governed by [DR-012](DR-012-neural-network-input-representation.md) |
 | Entity-level aggregates (counts, frequencies, past-window statistics) | Depend on heuristic pseudo-entity keys and on assumptions about label availability, and add a leakage surface; outside the scope of this study |
 
 ## Consequences
