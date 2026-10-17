@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) by the project owner (Issue #13) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight configurations; boundary cases; interpretation of R4 losses) |
-| Evidence source | Decision-theoretic derivation (checked numerically on synthetic data only); cost-sensitive learning, cost-curve and decision-curve literature; `notebooks/01_dataset_feasibility_audit.ipynb` §§6, 11, 12. **No Test labels, no model scores and no new dataset computations were used.** |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight configurations; boundary cases; interpretation of R4 losses) and 2026-10-17 (Issue #91: calibration details; conditional bootstrap intervals) |
+| Evidence source | Decision-theoretic derivation (checked numerically on synthetic data only); cost-sensitive learning, cost-curve and decision-curve literature; `notebooks/01_dataset_feasibility_audit.ipynb` §§6, 11, 12; for the calibration details (§8), Kull et al. [REF-132], Lin, Lin and Weng [REF-133], the REF-018 supplement and the scikit-learn 1.9.1 source of isotonic regression [REF-134], with an independent review in Issue #91. **No Test labels, no model scores and no new dataset computations were used.** |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
 ## Context
@@ -308,6 +308,7 @@ Uncertainty reporting (descriptive):
 - **Grid-point intervals.** For each (c, m, ρ ∈ G): 95 % percentile confidence intervals (CIs) for ΔJ, relative ΔJ, u, f and the amount measures. Relative ΔJ = ΔJ / J_R3 is always defined, because J_R3 ≥ N_R3 = 28 · K_c > 0.
   - Method: a **day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000)**, the same key-free machinery as H3 and sensitivity analysis S2 of DR-006 (the key-free day-block bootstrap).
   - Whole days are resampled, so each day's R3 and R4 queues stay exactly intact. R3 and R4 are paired within each replicate.
+  - **Conditional estimand.** The resampled days are Test days. The fitted models and the frozen V2 calibrators (§8) stay fixed, and with them R4's eligibility and the within-day queues. The intervals therefore describe Test-period variation for the fitted policy; they exclude uncertainty from model development, model selection and calibrator estimation, and do not quantify future calibration drift.
   - **Limitation:** this does not capture cross-day entity dependence of frauds, so intervals for f may be too narrow ([DR-006](DR-006-bootstrap-inference-strategy.md) evidence). As a sensitivity check, the interval for frauds forgone f (a recall difference between R3 and R4) is also computed with the DR-006 two-way pigeonhole bootstrap.
 - **Regime map.** Each (c, m, ρ ∈ G) cell is labelled:
   - *identical* (u = 0);
@@ -323,10 +324,31 @@ Uncertainty reporting (descriptive):
 **Calibration is required for R4** and is fitted on V2.
 - **Why calibration matters for R4.** R4 compares p̂ with an absolute threshold. R3 and every rate-based policy use only the ranking [REF-038, REF-073]. Miscalibration always lowers decision value and can make the cost-aware rule worse than its default alternative [REF-074].
 - **Primary: Platt scaling fitted on V2**, as in the protocol.
+  - **Input and map:** the float64 log-odds z of the raw score s_i, clipped to [10⁻¹⁵, 1 − 10⁻¹⁵], mapped to p̂ by a sigmoid with intercept κ_0 and slope κ_1 > 0 (displayed with its definitions in the [protocol](../protocol.md#calibration)). On log-odds the family contains the identity on the unclipped interior, which logistic calibration on the score itself does not [REF-132]. For a model fitted on the class-weighted likelihood, the unrestricted population optimum of the weighted log-loss satisfies
+
+    $$
+    \operatorname{logit}(q_w) = \operatorname{logit}(p) + \ln(w_{\mathrm{pos}})
+    $$
+
+    where:
+
+    - `q_w` = the unrestricted population optimum of the class-weighted binary log-loss;
+    - `p` = the population fraud probability;
+    - `w_pos` = the fraud-row loss weight of balanced weighting, with legitimate-row weight 1;
+    - `logit` = log-odds, logit(p) = ln(p / (1 − p)).
+
+    This is an intercept shift on the log-odds scale, which the calibrator family represents [I; cf. REF-021]; exact correction of the fitted tree and neural models is not assumed, because weighting also changes their splits, representations and stopping points. Clipping counts are recorded; the positive-slope sigmoid is strictly increasing in its input, but clipping can merge extreme raw scores, so the composite map is non-decreasing, and R4 keeps R3's raw-score order and tie rule.
+  - **Fit:** unweighted binary cross-entropy against Platt's smoothed targets t₊ = (N₊ + 1)/(N₊ + 2) and t₋ = 1/(N₋ + 2), where t₊ and t₋ are the targets of frauds and legitimate rows and N₊ and N₋ their counts in the fitting rows, on all V2 rows pooled (days 127–154), without a coefficient penalty [REF-016; REF-133]. This is a smoothed-target fit, not ordinary maximum likelihood against the labels; with 2,637 V2 frauds the targets are about 0.99962 and 1.3 × 10⁻⁵. Both classes and at least two distinct clipped log-odds values are required; non-identifiability, non-convergence, non-finite parameters or a non-positive fitted κ_1 stops the analysis for an issue, with no automatic substitute and no forcing of the slope to a positive boundary. The solver settings are fixed, tested and recorded in the implementation (Issue #96) before any calibration run. This rule applies to the fit, not to the Test diagnostic slope, which is reported whatever its value.
+  - **Scope:** one calibrator per configuration (eight), fitted on the V2 scores of the selected main-seed model and applied unchanged to Test; the seed refits and the CatBoost CPU refit are evaluated under R3 only.
 - **Secondary check: isotonic regression.** RQ3 is recomputed with isotonic p̂. Any change in the ρ_BE classification or the regime map is reported as calibration sensitivity. Confirmatory interpretation uses Platt only.
+  - Fitted on the raw float64 scores (not the log-odds: predictions between the fitted knots are interpolated linearly in the input coordinate [REF-134]) and the original labels, with unit weight per V2 transaction, increasing, bounded to [0, 1] and with endpoint clipping outside the fitting range; identical scores share their mean label and keep their combined weight.
+  - An isotonic p̂ of 0 gives an infinite reciprocal breakpoint and can make the saturation ratio infinite; p̂ = 1 gives a breakpoint at ratio 1. These boundaries are reported explicitly, and a declined-set ratio with no declined reviews is reported as undefined.
+- **Prediction outside the V2 range.** Platt applies its frozen map to every score, subject only to the input clipping; isotonic returns its endpoint values; out-of-range counts are recorded. For log loss and the diagnostic logit(p̂), a metric-only copy of p̂ is clipped to [10⁻¹⁵, 1 − 10⁻¹⁵], with clipping counts reported and log loss reported as ε-clipped log loss (ε = 10⁻¹⁵, the clipping constant); R4 and the Brier score use the original calibrated probabilities.
+- **Diagnostics** [REF-018, Additional file 1]. Calibration intercept: logistic regression of the original labels with logit(p̂) as an offset, intercept only (target 0); calibration slope: logistic regression of the labels on logit(p̂) with a free intercept (target 1). Both are unweighted and separate from the calibrator fit; on V2 they are in-sample. The reliability diagram is descriptive, with 20 equal-count bins formed from p̂ without labels (identical probabilities kept together) and per-bin probability range, mean prediction, observed rate, transaction count and fraud count; it displays no Wilson or other binomial confidence-interval bars, because frauds cluster across days ([DR-006](DR-006-bootstrap-inference-strategy.md)); the exact bin-edge algorithm is fixed and tested in the implementation (Issue #96).
 - **Declined-set calibration diagnostic.** For each grid ratio, the realised fraud rate among unused reviews, f/u, is reported next to (i) the mean p̂ of those transactions and (ii) p*. This is the calibration that decides RQ3.
 - **Interpretation rule when calibration is poor.** If Test calibration metrics (intercept, slope, reliability diagram) or the declined-set diagnostic show material miscalibration, R4 results are reported as the joint effect of **the cost rule and calibration transfer**. They are **not** evidence for or against cost-aware reviewing as such. A crossing break-even (ρ_BE < ρ_sat) is read as consistent with calibration-transfer failure at the margin only when the declined-set diagnostic supports it; otherwise it is reported as within finite-sample variation.
-- **Label-latency supplement.** The protocol's latency sensitivity (calibrator refitted on V2 days 127–147) applies to R4 and is reported for RQ3 as exploratory.
+- **Label-latency supplement.** The protocol's latency sensitivity applies to R4 and is reported for RQ3 as exploratory: with the selected main-seed models unchanged, both calibrators are refitted on V2 days 127–147, with their smoothing counts recomputed, and evaluated on days 148–154 (development data only). These calibrators do not replace the primary full-V2 calibrators or alter the H3 selection.
+- **Records.** For every calibrator: the model identity, the fitting rows and counts, the clipping settings and counts, the parameters or isotonic knots, the solver settings and convergence, the software versions and the artifact hash; predictions are verified after reloading.
 
 ### 9. RQ3 outputs
 
@@ -409,6 +431,15 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
   - ρ_BE and ρ_sat are therefore an extension and alternative operationalisation of that pattern under a fixed daily cap, not a primary novelty claim.
 - **[L]** The protocol cites REF-007 for amount-dependent costs. Its author copy could not be read in this pass (access restricted), so the amount-dependent cost structure is supported here by REF-073, which was read in full (arXiv version).
 
+
+### Calibration methods
+
+- **[L]** Logistic calibration, a sigmoid of an affine function of a score in [0, 1], does not contain the identity map; the family its authors call "beta[a=b]", fitted by univariate logistic regression on the log-odds of the score, contains it [REF-132, §3.2 and Algorithm 1].
+- **[L]** Platt's sigmoid is fitted by minimising cross-entropy against the targets (N₊ + 1)/(N₊ + 2) for positives and 1/(N₋ + 2) for negatives [REF-133, eq. (2), restating REF-016].
+- **[L]** The calibration intercept is estimated from a logistic model with the predicted log-odds as an offset, and the calibration slope from a logistic model with a free intercept and the predicted log-odds as covariate [REF-018, Additional file 1, "Weak calibration"].
+- **[L]** scikit-learn 1.9.1 isotonic regression predicts between its fitted knots by linear interpolation (`_build_f`: `interp1d(kind="linear")`) [REF-134].
+- **[D]** V2 has 77,822 transactions and 2,637 frauds ([DR-006](DR-006-bootstrap-inference-strategy.md)).
+
 ## Alternatives considered
 
 | Alternative | Why not chosen |
@@ -421,6 +452,11 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 | Linear interpolation between grid points | Unnecessary: the exact curve is available. Interpolation would add approximation error |
 | Amount-aware R4 (threshold C_R / A_i) | A new decision policy; outside the current scope without a new Issue |
 | Confirmatory test for RQ3 | Assumption-conditional nulls; non-smooth break-even statistics; would dilute Holm power for H1–H3 |
+| Platt scaling on the score itself (the behaviour of scikit-learn's sigmoid calibration on predicted probabilities) | Its family excludes the identity map, so it can miscalibrate an already calibrated model [REF-132], and it cannot represent a log-odds intercept shift |
+| Ordinary maximum likelihood on the original labels for Platt | A valid fit, but not Platt's procedure; the smoothed targets follow the method cited for the primary calibrator [REF-016; REF-133] |
+| Two-stage bootstrap that resamples V2 blocks, refits the calibrators and then resamples Test blocks | Answers a broader question about redeveloping the policy, yet still excludes model-training uncertainty; it would recompute R4 eligibility in every replicate. The primary intervals are conditional on the frozen calibrators |
+| Isotonic regression on the log-odds | Equal at the fitted knots but interpolated differently between them; the raw score is the conventional input |
+| Binomial (Wilson) intervals on the reliability diagram as 95 % confidence intervals | Frauds cluster across days ([DR-006](DR-006-bootstrap-inference-strategy.md)), so independent-binomial intervals would overstate precision |
 | Pigeonhole bootstrap as RQ3 primary | DR-006 defines it for fraud-level capture indicators. ΔJ also involves legitimate-transaction counts, for which no entity weighting has been specified. It is used as a sensitivity check for f only |
 
 ## Consequences
@@ -438,6 +474,8 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
   - A single constant C_miss ignores the variation in fraud value.
 - **A6 (unused capacity has value)** is a modelling choice. If review slots have no alternative use, filling capacity is optimal whenever C_FP = 0.
 - **R4's advantage depends on calibration transfer** from V2 to Test. Prevalence and composition shift between periods [D], so calibration may degrade.
+- **Conditional intervals.** The RQ3 intervals hold the fitted models and the V2 calibrators fixed (§7), so they do not include calibrator-estimation uncertainty.
+- **Calibrator details.** The weighting correction is exact only at the unrestricted population optimum. Smoothed targets and input clipping change the fitting objective or inputs relative to ordinary maximum likelihood on unclipped scores; their effects on fitted coefficients and tail probabilities are not separately estimated.
 - **ρ_BE is sensitive to a few marginal transactions** and has no CI. The grid-point intervals are the main uncertainty statement.
 - **The day-block intervals may be too narrow** for fraud counts (cross-day entity dependence, [DR-006](DR-006-bootstrap-inference-strategy.md)). The pigeonhole check on f partly addresses this.
 - **Labels are chargeback-derived** and miss unreported fraud [REF-048, partially verified], so f and FN (false negatives) undercount true fraud.
@@ -658,7 +696,7 @@ This is the same ρ′ = (C_miss + C_FP) / (C_R + C_FP) defined above, after div
 
 ## References
 
-REF-004, REF-005, REF-006, REF-007, REF-008, REF-038, REF-039, REF-040, REF-048\*, REF-072, REF-073, REF-074, REF-075, REF-078 — see [`../references.md`](../references.md).
+REF-004, REF-005, REF-006, REF-007, REF-008, REF-016, REF-017, REF-018, REF-021, REF-038, REF-039, REF-040, REF-048\*, REF-072, REF-073, REF-074, REF-075, REF-078, REF-132, REF-133, REF-134 — see [`../references.md`](../references.md).
 
 \* Partially verified.
 
@@ -673,6 +711,12 @@ Complete reference for every symbol used in this record. Each symbol is also def
 | d | A Test relative day, d ∈ {155, …, 182} (28 days) |
 | m | A model configuration: LightGBM, CatBoost, ResNet-style MLP or FT-Transformer, each unweighted or with balanced class weighting (eight configurations; DR-011) |
 | s_i | Raw model score of transaction i (used for ranking) |
+| z | Log-odds of the raw score, clipped to [10⁻¹⁵, 1 − 10⁻¹⁵] (the calibrator input) |
+| ε | Clipping constant 10⁻¹⁵ (calibrator input and logarithmic metrics) |
+| κ_0, κ_1 | Intercept and slope of the Platt calibrator on the log-odds scale |
+| t₊, t₋, N₊, N₋ | Platt's smoothed targets for frauds and legitimate rows; the fraud and legitimate counts of the fitting rows |
+| logit | Log-odds: logit(p) = ln(p / (1 − p)) |
+| q_w, p, w_pos | Ideal optimum of the class-weighted log-loss; the population fraud probability; the fraud weight of balanced weighting (n_neg / n_pos) |
 | p̂_i | Calibrated fraud probability of transaction i: the Platt-scaled score, with the calibrator fitted on Validation 2 (V2, relative days 127–154) |
 | y_i | Fraud label of transaction i (1 = fraud, 0 = legitimate) |
 | F | Number of frauds in the evaluation period |
