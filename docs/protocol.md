@@ -226,7 +226,7 @@ Chronological, day-aligned split, fixed from transaction volume only, before any
 Partition hashes and `TransactionDT` bounds are recorded in [DR-001](decisions/DR-001-temporal-split-strategy.md).
 
 **Supplementary analyses** (exploratory; development data only; no Test access):
-- **Label-latency sensitivity:** repeat label-dependent choices (R1 threshold, R4 calibrator) using only V2 days 127–147. Also report which configuration the H3 selection rule would choose on those days (descriptive; the H3 configuration is not changed; [DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
+- **Label-latency sensitivity:** repeat label-dependent choices (R1 threshold, R4 calibrator) using only V2 days 127–147. For R4, the selected main-seed models are unchanged, and both calibrators (Platt and isotonic) are refitted on days 127–147 with their smoothing counts recomputed and evaluated on days 148–154; these calibrators do not replace the primary full-V2 calibrators. Also report which configuration the H3 selection rule would choose on those days (descriptive; the H3 configuration is not changed; [DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
 - **Rolling-origin supplement for RQ2:** several V2-like → next-28-day transfers inside days 1–154, on the primary configuration only [REF-024, REF-025, REF-046]. The primary configuration is the H3 configuration's model and weighting ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
 
 ## Models
@@ -511,9 +511,35 @@ Purpose: RQ3. When does leaving capacity unused become the cheaper choice under 
 Calibration is a supporting component, not a separate research question.
 
 - **Fitted on V2, not V1.** V1 scores are optimistic because V1 is used for early stopping, and V1 prevalence (4.22 %) differs from V2 (3.39 %): a −0.23 log-odds shift [D]. V2 is also closest in time to Test.
-- **Relevant to R4 only.** R0–R3 rank and threshold on raw model scores, so calibration does not affect them. Platt scaling with a positive fitted slope is strictly monotone and preserves the ranking; isotonic regression is monotone but can merge scores into ties, which is why it serves only as a secondary check for R4 [I; REF-015, REF-017].
+- **Relevant to R4 only.** R0–R3 rank and threshold on raw model scores, so calibration does not affect them. The positive-slope Platt sigmoid is strictly increasing in its input, but the input clipping can merge extreme raw scores; isotonic regression is monotone but can merge scores into ties, which is why it serves only as a secondary check for R4 [I; REF-015, REF-017]. R4 therefore keeps R3's raw-score order and tie rule.
 - **Primary method:** Platt scaling [REF-016]. **Secondary check:** isotonic regression [REF-017].
+- **Scope.** One Platt and one isotonic calibrator per configuration (eight of each), fitted on the V2 scores of the configuration's selected main-seed model and applied unchanged to Test. The seed refits and the CatBoost CPU refit are evaluated under R3 only and are not calibrated. R4's queue stays R3's raw-score order.
+- **Platt input and map.** Platt scaling is applied to the float64 log-odds of the raw fraud score s:
+
+  $$
+  \begin{aligned}
+  s_c &= \min\left(\max\left(s,\ \epsilon\right),\ 1 - \epsilon\right), \qquad \epsilon = 10^{-15} \\
+  z &= \ln s_c - \ln(1 - s_c) \\
+  \hat p &= \frac{1}{1 + \exp\left(-(\kappa_0 + \kappa_1 z)\right)}, \qquad \kappa_1 > 0
+  \end{aligned}
+  $$
+
+  where:
+
+  - `s`, `s_c` = the raw fraud score s_i of a transaction and its clipped value;
+  - `ε` = the clipping constant (10⁻¹⁵);
+  - `z` = the log-odds of the clipped score (the second logarithm computed as `log1p(-s_c)`);
+  - `p̂` = the calibrated fraud probability;
+  - `κ_0`, `κ_1` = the calibrator's intercept and slope (distinct from the significance level α).
+
+  On log-odds, the map's family contains the identity on the unclipped interior, which logistic calibration on the score itself does not [REF-132]; its ability to represent an ideal class-weighting odds correction (an intercept shift on the log-odds scale) motivates the choice [I], and exact correction of the fitted weighted models is not assumed. The number of clipped scores is recorded. Clipping can merge extreme scores, so the composite map is non-decreasing.
+- **Platt fit.** Unweighted binary cross-entropy is minimised on all V2 rows pooled over days 127–154, against Platt's smoothed targets t₊ = (N₊ + 1)/(N₊ + 2) for frauds and t₋ = 1/(N₋ + 2) for legitimate rows, where N₊ and N₋ are the fraud and legitimate counts of the fitting rows [REF-016; REF-133]; no coefficient penalty is added. This is a smoothed-target fit, not ordinary maximum likelihood against the original labels; the diagnostics use the original labels. Both classes and at least two distinct clipped log-odds values are required. Non-identifiability, non-convergence, non-finite parameters or a non-positive fitted κ_1 stops the analysis for an issue, with no automatic substitute and no forcing of the slope to a positive boundary. The solver, its initialisation, tolerance and iteration limit are fixed, tested and recorded in the implementation (Issue #96) before any calibration run.
+- **Isotonic check.** Fitted on the raw float64 scores and the original labels, with unit weight per V2 transaction, increasing, bounded to [0, 1], linear interpolation between the fitted knots and endpoint clipping outside the fitting range; identical scores share their mean label and keep their combined weight [REF-017; REF-134].
+- **Prediction outside the V2 range.** Platt applies its frozen map to every score, subject only to the input clipping; isotonic returns its endpoint values. Out-of-range counts are recorded. For log loss and the diagnostic logit(p̂), a metric-only copy of p̂ is clipped to [ε, 1 − ε] with ε = 10⁻¹⁵, the clipping counts are reported and log loss is reported as ε-clipped log loss; R4 and the Brier score use the original calibrated probabilities.
 - **Metrics:** Brier score, log loss, calibration intercept and slope, reliability diagram [REF-018]. Reported on V2 (in-sample for the calibrator) and on Test.
+  - **Calibration intercept:** unweighted logistic regression of the original labels with logit(p̂) as an offset and only an intercept estimated (target 0). **Calibration slope:** unweighted logistic regression of the labels on logit(p̂) with a free intercept (target 1) [REF-018]. These diagnostic fits are separate from the calibrator fit; their slopes are not constrained, and a non-estimable fit is reported as such.
+  - **Reliability diagram:** descriptive, with 20 equal-count bins formed from p̂ without labels (identical probabilities kept together, so fewer bins are possible), reporting each bin's probability range, mean prediction, observed fraud rate, transaction count and fraud count. The diagram is descriptive only: Wilson or other binomial confidence-interval bars are not displayed, because frauds cluster across days ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)). The exact bin-edge algorithm, including the assignment of tied values at an edge, is fixed and tested in the implementation (Issue #96). The decision-region check is the declined-set diagnostic of [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md) §8.
+- **Records:** the model identity, the fitting rows and their counts, the clipping settings and counts, the parameters or isotonic knots, the solver settings and convergence, the software versions and the artifact hashes; predictions are verified after reloading.
 
 ## Cost Model
 
@@ -574,7 +600,7 @@ Amount-weighted results will have wide uncertainty: the top 20 % of development 
   ΔJ is negative when the cost-aware policy is cheaper than filling capacity. ρ_BE is reported per capacity and configuration, with ties, censoring and non-monotone cases as defined in DR-007;
 - amount-dependent miss costs are **not** used to change decisions. Amount enters only as an evaluation-only sensitivity analysis (amount-weighted recall, fraud value exposed, fraud value forgone), labelled as exposure proxies, never as loss or saving [REF-073].
 
-**Uncertainty (descriptive).** 95 % percentile intervals at grid ratios come from a day-level moving-block bootstrap (block length ℓ = 3 days, B (number of bootstrap replicates) = 10,000, R3 and R4 paired). A DR-006 pigeonhole check is applied to frauds forgone. ρ_sat and ρ_BE are point estimates.
+**Uncertainty (descriptive).** 95 % percentile intervals at grid ratios come from a day-level moving-block bootstrap over Test days (block length ℓ = 3 days, B (number of bootstrap replicates) = 10,000, R3 and R4 paired). A DR-006 pigeonhole check is applied to frauds forgone. ρ_sat and ρ_BE are point estimates. The intervals are conditional on the fitted models and the frozen V2 calibrators: calibrators, R4 eligibility and within-day queues stay fixed while Test-day blocks are resampled, so the intervals exclude uncertainty from model development, model selection and calibrator estimation, and do not quantify future calibration drift ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md) §7).
 
 **Calibration dependence.** Under calibrated probabilities, R4 cannot be worse than R3 in expectation. An observed loss for R4 is consistent with calibration-transfer failure at the margin [REF-074] **or** with finite-sample variation among the few marginal transactions; the grid-point intervals, isotonic calibration and a declined-set calibration diagnostic are used to distinguish the two ([DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)).
 
@@ -788,7 +814,7 @@ Artificial intelligence (AI) assistance used in this project will be declared at
 |---|---|---|
 | 1 | University of Greenwich criteria | Resolved (Issue #63): requirements mapped in the [criteria checklist](greenwich-criteria-checklist.md); supervisor feedback on the design (DR-001–DR-014) welcome, not a precondition (Issue #56) |
 | 2 | Neural-network input representation | Resolved: representation accepted on 2026-10-17 (Issue #107); preprocessing seed and the draw and shared-artifact rules fixed in Issue #112 ([DR-012](decisions/DR-012-neural-network-input-representation.md); [DR-015](decisions/DR-015-common-training-rules.md) §4). Implementation and the deferred `config/features.yaml` status update remain under Issue #96 |
-| 3 | Training rules | Common rules resolved (Issue #105): search method and budget, early stopping, V1 objective, seeds and tie rules ([DR-015](decisions/DR-015-common-training-rules.md)); tree-based search spaces and reference configurations resolved (Issue #106; DR-015 §6). neural search spaces, reference configurations and training values resolved (Issue #107; DR-015 §7). Open: the calibration details (Issue #91) |
+| 3 | Training rules | Common rules resolved (Issue #105): search method and budget, early stopping, V1 objective, seeds and tie rules ([DR-015](decisions/DR-015-common-training-rules.md)); tree-based search spaces and reference configurations resolved (Issue #106; DR-015 §6). neural search spaces, reference configurations and training values resolved (Issue #107; DR-015 §7); R4 calibration details resolved (Issue #91; [Calibration](#calibration); [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md) §8) |
 | 4 | Feature-engineering policy | Resolved (Issue #64): declared inputs plus the two time-of-day inputs; no other engineered feature ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §4) |
 | 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
 | 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Resolved as a working basis (Issue #63): Tier 2, AIR at submission [REF-109, REF-111]; tier to be confirmed against the COMP1885 assessment brief |
@@ -898,6 +924,10 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | N_π | Number of reviews made by policy π |
 | p* | Cost-derived probability threshold used by R4 |
 | p̂_i | Calibrated (Platt-scaled) fraud probability of transaction i |
+| s, s_c, ε, z | Raw fraud score of a transaction; its value clipped to [ε, 1 − ε]; the clipping constant 10⁻¹⁵; the log-odds of the clipped score (Calibration) |
+| κ_0, κ_1 | Intercept and slope of the Platt calibrator on the log-odds scale |
+| t₊, t₋, N₊, N₋ | Platt's smoothed targets for frauds and legitimate rows; the fraud and legitimate counts of the calibrator's fitting rows |
+| logit | Log-odds: logit(p) = ln(p / (1 − p)) |
 | φ | False-alert-to-review cost ratio, C_FP / C_R |
 | π | A decision policy (R3 or R4) in J_π and N_π |
 | pp | Percentage points |
