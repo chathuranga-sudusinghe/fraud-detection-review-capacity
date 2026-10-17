@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) by the project owner (Issue #27) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-25; revised 2026-10-09 (Issue #54) |
+| Date | 2026-09-25; revised 2026-10-09 (Issue #54) and 2026-10-17 (Issue #115: R1 threshold selection) |
 | Evidence source | Internal policy definitions in the [protocol](../protocol.md); existing Decision Records [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and [DR-007](DR-007-rq3-cost-ratio-and-break-even.md); an algebraic argument about thresholds and daily top-K selection; the existing label-free daily-volume inspection of the feasibility audit (`notebooks/01_dataset_feasibility_audit.ipynb` §3). No labels or model scores were inspected for this record. No new Test-period data were inspected; this record relies only on previously logged, label-free structural evidence from the feasibility audit. |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-007](DR-007-rq3-cost-ratio-and-break-even.md), [protocol](../protocol.md) |
 
@@ -230,10 +230,42 @@ Therefore:
 - arrival-order (first-come-first-served) processing within a day. This would be a different, streaming policy; R3 is already an idealised end-of-day batch policy. It would need its own GitHub Issue;
 - any other organisation-specific fraud-operations rule.
 
+### R1 threshold selection
+
+R1's threshold τ_R1 is selected once on V2 for each selected main-seed configuration and frozen; R1 is then evaluated uncapped under the rule above. The selection makes the policy fully reproducible:
+
+- **Rule.** A transaction is flagged when its raw model score is at least τ_R1, the same convention as R2 ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), "Threshold ties").
+- **Candidates.** Every distinct V2 score, including the smallest, so an all-flag optimum is allowed. With the at-least rule, these candidates cover every non-empty alert set obtainable by thresholding. A threshold above the maximum score produces the empty set, whose F1 is zero when the selection set contains a fraud; the all-flag candidate has a positive F1, so omitting the empty set cannot change the maximum. Transactions with equal scores are never separated, and the R3 queue's SHA-256 (Secure Hash Algorithm, 256-bit) ordering plays no part.
+- **Objective.** F1 is computed from the pooled, unweighted V2 counts at each candidate threshold a:
+
+  $$
+  F_1(a) = \frac{2\,\mathrm{TP}_a}{P + A_a}
+  $$
+
+  where:
+
+  - `TP_a` = frauds with score ≥ a;
+  - `A_a` = transactions with score ≥ a;
+  - `P` = frauds in the selection set.
+
+  For two candidates a and b (with TP_b and A_b defined in the same way), the comparison uses the integer cross-products, computed with arithmetic that cannot overflow:
+
+  $$
+  \mathrm{TP}_a\,(P + A_b) \quad \text{and} \quad \mathrm{TP}_b\,(P + A_a)
+  $$
+
+  The larger product identifies the larger F_1, and equal products an exact tie; there is no rounding or tolerance, and rounded F_1 values are for presentation only.
+- **Ties.** Among equal maxima, the highest candidate threshold, which flags the fewest transactions [I]. This is a design choice, neither required by R2's rule nor given by REF-009, which supports F1 threshold optimisation in general [REF-009].
+- **Degenerate case.** The selection set must be non-empty, contain at least one fraud and have finite scores; otherwise selection stops with a recorded error. With at least one fraud, the all-flag candidate has a positive F1, so a maximum always exists.
+- **Label latency.** The exploratory supplement applies the same rule to V2 days 127–147 and evaluates the frozen threshold on days 148–154; the primary full-V2 threshold is unchanged.
+
 ## Alternatives considered
 
 | Alternative | Why not chosen |
 |---|---|
+| R1 candidates at midpoints between distinct V2 scores | Midpoints between successive distinct scores reproduce the corresponding interior V2 alert sets, but require boundary candidates and can classify later scores differently; observed scores with the at-least rule match R2's convention |
+| The lowest threshold among equal-F1 maxima | Flags more transactions for the same V2 F1; the highest tied threshold is the more conservative workload [I] |
+| Floating-point comparison of F1 values | Mathematically equal ratios can differ in the last bit; integer cross-products compare them exactly |
 | **Truncate R0/R1/R2 to the top K_c of their alerts** | Reproduces R3 exactly on every overflow day and equals the uncapped policy on all other days (algebra in [Why truncation to top-K is rejected](#why-truncation-to-top-k-is-rejected)). Removes the workload demand that RQ2 studies and makes the threshold policies redundant. |
 | **Truncate by arrival order** (first K_c alerts of the day by `TransactionDT`) | Imports an operational rule (first-come-first-served) and defines a different, streaming policy. Out of scope; would need its own issue. |
 | **Count overflow frauds as missed or as false negatives** | Assumes excess alerts are never reviewed, which the design does not state and the labels cannot show. |
@@ -309,13 +341,14 @@ Truncation would therefore:
 
 ## References
 
-No new external references. The decision rests on the protocol's policy definitions and on [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md) and [DR-007](DR-007-rq3-cost-ratio-and-break-even.md).
+REF-009 (R1 threshold selection) — see [`../references.md`](../references.md). The overflow decision rests on the protocol's policy definitions and on [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md) and [DR-007](DR-007-rq3-cost-ratio-and-break-even.md).
 
 ## Symbols and notation
 
 | Symbol / abbreviation | Meaning |
 |---|---|
 | [D] | Evidence tag: observed dataset evidence |
+| [I] | Evidence tag: inference or recommendation |
 | A_d,j | Alerts generated by threshold policy j on day d: threshold-generated review demand |
 | A_j, O_j,c, U_j,c | Totals of A, O and U over the 28 Test days |
 | c | Review-capacity scenario (1 %, 2 %, 5 % or 10 %) |
@@ -343,6 +376,13 @@ No new external references. The decision rests on the protocol's policy definiti
 | s_i | Score of transaction i compared with the policy threshold |
 | T_d,j | Set of transactions flagged by policy j on day d |
 | τ_j, τ_c, τ₂ | Threshold of policy j; R2 threshold for capacity c; R2 threshold at 2 % |
+| τ_R1 | R1's V2-selected threshold |
+| a, b | Candidate thresholds in the R1 comparison |
+| F_1(a) | Pooled, unweighted F1 at candidate threshold a |
+| TP_a, TP_b | True-positive counts at thresholds a and b |
+| A_a, A_b | Alert counts at thresholds a and b |
+| P | Number of frauds in the R1 selection set |
+| SHA-256 | Secure Hash Algorithm, 256-bit (the R3 queue's tie-break digest, DR-015) |
 | TP^A_d,j | Flagged frauds: frauds among the alerts of policy j on day d |
 | TP^R3_d,c | Frauds reviewed by R3 on day d at capacity c |
 | trunc_K(T) | The K highest-scoring members of set T |

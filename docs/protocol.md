@@ -226,7 +226,7 @@ Chronological, day-aligned split, fixed from transaction volume only, before any
 Partition hashes and `TransactionDT` bounds are recorded in [DR-001](decisions/DR-001-temporal-split-strategy.md).
 
 **Supplementary analyses** (exploratory; development data only; no Test access):
-- **Label-latency sensitivity:** repeat label-dependent choices (R1 threshold, R4 calibrator) using only V2 days 127–147. For R4, the selected main-seed models are unchanged, and both calibrators (Platt and isotonic) are refitted on days 127–147 with their smoothing counts recomputed and evaluated on days 148–154; these calibrators do not replace the primary full-V2 calibrators. Also report which configuration the H3 selection rule would choose on those days (descriptive; the H3 configuration is not changed; [DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
+- **Label-latency sensitivity:** repeat label-dependent choices (R1 threshold, R4 calibrator) using only V2 days 127–147. For R1, the same selection rule is applied to days 127–147 and the resulting frozen threshold is evaluated on days 148–154; the primary full-V2 threshold is unchanged. For R4, the selected main-seed models are unchanged, and both calibrators (Platt and isotonic) are refitted on days 127–147 with their smoothing counts recomputed and evaluated on days 148–154; these calibrators do not replace the primary full-V2 calibrators. Also report which configuration the H3 selection rule would choose on those days (descriptive; the H3 configuration is not changed; [DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
 - **Rolling-origin supplement for RQ2:** several V2-like → next-28-day transfers inside days 1–154, on the primary configuration only [REF-024, REF-025, REF-046]. The primary configuration is the H3 configuration's model and weighting ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)).
 
 ## Models
@@ -240,9 +240,12 @@ Defined in [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md
 
 The tree-vs-neural family question is open in the literature for tabular data: no family is universally superior, and the gap is often small relative to tuning effects [REF-013, REF-014, REF-087, REF-088, REF-089, REF-090] ([literature review](literature-review.md), Section 2).
 
-Optional reference (descriptive only, outside H1–H3; inclusion is an owner decision, design item 5):
+**Logistic-regression reference (descriptive only)** ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) §5; Issue #115). One unweighted L2-regularised (ridge-penalised) logistic regression is reported as a reference. It is outside the eight configurations, H1–H3, the Holm adjustment, the H3-configuration selection and RQ2/RQ3, and supports no conclusion about class weighting for logistic regression.
 
-- L2-regularised (ridge-penalised) logistic regression. Any preprocessing pipeline is fitted on Train only.
+- **Inputs.** The shared Train-fitted preprocessing artifact of [DR-012](decisions/DR-012-neural-network-input-representation.md): quantile-transformed numeric inputs, numeric missing values set to 0, the 324 missingness indicators and the Train vocabularies. Categorical inputs are one-hot encoded over every vocabulary category, including `"__MISSING__"`, with no category dropped (dropping one breaks the symmetry of the representation under a penalty [REF-135]); values unseen in Train map to `"__MISSING__"`. The matrix is a 64-bit floating-point (float64) compressed sparse row (CSR) matrix with no additional scaling and no category dropout; its column order, shape and the artifact's identity are recorded. No preprocessing is fitted on V1, V2 or Test.
+- **Fitting.** scikit-learn 1.9.1 `LogisticRegression`: `solver="lbfgs"` (the quasi-Newton solver), `l1_ratio=0` (L2 penalty), `fit_intercept=True` (fit an intercept), `class_weight=None` (no class weighting) and `warm_start=False` (start each fit independently) [REF-135]. The study fixes `tol=1e-6` (convergence tolerance) and `max_iter=1000` (iteration limit), a tighter tolerance and a larger iteration allowance than the library defaults (1e-4 and 100) [I; Issue #115]; these settings do not guarantee convergence. Each candidate is fitted to convergence on Train, without V1 early stopping. Non-convergence, non-finite coefficients or invalid probabilities (non-finite or outside [0, 1]) stop the analysis for an issue, with no solver substitution, candidate replacement or iteration extension.
+- **Search.** Ten candidates: trial 1 uses C = 1 (the library default; C is the inverse regularisation strength); trials 2–10 draw C from LogUniform[10⁻⁴, 10⁴] (continuous log-uniform sampling) with the sampling formula of [DR-015](decisions/DR-015-common-training-rules.md) §6 (search and fitting: DR-015 §8). The range is that of scikit-learn's default `LogisticRegressionCV` grid [REF-135]; the log-uniform draw is this study's adaptation [I]. Selection uses the V1 objective of DR-015 §3 (unweighted daily top-62 recall), with exact ties to the lowest trial number. The candidates come from the fifth child stream of the sampler (DR-015 §1), spawned from the same parent after the four model streams, so the existing candidate lists are unchanged [REF-136].
+- **Reported.** R3 recall at 1 %, 2 %, 5 % and 10 % capacity (K = 28, 56, 139 and 278), with the oracle-normalised recall, the random-review context and the computational cost; on V2 descriptively and on Test only in the authorised confirmatory evaluation. It is not calibrated and is not evaluated under R0–R2 or R4. Being deterministic, it has no additional-seed refits.
 
 Analytic baselines (always reported):
 - random review (precision = prevalence);
@@ -443,6 +446,26 @@ Purpose: naive reference only. Its alert volume mainly reflects the raw score sc
 ### R1 — F1-optimal threshold
 
 The threshold that maximises F1 (the harmonic mean of precision and recall), selected using V2 only [REF-009]. Capacity-agnostic; evaluated uncapped under the report-only overflow rule, with its alert demand, overflow and unused capacity reported against K (DR-009). Secondary comparator.
+
+**Selection rule** ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md#r1-threshold-selection), "R1 threshold selection"; Issue #115). For each selected main-seed configuration, R1 flags every transaction whose raw score is at least the threshold τ_R1. The candidates for τ_R1 are every distinct V2 score, including the smallest (so an all-flag optimum is allowed); transactions with equal scores are never separated. For a candidate a, F1 is computed from the pooled, unweighted V2 counts:
+
+$$
+F_1(a) = \frac{2\,\mathrm{TP}_a}{P + A_a}
+$$
+
+where:
+
+- `TP_a` = true positives (frauds with score ≥ a);
+- `A_a` = alerts (transactions with score ≥ a);
+- `P` = frauds in the selection set; P + A_a = 2TP_a + FP_a + FN_a, the usual denominator, with `FP_a` and `FN_a` the false positives and false negatives at a.
+
+For two candidate thresholds a and b, TP_b and A_b are defined as TP_a and A_a are. Candidates are compared exactly through the integer cross-products, computed with arithmetic that cannot overflow:
+
+$$
+\mathrm{TP}_a\,(P + A_b) \quad \text{and} \quad \mathrm{TP}_b\,(P + A_a)
+$$
+
+The larger product identifies the larger F1, and equal products identify an exact tie; no rounding or tolerance is used. Among equal maxima the **highest** candidate threshold (the fewest alerts) is selected [I]. The selection set must be non-empty, contain at least one fraud and have finite scores; otherwise selection stops with a recorded error. The selected threshold is frozen for later evaluation; its full-V2 F1 is a selection-set result.
 
 ### R2 — Capacity-rate threshold
 
@@ -816,7 +839,7 @@ Artificial intelligence (AI) assistance used in this project will be declared at
 | 2 | Neural-network input representation | Resolved: representation accepted on 2026-10-17 (Issue #107); preprocessing seed and the draw and shared-artifact rules fixed in Issue #112 ([DR-012](decisions/DR-012-neural-network-input-representation.md); [DR-015](decisions/DR-015-common-training-rules.md) §4). Implementation and the deferred `config/features.yaml` status update remain under Issue #96 |
 | 3 | Training rules | Common rules resolved (Issue #105): search method and budget, early stopping, V1 objective, seeds and tie rules ([DR-015](decisions/DR-015-common-training-rules.md)); tree-based search spaces and reference configurations resolved (Issue #106; DR-015 §6). neural search spaces, reference configurations and training values resolved (Issue #107; DR-015 §7); R4 calibration details resolved (Issue #91; [Calibration](#calibration); [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md) §8) |
 | 4 | Feature-engineering policy | Resolved (Issue #64): declared inputs plus the two time-of-day inputs; no other engineered feature ([DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md) §4) |
-| 5 | Logistic-regression reference baseline | Include as a descriptive reference, or not |
+| 5 | Logistic-regression reference baseline | Resolved (Issue #115): one unweighted, tuned L2-regularised logistic regression on the DR-012 representation, reported descriptively under R3 ([Models](#models); [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md) §5) |
 | 6 | University of Greenwich AI-use tier and AI Reflection (AIR) | Resolved as a working basis (Issue #63): Tier 2, AIR at submission [REF-109, REF-111]; tier to be confirmed against the COMP1885 assessment brief |
 | 7 | Research-methodology framing | Resolved (Issue #85): the ten stages of the Foundational Methodology for Data Science published by International Business Machines Corporation (IBM) [REF-085], adapted to the confirmatory design ([DR-014](decisions/DR-014-research-methodology-framing.md)) |
 | 8 | Dataset manifest | Resolved (Issue #62): SHA-256 (Secure Hash Algorithm, 256-bit) values and partition hashes reproduced by the data-preparation code and recorded in `data/datapackage.json` ([dataset manifest](dataset.md#dataset-manifest)) |
@@ -963,6 +986,16 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | θ | Time-of-day angle: fraction of the relative day elapsed × 360° |
 | `tod_sin`, `tod_cos` | Time-of-day inputs: sine and cosine of θ |
 | τ₂, τ_c | V2-selected score threshold flagging 2 % (a fraction c) of V2 transactions |
+| τ_R1 | R1's V2-selected threshold |
+| a, b | Candidate thresholds in the R1 comparison |
+| F_1(a) | Pooled, unweighted F1 at candidate threshold a |
+| TP_a, TP_b | True-positive counts at thresholds a and b |
+| A_a, A_b | Alert counts at thresholds a and b |
+| P | Number of frauds in the R1 selection set |
+| FP_a, FN_a | False-positive and false-negative counts at threshold a |
+| C | Inverse regularisation strength of the logistic-regression reference (distinct from the costs C_R, C_miss, C_FP) |
+| CSR | Compressed sparse row: the sparse-matrix format of the logistic-regression inputs |
+| `l1_ratio`, `lbfgs`, `tol`, `max_iter`, `fit_intercept`, `class_weight`, `warm_start` | scikit-learn logistic-regression settings: elastic-net mixing (0 = L2 penalty); the quasi-Newton solver; the convergence tolerance; the iteration limit; whether an intercept is fitted; class weighting (None = none); whether a fit starts from the previous solution |
 | TOST | Two One-Sided Tests |
 | TP_d | True positives: frauds reviewed on day d |
 | pooled normalised recall | Σ_d TP_d / Σ_d min(K, F_d): Recall@K divided by the oracle ceiling |
@@ -983,7 +1016,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | `learning_rate`, `num_leaves`, `min_data_in_leaf`, `min_sum_hessian_in_leaf`, `feature_fraction`, `bagging_fraction`, `bagging_freq`, `lambda_l1`, `lambda_l2` | LightGBM: shrinkage per tree; maximum leaves per tree; minimum rows per leaf; minimum Hessian sum per leaf; share of features per tree; share of rows per bagging draw; bagging interval in rounds; L1 and L2 leaf-value penalties |
 | `depth`, `l2_leaf_reg`, `bagging_temperature`, `leaf_estimation_iterations`, `random_strength` | CatBoost: symmetric-tree depth; L2 leaf-value penalty; Bayesian-bootstrap weight intensity; Newton steps per leaf-value estimate; split-score noise scale |
 | `eval_metric`, `metric_period`, `iterations`, `od_wait`; `metric`, `num_iterations`, `early_stopping_round` | CatBoost's evaluation metric, evaluation interval, maximum trees and early-stopping wait; LightGBM's metric, maximum trees and early-stopping rounds |
-| L1, L2 | Absolute-value and squared-value penalties on leaf values |
+| L1, L2 | Absolute-value and squared-value penalties; applied to tree leaf values and, for L2, logistic-regression coefficients |
 | `boosting`, `data_sample_strategy`, `max_depth`, `min_gain_to_split`, `max_delta_step`, `path_smooth`, `extra_trees`, `feature_fraction_bynode`, `boost_from_average`, `early_stopping_min_delta` | LightGBM: boosting algorithm; row-sampling strategy; depth limit (−1 = none); minimum split gain; leaf-output step limit; leaf-value smoothing towards the parent; randomised split thresholds; share of features per node; start from the average label; minimum improvement counted by early stopping |
 | `max_cat_to_onehot`, `max_cat_threshold`, `cat_l2`, `cat_smooth`, `min_data_per_group` | LightGBM categorical controls: largest category count split one-vs-rest; maximum categories on one side of a split; L2 penalty in categorical splits; smoothing of category statistics; minimum rows per category group |
 | `model_size_reg`, `permutation_count`, `fold_permutation_block`, `boost_from_average` | CatBoost: model-size regularisation coefficient; number of permutations; permutation block size; start from the average label |
