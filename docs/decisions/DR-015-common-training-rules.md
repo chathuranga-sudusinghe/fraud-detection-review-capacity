@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) through Issues #105 and #106, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-10-16 (Issue #105: common rules; Issue #106: tree-based search spaces and reference configurations) |
-| Evidence source | Gorishniy et al. [REF-087] and McElfresh et al. [REF-089] (tuning protocols, read in full); Bergstra and Bengio [REF-128]; the tree-based tuning spaces of Prokhorenkova et al. [REF-012, arXiv v5 Appendix D.2], Gorishniy et al. [REF-087, Table 17; REF-129, Tables 23–24] and the TabZilla code [REF-130]; LightGBM and CatBoost documentation and source code [REF-116; REF-118; REF-119]; the training-time measurements of the graphics processing unit (GPU) acceptance probe ([`gpu-acceptance-probe.md`](../gpu-acceptance-probe.md), Section 7; Issue #77); the partition sizes of [DR-001](DR-001-temporal-split-strategy.md); two independent proposals reviewed in Issue #105. No labels, model scores or Test-period data were used. |
+| Status | Accepted (pre-freeze) through Issues #105, #106 and #107, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Date | 2026-10-16 (Issue #105: common rules; Issue #106: tree-based search spaces and reference configurations; Issue #107: neural search spaces, reference configurations and training values) |
+| Evidence source | Gorishniy et al. [REF-087] and McElfresh et al. [REF-089] (tuning protocols, read in full); Bergstra and Bengio [REF-128]; the tree-based tuning spaces of Prokhorenkova et al. [REF-012, arXiv v5 Appendix D.2], Gorishniy et al. [REF-087, Table 17; REF-129, Tables 23–24] and the TabZilla code [REF-130]; LightGBM and CatBoost documentation and source code [REF-116; REF-118; REF-119]; the neural spaces, defaults and batch sizes of REF-087 (Tables 7 and 12–14), the authors' tuning code and configurations [REF-103], the TabZilla ResNet [REF-130] and the `rtdl` package [REF-131]; PyTorch's AdamW documentation [REF-120]; the training-time and memory measurements of the graphics processing unit (GPU) acceptance probe ([`gpu-acceptance-probe.md`](../gpu-acceptance-probe.md), Section 7; Issue #77) and of the GPU memory probe of Issue #50 ([`evidence/gpu_probe/`](../../evidence/gpu_probe/README.md)); the partition sizes of [DR-001](DR-001-temporal-split-strategy.md); independent reviews in Issues #105, #106 and #107. No labels, model scores or Test-period data were used. |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [DR-013](DR-013-training-device-policy.md), [protocol](../protocol.md) |
 
 ## Context
@@ -13,9 +13,9 @@ The eight configurations of [DR-011](DR-011-model-set-tree-based-and-neural-fami
 
 The study's primary outcome is Recall@2%: the share of frauds captured under R3, the daily top-K policy, which reviews the K highest-scored transactions of each relative day, where K is the fixed daily review budget (K = 56 at 2 % capacity, from V2 volume; [DR-002](DR-002-review-capacity-definition.md)). H3, the alert-rate transfer fidelity hypothesis, is confirmatory for one configuration selected on V2 ([DR-010](DR-010-h3-confirmatory-configuration.md)).
 
-The models differ greatly in training cost on the project hardware. Extrapolated from the GPU acceptance probe, one full pass over the Train partition takes about 0.1–0.4 minutes for the ResNet-style MLP and about 5, 7 and 40 minutes for the padded, default and largest FT-Transformer settings; a LightGBM fit takes seconds and a CatBoost GPU fit about 15–20 seconds at the probe values. Published tabular benchmarks tune each model with up to 30 to 100 trials [REF-087; REF-089].
+The models differ greatly in training cost on the project hardware. Extrapolated from the GPU acceptance probe, one full pass over the Train partition takes about 0.1–0.4 minutes for the ResNet-style MLP and about 5, 7 and 40 minutes for the padded, default and largest FT-Transformer settings (training only; §7 adds the V1 evaluation of each epoch); a LightGBM fit takes seconds and a CatBoost GPU fit about 15–20 seconds at the probe values. Published tabular benchmarks tune each model with up to 30 to 100 trials [REF-087; REF-089].
 
-The search spaces and reference configurations of the tree-based models are fixed in §6 (Issue #106); those of the neural models are fixed in Issue #107 and recorded with this record.
+The search spaces and reference configurations are fixed in §6 for the tree-based models (Issue #106) and in §7 for the neural models, with their training values (Issue #107).
 
 ## Decision
 
@@ -42,7 +42,7 @@ The V1 objective (§3) is evaluated after every boosting round (tree-based model
 | Tree-based (LightGBM, CatBoost) | 50 boosting rounds: training stops after 50 consecutive rounds without improvement (LightGBM `early_stopping_round` = 50; CatBoost `od_type` = `"Iter"`, `od_wait` = 50) | 2,000 boosting rounds |
 | Neural (ResNet-style MLP, FT-Transformer) | 5 epochs: training stops at the sixth consecutive epoch without improvement (the neural loop's `patience` = 5, which stops when the count of epochs without improvement exceeds the patience) | 15 epochs |
 
-The rule is the same for all eight configurations. Patience is set in each family's natural training unit, because one boosting round adds a single tree, a far smaller step than one epoch, which passes over all Train rows with thousands of parameter updates. The tree-based values follow REF-087 (CatBoost: 2,000 iterations, 50 early-stopping rounds); the neural values are an engineering adaptation to the measured training cost. Each trial records its stopping round or epoch, its stopping reason (early stop or maximum) and its runtime.
+The rule is the same for all eight configurations. Patience is set in each family's natural training unit, because one boosting round adds a single tree, a far smaller step than one epoch, which passes over all Train rows with hundreds of parameter updates (360 at the effective batch of 1,024 rows; §7). The tree-based values follow REF-087 (CatBoost: 2,000 iterations, 50 early-stopping rounds); the neural values are an engineering adaptation to the measured training cost. Each trial records its stopping round or epoch, its stopping reason (early stop or maximum) and its runtime.
 
 ### 3. V1 objective
 
@@ -131,7 +131,7 @@ where:
 
 UniformInt uses `Generator.integers(x_min, x_max, endpoint=True)`. A **mixture** `0.5 · {0} + 0.5 · LogUniform[x_min, x_max]` draws w ~ U[0, 1) and then z as for LogUniform, and takes x = 0 if w < 0.5 and x = exp(z) otherwise; both draws are always made, so the stream position does not depend on the branch. Every draw is one scalar call (no `size` argument), with NumPy's `log` and `exp`. Candidate values are recorded at full float64 precision, and the recorded candidate list is the reproducibility record: bit-for-bit regeneration in another software environment is not assumed.
 
-**Reference configurations.** Trial 1 of each model uses the library's default values for the pinned version, written out explicitly, as the default setting that REF-089 includes among its trials [REF-089]. Each model keeps its own default learning rate; no common value is imposed across models, because fairness is the common procedure, not identical values ([DR-011](DR-011-model-set-tree-based-and-neural-families.md) §3). Every reference value lies within its parameter's declared bounds; a reference value may sit at an upper bound that the half-open continuous sampling interval excludes (for example a fraction of 1.0).
+**Reference configurations.** Trial 1 of each tree-based model uses the library's default values for the pinned version, written out explicitly, as the default setting that REF-089 includes among its trials [REF-089]. Each model keeps its own default learning rate; no common value is imposed across models, because fairness is the common procedure, not identical values ([DR-011](DR-011-model-set-tree-based-and-neural-families.md) §3). Every reference value lies within its parameter's declared bounds; a reference value may sit at an upper bound that the half-open continuous sampling interval excludes (for example a fraction of 1.0).
 
 **CatBoost's reference learning rate.** For binary log-loss, CatBoost chooses its learning rate automatically when `learning_rate`, `leaf_estimation_method`, `leaf_estimation_iterations` and `l2_leaf_reg` are all unset, from the device, the loss, `use_best_model`, `boost_from_average`, the number of training rows and the iteration count; it uses no labels [REF-119]. The study sets these parameters explicitly ([DR-013](DR-013-training-device-policy.md) §3), so the rule is evaluated once for the training device and recorded as one explicit value, used identically on both devices:
 
@@ -189,6 +189,116 @@ Fixed CatBoost settings of [DR-013](DR-013-training-device-policy.md) §3, set e
 
 `random_strength` is not searched, so CatBoost's space is REF-087's space (B) with the learning-rate adaptation above. The remaining CatBoost settings are those of [DR-013](DR-013-training-device-policy.md) §3.
 
+### 7. Search spaces, reference configurations and training values: neural models
+
+**Sources.** Both neural models use the large-dataset space (B) of REF-087 ([DR-011](DR-011-model-set-tree-based-and-neural-families.md) §4): Table 14 for the ResNet-style MLP and Table 13 for FT-Transformer, with the distributions as the authors' code samples them [REF-103: `bin/tune.py` and the Covertype tuning configurations]. One adaptation applies: space (B) has no category-embedding entry for the ResNet-style MLP, because its datasets have no categorical features, so the embedding width is searched over the range REF-087 uses for Adult, its one dataset with categorical features [REF-087, Table 14; REF-103, Adult configuration] [I]. This keeps the category-vector size of the ResNet-style MLP searched over the same range as FT-Transformer's token width.
+
+**Sampling.** The distributions, draw order and recording rules of §6 apply: each random candidate (trials 2–10) draws its parameters in the order of the tables below, and trial 1 uses no random draws. Two forms are added:
+
+- **Token width:** `d_token` (the length of each FT-Transformer token vector) is uniform over the 57 multiples of 8 from 64 to 512 (8 · UniformInt[8, 64]), because the width must divide among the 8 attention heads [REF-103: `bin/tune.py`, step `n_heads`].
+- **Optional parameters:** `0.5 · {0} + 0.5 · Uniform[x_min, x_max]` follows the mixture rule of §6 with a continuous uniform draw in place of the log-uniform one. The probability 0.5 is the authors' choice between "off" and "on" (`suggest_categorical([False, True])`) [REF-103].
+
+The parameters are: `n_layers`, the number of residual blocks or Transformer layers; `d`, the ResNet block width (a parameter name, distinct from the relative day d of §3); `d_hidden_factor`, the ratio of a block's hidden width to `d`; `d_embedding` and `d_token`, the lengths of the ResNet's category-embedding vectors and of FT-Transformer's token vectors; `hidden_dropout`, `residual_dropout`, `attention_dropout` and `ffn_dropout`, the dropout probabilities inside a ResNet block, on a residual branch, on the attention weights and inside the feed-forward module; `d_ffn_factor`, the ratio of the feed-forward hidden size to `d_token`; `lr`, the learning rate; and `weight_decay`, AdamW's decoupled weight-decay coefficient.
+
+**ResNet-style MLP** (GPU):
+
+| Parameter | Search distribution | Reference (trial 1) | Source |
+|---|---|---|---|
+| `n_layers` | UniformInt[1, 16] | 2 | [REF-087, Table 14 (B); REF-103]; reference [REF-130] |
+| `d` | UniformInt[64, 1024] | 128 | [REF-087, Table 14 (B); REF-103]; reference [REF-130] |
+| `d_hidden_factor` | Uniform[1, 4] | 2 (hidden width 256) | [REF-087, Table 14 (B); REF-103]; reference [REF-130] |
+| `hidden_dropout` | Uniform[0, 0.5] | 0.25 | [REF-087, Table 14 (B); REF-103]; reference [REF-130] |
+| `residual_dropout` | 0.5 · {0} + 0.5 · Uniform[0, 0.5] | 0.1 | [REF-087, Table 14 (B); REF-103]; reference [REF-130] |
+| `d_embedding` | UniformInt[64, 512] | 192 | Range [REF-087, Table 14 (Adult); REF-103] [I]; reference [I] (below) |
+| `lr` | LogUniform[1e-5, 1e-2] | 1e-3 | [REF-087, Table 14 (B); REF-103]; reference [REF-130] |
+| `weight_decay` | 0.5 · {0} + 0.5 · LogUniform[1e-6, 1e-3] | 0 | [REF-087, Table 14 (B); REF-103]; reference [I] (below) |
+
+The hidden width of each residual block is int(`d` × `d_hidden_factor`); the parameter `d` is the block width, distinct from the relative day d of §3. Every categorical input uses the same `d_embedding` within a trial. Weight decay applies to every parameter, as in REF-103.
+
+**FT-Transformer** (GPU):
+
+| Parameter | Search distribution | Reference (trial 1) | Source |
+|---|---|---|---|
+| `n_layers` | UniformInt[1, 6] | 3 | [REF-087, Table 13 (B); REF-103]; reference [REF-087, Table 12] |
+| `d_token` | 8 · UniformInt[8, 64] | 192 | [REF-087, Table 13 (B); REF-103]; reference [REF-087, Table 12] |
+| `attention_dropout` | Uniform[0, 0.5] | 0.2 | [REF-087, Table 13 (B); REF-103]; reference [REF-087, Table 12] |
+| `ffn_dropout` | Uniform[0, 0.5] | 0.1 | [REF-087, Table 13 (B); REF-103]; reference [REF-087, Table 12] |
+| `lr` | LogUniform[3e-5, 3e-4] | 1e-4 | [REF-087, Table 13 (B); REF-103]; reference [REF-087, Table 12; REF-131] |
+| `weight_decay` | LogUniform[1e-6, 1e-3] | 1e-5 | [REF-087, Table 13 (B); REF-103]; reference [REF-087, Table 12; REF-131] |
+
+Fixed for every FT-Transformer candidate, as space (B) and Table 12 specify [REF-087]: `residual_dropout=0`, `d_ffn_factor=4/3`, 8 attention heads, the ReGLU (rectified gated linear unit) activation, pre-normalisation and Kaiming initialisation; weight decay is 0 for the feature tokenizer, every LayerNorm and every bias.
+
+**Reference configurations.** Trial 1 of each neural model is based on a published default, as the tree models use their libraries' defaults (§6):
+
+- **FT-Transformer:** the default configuration of REF-087 (Table 12), which the paper also evaluates untuned; the same learning rate and weight decay are the defaults of the authors' `rtdl` package [REF-131].
+- **ResNet-style MLP:** REF-087 gives no default configuration. Trial 1 uses the default ResNet of the TabZilla benchmark [REF-130: `rtdl_ResNet`], which REF-089 evaluates untuned and reports among the algorithms that "perform fairly well both with and without hyperparameter tuning" (Appendix D.2.1) [REF-089]. TabZilla builds it with the `rtdl` package's ResNet, whose blocks apply `dropout_first` after the activation and `dropout_second` after the second linear layer, as REF-087's ResNet block applies its hidden and residual dropout [REF-131]; its `dropout_first` 0.25 and `dropout_second` 0.1 are therefore `hidden_dropout` and `residual_dropout`. Two TabZilla values lie outside space (B) and are replaced [I]:
+  - its category-embedding width of 8 by **192**, the token width of the default FT-Transformer, so both neural reference configurations represent each category with a vector of 192 numbers;
+  - its weight decay, which TabZilla inherits from PyTorch's AdamW default of 0.01 [REF-130; REF-120], by **0**, the zero branch of space (B).
+
+**Optimiser.** AdamW (Adam with decoupled weight decay) with `betas` (0.9, 0.999), the decay coefficients of its first- and second-moment estimates; `eps` 1e-8, its numerical-stability constant; AMSGrad, the variant that keeps the maximum of past second moments, disabled; and the single-tensor implementation (`foreach=False`, `fused=False`), set explicitly, with no learning-rate schedule [REF-087, Section 4; REF-103].
+
+**Effective batch.** Both neural models update on an **effective batch of 1,024 Train rows**, the batch size REF-087 uses for every dataset with more than 300,000 training rows (Table 7; Covertype: 371,847) [REF-087; REF-103]. Train has 368,632 rows, so each epoch has 360 updates: 359 full batches and a final batch of 1,016 rows, which is kept. Each epoch's row order is drawn from the training seed, as in the neural loop.
+
+**Micro-batches and gradient accumulation.** A micro-batch is the part of an effective batch that the GPU processes at once. Before the search, a synthetic, data-free preflight on the project GPU fixes the micro-batch of each of a model's 10 candidates [I]:
+
+1. The preflight uses the production implementation with full-size synthetic inputs and vocabularies, strict determinism, the precision and attention backend of [DR-013](DR-013-training-device-policy.md) §4, and initialised optimiser state.
+2. It tries micro-batches of 1,024, 512, 256, 128 and 64 rows in that order and records the largest that completes forward, backward and optimiser steps with at least 1,024 MiB (mebibytes) of device memory free at the sampled peak; training and float32 evaluation are checked separately.
+3. The ResNet-style MLP must run each candidate at 1,024 directly, because its BatchNorm statistics are computed over the whole batch; FT-Transformer, whose LayerNorm acts on each row, accumulates gradients when its micro-batch is smaller.
+4. The probe evidence supports expecting every FT-Transformer candidate to pass at 64 or more [I]: the largest setting of space (B) trained at 64 in the acceptance probe, with about 1,363 MiB of the 8,151 MiB device free at the sampled peak ([`gpu-acceptance-probe.md`](../gpu-acceptance-probe.md), Section 7), and smaller settings need less memory. The probe did not exercise every width or the accumulation path, so this is not established for every candidate: each candidate must pass the preflight, in training and in float32 evaluation, at a listed size. A candidate that passes at no listed size (or, for the ResNet-style MLP, not at 1,024) stops the search for an issue; no candidate is dropped or replaced.
+5. The preflight uses its own generator and leaves the training random state unchanged. The recorded plan is used for the unweighted and balanced configurations and for every refit (§4), and is not changed after V1 results are seen.
+
+With accumulation, every micro-batch adds its gradients in float32, and AdamW updates once per effective batch. The update follows the effective-batch loss below; it equals a whole-batch update in exact arithmetic with the same dropout masks. In ordinary execution the dropout masks and floating-point reduction order depend on the micro-batch plan, so repeatability is required for the recorded plan, not equality with an unsplit batch.
+
+**Loss.** Training minimises the weighted binary cross-entropy of the effective batch, divided by its actual row count:
+
+$$
+L_{\mathrm{batch}} = \frac{1}{m} \sum_{i \in \mathcal{B}} w_i \, \ell_i
+$$
+
+where:
+
+- `L_batch` = the training loss of one effective batch;
+- `𝓑` = the Train rows of the effective batch;
+- `i` = the index of a Train row in the effective batch;
+- `m` = its actual row count (1,024, or 1,016 for the final batch);
+- `w_i` = the explicit sample weight of row i (1 for every row in the unweighted configurations; the balanced weights of the protocol otherwise);
+- `ℓ_i` = the binary cross-entropy of row i, computed from its logit in float32 ([DR-013](DR-013-training-device-policy.md) §4).
+
+Every micro-batch divides its weighted sum by the same m. The row count is the denominator, not the batch's weight sum: it gives an unbiased mini-batch estimate of the mean weighted Train loss (for the ResNet-style MLP, up to BatchNorm's dependence of each row's loss on its batch) and needs no information from other micro-batches, whereas a weight-sum denominator changes with the number of frauds in each batch [I]. Training-loss normalisation does not change the V1 objective (§3), which is unweighted.
+
+**Other values.**
+
+- **Epochs:** at most 15, patience 5 (§2); with the best V1 value at epoch 1, the earliest stop is at epoch 7.
+- **Evaluation batch:** 4,096 rows for the ResNet-style MLP and 16 for FT-Transformer, the workloads exercised in the acceptance probe, fixed per model for every candidate [I]. It is fixed and recorded because it affects memory and speed and can also change floating-point scores; repeatability is checked with identical batch partitions.
+
+**Compute estimate** [D] [I]. The per-epoch times are the three-epoch means of the explicitly identified fits in acceptance-probe run 5 (`FTT-u default fit 1`, `FTT-b largest fit 1`, `RES-u largest fit 1`; 16,384 Train rows and 4,096 V1 rows per epoch), scaled to the study's partitions: Train time × 368,632 / 16,384 (22.50) and V1 evaluation time × 65,544 / 4,096 (16.00).
+
+| Setting | Train (min per epoch) | V1 evaluation (min per epoch) | Total (min per epoch) |
+|---|---|---|---|
+| FT-Transformer default (3 layers, `d_token` 192) | 6.95 | 0.69 | 7.64 |
+| FT-Transformer largest (6 layers, `d_token` 512) | 40.1 | 4.39 | 44.5 |
+| ResNet-style MLP largest (16 layers, `d` 1,024, `d_embedding` 64) | 0.42 | 0.065 | 0.48 |
+
+Interpolating the per-layer time linearly in `d_token` between the two FT-Transformer settings gives about 14.02 minutes per epoch for the average candidate of space (B) (mean `d_token` 288, mean `n_layers` 3.5). The search time of the two FT-Transformer configurations is then:
+
+$$
+\begin{aligned}
+T_{\mathrm{FTT}}(E) &= 2 \cdot E \cdot \left(t_{\mathrm{ref}} + 9 \, \bar{t}\right) \\
+&= 2 \cdot E \cdot (7.64 + 9 \times 14.02)\ \text{min} \\
+&\approx 2 \cdot E \cdot 133.8\ \text{min}
+\end{aligned}
+$$
+
+where:
+
+- `T_FTT(E)` = the search time of FT-Transformer's two configurations;
+- `E` = the number of epochs per trial (7 to 15);
+- `t_ref` = the epoch time of the reference configuration (7.64 minutes);
+- `t̄` = the epoch time of an average candidate (about 14.02 minutes);
+- 9 = the random candidates per configuration.
+
+This gives about **31.2 hours at 7 epochs** and **66.9 hours at 15 epochs**. The refits of §4 (three per configuration, fixed length, no per-epoch V1 evaluation) add up to about 60 hours if the largest setting is selected and retained for 15 epochs (6 × 15 × 40.1 minutes). The ResNet-style MLP takes at most about 2.5 hours for its search at the measured embedding width. These are estimates, not bounds: they do not measure accumulation, padding or the cheaper final FT-Transformer block. The predicted cost of the actual candidate lists is computed from the sampler before any fit and recorded; no list is redrawn and no candidate is rejected for its cost. If the predicted cost is not feasible, the search is paused for an explicit decision before any run.
+
 ## Evidence
 
 - **[L]** REF-087 tunes with a Tree-structured Parzen Estimator in Optuna: 100 iterations for most models and 50 for FT-Transformer on large datasets, neural patience 16, and CatBoost with 2,000 iterations and 50 early-stopping rounds. Its Appendix D.2 reports good FT-Transformer results after a few randomly sampled configurations [REF-087].
@@ -198,7 +308,11 @@ Fixed CatBoost settings of [DR-013](DR-013-training-device-policy.md) §3, set e
 - **[L]** REF-129 tunes LightGBM over `feature_fraction` and `bagging_fraction` Uniform[0.5, 1.0], `lambda_l2` {0, LogUniform[0.1, 10.0]}, `learning_rate` LogUniform[0.001, 1.0], `num_leaves` UniformInt[4, 768] and `min_sum_hessian_in_leaf` LogUniform[0.0001, 100.0], and CatBoost with depth UniformInt[3, 14], each with 200 Tree-structured Parzen Estimator iterations, 4,000 trees and 200 early-stopping rounds (Tables 23–24, Appendix D.18–D.19) [REF-129].
 - **[L]** REF-012 tunes LightGBM and CatBoost with 50 Tree-structured Parzen Estimator steps; its LightGBM space includes `feature_fraction` and `bagging_fraction` Uniform[0.5, 1] and L1 and L2 penalties as the mixture 0.5 · degenerate at 0 + 0.5 · log-uniform, and its CatBoost space includes `l2_leaf_reg` log-uniform [1, 10], `bagging_temperature` Uniform[0, 1] and `gradient_iterations` as a "Discrete uniform distribution over a set {1, 10}" (arXiv v5, Appendix D.2) [REF-012].
 - **[L]** The Optuna parameter definitions in REF-089's code sample the learning rate of both LightGBM and CatBoost from LogUniform[0.01, 0.3]; its separate random-search code draws CatBoost learning rates over [0.03, 0.3) and LightGBM learning rates over [0.03, 30) [REF-130]. LightGBM documents `min_data_in_leaf` as "an approximation based on the Hessian" [REF-116]; its split search estimates each side's row count as the side's Hessian sum times the parent's ratio of rows to Hessian sum [REF-117]. CatBoost's automatic learning rate for log-loss is a fixed function of device, `use_best_model`, `boost_from_average`, training-row count and iteration count, applied only when the learning-rate, leaf-estimation and L2 parameters are unset [REF-119]. LightGBM's tuning guide states that a reduced iteration count calls for a larger learning rate, and that `min_data_in_leaf` of "hundreds or thousands is enough for a large dataset" [REF-116]; CatBoost's guide states that a smaller learning rate requires more iterations and recommends depths of 6 to 10 [REF-118]. In CatBoost 1.2.10, binary log-loss defaults to ten Newton leaf-estimation iterations and L2 regularisation 3, the base learning-rate default is 0.03, and the default depth is 6 [REF-119].
-- **[D]** Training cost per full Train epoch from the GPU acceptance probe (Context); daily transaction volume per partition from DR-001 (V1: 65,544 transactions over 21 days).
+- **[L]** REF-087's space (B) for the ResNet-style MLP (Table 14) is `n_layers` UniformInt[1, 16], layer size UniformInt[64, 1024], hidden factor Uniform[1, 4], hidden dropout Uniform[0, 0.5], residual dropout {0, Uniform[0, 0.5]}, learning rate LogUniform[1e-5, 1e-2] and weight decay {0, LogUniform[1e-6, 1e-3]}, with category embedding size UniformInt[64, 512] for Adult only; for FT-Transformer (Table 13) it is `n_layers` UniformInt[1, 6], embedding size UniformInt[64, 512], residual dropout Const(0.0), attention and FFN (feed-forward network) dropout Uniform[0, 0.5], FFN factor Const(4/3), learning rate LogUniform[3e-5, 3e-4] and weight decay LogUniform[1e-6, 1e-3]. Its default FT-Transformer (Table 12) has 3 layers, embedding size 192, 8 heads, attention, FFN and residual dropout 0.2, 0.1 and 0.0, AdamW with learning rate 1e-4 and weight decay 1e-5 (0 for the feature tokenizer, LayerNorm and biases). It uses AdamW without learning-rate schedules and a predefined batch size per dataset, 1,024 for every dataset above 300,000 training rows (Section 4; Table 7) [REF-087].
+- **[L]** REF-103's sampler chooses each optional parameter's branch with `suggest_categorical([False, True])` and samples `d_token` in steps of `n_heads`; its Covertype configurations use batch size 1,024 for both models, and its Adult ResNet configuration searches `d_embedding` UniformInt[64, 512] [REF-103].
+- **[L]** TabZilla's default ResNet has 2 blocks, main width 128, hidden width 256, `dropout_first` 0.25, `dropout_second` 0.1, category embedding width 8 and learning rate 0.001, trained with PyTorch's AdamW without an explicit weight decay [REF-130]; AdamW's documented default weight decay is 0.01 [REF-120]. REF-089 ranks every algorithm's default setting separately and reports that "CatBoost, XGBoost, LightGBM, and ResNet, perform fairly well both with and without hyperparameter tuning" (arXiv v4, Appendix D.2.1) [REF-089]. The `rtdl` ResNet block applies `dropout_first` after the activation and `dropout_second` after the second linear layer, and the package's default FT-Transformer optimiser uses learning rate 1e-4 and weight decay 1e-5 [REF-131].
+- **[D]** GPU memory: in acceptance-probe run 5, the largest FT-Transformer setting of space (B) trained at batch 64 and the default at 256, with sampled whole-device memory at most 6,788 of 8,151 MiB; the largest ResNet-style MLP setting trained at 1,024 ([`gpu-acceptance-probe.md`](../gpu-acceptance-probe.md), Section 7). The Issue #50 probe found, at 800 tokens with bf16 (bfloat16) and memory-efficient attention, largest batches from 64 (6 layers, `d_token` 512) to 2,048 (1 layer, `d_token` 64) ([`evidence/gpu_probe/`](../../evidence/gpu_probe/README.md)).
+- **[D]** Training cost per full Train epoch from the GPU acceptance probe (Context; §7); daily transaction volume per partition from DR-001 (V1: 65,544 transactions over 21 days).
 - **[I]** Assuming independent random draws and a high-performing region with probability mass p under the sampling distribution, the probability of at least one draw in that region is:
 
   $$
@@ -241,17 +355,27 @@ Fixed CatBoost settings of [DR-013](DR-013-training-device-policy.md) §3, set e
 | CatBoost `random_strength` searched, as in REF-012 | Not tuned in REF-087's space (B); one fewer dimension for nine random draws |
 | LightGBM categorical controls (`cat_smooth`, `max_cat_threshold`, `min_data_per_group`) searched | Not tuned in any of the cited spaces; fixed at the documented defaults with native categorical handling ([DR-008](DR-008-feature-declaration-and-model-input-policy.md) §5) |
 | LightGBM `lambda_l1` searched, as in REF-012 and REF-130 | Not tuned in REF-129; fewer dimensions for nine random draws, with L2 regularisation searched |
+| One fixed small batch for every FT-Transformer candidate (64, the largest setting's limit) | Departs from REF-087's batch for datasets of this size; changes the number of updates, the optimisation noise and the cumulative weight decay; slower for small candidates and not measured |
+| A different batch size per candidate, set by its memory limit | Batch size would vary with the architecture and confound the comparison of candidates; accumulation keeps the effective batch fixed |
+| Gradient checkpointing instead of accumulation | Needs a revised probe and adds recomputation; accumulation reaches the same effective batch within the measured memory limits |
+| ResNet trial 1 from the commented ResNet example in the `rtdl` notebook | A usage example with no reported evaluation; TabZilla's default ResNet, built on the same package, is evaluated untuned in REF-089 |
+| TabZilla's ResNet default unchanged | Its category-embedding width (8) and inherited weight decay (0.01) lie outside space (B) |
+| ResNet `d_embedding` fixed for every candidate | REF-087 tunes the embedding size whenever categorical features exist; fixing it would also leave the ResNet's category-vector size untuned while FT-Transformer's is searched |
+| ResNet `d_embedding` searched over [192, 512] | Not a published range; removes short vectors, which can overfit less on rare categories |
+| Weight-sum denominator for the training loss | A self-normalised ratio estimator whose denominator varies with the number of frauds in each batch; dividing each micro-batch by its own weight sum would not implement effective-batch normalisation. Reduction A gives the additive row-count objective |
+| FT-Transformer evaluation batch 8,192, as in REF-103 | Not exercised on the 8 GB GPU in float32 at 758 tokens; 16 is the probe-verified workload |
 
 ## Rationale
 
-Each configuration receives ten candidate positions: one predefined reference configuration and nine settings drawn by the fixed sampler, so every configuration has the same search budget and no randomly sampled setting is chosen by hand. Early stopping on V1 limits overfitting within each trial, and the maxima bound training length. The V1 objective measures what the study's question concerns: the frauds captured within limited daily review capacity. The fixed sampler makes candidate generation reproducible; for fixed model scores, the comparison and tie rules (§5) make selection and queue ordering deterministic. Residual training variation is measured as DR-013 §6 specifies (§4). The tree-based search spaces come from published tuning protocols, CatBoost's from the same source and dataset-size class as the neural spaces; the two adaptations fit the spaces to nine random draws within the round maximum and keep the same nominal candidate list for both weightings with the scale-normalised leaf-size control, while the library's regularisation can still interact with class weighting (§6). Each reference configuration is its library's default for this setting, so every search contains the setting its developers chose.
+Each configuration receives ten candidate positions: one predefined reference configuration and nine settings drawn by the fixed sampler, so every configuration has the same search budget and no randomly sampled setting is chosen by hand. Early stopping on V1 limits overfitting within each trial, and the maxima bound training length. The V1 objective measures what the study's question concerns: the frauds captured within limited daily review capacity. The fixed sampler makes candidate generation reproducible; for fixed model scores, the comparison and tie rules (§5) make selection and queue ordering deterministic. Residual training variation is measured as DR-013 §6 specifies (§4). The tree-based search spaces come from published tuning protocols, CatBoost's from the same source and dataset-size class as the neural spaces; the two adaptations fit the spaces to nine random draws within the round maximum and keep the same nominal candidate list for both weightings with the scale-normalised leaf-size control, while the library's regularisation can still interact with class weighting (§6). Each tree-based reference configuration is its library's default for this setting, so every tree search contains the setting its developers chose. The neural spaces are REF-087's large-dataset spaces as its authors sample them. FT-Transformer's reference is the published default evaluated in REF-087; the ResNet-style MLP's reference adapts the TabZilla default evaluated in REF-089, replacing its category-embedding width and weight decay as §7 specifies [I], so the adapted configuration itself has not been evaluated in that source. One effective batch for every candidate keeps the optimisation rule fixed across the search, while the micro-batch plan only adapts the work to the GPU's memory (§7).
 
 ## Consequences
 
 - The protocol's Training Procedure, the R3 policy and design item 3 state these rules.
 - The development pipeline (Issue #96) saves every trial (settings, V1 objective per checkpoint, stopping round or epoch, stopping reason, runtime), the selected settings, the seed refits and the V2 metrics as JSON (JavaScript Object Notation) records, with a Markdown summary generated from them.
-- The tree-based search spaces and reference configurations (§6) and the neural ones of Issue #107 complete the training rules before any development run.
-- The development pipeline (Issue #96) reads the search spaces, sampling order and reference configurations from one machine-readable declaration that matches §6.
+- The search spaces and reference configurations of §6 and §7 complete the search rules of the training rules before any development run; the representation of [DR-012](DR-012-neural-network-input-representation.md), including its preprocessing noise seed, is decided separately before the neural runs.
+- Before any neural development run, the neural loop changes and is verified on synthetic data: effective batches split into recorded micro-batches with one AdamW update per effective batch and the loss of §7; the pre-search micro-batch preflight; the shared daily Recall@2% objective of §3 (the loop currently offers only the area under the ROC curve, average precision and log-loss); and the recording of the batch plan. The verification compares accumulated and unsplit gradients with dropout disabled, covers unequal micro-batches, non-uniform weights and the final batch of 1,016 rows, and checks same-seed repeatability for a recorded plan, the largest ResNet `d_embedding` (512) and representative FT-Transformer widths with padded heads. Because these change exercised paths, the synthetic acceptance evidence is extended under [`gpu-acceptance-probe.md`](../gpu-acceptance-probe.md) before any neural development run.
+- The development pipeline (Issue #96) reads the search spaces, sampling order and reference configurations from one machine-readable declaration that matches §6 and §7.
 - Before any development run, both tree adapters change and are verified on synthetic data: LightGBM accepts `metric="None"` with the shared V1 objective as a custom evaluation function (its adapter currently requires a built-in metric and passes no evaluation function), and CatBoost accepts the shared objective as a user-defined evaluation metric (its adapter currently requires a metric name). The verification covers the daily grouping, unweighted evaluation, the cutoff tie rule, strict improvement, patience, earliest-best checkpoint retention, and parameter recording and reloading with the custom metric.
 - The synthetic CatBoost verification also fits the largest depth of the space (10) on the GPU at the maximum of 2,000 iterations, because the acceptance probe measured depth 6 only.
 
@@ -262,11 +386,15 @@ Each configuration receives ten candidate positions: one predefined reference co
 - **V1 objective.** Recall@2% on V1 does not reflect ranking changes below the daily cutoff, so early stopping may end some trials earlier than a whole-ranking measure would.
 - **Seed variation.** Three seeds show a range, not a precise distribution of stochastic variation. CatBoost's GPU training is non-deterministic, so a fixed seed does not reproduce its fits exactly; the same-seed repeats measure that difference.
 - **Search coverage.** Equal trial counts give an equal search budget, not equal coverage of search spaces of different size, nor equal convergence.
+- **Neural updates.** At the effective batch of 1,024 and at most 15 epochs, a neural trial makes at most 5,400 updates, fewer than REF-087's training until 17 epochs without improvement; trials that reach the maximum are recorded (§2).
+- **Accumulation.** FT-Transformer's accumulated updates follow the effective-batch loss but do not reproduce an unsplit batch's dropout masks or floating-point order; repeatability holds for the recorded micro-batch plan.
+- **ResNet reference.** The ResNet-style MLP's reference configuration is a benchmark default with two values replaced [I], not a configuration from REF-087.
+- **Compute estimate.** The neural times of §7 are extrapolations from synthetic probe fits, not measured development runtimes; the predicted cost of the actual candidate lists is recorded before any run.
 - **Adapted spaces.** The tree-based spaces adapt published spaces to a smaller random budget (§6); the narrowed learning-rate range excludes settings that larger adaptive searches can reach. Trials that reach the 2,000-round maximum are recorded (§2).
 
 ## References
 
-REF-012, REF-087, REF-089, REF-116, REF-118, REF-119, REF-128, REF-129, REF-130 — see [`../references.md`](../references.md).
+REF-012, REF-087, REF-089, REF-103, REF-116, REF-118, REF-119, REF-120, REF-128, REF-129, REF-130, REF-131 — see [`../references.md`](../references.md).
 
 ## Symbols and notation
 
@@ -294,7 +422,7 @@ REF-012, REF-087, REF-089, REF-116, REF-118, REF-119, REF-128, REF-129, REF-130 
 | `N_V1` | Number of V1 transactions (65,544) |
 | R3, R4 | Decision policies: daily top-K; calibrated cost-aware capped policy |
 | Recall@2% | Share of frauds captured under daily top-K review at 2 % capacity |
-| ROC-AUC | Area under the Receiver Operating Characteristic curve |
+| ROC, ROC-AUC | Receiver Operating Characteristic curve; the area under it |
 | SESOI | Smallest Effect Size Of Interest |
 | SHA-256 | Secure Hash Algorithm, 256-bit |
 | Test | Sealed final evaluation partition (relative days 155–182) |
@@ -325,3 +453,18 @@ REF-012, REF-087, REF-089, REF-116, REF-118, REF-119, REF-128, REF-129, REF-130 
 | `boosting`, `data_sample_strategy`, `max_depth`, `min_gain_to_split`, `max_delta_step`, `path_smooth`, `extra_trees`, `feature_fraction_bynode`, `boost_from_average`, `early_stopping_min_delta` | LightGBM: boosting algorithm; row-sampling strategy; depth limit (−1 = none); minimum split gain; leaf-output step limit; leaf-value smoothing towards the parent; randomised split thresholds; share of features per node; start from the average label; minimum improvement counted by early stopping |
 | `max_cat_to_onehot`, `max_cat_threshold`, `cat_l2`, `cat_smooth`, `min_data_per_group` | LightGBM categorical controls: largest category count split one-vs-rest; maximum categories on one side of a split; L2 penalty in categorical splits; smoothing of category statistics; minimum rows per category group |
 | `model_size_reg`, `permutation_count`, `fold_permutation_block`, `boost_from_average`, `use_best_model`, `leaf_estimation_method`, `has_time` | CatBoost: model-size regularisation coefficient; number of permutations; permutation block size; start from the average label; keep the best-iteration model; leaf-value estimation method; use the supplied row order as time |
+| `n_layers`, `d`, `d_hidden_factor`, `hidden_dropout`, `residual_dropout`, `d_embedding` | ResNet-style MLP: number of residual blocks; block width (the parameter `d`, distinct from the relative day d); ratio of a block's hidden width to `d`; dropout inside a block; dropout on a block's residual branch; length of each category's embedding vector |
+| `n_layers`, `d_token`, `attention_dropout`, `ffn_dropout`, `residual_dropout`, `d_ffn_factor` | FT-Transformer: number of Transformer layers; length of each input's token vector; dropout of the attention weights; dropout inside the feed-forward module; dropout on the residual branches; ratio of the feed-forward hidden size to `d_token` |
+| `lr`, `weight_decay` | Neural learning rate; AdamW's decoupled weight-decay coefficient |
+| `dropout_first`, `dropout_second` | The `rtdl` ResNet block's dropout after the activation and after the second linear layer (REF-131) |
+| AdamW | Adam optimiser with decoupled weight decay |
+| `betas`, `eps`, AMSGrad | AdamW's decay coefficients of the first- and second-moment estimates; its numerical-stability constant; the variant that keeps the maximum of past second moments (disabled) |
+| i | Index of a Train row in an effective batch |
+| BatchNorm, LayerNorm | Batch normalisation (statistics over the rows of a batch); layer normalisation (over the values of one row) |
+| ReGLU, FFN | Rectified gated linear unit; feed-forward network (FT-Transformer's feed-forward module) |
+| bf16, float32 | bfloat16: 16-bit floating-point format with the exponent range of float32; 32-bit floating-point format |
+| MiB | Mebibyte (2^20 bytes) |
+| Effective batch, micro-batch | The Train rows of one optimiser update (1,024); the part of an effective batch processed by the GPU at once |
+| `suggest_categorical` | Optuna's categorical choice, used by REF-103 to switch an optional parameter off or on |
+| `L_batch`, `𝓑`, m, `w_i`, `ℓ_i` | Training loss of an effective batch; its Train rows; its row count; sample weight of row i; binary cross-entropy of row i |
+| `T_FTT(E)`, E, `t_ref`, `t̄` | Search time of FT-Transformer's two configurations; epochs per trial; epoch time of the reference configuration; epoch time of an average candidate |
