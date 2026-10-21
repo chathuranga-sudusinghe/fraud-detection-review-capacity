@@ -262,10 +262,14 @@ def test_an_identity_does_not_depend_on_its_key_order() -> None:
 
 
 def test_logistic_matches_catboost_probabilities_on_its_own_raw_scores() -> None:
-    """The probabilities the metric ranks equal, bit for bit, the ones ``predict_proba`` returns,
-    including a fit whose raw scores are far from zero (probabilities near 0 and 1). Exact
-    saturation is covered by ``test_logistic_saturates_without_warnings``; ties on a real GPU
-    fit are the subject of the acceptance check G3."""
+    """The probabilities the metric ranks agree with the ones ``predict_proba`` returns to within
+    4 units in the last place (ulp), including a fit whose raw scores are far from zero
+    (probabilities near 0 and 1). NumPy's and CatBoost's ``exp`` can differ in the last bits
+    between CPUs and math libraries (the CI runner differs from the development machine), so bit
+    equality is not guaranteed: the bound is an exponential, a rounded sum and a division, each
+    within about one ulp. Exact saturation is covered by
+    ``test_logistic_saturates_without_warnings``; ties on a real GPU fit are the subject of the
+    acceptance check G3."""
     from catboost import CatBoostClassifier
 
     rng = np.random.default_rng(3)
@@ -284,7 +288,8 @@ def test_logistic_matches_catboost_probabilities_on_its_own_raw_scores() -> None
         model.fit(features, labels)
         raw = np.asarray(model.predict(features, prediction_type="RawFormulaVal"), np.float64)
         native = model.predict_proba(features)[:, 1]
-        assert np.array_equal(logistic(raw), native)
+        ours = logistic(raw)
+        assert np.all(np.abs(ours - native) <= 4 * np.spacing(native))
         far = float(np.abs(raw).max())
     assert far > 8  # the second fit: probabilities within 3.4e-4 of 0 or 1
 
