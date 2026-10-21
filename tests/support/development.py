@@ -141,6 +141,90 @@ H3_CAPTURED = {
 }
 
 _BODIES: dict[str, dict[str, Any]] = {
+    "candidates": {
+        "model": "lightgbm",
+        "configurations": ["LGB-u", "LGB-b"],
+        "stream": {"index": 0, "spawn_key": [0]},
+        "sampler_seed": 42,
+        "sampler": {
+            "generator": "numpy.random.default_rng",
+            "bit_generator": "PCG64",
+            "numpy": "2.5.3",
+            "python": "3.12.3",
+        },
+        "trials": [
+            {
+                "trial": 1,
+                "reference": True,
+                "parameters": {"learning_rate": 0.1, "num_leaves": 31, "lambda_l2": 0.0},
+            },
+            {
+                "trial": 2,
+                "reference": False,
+                "parameters": {"learning_rate": 0.0731, "num_leaves": 412, "lambda_l2": 2.5},
+            },
+            {
+                "trial": 3,
+                "reference": False,
+                "parameters": {"learning_rate": 0.0125, "num_leaves": 9, "lambda_l2": 0.0},
+            },
+        ],
+    },
+    "cost_prediction": {
+        "candidates": {
+            "lightgbm": file("candidates/lightgbm.json"),
+            "catboost": file("candidates/catboost.json"),
+            "resnet": file("candidates/resnet.json"),
+            "ft_transformer": file("candidates/ft_transformer.json"),
+            "logistic_regression": file("candidates/logistic_regression.json"),
+        },
+        "estimates": [
+            {
+                "model": model,
+                "estimated": False,
+                "basis": "no cost model in DR-015 §7",
+                "epochs_low": None,
+                "epochs_high": None,
+                "candidate_epoch_minutes": [],
+                "search_hours_low": None,
+                "search_hours_high": None,
+                "refit_hours": None,
+            }
+            for model in ("lightgbm", "catboost")
+        ]
+        + [
+            {
+                "model": model,
+                "estimated": True,
+                "basis": basis,
+                "epochs_low": 7,
+                "epochs_high": 15,
+                "candidate_epoch_minutes": [minutes, minutes],
+                "search_hours_low": low,
+                "search_hours_high": high,
+                "refit_hours": refit,
+            }
+            for model, basis, minutes, low, high, refit in (
+                ("resnet", "upper bound at the largest measured setting", 0.48, 0.25, 0.5, 0.75),
+                ("ft_transformer", "linear in d_token between the anchors", 8.0, 3.5, 7.5, 9.25),
+            )
+        ]
+        + [
+            {
+                "model": "logistic_regression",
+                "estimated": False,
+                "basis": "no cost model in DR-015 §7",
+                "epochs_low": None,
+                "epochs_high": None,
+                "candidate_epoch_minutes": [],
+                "search_hours_low": None,
+                "search_hours_high": None,
+                "refit_hours": None,
+            }
+        ],
+        "totals": {"search_hours_low": 3.75, "search_hours_high": 8.0, "refit_hours": 10.0},
+        "decision": "pending_owner_decision",
+    },
     "run": {
         "started": "2026-10-20T09:15:30.123456Z",
         "code": {

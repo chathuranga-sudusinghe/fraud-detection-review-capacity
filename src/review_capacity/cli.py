@@ -25,6 +25,13 @@ Commands:
                    process and its own directory, with --previous (the first run's
                    probe.json), completes the comparison
 
+    plan-search    the search plan of DR-015 §1 and §7, before any fit: the candidate list of each
+                   model and the predicted cost of the lists, as records and a generated
+                   search_plan.md, and its log, always plan.log (--log-file is refused), in a
+                   new directory: --output, or by default
+                   outputs/search_plan/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Reads no data and
+                   fits no model; whether the predicted cost is feasible is the owner's decision
+
 Every message is logged with a timestamp to the terminal and, with --log-file PATH, also to a
 file kept with the run's evidence. --verbose adds detail; --quiet shows warnings and errors only.
 
@@ -238,10 +245,62 @@ def _probe_gpu(args: argparse.Namespace) -> int:
     return 0 if record["overall"] in ("pass", "pending second run") else EXIT_DIFFERENCES
 
 
+def _plan_output(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The plan's output directory. Without ``--output``, a new directory named by the UTC start
+    time under ``plan.OUTPUT_ROOT``; the start time is fixed on ``args`` at the first call, so that
+    the log file, the records and the directory agree."""
+    from review_capacity.training import plan
+
+    if getattr(args, "started", None) is None:
+        args.started = plan.run_id()
+    if args.output is None:
+        args.output = plan.OUTPUT_ROOT / args.started
+    output: Path = args.output if args.output.is_absolute() else paths.root / args.output
+    return output
+
+
+def _plan_search(args: argparse.Namespace) -> int:
+    from review_capacity.development.records import DevelopmentPartitions
+    from review_capacity.models.run_record import load_settings_with_snapshot
+    from review_capacity.training import plan
+    from review_capacity.training.declaration import load_declaration
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    output = _plan_output(args, paths)
+    settings, settings_file = load_settings_with_snapshot(paths)
+    declaration, declaration_file = load_declaration(paths)
+    partitions = DevelopmentPartitions.from_spec(load_dataset_spec(paths), paths)
+    run = plan.identity(
+        paths.root,
+        args.started,
+        declaration,
+        declaration_file,
+        settings_file,
+        settings.main_seed,
+        paths.manifest,
+    )
+    plan.write_plan(output, args.started, run, declaration, partitions)
+    logger.info("Search plan written to %s", output)
+    return 0
+
+
 def _log_file(args: argparse.Namespace) -> Path | None:
-    """The log file: ``--log-file``; for ``probe-gpu`` always ``probe.log`` in its output directory
-    (Section 5 of the probe specification), and only once the directory is shown to be free for a
-    new run, so that no earlier run's log is ever written to. Raises before any file is opened."""
+    """The log file: ``--log-file``; for ``probe-gpu`` always ``probe.log`` and for ``plan-search``
+    ``plan.log`` in its output directory (Section 5 of the probe specification), and only once the
+    directory is shown to be free for a new run, so that no earlier run's log is ever written to.
+    Raises before any file is opened."""
+    if args.command == "plan-search":
+        from review_capacity.training import plan
+
+        if args.log_file is not None:
+            raise SpecificationError(
+                f"plan-search writes its log to {plan.LOG_NAME} in its output directory; "
+                "omit --log-file"
+            )
+        output = _plan_output(args, ProjectPaths.discover(args.root))
+        plan.check_output(output)
+        return output / plan.LOG_NAME
     if args.command != "probe-gpu":
         log_file: Path | None = args.log_file
         return log_file
@@ -316,6 +375,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="the first run's probe.json, to compare a second run with it (check C11)",
     )
     probe.set_defaults(handler=_probe_gpu)
+    plan_search = commands.add_parser(
+        "plan-search",
+        help="generate the candidate lists and predict their cost, before any fit (DR-015)",
+    )
+    plan_search.add_argument("--root", type=Path, default=None, help="project root directory")
+    plan_search.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="new directory for the plan (default: outputs/search_plan/<UTC time>)",
+    )
+    plan_search.set_defaults(handler=_plan_search)
     return parser
 
 
@@ -330,16 +401,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     level = logging.DEBUG if args.verbose else logging.WARNING if args.quiet else logging.INFO
     handler: Callable[[argparse.Namespace], int] = args.handler
-    probe = args.command == "probe-gpu"
+    own_log = args.command in ("probe-gpu", "plan-search")
     try:
         configure_logging(level, terminal_tracebacks=args.debug)  # until the log file is known
         configure_logging(
             level,
             _log_file(args),
             terminal_tracebacks=args.debug,
-            # the probe's log is part of its evidence: complete even with --quiet, and new
-            file_level=min(level, logging.INFO) if probe else None,
-            new_file=probe,
+            # these logs are part of the run's evidence: complete even with --quiet, and new
+            file_level=min(level, logging.INFO) if own_log else None,
+            new_file=own_log,
         )
         logger.info("review-capacity %s", args.command)
         return handler(args)

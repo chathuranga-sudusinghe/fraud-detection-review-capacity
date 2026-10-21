@@ -454,13 +454,17 @@ def _table(header: list[str], body: list[list[str]]) -> list[str]:
     ]
 
 
-def record_markdown(record: Mapping[str, Any]) -> str:
+def record_markdown(record: Mapping[str, Any], *, omit: tuple[str, ...] = ()) -> str:
     """Every field of ``record`` as Markdown: a field/value table, then one table per list of
-    objects (one row per entry). The caller validates the record and adds the heading."""
+    objects (one row per entry). The caller validates the record and adds the heading. A page
+    that shows several records of one run may present their shared fields once and ``omit``
+    them from the others (for example ``identity``)."""
     contract = contract_of(record)
     scalars: list[tuple[str, object]] = []
     lists: list[tuple[str, Object, list[Mapping[str, Any]]]] = []
     for f in contract.body.fields:
+        if f.name in omit:
+            continue
         item = record[f.name]
         if isinstance(f.kind, ListOf) and isinstance(f.kind.item, Object):
             lists.append((f.name, f.kind.item, item))
