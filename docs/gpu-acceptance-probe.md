@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; **revised and approved on 15 October 2026** (Issue #77) for the training devices of the DR-013 revision of Issue #101. **Acceptance gate passed on 15 October 2026** (Section 7). **Section 8** (CatBoost tree-objective acceptance, Issue #123): approved on 21 October 2026, before implementation and before it runs |
+| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; **revised and approved on 15 October 2026** (Issue #77) for the training devices of the DR-013 revision of Issue #101. **Acceptance gate passed on 15 October 2026** (Section 7). **Section 8** (CatBoost tree-objective acceptance, Issue #123): approved on 21 October 2026, before implementation and before it runs; **acceptance passed on 21 October 2026** (Section 8, Result) |
 | Governing record | Decision Record (DR) [DR-013](decisions/DR-013-training-device-policy.md) §8: what the probe must confirm. This document owns how: the synthetic inputs, the checks, the acceptance criteria and the tolerances |
 | Command | `review-capacity probe-gpu` (package command); Section 8: `review-capacity probe-catboost-objective` |
 | Evidence | [`evidence/gpu_acceptance_probe/`](../evidence/gpu_acceptance_probe/README.md) |
@@ -184,7 +184,17 @@ The daily budget of the V1 objective is `K = round(0.02 × V1 rows / V1 days)` (
 
 **Procedure.** This section is approved before the implementation begins; the implementation is reviewed and committed before the run; `review-capacity probe-catboost-objective` runs from the clean committed tree. A change of values or paths requires an approved revision and a new run.
 
-**Result.** Not yet run.
+**Result, acceptance run of 21 October 2026 (UTC)** (commit `03bf5be`, clean tree; records in [`evidence/catboost_objective_acceptance/2026-10-21T222733Z/`](../evidence/catboost_objective_acceptance/2026-10-21T222733Z/)). Overall result **pass**; the run is the acceptance run (`acceptance_evidence` true, no blockers). The daily budget of the synthetic V1 partition (100,000 rows, 20 days, 3,462 frauds) is K = 100.
+
+- G1: the resolved task type is `GPU`; the GPU learner accepted the user-defined metric and the fit completed.
+- G2: 2,000 rounds trained and 2,000 V1 evaluations recorded, stopping reason `maximum`, CatBoost's own evaluation history of 2,000 entries; the earliest best checkpoint is round 107 and 107 trees are kept.
+- G3: the numerator recomputed from the CPU-scored V1 rows at the kept model (432) equals the recorded numerator of the kept checkpoint (432). CatBoost also evaluated the metric on the learn set at every round (2,000 evaluations of other sets), which the metric left unscored.
+- G4: `depth` 10 and `boost_from_average` `False` in the resolved parameters; all 21 fixed settings confirmed; `sampling_unit` as in Section 7.
+- G5: reloaded scores bit for bit identical; the objective's identity and `eval_metric` `v1_objective` are in the saved record.
+- G6: one warning, CatBoost's numba notice (accepted by its text, it concerns the speed of the metric only).
+- G7: fit time 485.5 s (about 0.24 s per round after the first); sampled whole-device GPU memory at most 6,788 of 8,151 MiB (975 samples, no monitoring problem); peak host memory 6.56 GB; no out-of-memory error.
+
+**Outcome: the CatBoost tree-objective acceptance of Issue #123 is passed.** The values are of synthetic data and carry no information about model performance.
 
 ## Symbols and notation
 
