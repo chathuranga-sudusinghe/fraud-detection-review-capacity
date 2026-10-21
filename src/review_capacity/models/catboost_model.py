@@ -19,6 +19,16 @@
   automatic, device-dependent value), ``model_size_reg``, ``fold_permutation_block``,
   ``permutation_count``, ``random_strength``, ``l2_leaf_reg``, ``leaf_estimation_iterations``,
   ``bagging_temperature``, ``eval_metric`` and ``metric_period``, and ``iterations``.
+* **V1 objective (DR-015 §3, §6):** the research configuration sets ``eval_metric`` to
+  ``"v1_objective"`` and ``boost_from_average`` to ``False``, explicitly. With early stopping, the
+  shared objective (``models.v1_objective``) is passed as ``objective`` and becomes CatBoost's
+  user-defined evaluation metric, which runs on the GPU learner as on the CPU; the recorded
+  parameters (also stored inside the model) carry the name and the objective's identity instead
+  of the metric object, so they stay JSON. In a fixed-length refit the name is recorded and not
+  passed to CatBoost, which has no validation set to evaluate. After fitting, the resolved
+  ``boost_from_average`` must be ``False``, and CatBoost's best iteration must equal the earliest
+  best of the objective's own history. Without the research configuration, a built-in metric name
+  is required (the GPU acceptance probe's path).
 * **Fitting:** with V1 early stopping, ``od_wait`` must also be given; the overfitting detector is
   ``Iter`` and the model is cut back to its best iteration. With a fixed iteration count (the CPU
   refit of DR-013 §7), exactly that many trees are grown without validation, or the run stops.
@@ -70,10 +80,17 @@ from review_capacity.models.base import (
 )
 from review_capacity.models.registry import Configuration
 from review_capacity.models.run_record import jsonable
+from review_capacity.models.v1_objective import (
+    OBJECTIVE_NAME,
+    CatBoostObjective,
+    TrainingHistory,
+    V1Objective,
+    check_identity,
+)
 
 logger = logging.getLogger(__name__)
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 MODEL_FILE = "model.cbm"
 MANIFEST_FILE = "manifest.json"
 # CatBoost's synonym groups (catboost.core._process_synonyms, CatBoost 1.2.10): alternative
@@ -208,7 +225,9 @@ class _LogStream:
         self.pending = ""
 
 
-def _check_values(params: Mapping[str, Any], early_stopping: bool) -> None:
+def _check_values(
+    params: Mapping[str, Any], early_stopping: bool, objective: V1Objective | None
+) -> None:
     required = [*EXPLICIT, "od_wait"] if early_stopping else list(EXPLICIT)
     missing = [name for name in required if name not in params]
     if missing:
@@ -228,6 +247,19 @@ def _check_values(params: Mapping[str, Any], early_stopping: bool) -> None:
     metric = params["eval_metric"]
     if not isinstance(metric, str) or not metric.strip():
         raise SpecificationError(f"eval_metric must name an evaluation metric, not {metric!r}")
+    if objective is not None and metric != OBJECTIVE_NAME:
+        raise SpecificationError(
+            f"The shared V1 objective is the evaluation: eval_metric must be "
+            f"{OBJECTIVE_NAME!r}, not {metric!r}"
+        )
+    if metric == OBJECTIVE_NAME:
+        if early_stopping and objective is None:
+            raise SpecificationError(f"eval_metric {OBJECTIVE_NAME!r} needs the objective argument")
+        if params.get("boost_from_average") is not False:
+            raise SpecificationError(
+                f"boost_from_average must be set explicitly to False (DR-015 §6), "
+                f"not {params.get('boost_from_average')!r}"
+            )
 
 
 def _binary_classes(classes: Any) -> bool:
@@ -266,6 +298,14 @@ def _check_resolved(resolved: Mapping[str, Any], fixed: Mapping[str, Any]) -> No
             wrong[name] = observed
     if wrong:
         raise ModelError(f"Resolved CatBoost parameters differ from the fixed settings: {wrong}")
+
+
+def _check_boost_from_average(resolved: Mapping[str, Any]) -> None:
+    """The resolved parameters must show ``boost_from_average`` as ``False`` (DR-015 §6): a
+    missing entry or any other value stops the run."""
+    observed = resolved.get("boost_from_average")
+    if observed is not False:
+        raise ModelError(f"Resolved boost_from_average must be False, not {observed!r}")
 
 
 def _canonical(value: object) -> str:
@@ -365,6 +405,15 @@ def _manifest_fields(
         saved = requested.get(name)
         if type(saved) is not type(value) or saved != value:  # 0 is not False, 1.0 is not 1
             raise ModelError(f"Saved requested parameter {name!r} does not match the fixed setting")
+    if (
+        requested.get("eval_metric") == OBJECTIVE_NAME
+        and requested.get("boost_from_average") is not False
+    ):
+        raise ModelError("Saved requested boost_from_average must be False for the V1 objective")
+    if OBJECTIVE_NAME in requested:
+        check_identity(requested[OBJECTIVE_NAME])
+        if requested.get("eval_metric") != OBJECTIVE_NAME:
+            raise ModelError("A model fitted on the V1 objective must record its eval_metric")
     if not isinstance(model_sha256, str) or len(model_sha256) != 64:
         raise ModelError("Saved model SHA-256 is missing or malformed")
     return iterations, requested, model_sha256
@@ -388,6 +437,7 @@ class CatBoostModel(ScoringModel):
         self._model: Any = None
         self._requested: dict[str, Any] = {}
         self._iterations = 0
+        self._history: TrainingHistory | None = None
 
     def _fixed_parameters(self) -> dict[str, Any]:
         return {**self.settings.catboost.params(self.device), "random_seed": self.seed}
@@ -416,7 +466,10 @@ class CatBoostModel(ScoringModel):
         )
 
     def _parameters_for_fit(
-        self, hyperparameters: Mapping[str, Any], iterations: int | None
+        self,
+        hyperparameters: Mapping[str, Any],
+        iterations: int | None,
+        objective: V1Objective | None = None,
     ) -> dict[str, Any]:
         requested = merge_parameters({}, hyperparameters, aliases=SYNONYMS)
         clash = sorted(self._reserved() & requested.keys())
@@ -434,7 +487,7 @@ class CatBoostModel(ScoringModel):
         if not early_stopping:
             requested.pop("od_wait", None)
             requested["iterations"] = iterations
-        _check_values(requested, early_stopping)
+        _check_values(requested, early_stopping, objective)
         params = {
             **self._fixed_parameters(),
             **requested,
@@ -444,6 +497,8 @@ class CatBoostModel(ScoringModel):
         }
         if early_stopping:
             params["od_type"] = "Iter"
+        if objective is not None:
+            params[OBJECTIVE_NAME] = objective.identity
         return params
 
     def fit(
@@ -453,11 +508,18 @@ class CatBoostModel(ScoringModel):
         hyperparameters: Mapping[str, Any],
         *,
         iterations: int | None = None,
+        objective: V1Objective | None = None,
     ) -> None:
+        """Fit as ``ScoringModel.fit``; with ``objective`` (the shared V1 objective, built from
+        ``valid``), CatBoost evaluates and early-stops on it."""
         from catboost import CatBoostClassifier, CatBoostError
 
         check_fit_arguments(valid, iterations)
-        params = self._parameters_for_fit(hyperparameters, iterations)
+        if objective is not None:
+            if valid is None:
+                raise SpecificationError("The V1 objective needs early stopping on V1")
+            objective.check_partition(valid)
+        params = self._parameters_for_fit(hyperparameters, iterations, objective)
         self.check_inputs(train.features)
         if not train.in_time_order():
             raise DataValidationError(
@@ -472,7 +534,13 @@ class CatBoostModel(ScoringModel):
             with log_step(logger, f"Fit {name} on {self.device} ({rows})"):
                 model = CatBoostClassifier()
                 record = json.dumps(jsonable(params), sort_keys=True)
-                model.set_params(**params, metadata={RECORD_KEY: record})
+                native = {k: v for k, v in params.items() if k != OBJECTIVE_NAME}
+                recorder = None if objective is None else objective.recorder()
+                if recorder is not None:
+                    native["eval_metric"] = CatBoostObjective(recorder)
+                elif native["eval_metric"] == OBJECTIVE_NAME:
+                    del native["eval_metric"]  # no validation set to evaluate (fixed-length refit)
+                model.set_params(**native, metadata={RECORD_KEY: record})
                 model.fit(
                     self._pool(train.features, train),
                     eval_set=None if valid is None else self._pool(valid.features, valid),
@@ -488,8 +556,34 @@ class CatBoostModel(ScoringModel):
                     )
                 if not _binary_classes(model.classes_):
                     raise ModelError(f"{name}: class labels are not 0 and 1")
-                _check_resolved(model.get_all_params(), self._fixed_parameters())
+                resolved = model.get_all_params()
+                _check_resolved(resolved, self._fixed_parameters())
                 _check_system(dict(model.get_metadata().items()), self._fixed_parameters())
+                if params["eval_metric"] == OBJECTIVE_NAME:
+                    _check_boost_from_average(resolved)
+                history = None
+                if recorder is not None:
+                    history = recorder.history(
+                        patience=params["od_wait"], maximum=params["iterations"]
+                    )
+                    evaluated = model.get_evals_result()["validation"]
+                    trained = {len(values) for values in evaluated.values()}
+                    if trained != {history.stopped_at}:
+                        raise ModelError(
+                            f"{name}: CatBoost's evaluation history has {sorted(trained)} rounds, "
+                            f"{history.stopped_at} V1 evaluations were recorded"
+                        )
+                    if kept != history.best_checkpoint:
+                        raise ModelError(
+                            f"{name}: CatBoost kept {kept} trees, the earliest best V1 "
+                            f"checkpoint is {history.best_checkpoint}"
+                        )
+                    if recorder.other_evaluations:
+                        logger.info(
+                            "%s: %d evaluations of other sets were not scored",
+                            name,
+                            recorder.other_evaluations,
+                        )
         except CatBoostError as error:
             raise ModelError(f"{name}: CatBoost training failed: {error}") from error
         finally:
@@ -498,6 +592,7 @@ class CatBoostModel(ScoringModel):
         self._model = model
         self._requested = params
         self._iterations = kept
+        self._history = history
         logger.info("%s fitted: %d trees kept", name, kept)
 
     def predict(self, features: pd.DataFrame) -> Scores:
@@ -605,6 +700,8 @@ class CatBoostModel(ScoringModel):
             raise ModelError("Saved model's class labels are not 0 and 1")
         _check_resolved(resolved, model._fixed_parameters())
         _check_system(metadata, model._fixed_parameters())
+        if requested.get("eval_metric") == OBJECTIVE_NAME:
+            _check_boost_from_average(resolved)
         try:
             embedded = json.loads(metadata[RECORD_KEY])
         except (KeyError, ValueError) as error:
@@ -628,6 +725,14 @@ class CatBoostModel(ScoringModel):
                 "thread_count": self._prediction_threads(),
             },
         }
+
+    @property
+    def training_history(self) -> TrainingHistory | None:
+        """The V1 checkpoint history of the fit that early-stopped on the shared objective
+        (``None`` for any other fit, and for a reloaded model: the history belongs to the trial's
+        record)."""
+        self._fitted()
+        return self._history
 
     @property
     def fitted_iterations(self) -> int:

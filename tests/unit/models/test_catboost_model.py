@@ -24,6 +24,7 @@ from review_capacity.models.catboost_model import (
     catboost_parameters,
 )
 from review_capacity.models.registry import configuration
+from review_capacity.models.v1_objective import V1Objective
 from support.synthetic import FEATURES, REPO_PATHS
 
 HYPERPARAMETERS: dict[str, Any] = {
@@ -632,3 +633,219 @@ def test_record_comparison_keeps_json_types_apart() -> None:
             catboost_model._check_record({**record, name: value}, record)
     with pytest.raises(ModelError, match="not valid JSON values"):
         catboost_model._check_record({**record, "learning_rate": float("nan")}, record)
+
+
+# --- the shared V1 objective as CatBoost's user-defined metric (Issue #123) -------------------
+
+V1_HYPERPARAMETERS: dict[str, Any] = {
+    **HYPERPARAMETERS,
+    "eval_metric": "v1_objective",
+    "boost_from_average": False,
+    "metric_period": 1,
+}
+DAILY_K = 6
+
+
+def _by_day(data: ModelData, per_day: int = 60) -> ModelData:
+    """The same rows (in time order) with times that spread them over relative days 1, 2, ..."""
+    rows = len(data.labels)
+    index = np.arange(rows, dtype=np.int64)
+    return ModelData(
+        data.features,
+        data.labels,
+        data.weights,
+        times=(index // per_day + 1) * 86_400 + index % per_day,
+        ids=index + 3_000_000,
+    )
+
+
+def _v1_fit(
+    settings: ModelSettings,
+    train: ModelData,
+    valid: ModelData,
+    hyperparameters: dict[str, Any] | None = None,
+    name: str = "Cat-u",
+) -> tuple[CatBoostModel, V1Objective]:
+    objective = V1Objective(valid, DAILY_K)
+    model = _model(settings, name)
+    model.fit(train, valid, hyperparameters or V1_HYPERPARAMETERS, objective=objective)
+    return model, objective
+
+
+def test_fit_early_stops_on_the_v1_objective(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    v1 = _by_day(valid)
+    model, objective = _v1_fit(settings, train, v1)
+    history = model.training_history
+    assert history is not None
+    assert model.fitted_iterations == history.best_checkpoint
+    assert history.stopped_at >= history.best_checkpoint
+    requested = model.parameters["requested"]
+    assert requested["eval_metric"] == "v1_objective"
+    assert requested["boost_from_average"] is False
+    assert requested["v1_objective"] == history.objective == objective.identity
+    assert model.parameters["resolved"]["boost_from_average"] is False
+    recall = objective.queue.recall(model.predict(v1.features), v1.labels, DAILY_K)
+    assert recall.numerator == history.checkpoints[history.best_checkpoint - 1].numerator
+
+
+def test_patience_stops_training_the_declared_rounds_after_the_best(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    # An objective of at most 30 integer steps cannot improve strictly in 60 rounds in a row.
+    model, _ = _v1_fit(settings, train, _by_day(valid), {**V1_HYPERPARAMETERS, "od_wait": 1})
+    history = model.training_history
+    assert history is not None
+    assert history.stopping_reason == "early_stopping"
+    assert history.stopped_at == history.best_checkpoint + 1
+
+
+def test_training_ends_at_the_maximum_when_patience_does_not_run_out(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    model, _ = _v1_fit(
+        settings, train, _by_day(valid), {**V1_HYPERPARAMETERS, "iterations": 8, "od_wait": 8}
+    )
+    history = model.training_history
+    assert history is not None
+    assert (history.stopped_at, history.stopping_reason) == (8, "maximum")
+
+
+def test_v1_weights_do_not_enter_the_objective(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    v1 = _by_day(valid)
+    heavy = ModelData(
+        v1.features,
+        v1.labels,
+        np.where(v1.labels == 1, 50.0, 1.0),
+        times=v1.times,
+        ids=v1.ids,
+    )
+    plain_model, _ = _v1_fit(settings, train, v1)
+    heavy_model, _ = _v1_fit(settings, train, heavy)
+    plain, other = plain_model.training_history, heavy_model.training_history
+    assert plain is not None
+    assert other is not None
+    assert [c.numerator for c in plain.checkpoints] == [c.numerator for c in other.checkpoints]
+    assert plain_model.fitted_iterations == heavy_model.fitted_iterations
+
+
+def test_a_fit_without_the_objective_has_no_history(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    model = _model(settings)
+    model.fit(train, valid, HYPERPARAMETERS)
+    assert model.training_history is None
+    assert "v1_objective" not in model.parameters["requested"]
+
+
+def test_refit_records_the_declared_metric_without_passing_it(
+    settings: ModelSettings, train: ModelData
+) -> None:
+    model = _model(settings)
+    model.fit(train, None, V1_HYPERPARAMETERS, iterations=6)
+    assert model.fitted_iterations == 6
+    assert model.training_history is None
+    requested = model.parameters["requested"]
+    assert (requested["eval_metric"], requested["boost_from_average"]) == ("v1_objective", False)
+    assert "v1_objective" not in requested
+    assert model.parameters["resolved"]["boost_from_average"] is False
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"boost_from_average": True}, "boost_from_average must be set explicitly to False"),
+        ({"boost_from_average": 0}, "boost_from_average must be set explicitly to False"),
+        ({"eval_metric": "Logloss"}, "eval_metric must be 'v1_objective'"),
+    ],
+)
+def test_the_research_configuration_is_checked(
+    settings: ModelSettings,
+    train: ModelData,
+    valid: ModelData,
+    change: dict[str, Any],
+    message: str,
+) -> None:
+    v1 = _by_day(valid)
+    objective = V1Objective(v1, DAILY_K)
+    with pytest.raises(SpecificationError, match=message):
+        _model(settings).fit(train, v1, {**V1_HYPERPARAMETERS, **change}, objective=objective)
+
+
+def test_boost_from_average_must_be_explicit_with_the_declared_metric(
+    settings: ModelSettings, train: ModelData
+) -> None:
+    missing = {k: v for k, v in V1_HYPERPARAMETERS.items() if k != "boost_from_average"}
+    with pytest.raises(SpecificationError, match="boost_from_average must be set explicitly"):
+        _model(settings).fit(train, None, missing, iterations=3)
+
+
+def test_the_declared_metric_needs_the_objective_for_early_stopping(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    with pytest.raises(SpecificationError, match="needs the objective argument"):
+        _model(settings).fit(train, valid, V1_HYPERPARAMETERS)
+
+
+def test_the_objective_needs_early_stopping_on_its_own_partition(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    v1 = _by_day(valid)
+    objective = V1Objective(v1, DAILY_K)
+    with pytest.raises(SpecificationError, match="needs early stopping"):
+        _model(settings).fit(train, None, V1_HYPERPARAMETERS, iterations=3, objective=objective)
+    with pytest.raises(DataValidationError, match="different V1 rows"):
+        _model(settings).fit(train, _by_day(_data(300, 9)), V1_HYPERPARAMETERS, objective=objective)
+
+
+def test_resolved_boost_from_average_must_be_false() -> None:
+    catboost_model._check_boost_from_average({"boost_from_average": False})
+    for resolved in ({}, {"boost_from_average": True}, {"boost_from_average": 0}):
+        with pytest.raises(ModelError, match="boost_from_average must be False"):
+            catboost_model._check_boost_from_average(resolved)
+
+
+def test_the_v1_fit_reloads_with_its_objective(
+    settings: ModelSettings, train: ModelData, valid: ModelData, tmp_path: Path
+) -> None:
+    v1 = _by_day(valid)
+    model, objective = _v1_fit(settings, train, v1, name="Cat-b")
+    model.save(tmp_path / "model")
+    reloaded = _reload(settings, tmp_path / "model")
+    requested = reloaded.parameters["requested"]
+    assert requested["v1_objective"] == objective.identity
+    assert (requested["eval_metric"], requested["boost_from_average"]) == ("v1_objective", False)
+    assert reloaded.parameters["resolved"]["boost_from_average"] is False
+    assert reloaded.training_history is None
+    assert np.array_equal(reloaded.predict(v1.features), model.predict(v1.features))
+    metadata = reloaded.parameters["metadata"]
+    embedded = json.loads(metadata[catboost_model.RECORD_KEY])
+    assert embedded["v1_objective"] == objective.identity
+
+
+@pytest.mark.parametrize(
+    ("edit", "message"),
+    [
+        (lambda m: m["requested"]["v1_objective"].update(daily_k=0), "positive integer"),
+        (lambda m: m["requested"]["v1_objective"].update(version=2), "not this version"),
+        (lambda m: m["requested"].update(boost_from_average=True), "boost_from_average"),
+        (lambda m: m["requested"].pop("v1_objective"), "model's own record"),
+        (lambda m: m["requested"].update(eval_metric="Logloss"), "must record its eval_metric"),
+    ],
+)
+def test_reload_rejects_a_tampered_objective_record(
+    settings: ModelSettings,
+    train: ModelData,
+    valid: ModelData,
+    tmp_path: Path,
+    edit: Callable[[dict[str, Any]], object],
+    message: str,
+) -> None:
+    model, _ = _v1_fit(settings, train, _by_day(valid), name="Cat-b")
+    model.save(tmp_path / "model")
+    _edit_manifest(tmp_path / "model", edit)
+    with pytest.raises(ModelError, match=message):
+        _reload(settings, tmp_path / "model")

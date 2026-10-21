@@ -15,15 +15,19 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from review_capacity.errors import SpecificationError
+from review_capacity.errors import FileAccessError, SpecificationError
 from review_capacity.files import write_atomically, write_json
 
 SCHEMA_VERSION = 1
 LOG_NAME = "probe.log"
 RECORD_ENTRIES = ("probe.json", "probe.md", "scores")
+ACCEPTANCE_ROOT = Path("outputs") / "catboost_objective_acceptance"  # Section 8
+ACCEPTANCE_LOG_NAME = "acceptance.log"
+ACCEPTANCE_ENTRIES = ("acceptance.json", "acceptance.md")
 CHECKS: dict[str, str] = {
     "C1": "Backend identity",
     "C2": "Ignored-option and unsupported-option warnings",
@@ -55,11 +59,31 @@ def check_output(output: Path, previous: Path | None, *, log_opened: bool = Fals
             raise SpecificationError("The output directory must be separate from the first run's")
 
 
+def check_acceptance_output(output: Path, *, log_opened: bool = False) -> None:
+    """The CatBoost tree-objective acceptance (Section 8) writes to a directory of its own: a
+    directory that does not exist or is empty. ``log_opened``: the command has already opened this
+    run's log ``acceptance.log`` in ``output``, which is then the only entry allowed."""
+    output = output.resolve()
+    allowed = {ACCEPTANCE_LOG_NAME} if log_opened else set()
+    try:
+        occupied = sorted(entry.name for entry in output.iterdir() if entry.name not in allowed)
+    except FileNotFoundError:
+        return
+    except OSError as error:
+        raise FileAccessError(f"{output}: cannot be inspected ({error.strerror})") from error
+    if occupied:
+        raise SpecificationError(
+            f"{output} is not empty ({', '.join(occupied)}); use a new directory for the run"
+        )
+
+
 class CheckBook:
     """The evidence of every check: items with a subject, an outcome and their details."""
 
-    def __init__(self) -> None:
-        self.items: dict[str, list[dict[str, Any]]] = {check: [] for check in CHECKS}
+    def __init__(self, checks: Mapping[str, str] = CHECKS) -> None:
+        """``checks``: the identifiers and titles of the checks (those of the probe by default)."""
+        self.checks = dict(checks)
+        self.items: dict[str, list[dict[str, Any]]] = {check: [] for check in self.checks}
 
     def add(self, check: str, subject: str, outcome: bool | str | None, **details: Any) -> None:
         """Record an item: ``outcome`` True (passed), False (failed), ``"review"`` (needs a
@@ -85,7 +109,7 @@ class CheckBook:
     def overall(self, *, compared: bool) -> str:
         """The overall result; without a comparison with a first run (``compared``), a run that
         has not failed is ``pending second run``, never ``pass``."""
-        statuses = [self.status(check) for check in CHECKS]
+        statuses = [self.status(check) for check in self.checks]
         if "fail" in statuses:
             return "fail"
         if "not run" in statuses:
@@ -99,7 +123,7 @@ class CheckBook:
     def to_json(self) -> dict[str, Any]:
         return {
             check: {"title": title, "status": self.status(check), "items": self.items[check]}
-            for check, title in CHECKS.items()
+            for check, title in self.checks.items()
         }
 
 
