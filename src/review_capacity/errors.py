@@ -34,6 +34,11 @@ class ModelError(ReviewCapacityError, RuntimeError):
     """A model failed to fit or produced invalid output (for example, non-finite scores)."""
 
 
+class RecordContractError(ReviewCapacityError, ValueError):
+    """A development record or table does not satisfy its versioned contract
+    (``review_capacity.development``)."""
+
+
 class EnvironmentMismatchError(ReviewCapacityError, RuntimeError):
     """The installed environment differs from the recorded one (for example, a LightGBM library
     that is not the recorded CUDA build, DR-013 §2), or a required device is unavailable."""
