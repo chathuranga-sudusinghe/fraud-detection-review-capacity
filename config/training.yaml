@@ -1,0 +1,153 @@
+# The training declaration: the machine-readable form of the common training rules,
+# docs/decisions/DR-015-common-training-rules.md (§1 search, §2 early stopping, §3 V1 objective,
+# §4 seeds, §6 tree-based and §7 neural search spaces, §8 logistic-regression reference), read by
+# review_capacity.training.declaration. Device and numerical settings are not here: they are in
+# config/models.yaml (DR-013), which also holds the main training seed (reproducibility.main_seed).
+# A difference between this file and DR-015 is a defect, resolved through an issue; a unit test
+# compares them. The code fixes which keys exist and their types, so no value can fall back
+# silently to a library default.
+#
+# Search spaces. A model's parameters are listed in DR-015's draw order: each random candidate
+# (trials 2 to `trials`) draws them one after another, one scalar call each, from the model's child
+# stream; trial 1 is the reference configuration and draws nothing. Distributions:
+#   uniform              x = z,                z ~ U[low, high)
+#   log_uniform          x = exp(z),           z ~ U[ln low, ln high)
+#   uniform_int          x ~ uniform on {low, ..., high}
+#   log_uniform_int      x = min(floor(exp(z)), high),  z ~ U[ln low, ln(high + 1))
+#   scaled_uniform_int   x = factor * k,       k ~ uniform on {low, ..., high}
+#   mixture_uniform      x = 0 if w < 0.5 else z,       w ~ U[0, 1), z ~ U[low, high); both drawn
+#   mixture_log_uniform  x = 0 if w < 0.5 else exp(z),  w ~ U[0, 1), z ~ U[ln low, ln high)
+# A reference value may sit at an upper bound that the half-open continuous interval excludes.
+
+search:                             # DR-015 §1, §8
+  trials: 10
+  sampler_seed: 42
+  streams:                          # child i of SeedSequence(sampler_seed) belongs to entry i
+    - lightgbm                      # DR-011 model order ...
+    - catboost
+    - resnet
+    - ft_transformer
+    - logistic_regression           # ... then child (4,), DR-015 §8
+
+seeds:                              # DR-015 §4
+  additional: [43, 44]              # refits of the selected settings; the main seed is in models.yaml
+  preprocessing: 0                  # neural quantile-fitting noise, DR-012
+
+v1_objective:                       # DR-015 §3
+  daily_k: 62                       # round(0.02 * 65,544 / 21); tuning only, not the review budget K
+
+early_stopping:                     # DR-015 §2
+  tree:
+    patience: 50                    # boosting rounds
+    maximum: 2000
+  neural:
+    patience: 5                     # epochs
+    maximum: 15
+
+neural_training:                    # DR-015 §7
+  effective_batch: 1024             # Train rows per optimiser update
+  micro_batch_candidates: [1024, 512, 256, 128, 64]
+  preflight_free_margin_mib: 1024
+  evaluation_batch:
+    resnet: 4096
+    ft_transformer: 16
+  optimiser:
+    name: AdamW
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+    amsgrad: false
+    foreach: false
+    fused: false
+    learning_rate_schedule: none
+
+models:
+  lightgbm:                         # DR-015 §6, CPU, LightGBM 4.7.0
+    parameters:
+      - {name: learning_rate, distribution: log_uniform, low: 0.01, high: 0.3, reference: 0.1}
+      - {name: num_leaves, distribution: uniform_int, low: 4, high: 768, reference: 31}
+      - {name: min_data_in_leaf, distribution: log_uniform_int, low: 20, high: 2000, reference: 20}
+      - {name: feature_fraction, distribution: uniform, low: 0.5, high: 1.0, reference: 1.0}
+      - {name: bagging_fraction, distribution: uniform, low: 0.5, high: 1.0, reference: 1.0}
+      - {name: lambda_l2, distribution: mixture_log_uniform, low: 0.1, high: 10.0, reference: 0.0}
+    fixed:
+      boosting: gbdt
+      data_sample_strategy: bagging
+      bagging_freq: 1
+      max_depth: -1
+      min_sum_hessian_in_leaf: 1.0e-3
+      lambda_l1: 0
+      min_gain_to_split: 0
+      max_delta_step: 0
+      path_smooth: 0
+      extra_trees: false
+      feature_fraction_bynode: 1.0
+      boost_from_average: true
+      max_cat_to_onehot: 4
+      max_cat_threshold: 32
+      cat_l2: 10
+      cat_smooth: 10
+      min_data_per_group: 100
+      num_iterations: 2000          # = early_stopping.tree.maximum
+      early_stopping_round: 50      # = early_stopping.tree.patience
+      early_stopping_min_delta: 0
+      metric: "None"                # the shared V1 objective is the custom evaluation function
+
+  catboost:                         # DR-015 §6, GPU, CatBoost 1.2.10
+    parameters:
+      - {name: depth, distribution: uniform_int, low: 6, high: 10, reference: 6}
+      - {name: learning_rate, distribution: log_uniform, low: 0.01, high: 0.3, reference: 0.03234}
+      - {name: l2_leaf_reg, distribution: log_uniform, low: 1.0, high: 10.0, reference: 3.0}
+      - {name: bagging_temperature, distribution: uniform, low: 0.0, high: 1.0, reference: 1.0}
+      - {name: leaf_estimation_iterations, distribution: uniform_int, low: 1, high: 10, reference: 10}
+    fixed:                          # identical on both devices, DR-013 §3
+      random_strength: 1
+      model_size_reg: 0.5
+      permutation_count: 4
+      fold_permutation_block: 1
+      boost_from_average: false
+      eval_metric: v1_objective     # the shared V1 objective as a user-defined metric
+      metric_period: 1
+      iterations: 2000              # = early_stopping.tree.maximum
+      od_wait: 50                   # = early_stopping.tree.patience
+
+  resnet:                           # DR-015 §7, REF-087 space (B) (Table 14), GPU
+    parameters:
+      - {name: n_layers, distribution: uniform_int, low: 1, high: 16, reference: 2}
+      - {name: d, distribution: uniform_int, low: 64, high: 1024, reference: 128}
+      - {name: d_hidden_factor, distribution: uniform, low: 1.0, high: 4.0, reference: 2.0}
+      - {name: hidden_dropout, distribution: uniform, low: 0.0, high: 0.5, reference: 0.25}
+      - {name: residual_dropout, distribution: mixture_uniform, low: 0.0, high: 0.5, reference: 0.1}
+      - {name: d_embedding, distribution: uniform_int, low: 64, high: 512, reference: 192}
+      - {name: lr, distribution: log_uniform, low: 1.0e-5, high: 1.0e-2, reference: 1.0e-3}
+      - {name: weight_decay, distribution: mixture_log_uniform, low: 1.0e-6, high: 1.0e-3, reference: 0.0}
+    fixed:
+      weight_decay_scope: all       # as in REF-103
+
+  ft_transformer:                   # DR-015 §7, REF-087 space (B) (Table 13), GPU
+    parameters:
+      - {name: n_layers, distribution: uniform_int, low: 1, high: 6, reference: 3}
+      - {name: d_token, distribution: scaled_uniform_int, low: 8, high: 64, factor: 8, reference: 192}
+      - {name: attention_dropout, distribution: uniform, low: 0.0, high: 0.5, reference: 0.2}
+      - {name: ffn_dropout, distribution: uniform, low: 0.0, high: 0.5, reference: 0.1}
+      - {name: lr, distribution: log_uniform, low: 3.0e-5, high: 3.0e-4, reference: 1.0e-4}
+      - {name: weight_decay, distribution: log_uniform, low: 1.0e-6, high: 1.0e-3, reference: 1.0e-5}
+    fixed:
+      residual_dropout: 0.0
+      d_ffn_factor: 1.3333333333333333   # 4/3
+      n_heads: 8
+      activation: reglu
+      normalization: pre
+      initialization: kaiming
+      no_weight_decay: [feature_tokenizer, layer_norm, bias]
+
+  logistic_regression:              # DR-015 §8, scikit-learn 1.9.1
+    parameters:
+      - {name: C, distribution: log_uniform, low: 1.0e-4, high: 1.0e+4, reference: 1.0}
+    fixed:
+      solver: lbfgs
+      l1_ratio: 0
+      fit_intercept: true
+      class_weight: null
+      warm_start: false
+      tol: 1.0e-6
+      max_iter: 1000

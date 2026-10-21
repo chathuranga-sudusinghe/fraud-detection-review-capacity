@@ -52,6 +52,11 @@ class ProjectPaths:
         return self.config_dir / "models.yaml"
 
     @property
+    def training_spec(self) -> Path:
+        """The training declaration (DR-015)."""
+        return self.config_dir / "training.yaml"
+
+    @property
     def feature_catalog(self) -> Path:
         """The human-readable feature catalog, whose statistics ``profile-data`` checks."""
         return self.root / "docs" / "feature-catalog.md"

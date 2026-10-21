@@ -62,6 +62,8 @@ def assert_rejected(record: dict[str, Any], fragment: str) -> None:
 
 def test_every_kind_has_a_valid_example_in_production_order() -> None:
     assert KINDS == [
+        "candidates",
+        "cost_prediction",
         "run",
         "preprocessing",
         "preflight",
@@ -197,6 +199,94 @@ def test_latency_evaluations_use_a_fitting_or_held_out_part_of_v2() -> None:
 
 
 # --- run -----------------------------------------------------------------------------------------
+
+
+def test_candidate_lists_are_ordered_and_start_at_the_reference() -> None:
+    record = example("candidates")
+    record["trials"][1]["reference"] = True
+    assert_rejected(record, "only trial 1 is the reference configuration")
+    record = example("candidates")
+    record["trials"][2]["trial"] = 4
+    assert_rejected(record, "numbered 1, 2, ... in trial order")
+    record = example("candidates")
+    del record["trials"][2]["parameters"]["num_leaves"]
+    assert_rejected(record, "same parameters in order")
+    record = example("candidates")
+    record["trials"][2]["parameters"] = dict(reversed(record["trials"][2]["parameters"].items()))
+    assert_rejected(record, "same parameters in order")
+
+
+def test_candidate_lists_belong_to_their_stream_and_seed() -> None:
+    assert_rejected(example("candidates") | {"sampler_seed": 7}, "declared sampler seed")
+    assert_rejected(
+        example("candidates") | {"stream": {"index": 1, "spawn_key": [0]}},
+        "the spawn key is the stream index",
+    )
+    assert_rejected(
+        example("candidates") | {"configurations": ["LGB-u", "Cat-b"]},
+        "Cat-b does not belong to lightgbm",
+    )
+    assert_rejected(example("candidates") | {"model": "keras"}, "candidates.model")
+    short = example("candidates")
+    short["trials"] = short["trials"][:1]
+    assert_rejected(short, "at least 2")
+
+
+def test_each_model_uses_its_own_stream() -> None:
+    wrong = example("candidates") | {"stream": {"index": 4, "spawn_key": [4]}}
+    assert_rejected(wrong, "candidates.stream.index: lightgbm uses stream 0")
+    reference = example("candidates") | {
+        "model": "logistic_regression",
+        "configurations": ["LR"],
+        "stream": {"index": 4, "spawn_key": [4]},
+    }
+    validate(reference)
+
+
+def test_candidates_name_the_sampling_software() -> None:
+    record = example("candidates")
+    del record["sampler"]["numpy"]
+    assert_rejected(record, "candidates.sampler: missing field 'numpy'")
+
+
+def test_cost_estimates_follow_whether_a_cost_model_exists() -> None:
+    record = example("cost_prediction")
+    record["estimates"][0]["search_hours_low"] = 1.0
+    assert_rejected(record, "estimates[lightgbm].search_hours_low: must be null")
+    record = example("cost_prediction")
+    record["estimates"][2]["refit_hours"] = None
+    assert_rejected(record, "estimates[resnet].refit_hours: required when estimated")
+    record = example("cost_prediction")
+    record["estimates"][2]["candidate_epoch_minutes"] = []
+    assert_rejected(record, "candidate_epoch_minutes: required when estimated")
+    record = example("cost_prediction")
+    record["estimates"][3]["search_hours_low"] = 99.0
+    assert_rejected(record, "search_hours_low must not exceed search_hours_high")
+    record = example("cost_prediction")
+    record["estimates"][1]["candidate_epoch_minutes"] = [1.0]
+    assert_rejected(record, "estimates[catboost].candidate_epoch_minutes: empty")
+
+
+def test_cost_totals_and_models_are_checked() -> None:
+    record = example("cost_prediction")
+    record["totals"]["search_hours_high"] = 9.0
+    assert_rejected(record, "totals.search_hours_high: must be the sum 8.0")
+    record = example("cost_prediction")
+    record["estimates"].reverse()
+    assert_rejected(record, "one per model, in DR-011 order then LR")
+    record = example("cost_prediction")
+    del record["candidates"]["resnet"]
+    assert_rejected(record, "one candidate record per model")
+    approved = example("cost_prediction") | {"decision": "approved"}
+    assert_rejected(approved, "cost_prediction.decision")
+
+
+def test_plan_records_carry_the_search_plan_run_type() -> None:
+    record = example("candidates")
+    record["identity"]["run_type"] = "search_plan"
+    validate(record)
+    record["identity"]["run_type"] = "training"
+    assert_rejected(record, "candidates.identity.run_type")
 
 
 def test_run_identity_must_match_the_run_provenance() -> None:

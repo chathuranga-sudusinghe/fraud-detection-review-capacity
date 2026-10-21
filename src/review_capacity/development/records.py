@@ -7,7 +7,8 @@ Every record is one JSON object with an envelope and kind-specific fields:
   and source fingerprint, the SHA-256 of the model settings (``config/models.yaml``), of the
   training declaration and of the dataset manifest, and the seeds.
 
-The kinds, in the order a run produces them: ``run``, ``preprocessing``, ``preflight``, ``fit``,
+The kinds, in the order a run produces them: ``candidates`` and ``cost_prediction`` (the search
+plan, written before any fit), ``run``, ``preprocessing``, ``preflight``, ``fit``,
 ``checkpoint``, ``trial``, ``configuration``, ``refit``, ``score``, ``evaluation``, ``timing``,
 ``calibration``, ``r1_selection`` and ``h3_selection``. Records link to one another and to the
 model-run records of ``models.run_record`` by path (relative to the run directory) and SHA-256.
@@ -208,7 +209,11 @@ DAYS = Object(
 IDENTITY = Object(
     (
         Field("run_id", RUN_ID, "Run identifier: the UTC start time naming the run directory"),
-        Field("run_type", Choice(("development",)), "Run type (the outputs/ subdirectory)"),
+        Field(
+            "run_type",
+            Choice(("development", "search_plan")),
+            "Run type (the outputs/ subdirectory)",
+        ),
         Field("code_commit", GIT_COMMIT, "Git commit of the project root", nullable=True),
         Field(
             "uncommitted_changes",
@@ -310,6 +315,187 @@ def _cpu_refit(kind: str, role_field: str) -> Check:
 
     return check
 
+
+# --- search plan: candidates and predicted cost --------------------------------------------------
+
+MODELS_SEARCHED: tuple[str, ...] = tuple(dict.fromkeys(MODEL_OF.values()))  # DR-011, then LR
+SEARCH_MODEL = Choice(MODELS_SEARCHED)
+CANDIDATE = Object(
+    (
+        Field("trial", POSITIVE, "Trial number"),
+        Field("reference", Boolean(), "Trial 1 is the reference configuration (no random draw)"),
+        Field("parameters", MapOf(Number()), "The searched parameters, in declaration order"),
+    )
+)
+
+
+def _candidates_rules(record: Mapping[str, Any]) -> list[str]:
+    trials = record["trials"]
+    problems: list[str] = []
+    if [t["trial"] for t in trials] != list(range(1, len(trials) + 1)):
+        problems.append("candidates.trials: numbered 1, 2, ... in trial order")
+    if [t["reference"] for t in trials] != [True] + [False] * (len(trials) - 1):
+        problems.append("candidates.trials: only trial 1 is the reference configuration")
+    names = {tuple(t["parameters"]) for t in trials}
+    if len(names) != 1:
+        problems.append("candidates.trials: every trial declares the same parameters in order")
+    stream = record["stream"]
+    if stream["spawn_key"] != [stream["index"]]:
+        problems.append("candidates.stream: the spawn key is the stream index")
+    if stream["index"] != MODELS_SEARCHED.index(record["model"]):
+        problems.append(
+            f"candidates.stream.index: {record['model']} uses stream "
+            f"{MODELS_SEARCHED.index(record['model'])} (DR-011 order, then LR as child (4,))"
+        )
+    if record["sampler_seed"] != record["identity"]["seeds"]["sampler"]:
+        problems.append("candidates.sampler_seed: must be the declared sampler seed")
+    problems += [
+        f"candidates.configurations: {name} does not belong to {record['model']}"
+        for name in record["configurations"]
+        if MODEL_OF[name] != record["model"]
+    ]
+    return problems
+
+
+CANDIDATES = _contract(
+    "candidates",
+    1,
+    "One model's ordered candidate list (DR-015 §1), generated before any fit; the model's "
+    "configurations (unweighted and balanced) share it.",
+    (
+        Field("model", SEARCH_MODEL, "Model"),
+        Field(
+            "configurations",
+            ListOf(CONFIGURATION, min_items=1, unique=True),
+            "Configurations that use this list",
+        ),
+        Field(
+            "stream",
+            Object(
+                (
+                    Field("index", COUNT, "Child stream of the sampler (DR-015 §1, §8)"),
+                    Field("spawn_key", ListOf(COUNT, min_items=1), "SeedSequence spawn key"),
+                )
+            ),
+            "The model's child stream",
+        ),
+        Field("sampler_seed", SEED, "Seed of the sampler's parent SeedSequence"),
+        Field(
+            "sampler",
+            Object(
+                (
+                    Field("generator", Text(), "Generator constructor"),
+                    Field("bit_generator", Text(), "Bit generator of the stream"),
+                    Field("numpy", Text(), "NumPy version that drew the values"),
+                    Field("python", Text(), "Python version"),
+                )
+            ),
+            "The software that generated the values; bit-for-bit regeneration in another "
+            "environment is not assumed (DR-015 §6)",
+        ),
+        Field("trials", ListOf(CANDIDATE, min_items=2), "The candidates, in trial order"),
+    ),
+    _candidates_rules,
+)
+
+COST_ESTIMATE = Object(
+    (
+        Field("model", SEARCH_MODEL, "Model"),
+        Field("estimated", Boolean(), "Whether DR-015 §7 gives a cost model for it"),
+        Field("basis", Text(), "How the estimate is made, or why there is none"),
+        Field("epochs_low", POSITIVE, "Epochs per trial at the earliest stop", nullable=True),
+        Field("epochs_high", POSITIVE, "Epochs per trial at the maximum", nullable=True),
+        Field(
+            "candidate_epoch_minutes",
+            ListOf(Number(0, exclusive_minimum=True)),
+            "Minutes per epoch of each candidate, with the V1 evaluation (empty: not estimated)",
+        ),
+        Field("search_hours_low", SECONDS, "Search hours at the earliest stops", nullable=True),
+        Field("search_hours_high", SECONDS, "Search hours at the maximum", nullable=True),
+        Field(
+            "refit_hours",
+            SECONDS,
+            "Hours of the refits if the costliest candidate of the list is selected, at the "
+            "maximum length (the selected candidate is unknown before the search)",
+            nullable=True,
+        ),
+    )
+)
+COST_NUMBERS = ("epochs_low", "epochs_high", "search_hours_low", "search_hours_high")
+
+
+def _cost_rules(record: Mapping[str, Any]) -> list[str]:
+    estimates = record["estimates"]
+    problems: list[str] = []
+    if [e["model"] for e in estimates] != list(MODELS_SEARCHED):
+        problems.append("cost_prediction.estimates: one per model, in DR-011 order then LR")
+    if set(record["candidates"]) != set(MODELS_SEARCHED):
+        problems.append("cost_prediction.candidates: one candidate record per model")
+    for e in estimates:
+        where = f"cost_prediction.estimates[{e['model']}]"
+        given = (*COST_NUMBERS, "refit_hours")
+        if e["estimated"]:
+            problems += [f"{where}.{n}: required when estimated" for n in given if e[n] is None]
+            if not e["candidate_epoch_minutes"]:
+                problems.append(f"{where}.candidate_epoch_minutes: required when estimated")
+            elif None not in (e["epochs_low"], e["epochs_high"]) and not (
+                e["epochs_low"] <= e["epochs_high"]
+            ):
+                problems.append(f"{where}: epochs_low must not exceed epochs_high")
+            elif None not in (e["search_hours_low"], e["search_hours_high"]) and not (
+                e["search_hours_low"] <= e["search_hours_high"]
+            ):
+                problems.append(f"{where}: search_hours_low must not exceed search_hours_high")
+        else:
+            problems += [
+                f"{where}.{n}: must be null when not estimated" for n in given if e[n] is not None
+            ]
+            if e["candidate_epoch_minutes"]:
+                problems.append(f"{where}.candidate_epoch_minutes: empty when not estimated")
+    totals = record["totals"]
+    for name in ("search_hours_low", "search_hours_high", "refit_hours"):
+        values = [e[name] for e in estimates if e["estimated"]]
+        if None in values:
+            continue  # reported above as required when estimated
+        expected = sum(values)
+        if totals[name] != expected:
+            problems.append(f"cost_prediction.totals.{name}: must be the sum {expected!r}")
+    return problems
+
+
+COST_PREDICTION = _contract(
+    "cost_prediction",
+    1,
+    "The predicted cost of the actual candidate lists (DR-015 §7), recorded before any fit. An "
+    "estimate under the stated basis, not a bound; no list is redrawn and no candidate rejected "
+    "for its cost.",
+    (
+        Field(
+            "candidates",
+            MapOf(RUN_FILE, keys=SEARCH_MODEL),
+            "The candidate record of each model that the prediction is computed from",
+        ),
+        Field("estimates", ListOf(COST_ESTIMATE, min_items=1), "One estimate per model"),
+        Field(
+            "totals",
+            Object(
+                (
+                    Field("search_hours_low", SECONDS, "Search hours at the earliest stops"),
+                    Field("search_hours_high", SECONDS, "Search hours at the maximum"),
+                    Field("refit_hours", SECONDS, "Refit hours, as in the estimates"),
+                )
+            ),
+            "Sums over the estimated models",
+        ),
+        Field(
+            "decision",
+            Choice(("pending_owner_decision",)),
+            "Whether the predicted cost is feasible is the owner's explicit decision, taken "
+            "before any run (DR-015 §7)",
+        ),
+    ),
+    _cost_rules,
+)
 
 # --- run -----------------------------------------------------------------------------------------
 
@@ -1663,6 +1849,8 @@ H3_SELECTION = _contract(
 RECORD_CONTRACTS: dict[str, RecordContract] = {
     contract.kind: contract
     for contract in (
+        CANDIDATES,
+        COST_PREDICTION,
         RUN,
         PREPROCESSING,
         PREFLIGHT,
