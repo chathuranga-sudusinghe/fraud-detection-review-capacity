@@ -19,13 +19,18 @@
 * **Fitting:** with V1 early stopping, the hyperparameters (training rules) must set a positive
   ``num_iterations`` and ``early_stopping_round`` and an explicit ``metric``, so that no library
   default decides them; with a fixed iteration count, exactly that many trees are grown without
-  validation, or the run stops.
+  validation, or the run stops. Given the shared V1 objective (``models.v1_objective``, DR-015
+  §3), the metric must be ``"None"`` and the objective is LightGBM's custom evaluation function:
+  its per-round history, strict improvement and earliest best are recorded, and the kept tree
+  count must equal the history's earliest best. Without it, a built-in metric is required (the
+  GPU acceptance probe's path).
 * **Prediction (DR-013 §5):** always through LightGBM's host (CPU) predictor, with the tree count
   the fitted model keeps and the CPU thread count of ``config/models.yaml``.
 * **Logging:** LightGBM's own messages, including its warnings, go to the run log; the fit is a
   logged step with bounded progress.
-* **Persistence:** the model text and a manifest with the model's SHA-256; reloading checks every
-  manifest field against the request and against the loaded model itself.
+* **Persistence:** the model text and a manifest with the model's SHA-256 and, for a fit that
+  early-stopped on the V1 objective, the objective's identity; reloading checks every manifest
+  field against the request and against the loaded model itself.
 
 The run that uses this model verifies the recorded LightGBM build at start-up
 (``models.device.verify_lightgbm_build``); this module does not.
@@ -60,10 +65,16 @@ from review_capacity.models.base import (
 )
 from review_capacity.models.registry import Configuration
 from review_capacity.models.run_record import jsonable
+from review_capacity.models.v1_objective import (
+    TrainingHistory,
+    V1Objective,
+    check_identity,
+    lightgbm_evaluation,
+)
 
 logger = logging.getLogger(__name__)
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 MODEL_FILE = "model.txt"
 MANIFEST_FILE = "manifest.json"
 # Parameters that the training rules must set explicitly for V1 early stopping.
@@ -215,7 +226,7 @@ def _check_parameter_encoding(requested: Mapping[str, Any]) -> None:
             )
 
 
-def _check_early_stopping(params: dict[str, Any]) -> None:
+def _check_early_stopping(params: dict[str, Any], objective: V1Objective | None) -> None:
     missing = [name for name in EARLY_STOPPING_PARAMETERS if name not in params]
     if missing:
         raise SpecificationError(
@@ -226,6 +237,13 @@ def _check_early_stopping(params: dict[str, Any]) -> None:
         if type(value) is not int or value <= 0:
             raise SpecificationError(f"{name} must be a positive integer, not {value!r}")
     metric = params["metric"]
+    if objective is not None:
+        if metric != "None":
+            raise SpecificationError(
+                f'The shared V1 objective is the evaluation: metric must be "None", not {metric!r}'
+            )
+        _check_boosting(params)
+        return
     if isinstance(metric, str):
         supplied = [metric]
     elif isinstance(metric, list | tuple):
@@ -238,6 +256,10 @@ def _check_early_stopping(params: dict[str, Any]) -> None:
     if any(not value or value.lower() in DISABLED_METRICS for value in metrics):
         raise SpecificationError(f"metric must enable an explicit evaluation metric: {metric!r}")
     params["metric"] = metrics  # one name per entry, as LightGBM resolves it
+    _check_boosting(params)
+
+
+def _check_boosting(params: Mapping[str, Any]) -> None:
     boosting = params.get("boosting", "gbdt")
     if isinstance(boosting, str) and boosting.lower() == "dart":
         raise SpecificationError("DART boosting does not support the required V1 early stopping")
@@ -252,9 +274,10 @@ def _manifest_fields(
     device: Device,
     fixed: Mapping[str, Any],
     library_version: str,
-) -> tuple[int, dict[str, list[str]], dict[str, Any], str]:
-    """The tree count, category lists, requested parameters and model SHA-256 of a manifest,
-    after checking every field against the request."""
+) -> tuple[int, dict[str, list[str]], dict[str, Any], str, dict[str, Any] | None]:
+    """The tree count, category lists, requested parameters, model SHA-256 and V1 objective
+    identity (``None`` for a fit without it) of a manifest, after checking every field against
+    the request."""
     if not isinstance(manifest, dict):
         raise ModelError("Saved model manifest must be a JSON object")
     try:
@@ -272,6 +295,7 @@ def _manifest_fields(
         categories = manifest["categories"]
         requested = manifest["requested"]
         model_sha256 = manifest["model_sha256"]
+        recorded_objective = manifest["v1_objective"]
     except KeyError as error:
         raise ModelError(f"Saved model manifest is incomplete: missing {error}") from error
     if version != FORMAT_VERSION or type(version) is not int:
@@ -315,7 +339,10 @@ def _manifest_fields(
             raise ModelError(f"Saved requested parameter {name!r} does not match the fixed setting")
     if not isinstance(model_sha256, str) or len(model_sha256) != 64:
         raise ModelError("Saved model SHA-256 is missing or malformed")
-    return iterations, categories, requested, model_sha256
+    objective = None if recorded_objective is None else check_identity(recorded_objective)
+    if objective is not None and requested.get("metric") != "None":
+        raise ModelError('A model fitted on the V1 objective must have recorded metric "None"')
+    return iterations, categories, requested, model_sha256, objective
 
 
 class LightGBMModel(ScoringModel):
@@ -342,6 +369,8 @@ class LightGBMModel(ScoringModel):
         self._categories: dict[str, list[str]] = {}
         self._requested: dict[str, Any] = {}
         self._iterations = 0
+        self._objective: dict[str, Any] | None = None
+        self._history: TrainingHistory | None = None
 
     def _fixed_parameters(self) -> dict[str, Any]:
         return {**self.settings.lightgbm.params(self.device), "seed": self.seed}
@@ -371,7 +400,10 @@ class LightGBMModel(ScoringModel):
         )
 
     def _parameters_for_fit(
-        self, hyperparameters: Mapping[str, Any], iterations: int | None
+        self,
+        hyperparameters: Mapping[str, Any],
+        iterations: int | None,
+        objective: V1Objective | None = None,
     ) -> dict[str, Any]:
         requested = merge_parameters({}, hyperparameters, aliases=lightgbm_aliases())
         clash = sorted(self._reserved() & requested.keys())
@@ -385,7 +417,7 @@ class LightGBMModel(ScoringModel):
         if type(verbosity) is not int or verbosity < 0:
             raise SpecificationError("LightGBM verbosity must be a non-negative integer")
         if iterations is None:
-            _check_early_stopping(params)
+            _check_early_stopping(params, objective)
         else:
             params.pop("early_stopping_round", None)
             params["num_iterations"] = iterations
@@ -398,19 +430,27 @@ class LightGBMModel(ScoringModel):
         hyperparameters: Mapping[str, Any],
         *,
         iterations: int | None = None,
+        objective: V1Objective | None = None,
     ) -> None:
+        """Fit as ``ScoringModel.fit``; with ``objective`` (the shared V1 objective, built from
+        ``valid``), early stopping and the kept tree count follow it."""
         import lightgbm
         from lightgbm.basic import LightGBMError
 
         check_fit_arguments(valid, iterations)
+        if objective is not None:
+            if valid is None:
+                raise SpecificationError("The V1 objective needs early stopping on V1")
+            objective.check_partition(valid)
         _route_library_messages()
-        params = self._parameters_for_fit(hyperparameters, iterations)
+        params = self._parameters_for_fit(hyperparameters, iterations, objective)
         self.check_inputs(train.features)
         self._categories = fit_category_lists(train.features, self.features)
         train_set = self._dataset(train)
         valid_sets = [] if valid is None else [self._dataset(valid, reference=train_set)]
         name = self.configuration.name
         progress = ProgressLogger(logger, f"{name} boosting", params["num_iterations"])
+        recorder = None if objective is None else objective.recorder()
 
         def advance(_environment: Any) -> None:
             progress.advance()
@@ -426,11 +466,22 @@ class LightGBMModel(ScoringModel):
                     train_set,
                     valid_sets=valid_sets,
                     valid_names=["v1"][: len(valid_sets)],
+                    feval=None if recorder is None else lightgbm_evaluation(recorder),
                     callbacks=[advance],
                 )
                 kept = booster.best_iteration if valid is not None else booster.current_iteration()
                 if kept <= 0:
                     raise ModelError(f"{name} kept no trees")
+                history = None
+                if recorder is not None:
+                    history = recorder.history(
+                        patience=params["early_stopping_round"], maximum=params["num_iterations"]
+                    )
+                    if kept != history.best_checkpoint:
+                        raise ModelError(
+                            f"{name}: LightGBM kept {kept} trees, the earliest best V1 "
+                            f"checkpoint is {history.best_checkpoint}"
+                        )
                 if iterations is not None and kept != iterations:
                     raise ModelError(
                         f"{name}: {iterations} refit trees requested, LightGBM grew {kept}"
@@ -440,6 +491,8 @@ class LightGBMModel(ScoringModel):
         self._booster = booster
         self._requested = params
         self._iterations = kept
+        self._objective = None if objective is None else objective.identity
+        self._history = history
         logger.info("%s fitted: %d trees kept", name, kept)
 
     def predict(self, features: pd.DataFrame) -> Scores:
@@ -489,6 +542,7 @@ class LightGBMModel(ScoringModel):
                 "categories": self._categories,
                 "requested": jsonable(self._requested),
                 "model_sha256": hashlib.sha256(content).hexdigest(),
+                "v1_objective": self._objective,
             },
         )
 
@@ -515,7 +569,7 @@ class LightGBMModel(ScoringModel):
         except ValueError as error:
             raise ModelError(f"{directory}: saved model manifest is not valid JSON") from error
         model = cls(configuration, seed, settings=settings, features=features, device=device)
-        iterations, categories, requested, model_sha256 = _manifest_fields(
+        iterations, categories, requested, model_sha256, identity = _manifest_fields(
             manifest,
             configuration=configuration,
             seed=seed,
@@ -545,6 +599,7 @@ class LightGBMModel(ScoringModel):
         model._categories = categories
         model._requested = requested
         model._iterations = iterations
+        model._objective = identity
         return model
 
     @property
@@ -553,7 +608,16 @@ class LightGBMModel(ScoringModel):
             "requested": self._requested,
             "resolved": resolved_parameters(self._model_text()),
             "prediction": {"backend": "cpu", "num_threads": self._prediction_threads()},
+            "v1_objective": self._objective,
         }
+
+    @property
+    def training_history(self) -> TrainingHistory | None:
+        """The V1 checkpoint history of the fit that early-stopped on the shared objective
+        (``None`` for any other fit, and for a reloaded model: the history belongs to the trial's
+        record)."""
+        self._fitted()
+        return self._history
 
     @property
     def fitted_iterations(self) -> int:

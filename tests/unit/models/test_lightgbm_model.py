@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable, Iterator
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ from review_capacity.models.lightgbm_model import (
     resolved_parameters,
 )
 from review_capacity.models.registry import configuration
+from review_capacity.models.v1_objective import V1Objective
 from support.synthetic import FEATURES, REPO_PATHS
 
 HYPERPARAMETERS: dict[str, Any] = {
@@ -532,3 +534,207 @@ def test_resolved_parameters_are_read_from_the_model_text() -> None:
 def test_resolved_parameters_reject_incomplete_blocks(text: str, message: str) -> None:
     with pytest.raises(ModelError, match=message):
         resolved_parameters(text)
+
+
+# --- the shared V1 objective as LightGBM's evaluation (Issue #123) ---------------------------
+
+V1_HYPERPARAMETERS: dict[str, Any] = {**HYPERPARAMETERS, "metric": "None"}
+DAILY_K = 6
+
+
+def _by_day(data: ModelData, per_day: int = 60, weight: float | None = None) -> ModelData:
+    """The same rows with identifiers and times that spread them over relative days 1, 2, ..."""
+    rows = len(data.labels)
+    index = np.arange(rows, dtype=np.int64)
+    weights = data.weights if weight is None else np.where(data.labels == 1, weight, 1.0)
+    return ModelData(
+        data.features,
+        data.labels,
+        weights,
+        times=(index // per_day + 1) * 86_400 + index % per_day,
+        ids=index + 3_000_000,
+    )
+
+
+def _v1_fit(
+    settings: ModelSettings,
+    train: ModelData,
+    valid: ModelData,
+    hyperparameters: dict[str, Any] | None = None,
+    name: str = "LGB-u",
+) -> tuple[LightGBMModel, V1Objective]:
+    objective = V1Objective(valid, DAILY_K)
+    model = _model(settings, name)
+    model.fit(train, valid, hyperparameters or V1_HYPERPARAMETERS, objective=objective)
+    return model, objective
+
+
+def test_fit_early_stops_on_the_v1_objective(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    v1 = _by_day(valid)
+    model, objective = _v1_fit(settings, train, v1)
+    history = model.training_history
+    assert history is not None
+    assert model.fitted_iterations == history.best_checkpoint
+    assert history.stopped_at >= history.best_checkpoint
+    assert history.objective == objective.identity == model.parameters["v1_objective"]
+    # The history's best equals the objective recomputed from the model's own scores.
+    recall = objective.queue.recall(model.predict(v1.features), v1.labels, DAILY_K)
+    assert recall.numerator == history.checkpoints[history.best_checkpoint - 1].numerator
+    assert recall.value == history.best_objective
+    assert model.parameters["requested"]["metric"] == "None"
+
+
+def test_improvement_is_strict_and_the_earliest_best_is_kept(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    model, _ = _v1_fit(settings, train, _by_day(valid))
+    history = model.training_history
+    assert history is not None
+    best = -1
+    for row in history.checkpoints:
+        assert row.improved == (row.numerator > best)
+        best = max(best, row.numerator)
+        assert row.best_checkpoint == next(
+            c.checkpoint for c in history.checkpoints if c.numerator == best
+        )
+    assert history.best_checkpoint == history.checkpoints[-1].best_checkpoint
+
+
+def test_patience_stops_training_the_declared_rounds_after_the_best(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    # An objective of at most 30 integer steps cannot improve strictly in 60 rounds in a row.
+    model, _ = _v1_fit(
+        settings, train, _by_day(valid), {**V1_HYPERPARAMETERS, "early_stopping_round": 1}
+    )
+    history = model.training_history
+    assert history is not None
+    assert history.stopping_reason == "early_stopping"
+    assert history.stopped_at == history.best_checkpoint + 1
+    assert history.stopped_at < 60
+
+
+def test_training_ends_at_the_maximum_when_patience_does_not_run_out(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    model, _ = _v1_fit(
+        settings,
+        train,
+        _by_day(valid),
+        {**V1_HYPERPARAMETERS, "num_iterations": 8, "early_stopping_round": 8},
+    )
+    history = model.training_history
+    assert history is not None
+    assert (history.stopped_at, history.stopping_reason) == (8, "maximum")
+
+
+def test_v1_weights_do_not_enter_the_objective(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    plain, _ = _v1_fit(settings, train, _by_day(valid))
+    heavy, _ = _v1_fit(settings, train, _by_day(valid, weight=50.0))
+    assert plain.training_history == _same_but_seconds(plain, heavy)
+    assert plain.fitted_iterations == heavy.fitted_iterations
+
+
+def _same_but_seconds(reference: LightGBMModel, other: LightGBMModel) -> Any:
+    """``other``'s history with the timings of ``reference`` (runtimes differ between fits)."""
+    history = other.training_history
+    base = reference.training_history
+    assert history is not None
+    assert base is not None
+    rows = tuple(
+        replace(row, seconds=ref.seconds)
+        for row, ref in zip(history.checkpoints, base.checkpoints, strict=True)
+    )
+    return replace(history, checkpoints=rows)
+
+
+def test_a_fit_without_the_objective_has_no_history(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    model = _model(settings)
+    model.fit(train, valid, HYPERPARAMETERS)
+    assert model.training_history is None
+    assert model.parameters["v1_objective"] is None
+
+
+def test_the_objective_requires_metric_none(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    v1 = _by_day(valid)
+    objective = V1Objective(v1, DAILY_K)
+    for metric in ("binary_logloss", "none", ["None"], "custom"):
+        with pytest.raises(SpecificationError, match='metric must be "None"'):
+            _model(settings).fit(
+                train, v1, {**V1_HYPERPARAMETERS, "metric": metric}, objective=objective
+            )
+
+
+def test_metric_none_needs_the_objective(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    with pytest.raises(SpecificationError, match="explicit evaluation metric"):
+        _model(settings).fit(train, valid, V1_HYPERPARAMETERS)
+
+
+def test_the_objective_needs_early_stopping_on_its_own_partition(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    v1 = _by_day(valid)
+    objective = V1Objective(v1, DAILY_K)
+    with pytest.raises(SpecificationError, match="needs early stopping"):
+        _model(settings).fit(train, None, V1_HYPERPARAMETERS, iterations=3, objective=objective)
+    with pytest.raises(DataValidationError, match="different V1 rows"):
+        _model(settings).fit(train, _by_day(_data(300, 9)), V1_HYPERPARAMETERS, objective=objective)
+
+
+def test_refit_with_the_declared_metric_has_no_objective(
+    settings: ModelSettings, train: ModelData
+) -> None:
+    model = _model(settings)
+    model.fit(train, None, V1_HYPERPARAMETERS, iterations=6)
+    assert model.fitted_iterations == 6
+    assert model.training_history is None
+
+
+def test_the_v1_fit_reloads_with_its_objective(
+    settings: ModelSettings, train: ModelData, valid: ModelData, tmp_path: Path
+) -> None:
+    v1 = _by_day(valid)
+    model, objective = _v1_fit(settings, train, v1, name="LGB-b")
+    model.save(tmp_path / "model")
+    reloaded = _reload(settings, tmp_path / "model")
+    assert reloaded.parameters["v1_objective"] == objective.identity
+    assert reloaded.parameters["requested"]["metric"] == "None"
+    assert reloaded.training_history is None
+    assert np.array_equal(reloaded.predict(v1.features), model.predict(v1.features))
+    manifest = json.loads((tmp_path / "model" / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["v1_objective"] == objective.identity
+
+
+@pytest.mark.parametrize(
+    ("edit", "message"),
+    [
+        (lambda m: m["v1_objective"].update(daily_k=0), "positive integer"),
+        (lambda m: m["v1_objective"].update(weighting="balanced"), "differs from DR-015"),
+        (lambda m: m["v1_objective"].pop("rows"), "malformed"),
+        (lambda m: m["requested"].update(metric=["auc"]), 'recorded metric "None"'),
+        (lambda m: m.pop("v1_objective"), "incomplete"),
+    ],
+)
+def test_reload_rejects_a_tampered_objective_record(
+    settings: ModelSettings,
+    train: ModelData,
+    valid: ModelData,
+    tmp_path: Path,
+    edit: Callable[[dict[str, Any]], object],
+    message: str,
+) -> None:
+    model, _ = _v1_fit(settings, train, _by_day(valid), name="LGB-b")
+    model.save(tmp_path / "model")
+    _edit_manifest(tmp_path / "model", edit)
+    with pytest.raises(ModelError, match=message):
+        _reload(settings, tmp_path / "model")

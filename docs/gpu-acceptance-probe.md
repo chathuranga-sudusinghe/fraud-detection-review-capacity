@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; **revised and approved on 15 October 2026** (Issue #77) for the training devices of the DR-013 revision of Issue #101. **Acceptance gate passed on 15 October 2026** (Section 7) |
+| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; **revised and approved on 15 October 2026** (Issue #77) for the training devices of the DR-013 revision of Issue #101. **Acceptance gate passed on 15 October 2026** (Section 7). **Section 8** (CatBoost tree-objective acceptance, Issue #123): approved on 21 October 2026, before implementation and before it runs |
 | Governing record | Decision Record (DR) [DR-013](decisions/DR-013-training-device-policy.md) §8: what the probe must confirm. This document owns how: the synthetic inputs, the checks, the acceptance criteria and the tolerances |
-| Command | `review-capacity probe-gpu` (package command) |
+| Command | `review-capacity probe-gpu` (package command); Section 8: `review-capacity probe-catboost-objective` |
 | Evidence | [`evidence/gpu_acceptance_probe/`](../evidence/gpu_acceptance_probe/README.md) |
 
 Statements are tagged by source: **[L]** library documentation or source code, cited with its reference identifier (REF-NNN, [`references.md`](references.md)); **[D]** documented dataset facts; **[I]** an engineering choice of this probe.
@@ -146,6 +146,46 @@ The probe writes, step by step:
 
 **Outcome: the GPU acceptance gate of DR-013 §8 is passed.** Every pass/fail check passes on the project hardware, and the only review item is settled.
 
+## 8. CatBoost tree-objective acceptance (Issue #123)
+
+[DR-015](decisions/DR-015-common-training-rules.md) §3 trains CatBoost on the shared V1 objective as a user-defined evaluation metric on the GPU learner, for up to 2,000 boosting rounds (§2) and tree depths 6 to 10 (§6). Sections 1 to 7 measured depth 6 at 300 iterations with a built-in metric only. This section confirms, on the project hardware and before any development run, the largest depth of the search space at the maximum length with the user-defined metric. Everything else in Sections 1 to 7 is unchanged: this section adds a separate command and a separate record, so the evidence of the accepted probe is neither reopened nor reused.
+
+- **Synthetic data only**, from the generator of Section 1 with its data seed: the tree-model Train partition (368,632 rows) and V1 partition (100,000 rows) with their synthetic `TransactionDT` and `TransactionID`. The relative day of a row is `TransactionDT // 86400` (DR-001). No IEEE-CIS row is read.
+- **Engineering behaviour only**, as in the purpose above. Model performance is not assessed.
+- **No fallback.** The fit runs on the GPU. A failure (an unsupported user-defined metric on the GPU learner, an out-of-memory error, an error in the metric) is recorded and resolved on its evidence before any development run; the probe never moves to the CPU, reduces the depth, the length or the data, or replaces the metric.
+
+**Fit.** One CatBoost fit, `Cat-u` (unweighted; balanced class weighting changes the Train loss and so the trees, while the V1 objective is unweighted in both, so the balanced configuration is not separately probed [I]), seed 42, V1 early stopping through `CatBoostModel.fit(..., objective=...)` with the V1 objective of `models.v1_objective`. Probe values [I], with the reference candidate of DR-015 §6 except the depth:
+
+| Parameter | Value |
+|---|---|
+| `depth` | 10 (the largest of the space) |
+| `iterations` | 2000 (the maximum of §2) |
+| `od_wait` | 2000, so that the overfitting detector cannot stop the fit before the maximum (the study's value is 50, §2) |
+| `eval_metric`, `boost_from_average`, `metric_period` | `v1_objective`, `False`, 1 |
+| `learning_rate` | 0.03234 (the reference value of DR-015 §6) |
+| `l2_leaf_reg`, `bagging_temperature`, `leaf_estimation_iterations` | 3, 1, 10 (the reference values) |
+| `model_size_reg`, `fold_permutation_block`, `permutation_count`, `random_strength` | 0.5, 1, 4, 1 (DR-015 §6) |
+
+The daily budget of the V1 objective is `K = round(0.02 × V1 rows / V1 days)` (the rule of DR-015 §3), computed from the synthetic V1 partition and recorded.
+
+| ID | Method | Criterion |
+|---|---|---|
+| G1 | Device and completion. The fit runs to its end; the resolved `task_type` is read from CatBoost's native record | P/F: `GPU`; no error from the GPU learner or the metric |
+| G2 | Length. The history of the V1 objective, one entry per round | P/F: 2,000 rounds trained and 2,000 V1 evaluations recorded; stopping reason `maximum`; CatBoost's own evaluation history has 2,000 entries; the kept tree count equals the earliest best checkpoint of the history. The fit trains all 2,000 rounds; with the best-model cut it keeps only the rounds up to the earliest best |
+| G3 | Objective correctness. The model is scored on V1 through the CPU prediction path of DR-013 §5 at the kept tree count, and the shared daily queue computes the objective from those scores | P/F: the numerator equals the numerator recorded for the kept checkpoint (exact integers). D: the number of evaluations of other sets that the metric did not score. Equal numerators show that the objective agrees; they do not show identical queue membership, and the GPU's in-training approximations are not the CPU-recomputed scores of DR-013 §5. A mismatch requires numerical diagnosis and prevents acceptance; the criterion is never widened after the results are seen |
+| G4 | Resolved settings. `get_all_params()` and the model's metadata | P/F: `depth` 10, `boost_from_average` `False`, every fixed setting of `config/models.yaml` confirmed as in C3 |
+| G5 | Persistence. The model is saved, reloaded and scores the V1 rows again | P/F: identical scores, bit for bit (T2); the saved record holds the objective's identity and `eval_metric` `v1_objective` |
+| G6 | Warnings. Every library message and warning is kept as in C2 | P/F: the rule of C2 (an ignored setting, an unsupported capability or a fallback fails). The CatBoost notice that numba is not installed ("Failed to import numba for optimizing custom metrics and objectives") is accepted by its exact text: it concerns the speed of the metric only |
+| G7 | Resources and timing as in C13: GPU memory (capacity, baseline, sampled whole-device maximum every 0.5 seconds), peak host memory, the fit's total time and the increase of the elapsed time over the 2,000 checkpoints | P/F: no out-of-memory error. D: every measurement |
+
+**Records.** `acceptance.json` (the environment of DR-013 §6, the run identity of Section 5, the parameters, the history of the V1 objective, G1 to G7), `acceptance.md` (generated from it by code, presenting every recorded field and the V1 objective after every round) and `acceptance.log`, written in a new directory (one that does not exist or is empty) `outputs/catboost_objective_acceptance/<UTC start time>/` inside the repository (ignored by Git) as in Section 6. GPU training is not deterministic (DR-013 §2), so one run is the acceptance run; no second run is compared. The records are added to `evidence/` in a reviewed pull request, and the result is recorded in this section and in Issue #123.
+
+**Acceptance run.** A run is the acceptance run only on the GPU, at depth 10 and 2,000 rounds, on the Train and V1 sizes of Section 1, from a clean committed tree whose code is the code that runs (the running package lies inside the checkout whose Git state is recorded); `acceptance.json` records `acceptance_evidence` and, when false, the reasons (`evidence_blockers`). Any other run is exploratory and its summary says so.
+
+**Procedure.** This section is approved before the implementation begins; the implementation is reviewed and committed before the run; `review-capacity probe-catboost-objective` runs from the clean committed tree. A change of values or paths requires an approved revision and a new run.
+
+**Result.** Not yet run.
+
 ## Symbols and notation
 
 | Symbol / abbreviation | Meaning |
@@ -162,12 +202,14 @@ The probe writes, step by step:
 | D, P/F | Descriptive check; pass-or-fail check |
 | DR, DR-NNN | Decision Record; Decision Record NNN in `docs/decisions/` |
 | FT-Transformer | Feature Tokenizer + Transformer |
+| G1–G7 | Checks of the CatBoost tree-objective acceptance (Section 8) |
 | GB | Gigabyte |
 | IEEE-CIS | IEEE Computational Intelligence Society (the dataset's source) |
 | MiB | Mebibyte (2^20 bytes) |
 | `max_bin` | LightGBM's maximum number of bins of a numeric feature (DR-013 §2); it does not cap categorical features |
 | `LGB-u`, `Cat-u`, `Cat-b`, `FTT-u` | Configuration names: LightGBM, CatBoost or FT-Transformer, unweighted (u) or with balanced class weighting (b) |
-| K | Number of top-scored rows compared in C9 and C11: 2 % of the scored rows, rounded up (82 neural rows; 2,000 tree-model rows) |
+| K | Number of top-scored rows compared in C9 and C11: 2 % of the scored rows, rounded up (82 neural rows; 2,000 tree-model rows); in Section 8, the daily review budget of the V1 objective |
+| `boost_from_average`, `v1_objective` | CatBoost: start from the average label (set to `False`); the name of the shared V1 objective (daily Recall@K, unweighted) used as `eval_metric` |
 | MLP | Multilayer perceptron |
 | `n_layers` | Number of layers (residual blocks or Transformer layers) |
 | Probe parameter names | `num_iterations`, `iterations`, `early_stopping_round`, `od_wait`, `metric`, `eval_metric`, `learning_rate`, `lr`, `num_leaves`, `depth`, `metric_period`, `model_size_reg`, `fold_permutation_block`, `permutation_count`, `random_strength`, `l2_leaf_reg`, `leaf_estimation_iterations`, `bagging_temperature`, the four dropouts, `eval_batch_size`, `weight_decay`, `max_epochs`, `patience`: defined in the parameter table of Section 2 |

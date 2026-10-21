@@ -25,6 +25,15 @@ Commands:
                    process and its own directory, with --previous (the first run's
                    probe.json), completes the comparison
 
+    probe-catboost-objective
+                   the CatBoost tree-objective acceptance (docs/gpu-acceptance-probe.md,
+                   Section 8, checks G1-G7), on synthetic data only: one CatBoost fit on the GPU
+                   at depth 10 and 2,000 rounds with the shared V1 objective as the
+                   user-defined metric; writes acceptance.json, the generated acceptance.md and
+                   its log, always acceptance.log (--log-file is refused), to a new directory:
+                   --output, or by default
+                   outputs/catboost_objective_acceptance/<UTC start time, YYYY-MM-DDTHHMMSSZ>/
+
     plan-search    the search plan of DR-015 §1 and §7, before any fit: the candidate list of each
                    model and the predicted cost of the lists, as records and a generated
                    search_plan.md, and its log, always plan.log (--log-file is refused), in a
@@ -35,14 +44,15 @@ Commands:
 Every message is logged with a timestamp to the terminal and, with --log-file PATH, also to a
 file kept with the run's evidence. --verbose adds detail; --quiet shows warnings and errors only.
 
-Exit codes: 0 success (for probe-gpu: pass, or pending second run); 1 profile-data found
-differences, or probe-gpu did not pass; 2 configuration or project-root error; 3 data-validation
-error; 4 sealed Test period; 5 file access (a required file cannot be read or an output or log file
-cannot be written); 6 environment mismatch (for example, a LightGBM library that is not the
-recorded build); 7 model failure (a model failed to fit or produced invalid output); 130
-interrupted. An expected failure is summarised in one line with its exit code (steps that were
-running also log that they failed); the log file always keeps its traceback and cause, the terminal
-only with --debug. Any other error is a defect: it is logged with its traceback and raised.
+Exit codes: 0 success (for probe-gpu: pass, or pending second run; for probe-catboost-objective:
+pass); 1 profile-data found differences, or a probe did not pass; 2 configuration or
+project-root error; 3 data-validation error; 4 sealed Test period; 5 file access (a required
+file cannot be read or an output or log file cannot be written); 6 environment mismatch (for
+example, a LightGBM library that is not the recorded build); 7 model failure (a model failed to
+fit or produced invalid output); 130 interrupted. An expected failure is summarised in one line
+with its exit code (steps that were running also log that they failed); the log file always keeps
+its traceback and cause, the terminal only with --debug. Any other error is a defect: it is
+logged with its traceback and raised.
 """
 
 from __future__ import annotations
@@ -73,7 +83,13 @@ from review_capacity.files import write_atomically, write_json
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import configure_logging
 from review_capacity.paths import ProjectPaths
-from review_capacity.probe.records import LOG_NAME, check_output
+from review_capacity.probe.records import (
+    ACCEPTANCE_LOG_NAME,
+    ACCEPTANCE_ROOT,
+    LOG_NAME,
+    check_acceptance_output,
+    check_output,
+)
 from review_capacity.provenance import code_provenance, write_record
 
 logger = logging.getLogger(__name__)
@@ -245,6 +261,25 @@ def _probe_gpu(args: argparse.Namespace) -> int:
     return 0 if record["overall"] in ("pass", "pending second run") else EXIT_DIFFERENCES
 
 
+def _acceptance_output(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The acceptance run's output directory: ``--output``, or by default a new directory named
+    by the UTC start time under ``ACCEPTANCE_ROOT``, fixed on ``args`` at the first call."""
+    if args.output is None:
+        args.output = ACCEPTANCE_ROOT / datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
+    output: Path = args.output if args.output.is_absolute() else paths.root / args.output
+    return output
+
+
+def _probe_catboost_objective(args: argparse.Namespace) -> int:
+    from review_capacity.probe.catboost_objective import run_acceptance  # CatBoost and PyTorch
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    record = run_acceptance(paths, _acceptance_output(args, paths), log_opened=True)
+    logger.info("Acceptance result: %s", record["overall"])
+    return 0 if record["overall"] == "pass" else EXIT_DIFFERENCES
+
+
 def _plan_output(args: argparse.Namespace, paths: ProjectPaths) -> Path:
     """The plan's output directory. Without ``--output``, a new directory named by the UTC start
     time under ``plan.OUTPUT_ROOT``; the start time is fixed on ``args`` at the first call, so that
@@ -301,6 +336,15 @@ def _log_file(args: argparse.Namespace) -> Path | None:
         output = _plan_output(args, ProjectPaths.discover(args.root))
         plan.check_output(output)
         return output / plan.LOG_NAME
+    if args.command == "probe-catboost-objective":
+        if args.log_file is not None:
+            raise SpecificationError(
+                f"probe-catboost-objective writes its log to {ACCEPTANCE_LOG_NAME} in its output "
+                "directory; omit --log-file"
+            )
+        output = _acceptance_output(args, ProjectPaths.discover(args.root))
+        check_acceptance_output(output)
+        return output / ACCEPTANCE_LOG_NAME
     if args.command != "probe-gpu":
         log_file: Path | None = args.log_file
         return log_file
@@ -375,6 +419,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="the first run's probe.json, to compare a second run with it (check C11)",
     )
     probe.set_defaults(handler=_probe_gpu)
+    acceptance = commands.add_parser(
+        "probe-catboost-objective",
+        help="run the CatBoost tree-objective acceptance (probe specification, Section 8)",
+    )
+    acceptance.add_argument("--root", type=Path, default=None, help="project root directory")
+    acceptance.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=f"new directory for this run's records (default: {ACCEPTANCE_ROOT}/<UTC time>)",
+    )
+    acceptance.set_defaults(handler=_probe_catboost_objective)
     plan_search = commands.add_parser(
         "plan-search",
         help="generate the candidate lists and predict their cost, before any fit (DR-015)",
@@ -401,7 +457,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     level = logging.DEBUG if args.verbose else logging.WARNING if args.quiet else logging.INFO
     handler: Callable[[argparse.Namespace], int] = args.handler
-    own_log = args.command in ("probe-gpu", "plan-search")
+    own_log = args.command in ("probe-gpu", "probe-catboost-objective", "plan-search")
     try:
         configure_logging(level, terminal_tracebacks=args.debug)  # until the log file is known
         configure_logging(
