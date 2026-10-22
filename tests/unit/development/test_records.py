@@ -711,8 +711,7 @@ def test_search_timing_names_no_single_model() -> None:
         "row_selection": None,
         "settings": {
             "procedure_version": 1,
-            "session_confirmed": True,
-            "session": {"confirmed": True},
+            "session": {"load_average_1m": 0.25},
             "trials_completed": 10,
             "trials_declared": 10,
             "interrupted": False,
@@ -739,8 +738,7 @@ FIT = {
     "row_selection": None,
     "settings": {
         "procedure_version": 1,
-        "session_confirmed": True,
-        "session": {"confirmed": True},
+        "session": {"load_average_1m": 0.25},
         "completed_length": 170,
         "retained_length": 120,
         "startup_seconds": 1.5,
@@ -787,8 +785,7 @@ def test_scoring_runs_on_the_prediction_device(configuration: str, device: str) 
     base |= {"repetitions": 3, "rows_sha256": None, "row_selection": None}
     base["settings"] = {
         "procedure_version": 1,
-        "session_confirmed": True,
-        "session": {"confirmed": True},
+        "session": {"load_average_1m": 0.25},
         "pass_seconds": [2.5, 2.0, 1.9],
         "host_memory_method": "clear_refs",
     }
@@ -806,8 +803,7 @@ def test_scoring_seconds_are_the_median_of_the_passes() -> None:
     base |= {"rows_sha256": None, "row_selection": None}
     base["settings"] = {
         "procedure_version": 1,
-        "session_confirmed": True,
-        "session": {"confirmed": True},
+        "session": {"load_average_1m": 0.25},
         "pass_seconds": [2.5, 2.0, 1.9],
         "host_memory_method": "clear_refs",
     }
@@ -834,7 +830,7 @@ def test_latency_counts_agree_with_the_rounds() -> None:
 
 def test_every_timing_records_the_procedure_and_the_session() -> None:
     timing = example("timing")
-    for name in ("procedure_version", "session_confirmed"):
+    for name in ("procedure_version", "session"):
         broken = {k: v for k, v in timing["settings"].items() if k != name}
         assert_rejected(timing | {"settings": broken}, f"timing.settings.{name}: required")
     assert_rejected(
@@ -842,8 +838,8 @@ def test_every_timing_records_the_procedure_and_the_session() -> None:
         "procedure_version: must be 1",
     )
     assert_rejected(
-        timing | {"settings": {**timing["settings"], "session_confirmed": "yes"}},
-        "session_confirmed: must be true or false",
+        timing | {"settings": {**timing["settings"], "session": "ac power"}},
+        "session: must be the session conditions",
     )
 
 
@@ -1095,8 +1091,7 @@ def scoring_example() -> dict[str, Any]:
     }
     base["settings"] = {
         "procedure_version": 1,
-        "session_confirmed": True,
-        "session": {"confirmed": True},
+        "session": {"load_average_1m": 0.25},
         "pass_seconds": [2.5, 2.0, 1.9],
         "host_memory_method": "clear_refs",
     }
@@ -1125,8 +1120,7 @@ def search_example() -> dict[str, Any]:
     }
     search["settings"] = {
         "procedure_version": 1,
-        "session_confirmed": True,
-        "session": {"confirmed": True},
+        "session": {"load_average_1m": 0.25},
         "trials_completed": 10,
         "trials_declared": 10,
         "interrupted": False,
@@ -1162,10 +1156,9 @@ def test_a_search_is_complete_or_marked_partial() -> None:
     assert_rejected(search | {"settings": overdone}, "an interrupted search is partial")
 
 
-def test_the_session_flag_agrees_with_its_conditions() -> None:
+def test_the_session_conditions_are_recorded_as_context() -> None:
     timing = example("timing")
-    inconsistent = {**timing["settings"], "session": {"confirmed": False}}
-    assert_rejected(timing | {"settings": inconsistent}, "confirmed flag equals session_confirmed")
+    assert "session_confirmed" not in timing["settings"]
     missing = {k: v for k, v in timing["settings"].items() if k != "session"}
     assert_rejected(timing | {"settings": missing}, "timing.settings.session: required")
 

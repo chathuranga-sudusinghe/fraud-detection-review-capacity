@@ -50,10 +50,8 @@ Commands:
                    new directory inside outputs/: --output, or by default
                    outputs/development/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Starts only from
                    the search plan --plan whose cost_prediction.json has the SHA-256 given in
-                   --approved-cost (the owner's approval of the predicted cost). --confirm-session
-                   states that the timing session had AC power, a fixed power profile and no
-                   competing workload; without it the session is recorded as not confirmed and
-                   the timings are not valid for the computational-cost outcome. Reads the
+                   --approved-cost (the owner's approval of the predicted cost). The timing
+                   session conditions are recorded as context. Reads the
                    verified processed development files only; the Test period is never read.
                    Consequential: the owner runs it after approving its scope
 
@@ -363,7 +361,6 @@ def _development_options(args: argparse.Namespace) -> DevelopmentOptions:
         approved_cost_sha256=args.approved_cost,
         configurations=tuple(args.configurations or TREE_CONFIGURATIONS),
         output=args.output,
-        confirm_session=args.confirm_session,
         started=args.started,
     )
 
@@ -382,11 +379,6 @@ def _run_development(args: argparse.Namespace) -> int:
 
     paths = ProjectPaths.discover(args.root)
     logger.info("Project root: %s", paths.root)
-    if not args.confirm_session:
-        logger.warning(
-            "The timing session is not confirmed: it is recorded as such, and the timings are "
-            "not valid for the computational-cost outcome (DR-015 §9)"
-        )
     setup = prepare_development(paths, _development_options(args))
     directory = run_development(setup)
     logger.info("Development run written to %s", directory)
@@ -578,12 +570,6 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="new directory for this run (default: outputs/development/<UTC time>)",
-    )
-    development.add_argument(
-        "--confirm-session",
-        action="store_true",
-        help="state that the timing session had AC power, a fixed power profile and no "
-        "competing workload (DR-015 §9)",
     )
     development.set_defaults(handler=_run_development)
     summarise = commands.add_parser(

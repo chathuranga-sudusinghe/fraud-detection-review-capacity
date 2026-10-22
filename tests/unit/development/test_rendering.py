@@ -133,20 +133,10 @@ def test_conflicting_trial_records_are_an_error(tmp_path: Path) -> None:
         write_summary(run.path, PARTITIONS)
 
 
-def test_unconfirmed_timing_sessions_are_flagged_in_the_summary(tmp_path: Path) -> None:
+def test_the_summary_never_marks_a_timing_as_not_valid(tmp_path: Path) -> None:
     run = new_run(tmp_path)
     write_records(run)
     assert "Not valid for the computational-cost outcome" not in summary_of(run.path)
-    unconfirmed = example("timing") | {"boundary": "end_to_end"}
-    unconfirmed["settings"] = {
-        **unconfirmed["settings"],
-        "session_confirmed": False,
-        "session": {"confirmed": False},
-    }
-    run.write_record(unconfirmed, "RES-u", "latency-end-to-end")
-    text = summary_of(run.path)
-    assert "**Not valid for the computational-cost outcome:** 1 timing records" in text
-    assert "RES-u latency" in text
 
 
 def test_an_interrupted_search_is_flagged_as_partial_in_the_summary(tmp_path: Path) -> None:

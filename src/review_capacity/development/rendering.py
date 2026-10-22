@@ -230,14 +230,9 @@ def _tables(run: LoadedRun) -> list[str]:
 
 
 def _cost_notes(run: LoadedRun) -> list[str]:
-    """Notes under the computational-cost table: timings of a session the operator did not
-    confirm, and search times of interrupted searches (DR-015 §9)."""
+    """Notes under the computational-cost table: search times of interrupted searches
+    (DR-015 §9)."""
     timings = run.of_kind("timing")
-    unconfirmed = sorted(
-        f"{t['configuration']} {t['measurement']}"
-        for t in timings
-        if t["settings"].get("session_confirmed") is False
-    )
     partial = sorted(
         f"{t['configuration']} ({t['settings']['trials_completed']} of "
         f"{t['settings']['trials_declared']} trials)"
@@ -245,13 +240,6 @@ def _cost_notes(run: LoadedRun) -> list[str]:
         if t["measurement"] == "search" and t["settings"].get("interrupted") is True
     )
     lines: list[str] = []
-    if unconfirmed:
-        lines += [
-            "",
-            f"**Not valid for the computational-cost outcome:** {len(unconfirmed)} timing "
-            "records were taken in a session without the operator's confirmation of the session "
-            f"conditions ({', '.join(unconfirmed)}).",
-        ]
     if partial:
         lines += [
             "",

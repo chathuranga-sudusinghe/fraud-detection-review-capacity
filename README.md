@@ -129,10 +129,10 @@ The environment is pinned for reproducibility: every direct dependency has an ex
    ```
 
    ```bash
-   .venv/bin/review-capacity run-development --plan outputs/search_plan/<UTC start time> --approved-cost <SHA-256 of cost_prediction.json> --confirm-session
+   .venv/bin/review-capacity run-development --plan outputs/search_plan/<UTC start time> --approved-cost <SHA-256 of cost_prediction.json>
    ```
 
-   `run-development` runs the declared search of each tree-based configuration (`--configurations` chooses a subset), selects on V1, scores V1 and V2, evaluates R3 and the ranking, and times scoring, writing dated, ignored records, `summary.md` and `run.log` to `outputs/development/<UTC start time>/` (`--output` must name a new directory inside `outputs/`). It refuses to start if the plan differs from the approved cost or from the training declaration. `--confirm-session` states that the timing session had alternating-current power, a fixed power profile and no competing workload; without it the session is recorded as not confirmed and the timings are not valid for the computational-cost outcome ([DR-015](docs/decisions/DR-015-common-training-rules.md) §9). `review-capacity --help` lists every option.
+   `run-development` runs the declared search of each tree-based configuration (`--configurations` chooses a subset), selects on V1, scores V1 and V2, evaluates R3 and the ranking, and times scoring, writing dated, ignored records, `summary.md` and `run.log` to `outputs/development/<UTC start time>/` (`--output` must name a new directory inside `outputs/`). It refuses to start if the plan differs from the approved cost or from the training declaration. The conditions of the timing session are recorded with each timing as context; no condition is required ([DR-015](docs/decisions/DR-015-common-training-rules.md) §9). `review-capacity --help` lists every option.
 
 **Continuous integration:** code-affecting pull requests to `main` receive the checks defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml); CI never trains or scores a model on research data, reads research data or writes research output; unit tests fit only small models on synthetic data.
 

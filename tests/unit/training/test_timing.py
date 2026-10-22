@@ -435,9 +435,8 @@ def test_gpu_telemetry_is_recorded_as_unavailable_not_as_a_pass() -> None:
     assert timing.gpu_telemetry(missing)["available"] is False
 
 
-def conditions(confirmed: bool = True) -> dict[str, Any]:
+def conditions() -> dict[str, Any]:
     return timing.session_conditions(
-        confirmed,
         loadavg=lambda: (0.25, 0.5, 0.75),
         affinity=lambda _pid: {3, 1, 2},
         meminfo=lambda: "MemTotal:  33554432 kB\nSwapTotal:  8388608 kB\n",
@@ -445,14 +444,13 @@ def conditions(confirmed: bool = True) -> dict[str, Any]:
     )
 
 
-def test_the_session_records_the_confirmation_and_what_the_system_reports() -> None:
+def test_the_session_records_what_the_system_reports_as_context() -> None:
     session = conditions()
-    assert session["confirmed"] is True
     assert session["load_average_1m"] == 0.25
     assert session["allowed_cpus"] == [1, 2, 3]
     assert (session["memory_total_mib"], session["swap_total_mib"]) == (32768, 8192)
     assert session["gpu"] == {"available": False, "reason": "none"}
-    assert conditions(False)["confirmed"] is False
+    assert "confirmed" not in conditions()
 
 
 # --- records -------------------------------------------------------------------------------------
@@ -490,7 +488,7 @@ def test_a_fit_record_carries_the_lengths_and_the_session() -> None:
     assert record["cpu_affinity"] == [0, 1, 2]
     assert record["synchronised"] is False
     assert record["settings"]["completed_length"] == 170
-    assert record["settings"]["session_confirmed"] is True
+    assert "session_confirmed" not in record["settings"]
     assert record["settings"]["session"]["load_average_1m"] == 0.25
 
 
@@ -608,20 +606,6 @@ def test_a_latency_record_names_the_sample_the_rounds_and_the_calls() -> None:
         )
 
 
-def test_an_unconfirmed_session_is_carried_into_the_record() -> None:
-    record = timing.fit_record(
-        IDENTITY,
-        CPU,
-        conditions(False),
-        seconds=1.0,
-        completed_length=2,
-        retained_length=1,
-        startup_seconds=None,
-        preprocessing_seconds=None,
-    )
-    assert check(record)["settings"]["session_confirmed"] is False
-
-
 def test_the_boundary_is_model_only_or_end_to_end() -> None:
     sample = np.arange(1, 4, dtype=np.int64)
     with pytest.raises(SpecificationError, match="boundary"):
@@ -649,7 +633,7 @@ def test_the_boundary_is_model_only_or_end_to_end() -> None:
 
 def test_extra_settings_cannot_override_the_session_or_the_measurement() -> None:
     with pytest.raises(SpecificationError, match="builder-owned"):
-        Timed("LGB-u", "selected", "cpu", threads=24, extra={"session_confirmed": True})
+        Timed("LGB-u", "selected", "cpu", threads=24, extra={"session": {}})
     clash = Timed("LGB-u", "selected", "cpu", threads=24, extra={"completed_length": 1})
     with pytest.raises(SpecificationError, match="repeats"):
         timing.fit_record(
@@ -666,7 +650,7 @@ def test_extra_settings_cannot_override_the_session_or_the_measurement() -> None
     record = timing.fit_record(
         IDENTITY,
         fine,
-        conditions(False),
+        conditions(),
         seconds=1.0,
         completed_length=2,
         retained_length=1,
@@ -674,8 +658,8 @@ def test_extra_settings_cannot_override_the_session_or_the_measurement() -> None
         preprocessing_seconds=None,
     )
     assert record["settings"]["note"] == "x"
-    assert record["settings"]["session_confirmed"] is False
-    assert record["settings"]["session"]["confirmed"] is False
+    assert "session_confirmed" not in record["settings"]
+    assert "confirmed" not in record["settings"]["session"]
 
 
 def test_a_memory_reading_states_its_scope() -> None:

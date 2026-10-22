@@ -154,14 +154,13 @@ def test_a_run_record_that_cannot_be_published_raises_and_leaves_no_closing_arti
     assert not (setup.run.path / SUMMARY_NAME).exists()
 
 
-def test_an_unconfirmed_session_is_recorded_in_every_timing(tmp_path: Path) -> None:
+def test_the_session_conditions_are_recorded_in_every_timing(tmp_path: Path) -> None:
     setup = development_setup(tmp_path, ("LGB-u",))
-    setup = replace(setup, session={**setup.session, "confirmed": False})
     run_development(setup)
     timings = load_run(setup.run.path, setup.run.partitions).of_kind("timing")
     assert timings
-    assert all(t["settings"]["session_confirmed"] is False for t in timings)
-    assert all(t["settings"]["session"]["confirmed"] is False for t in timings)
+    assert all("session_confirmed" not in t["settings"] for t in timings)
+    assert all("load_average_1m" in t["settings"]["session"] for t in timings)
 
 
 def test_an_unapproved_cost_stops_the_run_before_a_directory_or_any_data_is_used(

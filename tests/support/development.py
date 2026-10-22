@@ -479,8 +479,7 @@ _BODIES: dict[str, dict[str, Any]] = {
         "memory_scope": "process resident set",
         "settings": {
             "procedure_version": 1,
-            "session_confirmed": True,
-            "session": {"confirmed": True},
+            "session": {"load_average_1m": 0.25},
             "percentile_method": "linear",
             "timed_calls": 30_000,
             "round_latency_ms": [{"median": 0.4, "p95": 0.6, "p99": 0.9}] * 3,

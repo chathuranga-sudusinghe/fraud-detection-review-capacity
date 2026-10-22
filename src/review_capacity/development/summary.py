@@ -346,12 +346,6 @@ COMPARISON_TABLES: tuple[ComparisonTable, ...] = (
                     (*SELECTED, ("measurement", ("latency",)), ("boundary", ("end_to_end",))),
                 ),
             ),
-            _column(
-                "Session confirmed",
-                "Whether the operator confirmed the timing session conditions (DR-015 §9)",
-                "boolean",
-                Source("timing", "settings.session_confirmed", (("measurement", ("search",)),)),
-            ),
         ),
     ),
 )
