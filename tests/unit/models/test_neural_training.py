@@ -5,6 +5,7 @@ Issue #77). Model-level behaviour is tested through the ResNet-style MLP
 
 from __future__ import annotations
 
+import contextlib
 import math
 from collections.abc import Iterator
 from dataclasses import replace
@@ -23,12 +24,13 @@ from review_capacity.errors import (
 )
 from review_capacity.models.neural_training import (
     EARLY_STOPPING_PARAMETERS,
-    METRICS,
     TRAINING_PARAMETERS,
+    BatchPlan,
     EarlyStopping,
     InputLayout,
     NeuralData,
     NeuralInputs,
+    batching_record,
     derived_seeds,
     drop_categories,
     epoch_batches,
@@ -42,7 +44,14 @@ from review_capacity.models.neural_training import (
     training_settings,
     weighted_bce,
 )
-from support.neural import LAYOUT, TRAINING, neural_data, neural_inputs, preserved_torch_state
+from support.neural import (
+    LAYOUT,
+    TRAINING,
+    neural_data,
+    neural_inputs,
+    preserved_torch_state,
+    v1_objective,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -124,6 +133,20 @@ def test_inputs_are_checked_against_the_layout() -> None:
             NeuralInputs(inputs.numeric, categorical).check(LAYOUT)
 
 
+def test_row_identifiers_and_times_are_metadata_given_together() -> None:
+    data = neural_data(10, seed=0, with_rows=True)
+    assert data.ids is not None
+    assert data.times is not None
+    with pytest.raises(DataValidationError, match="together"):
+        NeuralData(data.inputs, data.labels, data.weights, ids=data.ids)
+    with pytest.raises(DataValidationError, match="identifiers"):
+        NeuralData(data.inputs, data.labels, data.weights, ids=data.ids[:9], times=data.times)
+    with pytest.raises(DataValidationError, match="times"):
+        NeuralData(
+            data.inputs, data.labels, data.weights, ids=data.ids, times=data.times.astype(np.int32)
+        )
+
+
 def test_malformed_labels_and_weights_are_rejected() -> None:
     data = neural_data(10, seed=0)
     with pytest.raises(DataValidationError, match="Labels"):
@@ -144,10 +167,10 @@ def test_malformed_labels_and_weights_are_rejected() -> None:
 def test_training_settings_are_read_explicitly() -> None:
     settings = training_settings(TRAINING, early_stopping=True)
     assert (settings.lr, settings.batch_size, settings.patience) == (1e-2, 64, 2)
-    assert settings.metric == "average_precision"
+    assert (settings.max_epochs, settings.eval_batch_size) == (12, 96)
     loop_only = {name: TRAINING[name] for name in TRAINING_PARAMETERS}
     fixed = training_settings(loop_only, early_stopping=False)
-    assert (fixed.max_epochs, fixed.patience, fixed.metric) == (None, None, None)
+    assert (fixed.max_epochs, fixed.patience) == (None, None)
 
 
 @pytest.mark.parametrize("name", TRAINING_PARAMETERS + EARLY_STOPPING_PARAMETERS)
@@ -174,8 +197,6 @@ def test_every_training_setting_is_required(name: str) -> None:
         ("max_epochs", 0),
         ("patience", -1),
         ("patience", 1.0),
-        ("metric", "f1"),
-        ("metric", None),
     ],
 )
 def test_invalid_training_setting_is_rejected(name: str, value: Any) -> None:
@@ -236,23 +257,31 @@ def test_weighted_loss_is_the_weighted_row_mean_in_float32() -> None:
         weighted_bce(logits, labels.double(), weights)
 
 
+def test_micro_batch_losses_add_up_to_the_effective_batch_loss() -> None:
+    logits = torch.tensor([2.0, -1.0, 0.5, -3.0, 1.5])
+    labels = torch.tensor([1.0, 0.0, 0.0, 1.0, 1.0])
+    weights = torch.tensor([10.0, 1.0, 2.0, 10.0, 3.0])
+    whole = weighted_bce(logits, labels, weights)
+    parts = weighted_bce(logits[:2], labels[:2], weights[:2], rows=5) + weighted_bce(
+        logits[2:], labels[2:], weights[2:], rows=5
+    )
+    assert parts.item() == pytest.approx(whole.item(), rel=1e-6)
+
+
 def test_early_stopping_counts_patience_plus_one_epochs_without_improvement() -> None:
-    tracker = EarlyStopping(2, greater_is_better=True)
-    outcomes = [tracker.update(epoch, score) for epoch, score in enumerate([0.5, 0.6], start=1)]
+    tracker = EarlyStopping(2)
+    outcomes = [tracker.update(epoch, value) for epoch, value in enumerate([50, 60], start=1)]
     assert outcomes == [True, True]
-    for epoch, score in ((3, 0.6), (4, 0.55)):  # a tie is not an improvement
-        assert not tracker.update(epoch, score)
+    for epoch, value in ((3, 60), (4, 55)):  # a tie is not an improvement
+        assert not tracker.update(epoch, value)
         assert not tracker.stop
-    assert not tracker.update(5, 0.6)
+    assert not tracker.update(5, 60)
     assert tracker.stop
-    assert (tracker.best, tracker.best_epoch) == (0.6, 2)  # the earliest best epoch is kept
-    lower = EarlyStopping(0, greater_is_better=False)
-    assert lower.update(1, 0.3)
-    assert lower.update(2, 0.2)
-    assert not lower.update(3, 0.25)
-    assert lower.stop
-    with pytest.raises(ModelError, match="not finite"):
-        lower.update(4, math.nan)
+    assert (tracker.best, tracker.best_epoch) == (60, 2)  # the earliest best epoch is kept
+    immediate = EarlyStopping(0)
+    assert immediate.update(1, 3)
+    assert not immediate.update(2, 3)
+    assert immediate.stop
 
 
 def test_scores_keep_the_resolution_of_the_logits() -> None:
@@ -319,39 +348,6 @@ def test_category_dropout_does_not_depend_on_the_default_dtype() -> None:
     assert torch.equal(drop_categories(categorical, missing, 0.3, generator(2)), expected)
 
 
-# --- V1 metrics -----------------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("name", sorted(METRICS))
-def test_metric_weights_count_as_repeated_rows(name: str) -> None:
-    rng = np.random.default_rng(0)
-    labels = rng.integers(0, 2, 200).astype(np.int8)
-    scores = 0.3 * labels + 0.7 * rng.random(200)
-    weights = np.where(rng.random(200) < 0.3, 2.0, 1.0)
-    repeat = np.repeat(np.arange(200), weights.astype(np.int64))
-    compute = METRICS[name].compute
-    weighted = compute(labels, scores, weights)
-    assert weighted == pytest.approx(compute(labels[repeat], scores[repeat], np.ones(len(repeat))))
-    assert weighted != pytest.approx(compute(labels, scores, np.ones(200)))
-
-
-def test_metric_directions() -> None:
-    labels = np.array([0, 0, 1, 1], np.int8)
-    weights = np.ones(4)
-    good, bad = np.array([0.1, 0.2, 0.8, 0.9]), np.array([0.9, 0.8, 0.2, 0.1])
-    for name, metric in METRICS.items():
-        better = metric.compute(labels, good, weights) > metric.compute(labels, bad, weights)
-        assert better == metric.greater_is_better, name
-
-
-def test_only_ranking_metrics_need_both_classes() -> None:
-    needing = {name for name, metric in METRICS.items() if metric.needs_both_classes}
-    assert needing == {"auc", "average_precision"}
-    labels = np.zeros(4, np.int8)
-    loss = METRICS["binary_logloss"].compute(labels, np.full(4, 0.1), np.ones(4))
-    assert loss == pytest.approx(-math.log(0.9))
-
-
 # --- Numerical failures ---------------------------------------------------------------------------
 
 
@@ -394,6 +390,8 @@ def test_non_finite_loss_stops_before_the_batch_updates_the_network() -> None:
             seeds=derived_seeds(0),
             epochs=1,
             name="test",
+            plan=BatchPlan(64, 64),
+            objective=None,
         )
     assert torch.equal(network.weight.detach(), before)
     assert not optimizer.state  # no optimiser step was taken
@@ -422,3 +420,322 @@ def test_parameter_groups_are_recorded_by_name() -> None:
     ):
         with pytest.raises(ValueError, match="Parameter groups must hold"):
             parameter_group_record(network, invalid)
+
+
+# --- The batch plan and the effective-batch loop --------------------------------------------------
+
+
+def test_a_batch_plan_has_positive_sizes_and_a_micro_batch_within_the_effective_batch() -> None:
+    plan = BatchPlan(1024, 256)
+    assert plan.micro_sizes(1024) == [256, 256, 256, 256]
+    assert plan.micro_sizes(1016) == [256, 256, 256, 248]  # the final batch, kept
+    assert BatchPlan(64, 64).micro_sizes(22) == [22]
+    assert BatchPlan(5, 2).micro_sizes(5) == [2, 2, 1]
+    for effective, micro in ((0, 1), (4, 0), (4, 5), (True, 1), (4, 2.0)):
+        with pytest.raises(SpecificationError, match="batch"):
+            BatchPlan(effective, micro)  # type: ignore[arg-type]
+
+
+def test_the_recorded_batching_states_the_plan_the_reduction_and_the_evaluation_batch() -> None:
+    record = batching_record(BatchPlan(1024, 256), 368_632, 4096)
+    assert record["effective_batch"] == 1024
+    assert record["micro_batch"] == 256
+    assert record["final_batch_rows"] == 1016  # 368,632 = 359 x 1,024 + 1,016
+    assert record["evaluation_batch"] == 4096
+    assert "m" in record["loss_reduction"]
+    assert batching_record(BatchPlan(64, 64), 128, 96)["final_batch_rows"] == 64
+
+
+class _Counting(torch.optim.AdamW):
+    """AdamW that counts its steps and the clearing of gradients."""
+
+    steps = 0
+    clears = 0
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.gradients: list[list[Tensor]] = []  # the accumulated gradients before each step
+
+    def step(self, *args: Any, **kwargs: Any) -> Any:
+        self.steps += 1
+        parameters = [p for group in self.param_groups for p in group["params"]]
+        self.gradients.append([p.grad.clone() for p in parameters if p.grad is not None])
+        return super().step(*args, **kwargs)
+
+    def zero_grad(self, *args: Any, **kwargs: Any) -> None:
+        self.clears += 1
+        super().zero_grad(*args, **kwargs)
+
+
+def _train(
+    plan: BatchPlan, rows: int = 150, layout: InputLayout = LAYOUT, seed: int = 4
+) -> tuple[_Counting, nn.Module, list[float]]:
+    torch.manual_seed(seed)
+    network = _Linear()
+    optimizer = _Counting(network.parameters(), lr=1e-2, weight_decay=1e-3)
+    settings = training_settings(
+        {**{name: TRAINING[name] for name in TRAINING_PARAMETERS}, "batch_size": plan.effective},
+        early_stopping=False,
+    )
+    result = train_network(
+        network,
+        optimizer,
+        neural_data(rows, seed=1, fraud_weight=3.0),
+        None,
+        settings,
+        layout=layout,
+        device=torch.device("cpu"),
+        seeds=derived_seeds(0),
+        epochs=2,
+        name="test",
+        plan=plan,
+        objective=None,
+    )
+    return optimizer, network, [record.train_loss for record in result.history]
+
+
+@pytest.mark.parametrize("dropout", [0.0, 0.3])
+@pytest.mark.parametrize("micro", [64, 24, 7, 1])
+def test_an_accumulated_update_equals_the_unsplit_update(
+    micro: int, dropout: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With autocast off the micro-batch plan changes nothing but the summation order: the same
+    losses, parameters and optimiser state as the unsplit effective batch, to float32 rounding,
+    with unequal micro-batches, non-uniform weights, a short final batch (22 of 150 rows) and
+    category dropout (drawn once per effective batch, so its masks do not depend on the plan)."""
+    monkeypatch.setattr(torch, "autocast", lambda **_: contextlib.nullcontext())
+    layout = replace(LAYOUT, category_dropout=dropout)
+    reference, network_a, losses_a = _train(BatchPlan(64, 64), layout=layout)
+    split, network_b, losses_b = _train(BatchPlan(64, micro), layout=layout)
+    assert (reference.steps, reference.clears) == (6, 6)  # 3 effective batches x 2 epochs
+    assert (split.steps, split.clears) == (6, 6)  # one step and one clearing per effective batch
+    np.testing.assert_allclose(losses_b, losses_a, rtol=1e-5)
+    assert len(split.gradients) == len(reference.gradients) == 6
+    for before_a, before_b in zip(reference.gradients, split.gradients, strict=True):
+        for grad_a, grad_b in zip(before_a, before_b, strict=True):
+            torch.testing.assert_close(grad_b, grad_a, rtol=1e-4, atol=1e-7)
+    for a, b in zip(network_a.parameters(), network_b.parameters(), strict=True):
+        torch.testing.assert_close(b, a, rtol=1e-4, atol=1e-6)
+    state_a, state_b = reference.state_dict()["state"], split.state_dict()["state"]
+    for key in state_a:
+        for name in ("exp_avg", "exp_avg_sq"):
+            torch.testing.assert_close(state_b[key][name], state_a[key][name], rtol=1e-4, atol=1e-8)
+
+
+def test_the_study_effective_batch_has_a_1016_row_tail_and_accumulates_exactly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """2,040 rows in effective batches of 1,024: 1,024 and a final batch of 1,016 rows, split into
+    uneven micro-batches (300, 300, 300, 124 and 300, 300, 300, 116)."""
+    monkeypatch.setattr(torch, "autocast", lambda **_: contextlib.nullcontext())
+    layout = replace(LAYOUT, category_dropout=0.2)
+    reference, network_a, losses_a = _train(BatchPlan(1024, 1024), rows=2040, layout=layout)
+    split, network_b, losses_b = _train(BatchPlan(1024, 300), rows=2040, layout=layout)
+    assert (reference.steps, split.steps) == (4, 4)  # 2 effective batches x 2 epochs
+    assert BatchPlan(1024, 300).micro_sizes(1016) == [300, 300, 300, 116]
+    np.testing.assert_allclose(losses_b, losses_a, rtol=1e-5)
+    for before_a, before_b in zip(reference.gradients, split.gradients, strict=True):
+        for grad_a, grad_b in zip(before_a, before_b, strict=True):
+            torch.testing.assert_close(grad_b, grad_a, rtol=1e-4, atol=1e-7)
+    for a, b in zip(network_a.parameters(), network_b.parameters(), strict=True):
+        torch.testing.assert_close(b, a, rtol=1e-4, atol=1e-6)
+
+
+def test_category_dropout_is_drawn_once_per_effective_batch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    shapes: list[int] = []
+    original = drop_categories
+
+    def spy(categorical: Tensor, *args: Any) -> Tensor:
+        shapes.append(categorical.shape[0])
+        return original(categorical, *args)
+
+    monkeypatch.setattr("review_capacity.models.neural_training.drop_categories", spy)
+    _train(BatchPlan(64, 24), layout=replace(LAYOUT, category_dropout=0.3))
+    assert shapes == [64, 64, 22] * 2  # whole effective batches, never micro-batches
+
+
+def test_the_same_plan_and_seed_repeat_exactly_with_dropout_on() -> None:
+    layout = replace(LAYOUT, category_dropout=0.3)
+    _, first, losses_first = _train(BatchPlan(64, 24), layout=layout)
+    _, second, losses_second = _train(BatchPlan(64, 24), layout=layout)
+    assert losses_first == losses_second
+    for a, b in zip(first.parameters(), second.parameters(), strict=True):
+        assert torch.equal(a, b)
+
+
+class _FailsOnCall(nn.Module):
+    """A trainable network whose ``call``-th forward pass gives non-finite logits."""
+
+    def __init__(self, call: int) -> None:
+        super().__init__()
+        self.call, self.calls = call, 0
+        self.weight = nn.Parameter(torch.ones(1))
+
+    def forward(self, numeric: Tensor, categorical: Tensor) -> Tensor:
+        self.calls += 1
+        value = math.nan if self.calls == self.call else 0.0
+        return (numeric[:, 0] + categorical[:, 0]) * 0 * self.weight + value
+
+
+class _InfiniteGradient(torch.autograd.Function):
+    """The identity whose gradient is infinite: a finite loss with non-finite gradients."""
+
+    @staticmethod
+    def forward(_ctx: Any, value: Tensor) -> Tensor:
+        return value.clone()
+
+    @staticmethod
+    def backward(_ctx: Any, grad: Tensor) -> Tensor:
+        return grad * math.inf
+
+
+class _OverflowingGradient(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(1))
+
+    def forward(self, numeric: Tensor, _categorical: Tensor) -> Tensor:
+        gradient: Tensor = _InfiniteGradient.apply(self.weight)  # type: ignore[no-untyped-call]
+        return numeric[:, 0] * 0 + gradient
+
+
+def _fit_once(network: nn.Module, optimizer: torch.optim.Optimizer, plan: BatchPlan) -> None:
+    settings = training_settings(
+        {**{name: TRAINING[name] for name in TRAINING_PARAMETERS}, "batch_size": plan.effective},
+        early_stopping=False,
+    )
+    train_network(
+        network,
+        optimizer,
+        neural_data(100, seed=0),
+        None,
+        settings,
+        layout=LAYOUT,
+        device=torch.device("cpu"),
+        seeds=derived_seeds(0),
+        epochs=1,
+        name="test",
+        plan=plan,
+        objective=None,
+    )
+
+
+def test_a_non_finite_loss_after_successful_micro_batches_gives_no_step() -> None:
+    network = _FailsOnCall(call=3)  # micro-batches 1 and 2 of batch 1 are fine
+    before = network.weight.detach().clone()
+    optimizer = torch.optim.AdamW(network.parameters(), lr=0.1)
+    with pytest.raises(ModelError, match="epoch 1, batch 1, micro-batch 3"):
+        _fit_once(network, optimizer, BatchPlan(64, 20))
+    assert torch.equal(network.weight.detach(), before)
+    assert not optimizer.state  # the failing effective batch took no step
+
+
+def test_finite_losses_with_non_finite_gradients_give_no_step() -> None:
+    network = _OverflowingGradient()
+    optimizer = torch.optim.AdamW(network.parameters(), lr=0.1)
+    with pytest.raises(ModelError, match="non-finite gradients in epoch 1, batch 1"):
+        _fit_once(network, optimizer, BatchPlan(64, 32))
+    assert torch.equal(network.weight.detach(), torch.ones(1))
+    assert not optimizer.state  # no step was taken
+
+
+def test_earlier_updates_are_kept_when_a_later_batch_fails() -> None:
+    network = _FailsOnCall(call=2)  # batch 1 (one micro-batch of 64) is fine, batch 2 fails
+    optimizer = torch.optim.AdamW(network.parameters(), lr=0.1)
+    settings = training_settings(
+        {name: TRAINING[name] for name in TRAINING_PARAMETERS}, early_stopping=False
+    )
+    with pytest.raises(ModelError, match="batch 2"):
+        train_network(
+            network,
+            optimizer,
+            neural_data(100, seed=0),
+            None,
+            settings,
+            layout=LAYOUT,
+            device=torch.device("cpu"),
+            seeds=derived_seeds(0),
+            epochs=1,
+            name="test",
+            plan=BatchPlan(64, 64),
+            objective=None,
+        )
+    assert len(optimizer.state) == 1  # batch 1's update was applied and is not rolled back
+
+
+# --- Early stopping on the shared V1 objective ----------------------------------------------------
+
+
+def _fit_on_v1(patience: int, max_epochs: int, *, v1_weight: float = 1.0) -> Any:
+    valid = neural_data(240, seed=9, with_rows=True)
+    valid = replace(valid, weights=np.where(valid.labels == 1, v1_weight, 1.0))
+    objective = v1_objective(valid)
+    torch.manual_seed(0)
+    network = _Linear()
+    optimizer = torch.optim.AdamW(network.parameters(), lr=5e-2)
+    settings = training_settings(
+        {**TRAINING, "patience": patience, "max_epochs": max_epochs}, early_stopping=True
+    )
+    result = train_network(
+        network,
+        optimizer,
+        neural_data(200, seed=2),
+        valid,
+        settings,
+        layout=LAYOUT,
+        device=torch.device("cpu"),
+        seeds=derived_seeds(0),
+        epochs=None,
+        name="test",
+        plan=BatchPlan(64, 64),
+        objective=objective,
+    )
+    return result, objective
+
+
+def test_early_stopping_uses_the_shared_unweighted_v1_objective() -> None:
+    result, objective = _fit_on_v1(patience=1, max_epochs=8)
+    numerators = [record.v1_numerator for record in result.history]
+    assert all(type(n) is int and 0 <= n <= objective.frauds for n in numerators)
+    assert result.best_numerator == max(numerators)
+    assert result.epochs_kept == numerators.index(max(numerators)) + 1  # the earliest best
+    assert result.best_objective == result.best_numerator / objective.frauds
+    history = result.v1_history
+    assert history is not None
+    assert history.unit == "epoch"
+    assert history.best_checkpoint == result.epochs_kept
+    assert [c.numerator for c in history.checkpoints] == numerators
+
+
+def test_the_v1_sample_weights_do_not_enter_the_objective() -> None:
+    plain, _ = _fit_on_v1(patience=1, max_epochs=6)
+    weighted, _ = _fit_on_v1(patience=1, max_epochs=6, v1_weight=37.0)
+    assert [r.v1_numerator for r in plain.history] == [r.v1_numerator for r in weighted.history]
+    assert plain.epochs_kept == weighted.epochs_kept
+
+
+def test_a_neural_fit_stops_patience_plus_one_epochs_after_the_best() -> None:
+    result, _ = _fit_on_v1(patience=1, max_epochs=40)
+    if result.stop == "patience":
+        assert result.epochs_run == result.epochs_kept + 2  # patience + 1 epochs without gain
+    else:
+        assert result.epochs_run == 40
+
+
+def test_the_shared_history_distinguishes_rounds_from_epochs() -> None:
+    objective = v1_objective(neural_data(240, seed=9, with_rows=True))
+    recorder = objective.recorder()
+    for _ in range(3):  # equal numerators: only the first observation improves
+        recorder.observe(np.zeros(objective.rows), objective.labels)
+    rounds = recorder.history(patience=2, maximum=60)  # a tree stops at best + patience
+    assert (rounds.stopped_at, rounds.stopping_reason) == (3, "early_stopping")
+    assert rounds.unit == "round"
+    epochs = recorder.history(patience=1, maximum=60, unit="epoch")  # best + patience + 1
+    assert (epochs.stopped_at, epochs.stopping_reason) == (3, "early_stopping")
+    assert epochs.unit == "epoch"
+    with pytest.raises(ModelError, match="neither"):
+        recorder.history(patience=2, maximum=60, unit="epoch")
+    with pytest.raises(ModelError, match="training unit"):
+        recorder.history(patience=1, maximum=60, unit="batch")

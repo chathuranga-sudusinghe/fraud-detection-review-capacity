@@ -1,7 +1,7 @@
 """Shared training loop and fitted-model base of the two neural models of DR-011 (ResNet-style MLP
 and FT-Transformer), under the device, precision and determinism policy of DR-013 §4.
 
-* **Inputs:** the neural input representation of DR-012 (proposed), already applied by the caller:
+* **Inputs:** the neural input representation of DR-012 (Accepted), already applied by the caller:
   float32 numeric inputs (transformed values and missingness indicators, all finite) and int64
   category indices, described by an ``InputLayout`` (names, vocabulary sizes, the index of
   ``"__MISSING__"`` per categorical input and the category-dropout probability). This module never
@@ -18,17 +18,24 @@ and FT-Transformer), under the device, precision and determinism policy of DR-01
   (REF-103) and the single-tensor implementation on every device; bf16 autocast for the forward
   pass, float32 parameters and optimiser state; weighted binary cross-entropy from logits,
   computed outside autocast in float32 from float32 logits, labels and weights, and reduced as the
-  sum of the weighted row losses divided by the rows of the batch (``weighted_bce``). Every epoch
-  visits every Train row once, in a new random order; the last batch keeps the remaining rows
-  (as REF-103). The network is built and trained with float32 as PyTorch's default dtype,
-  whatever the process-wide default (``float32_default``); a non-finite batch loss stops the run
-  before that batch updates the network; the dtypes of the training logits and of the optimiser
-  state are observed and recorded.
-* **Early stopping on V1:** after every epoch, V1 is scored through the float32 prediction path,
-  and the explicit V1 metric is computed with the V1 sample weights. A score improves only if it
-  is strictly better than the best so far, so the earliest epoch wins a tie; training stops after
-  ``patience + 1`` consecutive epochs without improvement (REF-087, Section 4; the
-  ``ProgressTracker`` of REF-103's ``libzero`` 0.0.3.dev7) or at ``max_epochs``, and the
+  sum of the weighted row losses divided by the rows of the effective batch (``weighted_bce``).
+  Every epoch visits every Train row once, in a new random order (one shuffle); the order is cut
+  into effective batches (``BatchPlan.effective`` rows, DR-015 §7) and the last batch keeps the
+  remaining rows (as REF-103). An effective batch is processed in micro-batches of at most
+  ``BatchPlan.micro`` rows: gradients are cleared once, every micro-batch adds the gradients of
+  its weighted loss sum divided by the same row count m of the effective batch (float32
+  accumulation, no further division), and AdamW steps once per effective batch. A micro-batch
+  loss or the accumulated gradients that are not finite stop the run before that effective batch
+  updates the network. Category dropout is drawn once per effective batch, so its masks do not
+  depend on the micro-batch plan. The network is built and trained with float32 as PyTorch's
+  default dtype, whatever the process-wide default (``float32_default``); the dtypes of the
+  training logits and of the optimiser state are observed and recorded.
+* **Early stopping on V1 (DR-015 §3):** after every epoch, V1 is scored through the float32
+  prediction path and the shared V1 objective (unweighted Recall@K under daily top-K review,
+  ``v1_objective``) is observed on the full ordered V1 vector. An epoch improves only if its
+  integer numerator is strictly greater than the best so far, so the earliest epoch wins a tie;
+  training stops after ``patience + 1`` consecutive epochs without improvement (REF-087, Section
+  4; the ``ProgressTracker`` of REF-103's ``libzero`` 0.0.3.dev7) or at ``max_epochs``, and the
   parameters and normalisation statistics of the best epoch are restored. With a fixed epoch count
   and no validation, exactly that many epochs are trained.
 * **Prediction (DR-013 §4):** float32 with autocast disabled, in evaluation mode and without
@@ -36,13 +43,15 @@ and FT-Transformer), under the device, precision and determinism policy of DR-01
   The float32 logits are turned into probabilities in float64, so scores keep the resolution of
   the logits: a float32 sigmoid rounds every logit above about 17 to exactly 1.
 * **Persistence:** the network state (tensors only, read back with ``weights_only=True``) and a
-  manifest with the layout, the hyperparameters, the training record and the state file's SHA-256;
-  reloading checks the manifest against the request, requires the precision settings now applied
-  to equal those of the fit and the training record to be complete and consistent (an early-stopped
-  fit is replayed through the stopping rule), and loads the state strictly.
+  manifest with the layout, the hyperparameters, the training record (with the batch plan) and the
+  state file's SHA-256; reloading checks the manifest against the request, requires the precision
+  settings now applied to equal those of the fit and the training record to be complete and
+  consistent (an early-stopped fit is replayed through the stopping rule on its integer
+  numerators), and loads the state strictly.
 
-Hyperparameter values, the V1 metric, patience and the epoch limit are fixed in the training rules
-(protocol design item 3), never defaulted here: every name below must be given explicitly.
+Hyperparameter values, patience and the epoch limit are fixed in the training rules
+(protocol design item 3), never defaulted here: every name below must be given explicitly. The
+V1 objective and the batch plan are passed to ``fit``.
 """
 
 from __future__ import annotations
@@ -54,7 +63,7 @@ import logging
 import math
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -63,7 +72,6 @@ from typing import Any, ClassVar, Self
 import numpy as np
 import numpy.typing as npt
 import torch
-from sklearn.metrics import average_precision_score, log_loss, roc_auc_score
 from torch import Tensor, nn
 from torch.nn import functional
 
@@ -77,22 +85,36 @@ from review_capacity.errors import (
 )
 from review_capacity.files import write_atomically, write_json
 from review_capacity.logging_setup import ProgressLogger, log_step
-from review_capacity.models.base import Labels, Scores, Weights, check_fit_arguments, checked_scores
+from review_capacity.models.base import (
+    Keys,
+    Labels,
+    Scores,
+    Weights,
+    check_fit_arguments,
+    checked_scores,
+)
 from review_capacity.models.device import configure_torch, seed_everything
 from review_capacity.models.registry import Configuration, Family
 from review_capacity.models.run_record import jsonable
+from review_capacity.models.v1_objective import (
+    ObjectiveRecorder,
+    TrainingHistory,
+    V1Objective,
+    check_identity,
+)
 
 logger = logging.getLogger(__name__)
 
-FORMAT_VERSION = 2  # 2: per-epoch train_seconds in the training history
+FORMAT_VERSION = 3  # 3: V1 objective history and the batch plan; 2: per-epoch train_seconds
 STATE_FILE = "model.pt"
 MANIFEST_FILE = "manifest.json"
 
-# Hyperparameters of the training loop, required for every fit; with V1 early stopping the three
-# early-stopping names are required as well. A fixed-epoch fit accepts them (so that the selected
-# hyperparameters can be reused as they are) and records them, but does not use them.
+# Hyperparameters of the training loop, required for every fit; with V1 early stopping the two
+# early-stopping names (the epoch limit and the patience) are required as well. A fixed-epoch fit
+# accepts them (so that the selected hyperparameters can be reused as they are) and records them,
+# but does not use them.
 TRAINING_PARAMETERS = ("lr", "weight_decay", "batch_size", "eval_batch_size")
-EARLY_STOPPING_PARAMETERS = ("max_epochs", "patience", "metric")
+EARLY_STOPPING_PARAMETERS = ("max_epochs", "patience")
 
 # AdamW constants of the reference implementation (REF-103 passes only the learning rate and
 # weight decay, so PyTorch's defaults apply), set explicitly; the single-tensor implementation
@@ -113,20 +135,34 @@ TRAINING_RECORD_SECTIONS: dict[str, type] = {
     "data_loading": str,
     "optimizer": dict,
     "batches_per_epoch": int,
+    "batching": dict,
     "schedule": dict,
     "history": list,
 }
 SCHEDULE_KEYS = (
     "mode",
-    "metric",
+    "objective",
     "patience",
     "max_epochs",
     "stop",
     "epochs_run",
     "epochs_kept",
-    "best_v1_score",
+    "best_numerator",
+    "best_objective",
 )
-HISTORY_KEYS = ("epoch", "train_loss", "v1_score", "train_seconds", "seconds")
+HISTORY_KEYS = ("epoch", "train_loss", "v1_numerator", "v1_objective", "train_seconds", "seconds")
+BATCHING_KEYS = (
+    "effective_batch",
+    "micro_batch",
+    "final_batch_rows",
+    "loss_reduction",
+    "gradient_accumulation",
+    "evaluation_batch",
+    "evaluation_final_batch",
+)
+LOSS_REDUCTION = "sum(w * loss) over the effective batch / its rows m, in every micro-batch"
+GRADIENT_ACCUMULATION = "float32; one optimiser step per effective batch"
+EVALUATION_FINAL_BATCH = "kept"
 
 
 # --- Inputs ---------------------------------------------------------------------------------------
@@ -226,14 +262,25 @@ class NeuralData:
 
     The weights are the protocol's explicit sample weights (``models.base.sample_weights``); V1
     weights are an explicit input set by the training rules, never recomputed from V1 labels.
+    ``ids`` and ``times`` (each row's ``TransactionID`` and ``TransactionDT``) are metadata, given
+    together, for the V1 objective's queue: they are never network inputs.
     """
 
     inputs: NeuralInputs
     labels: Labels
     weights: Weights
+    ids: Keys | None = None
+    times: Keys | None = None
 
     def __post_init__(self) -> None:
         labels, weights, rows = self.labels, self.weights, self.inputs.rows
+        if (self.ids is None) != (self.times is None):
+            raise DataValidationError("Row identifiers and times must be given together")
+        for name, keys in (("identifiers", self.ids), ("times", self.times)):
+            if keys is not None and (
+                not isinstance(keys, np.ndarray) or keys.dtype != np.int64 or keys.shape != (rows,)
+            ):
+                raise DataValidationError(f"Row {name} must be one int64 value per row")
         if (
             not isinstance(labels, np.ndarray)
             or labels.dtype != np.int8
@@ -275,34 +322,6 @@ def real_number(
 
 
 @dataclass(frozen=True)
-class Metric:
-    """A V1 early-stopping metric computed from fraud scores with the V1 sample weights."""
-
-    compute: Callable[[Labels, Scores, Weights], float]
-    greater_is_better: bool
-    needs_both_classes: bool
-
-
-METRICS: dict[str, Metric] = {  # LightGBM's names for the same metrics
-    "auc": Metric(
-        lambda y, s, w: float(roc_auc_score(y, s, sample_weight=w)),
-        greater_is_better=True,
-        needs_both_classes=True,
-    ),
-    "average_precision": Metric(
-        lambda y, s, w: float(average_precision_score(y, s, sample_weight=w)),
-        greater_is_better=True,
-        needs_both_classes=True,
-    ),
-    "binary_logloss": Metric(
-        lambda y, s, w: float(log_loss(y, s, sample_weight=w, labels=[0, 1])),
-        greater_is_better=False,
-        needs_both_classes=False,
-    ),
-}
-
-
-@dataclass(frozen=True)
 class TrainingSettings:
     """The training-loop hyperparameters of one fit. The early-stopping values are ``None`` for a
     fixed-epoch fit."""
@@ -313,7 +332,6 @@ class TrainingSettings:
     eval_batch_size: int
     max_epochs: int | None
     patience: int | None
-    metric: str | None
 
 
 def training_settings(values: Mapping[str, Any], *, early_stopping: bool) -> TrainingSettings:
@@ -325,15 +343,11 @@ def training_settings(values: Mapping[str, Any], *, early_stopping: bool) -> Tra
         raise SpecificationError(f"Hyperparameters must be set explicitly: {missing}")
     max_epochs: int | None = None
     patience: int | None = None
-    metric: str | None = None
     if early_stopping:
         max_epochs = positive_integer(values["max_epochs"], "max_epochs")
         patience = values["patience"]
         if type(patience) is not int or patience < 0:
             raise SpecificationError(f"patience must be a non-negative integer, not {patience!r}")
-        metric = values["metric"]
-        if not isinstance(metric, str) or metric not in METRICS:
-            raise SpecificationError(f"metric must be one of {sorted(METRICS)}, not {metric!r}")
     return TrainingSettings(
         lr=real_number(values["lr"], "lr", open_low=True),
         weight_decay=real_number(values["weight_decay"], "weight_decay"),
@@ -341,8 +355,48 @@ def training_settings(values: Mapping[str, Any], *, early_stopping: bool) -> Tra
         eval_batch_size=positive_integer(values["eval_batch_size"], "eval_batch_size"),
         max_epochs=max_epochs,
         patience=patience,
-        metric=metric,
     )
+
+
+@dataclass(frozen=True)
+class BatchPlan:
+    """How an effective batch is processed (DR-015 §7): ``effective`` Train rows per optimiser
+    update, in micro-batches of at most ``micro`` rows. The plan comes from the preflight (it is
+    fixed before the search and never adapted during a fit); this module only checks and uses it.
+    """
+
+    effective: int
+    micro: int
+
+    def __post_init__(self) -> None:
+        for name, value in (("effective", self.effective), ("micro", self.micro)):
+            if type(value) is not int or value < 1:
+                raise SpecificationError(f"The {name} batch must be a positive integer")
+        if self.micro > self.effective:
+            raise SpecificationError(
+                f"The micro-batch ({self.micro}) cannot exceed the effective batch "
+                f"({self.effective})"
+            )
+
+    def micro_sizes(self, rows: int) -> list[int]:
+        """The sizes of the micro-batches of an effective batch of ``rows`` rows: full micro-batches
+        and a shorter last one."""
+        sizes = [self.micro] * (rows // self.micro)
+        return [*sizes, rows % self.micro] if rows % self.micro else sizes
+
+
+def batching_record(plan: BatchPlan, rows: int, evaluation_batch: int) -> dict[str, Any]:
+    """The batch plan of a fit as recorded: the effective and micro-batch sizes, the rows of the
+    final batch of an epoch, the loss reduction and accumulation, and the evaluation batch."""
+    return {
+        "effective_batch": plan.effective,
+        "micro_batch": plan.micro,
+        "final_batch_rows": rows % plan.effective or plan.effective,
+        "loss_reduction": LOSS_REDUCTION,
+        "gradient_accumulation": GRADIENT_ACCUMULATION,
+        "evaluation_batch": evaluation_batch,
+        "evaluation_final_batch": EVALUATION_FINAL_BATCH,
+    }
 
 
 # --- Seeds, device and loop components -----------------------------------------------------------
@@ -357,6 +411,15 @@ def _finite_number(value: object) -> bool:
         return math.isfinite(value)
     except OverflowError:
         return False
+
+
+def _v1_entry_valid(entry: Mapping[str, Any], *, early: bool) -> bool:
+    """The V1 fields of a saved history entry: an integer numerator and a finite objective with
+    early stopping, none without."""
+    numerator, value = entry["v1_numerator"], entry["v1_objective"]
+    if not early:
+        return numerator is None and value is None
+    return type(numerator) is int and numerator >= 0 and _finite_number(value)
 
 
 def derived_seeds(seed: int) -> dict[str, int]:
@@ -413,14 +476,18 @@ def drop_categories(
     return torch.where(dropped, missing.expand_as(categorical), categorical)
 
 
-def weighted_bce(logits: Tensor, labels: Tensor, weights: Tensor) -> Tensor:
-    """Weighted binary cross-entropy from logits in float32: the sum of ``w_i * l_i`` over the
-    batch divided by its rows, so a mini-batch loss is an unbiased estimate of the mean weighted
-    Train loss. Labels and weights must be float32; the logits are cast to float32."""
+def weighted_bce(
+    logits: Tensor, labels: Tensor, weights: Tensor, rows: int | None = None
+) -> Tensor:
+    """Weighted binary cross-entropy from logits in float32: the sum of ``w_i * l_i`` divided by
+    ``rows``, the row count of the whole effective batch (DR-015 §7; by default, the rows given),
+    so a mini-batch loss is an unbiased estimate of the mean weighted Train loss and the
+    micro-batches of one effective batch add up to its loss. Labels and weights must be float32;
+    the logits are cast to float32."""
     if labels.dtype != torch.float32 or weights.dtype != torch.float32:
         raise TypeError("Labels and weights of the loss must be float32")
     losses = functional.binary_cross_entropy_with_logits(logits.float(), labels, reduction="none")
-    return (losses * weights).sum() / logits.shape[0]
+    return (losses * weights).sum() / (logits.shape[0] if rows is None else rows)
 
 
 def predict_logits(
@@ -457,35 +524,29 @@ def probabilities(logits: npt.NDArray[np.float32]) -> Scores:
 
 
 def epoch_batches(rows: int, batch_size: int, rng: torch.Generator) -> list[npt.NDArray[np.int64]]:
-    """The row indices of each batch of one epoch: every row exactly once, in a new random order
-    drawn from ``rng``; the last batch keeps the remaining rows (as REF-103)."""
+    """The row indices of each effective batch of one epoch: every row exactly once, in a new
+    random order drawn from ``rng`` (one shuffle); the last batch keeps the remaining rows (as
+    REF-103)."""
     order = torch.randperm(rows, generator=rng).numpy()
     return [order[start : start + batch_size] for start in range(0, rows, batch_size)]
 
 
 class EarlyStopping:
-    """Best V1 score and stopping state: the first score always improves; a later score improves
-    only if strictly better than the best; training stops once more than ``patience``
-    consecutive scores have not improved."""
+    """Best V1 numerator and stopping state: the first epoch always improves; a later epoch
+    improves only if its integer numerator is strictly greater than the best; training stops once
+    more than ``patience`` consecutive epochs have not improved (``patience + 1`` of them)."""
 
-    def __init__(self, patience: int, *, greater_is_better: bool) -> None:
+    def __init__(self, patience: int) -> None:
         self.patience = patience
-        self.greater_is_better = greater_is_better
-        self.best: float | None = None
+        self.best: int | None = None
         self.best_epoch = 0
         self.bad_epochs = 0
 
-    def update(self, epoch: int, score: float) -> bool:
-        """Record the score of ``epoch``; return whether it is the new best."""
-        if not math.isfinite(score):
-            raise ModelError(f"Epoch {epoch}: the V1 metric is not finite ({score})")
-        better = (
-            self.best is None
-            or (self.greater_is_better and score > self.best)
-            or (not self.greater_is_better and score < self.best)
-        )
+    def update(self, epoch: int, numerator: int) -> bool:
+        """Record the numerator of ``epoch``; return whether it is the new best."""
+        better = self.best is None or numerator > self.best
         if better:
-            self.best, self.best_epoch, self.bad_epochs = score, epoch, 0
+            self.best, self.best_epoch, self.bad_epochs = numerator, epoch, 0
         else:
             self.bad_epochs += 1
         return better
@@ -497,13 +558,14 @@ class EarlyStopping:
 
 @dataclass(frozen=True)
 class EpochRecord:
-    """One epoch: its mean weighted Train loss, its V1 score (None without early stopping), the
-    seconds of its training batches alone (up to the synchronising read of the loss) and of the
-    whole epoch including V1 scoring."""
+    """One epoch: its mean weighted Train loss, its V1 objective numerator and value (None without
+    early stopping), the seconds of its training batches alone (up to the synchronising read of
+    the loss) and of the whole epoch including V1 scoring."""
 
     epoch: int
     train_loss: float
-    v1_score: float | None
+    v1_numerator: int | None
+    v1_objective: float | None
     train_seconds: float
     seconds: float
 
@@ -515,8 +577,10 @@ class TrainingResult:
     epochs_kept: int
     epochs_run: int
     stop: str  # "patience", "max_epochs" or "fixed"
-    best_score: float | None
+    best_numerator: int | None
+    best_objective: float | None
     history: tuple[EpochRecord, ...]
+    v1_history: TrainingHistory | None
     training_logits_dtypes: tuple[str, ...]
     optimizer_state_dtypes: dict[str, tuple[str, ...]]
 
@@ -562,6 +626,16 @@ def _state_copy(network: nn.Module) -> dict[str, Tensor]:
     return {name: value.detach().to("cpu", copy=True) for name, value in state.items()}
 
 
+def _gradients_finite(network: nn.Module) -> bool:
+    """Whether every accumulated gradient is finite (one synchronising read)."""
+    checks = [
+        torch.isfinite(parameter.grad).all()
+        for parameter in network.parameters()
+        if parameter.grad is not None
+    ]
+    return bool(torch.stack(checks).all()) if checks else True
+
+
 def train_network(
     network: nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -574,28 +648,33 @@ def train_network(
     seeds: Mapping[str, int],
     epochs: int | None,
     name: str,
+    plan: BatchPlan,
+    objective: V1Objective | None,
 ) -> TrainingResult:
-    """Train ``network`` (already on ``device``) with V1 early stopping, or for exactly ``epochs``
-    epochs without validation, and leave it in evaluation mode with the kept parameters."""
+    """Train ``network`` (already on ``device``) with V1 early stopping on ``objective``, or for
+    exactly ``epochs`` epochs without validation, and leave it in evaluation mode with the kept
+    parameters. ``plan`` splits each effective batch into micro-batches (DR-015 §7)."""
     tracker: EarlyStopping | None = None
-    metric: Metric | None = None
+    recorder: ObjectiveRecorder | None = None
     if valid is not None:
-        if settings.metric is None or settings.patience is None or settings.max_epochs is None:
-            raise ValueError("V1 early stopping needs its metric, patience and epoch limit")
-        metric = METRICS[settings.metric]
-        tracker = EarlyStopping(settings.patience, greater_is_better=metric.greater_is_better)
+        if objective is None:
+            raise ValueError("V1 early stopping needs the V1 objective")
+        if settings.patience is None or settings.max_epochs is None:
+            raise ValueError("V1 early stopping needs its patience and epoch limit")
+        recorder = objective.recorder()
+        tracker = EarlyStopping(settings.patience)
         total_epochs = settings.max_epochs
     else:
         if epochs is None:
             raise ValueError("A fixed-epoch fit needs its epoch count")
         total_epochs = epochs
-    rows, batch_size = train.inputs.rows, settings.batch_size
+    rows = train.inputs.rows
     order_rng = generator(seeds["batch_order"])
     dropout_rng = generator(seeds["category_dropout"])
     missing = torch.tensor(layout.missing_indices, dtype=torch.int64)
     labels = train.labels.astype(np.float32)
     weights = train.weights.astype(np.float32)
-    batches = math.ceil(rows / batch_size)
+    batches = math.ceil(rows / plan.effective)
     epoch_progress = ProgressLogger(logger, f"{name} epochs", total_epochs)
     history: list[EpochRecord] = []
     best_state: dict[str, Tensor] | None = None
@@ -606,34 +685,51 @@ def train_network(
         network.train()
         batch_progress = ProgressLogger(logger, f"{name} epoch {epoch} batches", batches)
         loss_sum = torch.zeros((), dtype=torch.float64, device=device)
-        for number, index in enumerate(epoch_batches(rows, batch_size, order_rng), start=1):
+        for number, index in enumerate(epoch_batches(rows, plan.effective, order_rng), start=1):
+            m = len(index)
+            # drawn once per effective batch, so the masks do not depend on the micro-batch plan
             categorical = drop_categories(
                 torch.from_numpy(train.inputs.categorical[index]),
                 missing,
                 layout.category_dropout,
                 dropout_rng,
             )
-            numeric_batch = torch.from_numpy(train.inputs.numeric[index]).to(device)
-            categorical_batch = categorical.to(device)
-            label_batch = torch.from_numpy(labels[index]).to(device)
-            weight_batch = torch.from_numpy(weights[index]).to(device)
             optimizer.zero_grad(set_to_none=True)
-            with torch.autocast(device_type=device.type, dtype=torch.bfloat16):
-                logits: Tensor = network(numeric_batch, categorical_batch)
-            logits_dtypes.add(str(logits.dtype))
-            loss = weighted_bce(logits, label_batch, weight_batch)
-            if not bool(torch.isfinite(loss)):  # before any update from this batch
-                raise ModelError(f"{name}: non-finite Train loss in epoch {epoch}, batch {number}")
-            loss.backward()  # type: ignore[no-untyped-call]
+            batch_loss = torch.zeros((), dtype=torch.float32, device=device)
+            start = 0
+            for micro_number, size in enumerate(plan.micro_sizes(m), start=1):
+                part = index[start : start + size]
+                numeric_part = torch.from_numpy(train.inputs.numeric[part]).to(device)
+                categorical_part = categorical[start : start + size].to(device)
+                label_part = torch.from_numpy(labels[part]).to(device)
+                weight_part = torch.from_numpy(weights[part]).to(device)
+                start += size
+                with torch.autocast(device_type=device.type, dtype=torch.bfloat16):
+                    logits: Tensor = network(numeric_part, categorical_part)
+                logits_dtypes.add(str(logits.dtype))
+                loss = weighted_bce(logits, label_part, weight_part, rows=m)
+                if not bool(torch.isfinite(loss)):  # before any update from this batch
+                    raise ModelError(
+                        f"{name}: non-finite Train loss in epoch {epoch}, batch {number}, "
+                        f"micro-batch {micro_number}"
+                    )
+                loss.backward()  # type: ignore[no-untyped-call]
+                batch_loss += loss.detach()
+            if not _gradients_finite(network):
+                raise ModelError(
+                    f"{name}: non-finite gradients in epoch {epoch}, batch {number}; "
+                    "the optimiser did not step"
+                )
             optimizer.step()
-            loss_sum += loss.detach().double() * len(index)
+            loss_sum += batch_loss.double() * m
             batch_progress.advance()
         train_loss = float(loss_sum.item()) / rows  # waits for the epoch's GPU work
         train_seconds = time.perf_counter() - start_time
         if not math.isfinite(train_loss):
             raise ModelError(f"{name}: Train loss is not finite in epoch {epoch}")
-        score = None
-        if valid is not None and tracker is not None and metric is not None:
+        numerator: int | None = None
+        value: float | None = None
+        if valid is not None and tracker is not None and recorder is not None:
             logits_v1 = predict_logits(
                 network,
                 valid.inputs,
@@ -642,22 +738,24 @@ def train_network(
                 task=f"{name} epoch {epoch} V1",
             )
             scores = checked_scores(probabilities(logits_v1), valid.inputs.rows, name)
-            score = metric.compute(valid.labels, scores, valid.weights)
-            if tracker.update(epoch, score):
+            recall = recorder.observe(scores, valid.labels)
+            if recall is None:
+                raise ModelError(f"{name}: the V1 objective did not accept the V1 evaluation")
+            numerator, value = recall.numerator, recall.value
+            if tracker.update(epoch, numerator):
                 best_state = _state_copy(network)
         seconds = time.perf_counter() - start_time
-        history.append(EpochRecord(epoch, train_loss, score, train_seconds, seconds))
+        history.append(EpochRecord(epoch, train_loss, numerator, value, train_seconds, seconds))
         if tracker is None:
             logger.info("%s epoch %d: Train loss %.6f (%.1f s)", name, epoch, train_loss, seconds)
-        else:
+        elif objective is not None:
             logger.info(
-                "%s epoch %d: Train loss %.6f, V1 %s %.6f (best %.6f, epoch %d) (%.1f s)",
+                "%s epoch %d: Train loss %.6f, V1 objective %.6f (best %.6f, epoch %d) (%.1f s)",
                 name,
                 epoch,
                 train_loss,
-                settings.metric,
-                score,
-                tracker.best,
+                value,
+                (tracker.best or 0) / objective.frauds,
                 tracker.best_epoch,
                 seconds,
             )
@@ -667,20 +765,29 @@ def train_network(
             break
     else:
         stop = "fixed" if tracker is None else "max_epochs"
-    if tracker is not None:
-        if best_state is None:
+    v1_history: TrainingHistory | None = None
+    if tracker is not None and recorder is not None:
+        if best_state is None or settings.patience is None or settings.max_epochs is None:
             raise ModelError(f"{name}: no epoch was kept")
         network.load_state_dict(best_state)
         kept = tracker.best_epoch
+        v1_history = recorder.history(
+            patience=settings.patience, maximum=settings.max_epochs, unit="epoch"
+        )
     else:
         kept = len(history)
     network.eval()
+    best_numerator = None if tracker is None else tracker.best
     return TrainingResult(
         epochs_kept=kept,
         epochs_run=len(history),
         stop=stop,
-        best_score=None if tracker is None else tracker.best,
+        best_numerator=best_numerator,
+        best_objective=None
+        if best_numerator is None or objective is None
+        else best_numerator / objective.frauds,
         history=tuple(history),
+        v1_history=v1_history,
         training_logits_dtypes=tuple(sorted(logits_dtypes)),
         optimizer_state_dtypes=optimizer_state_dtypes(optimizer),
     )
@@ -697,12 +804,15 @@ class NeuralModel(ABC):
     canonical frame. A subclass names its model and its architecture hyperparameters, checks
     them and builds its network; the loop, the settings, prediction, persistence and the record
     are shared. ``MIN_BATCH_ROWS`` is the smallest training batch the network accepts (2 with
-    batch normalisation, which cannot normalise a single row).
+    batch normalisation, which cannot normalise a single row); ``ACCUMULATES`` says whether an
+    effective batch may be split into micro-batches (False with batch normalisation, whose
+    statistics are those of the whole batch: the micro-batch is then the effective batch).
     """
 
     MODEL: ClassVar[str]
     ARCHITECTURE: ClassVar[tuple[str, ...]]
     MIN_BATCH_ROWS: ClassVar[int] = 1
+    ACCUMULATES: ClassVar[bool] = True
 
     def __init__(
         self,
@@ -772,13 +882,35 @@ class NeuralModel(ABC):
             raise ModelError(f"{self.configuration.name} is not fitted")
         return self._network
 
-    def _check_batches(self, rows: int, batch_size: int) -> None:
-        last = rows % batch_size or min(rows, batch_size)
-        if last < self.MIN_BATCH_ROWS:
+    def _check_batches(self, rows: int, plan: BatchPlan) -> None:
+        """The last micro-batch of every effective batch must hold the rows the network needs."""
+        last_batch = rows % plan.effective or plan.effective
+        for size in {plan.effective, last_batch}:
+            last = plan.micro_sizes(size)[-1]
+            if last < self.MIN_BATCH_ROWS:
+                raise SpecificationError(
+                    f"{rows} Train rows in effective batches of {plan.effective} and micro-batches "
+                    f"of {plan.micro} leave a last micro-batch of {last} rows; {self.MODEL} needs "
+                    f"at least {self.MIN_BATCH_ROWS} rows per batch"
+                )
+
+    def _batch_plan(self, plan: BatchPlan | None, training: TrainingSettings) -> BatchPlan:
+        """The plan of a fit: the given one, or the whole effective batch at once; it must be
+        for the effective batch of the hyperparameters, and a model that cannot accumulate
+        processes each effective batch whole."""
+        used = plan or BatchPlan(training.batch_size, training.batch_size)
+        if used.effective != training.batch_size:
             raise SpecificationError(
-                f"{rows} Train rows in batches of {batch_size} leave a last batch of {last} "
-                f"rows; {self.MODEL} needs at least {self.MIN_BATCH_ROWS} rows per batch"
+                f"The batch plan's effective batch ({used.effective}) is not the batch_size "
+                f"hyperparameter ({training.batch_size})"
             )
+        if not self.ACCUMULATES and used.micro != used.effective:
+            raise SpecificationError(
+                f"{self.MODEL} cannot accumulate gradients (its batch normalisation needs the "
+                f"whole batch): the micro-batch must be the effective batch ({used.effective}), "
+                f"not {used.micro}"
+            )
+        return used
 
     def fit(
         self,
@@ -787,19 +919,25 @@ class NeuralModel(ABC):
         hyperparameters: Mapping[str, Any],
         *,
         iterations: int | None = None,
+        objective: V1Objective | None = None,
+        plan: BatchPlan | None = None,
     ) -> None:
-        """Fit on ``train`` with early stopping on ``valid`` (V1), or, with ``valid=None``, for
-        exactly ``iterations`` epochs without validation."""
+        """Fit on ``train`` with early stopping on ``valid`` (V1) and the shared V1 ``objective``,
+        or, with ``valid=None``, for exactly ``iterations`` epochs without validation. ``plan``
+        is the micro-batch plan of the effective batch (default: each effective batch at once);
+        ``valid`` carries the V1 rows' identifiers and times, which must be those of
+        ``objective``."""
         check_fit_arguments(valid, iterations)
         early = valid is not None
         training, architecture = self._split(hyperparameters, early_stopping=early)
+        batch_plan = self._batch_plan(plan, training)
         train.inputs.check(self.layout)
         if valid is not None:
             valid.inputs.check(self.layout)
-            metric = METRICS[str(training.metric)]
-            if metric.needs_both_classes and len(np.unique(valid.labels)) != 2:
-                raise DataValidationError(f"V1 {training.metric} needs both classes in V1")
-        self._check_batches(train.inputs.rows, training.batch_size)
+            if objective is None:
+                raise SpecificationError("V1 early stopping needs the V1 objective")
+            objective.check_rows(valid.ids, valid.times, valid.labels)
+        self._check_batches(train.inputs.rows, batch_plan)
         device = torch_device(self.device)
         precision = configure_torch(self.settings.neural)
         seeds = derived_seeds(self.seed)
@@ -834,6 +972,8 @@ class NeuralModel(ABC):
                     seeds=seeds,
                     epochs=iterations,
                     name=name,
+                    plan=batch_plan,
+                    objective=objective,
                 )
         except torch.cuda.OutOfMemoryError as error:
             raise ModelError(f"{name}: out of GPU memory during training") from error
@@ -863,22 +1003,25 @@ class NeuralModel(ABC):
                 **optimizer.defaults,
                 "parameter_groups": group_record,
             },
-            "batches_per_epoch": math.ceil(train.inputs.rows / training.batch_size),
+            "batches_per_epoch": math.ceil(train.inputs.rows / batch_plan.effective),
+            "batching": batching_record(batch_plan, train.inputs.rows, training.eval_batch_size),
             "schedule": {
                 "mode": "early_stopping" if early else "fixed",
-                "metric": training.metric,
+                "objective": None if objective is None or not early else objective.identity,
                 "patience": training.patience,
                 "max_epochs": training.max_epochs,
                 "stop": result.stop,
                 "epochs_run": result.epochs_run,
                 "epochs_kept": result.epochs_kept,
-                "best_v1_score": result.best_score,
+                "best_numerator": result.best_numerator,
+                "best_objective": result.best_objective,
             },
             "history": [
                 {
                     "epoch": record.epoch,
                     "train_loss": record.train_loss,
-                    "v1_score": record.v1_score,
+                    "v1_numerator": record.v1_numerator,
+                    "v1_objective": record.v1_objective,
                     "train_seconds": record.train_seconds,
                     "seconds": record.seconds,
                 }
@@ -902,7 +1045,8 @@ class NeuralModel(ABC):
             **effective,
             "training_dtype": self.settings.neural.training_dtype,
             "autocast": f"{device.type}, bfloat16, forward pass only",
-            "loss": "binary_cross_entropy_with_logits, float32, sum(w * loss) / batch rows",
+            "loss": "binary_cross_entropy_with_logits, float32, "
+            "sum(w * loss) / rows of the effective batch",
             "parameter_and_optimizer_dtype": "float32",
             "prediction_dtype": self.settings.neural.prediction_dtype,
         }
@@ -1111,8 +1255,9 @@ class NeuralModel(ABC):
             raise ModelError("Saved seeds are not those derived from the run seed")
         if training["device"].get("type") != device.type:
             raise ModelError("Saved training device type differs from the requested device")
-        if training["batches_per_epoch"] <= 0:
+        if type(training["batches_per_epoch"]) is not int or training["batches_per_epoch"] <= 0:
             raise ModelError("Saved batch count per epoch must be positive")
+        self._check_batching(training["batching"], settings)
         self._check_optimizer_record(training["optimizer"], settings)
         self._check_observed_dtypes(training["observed_dtypes"])
         schedule, history = training["schedule"], training["history"]
@@ -1150,6 +1295,37 @@ class NeuralModel(ABC):
                 f"logits {expected_logits} and float32 optimiser state)"
             )
 
+    def _check_batching(self, batching: dict[str, Any], settings: TrainingSettings) -> None:
+        """The saved batch plan has its fields and agrees with the saved hyperparameters: the
+        effective and evaluation batches are theirs, the micro-batch lies within the effective
+        batch (and equals it for a model that cannot accumulate), the final batch is a real
+        batch, and the reduction and accumulation are those of DR-015 §7."""
+        if set(batching) != set(BATCHING_KEYS):
+            raise ModelError("Saved batch plan is malformed")
+        counts = [batching[key] for key in ("effective_batch", "micro_batch", "final_batch_rows")]
+        counts.append(batching["evaluation_batch"])
+        if any(type(value) is not int or value < 1 for value in counts):
+            raise ModelError("Saved batch plan sizes must be positive integers")
+        effective, micro, final = counts[:3]
+        consistent = (
+            effective == settings.batch_size
+            and batching["evaluation_batch"] == settings.eval_batch_size
+            and micro <= effective
+            and final <= effective
+            and (self.ACCUMULATES or micro == effective)
+            and batching["loss_reduction"] == LOSS_REDUCTION
+            and batching["gradient_accumulation"] == GRADIENT_ACCUMULATION
+            and batching["evaluation_final_batch"] == EVALUATION_FINAL_BATCH
+        )
+        if not consistent:
+            raise ModelError("Saved batch plan does not match the saved hyperparameters")
+        plan = BatchPlan(effective, micro)
+        if any(plan.micro_sizes(size)[-1] < self.MIN_BATCH_ROWS for size in {effective, final}):
+            raise ModelError(
+                f"Saved batch plan leaves a last micro-batch of fewer than {self.MIN_BATCH_ROWS} "
+                f"rows, which {self.MODEL} does not accept"
+            )
+
     @staticmethod
     def _check_schedule(
         schedule: dict[str, Any],
@@ -1172,13 +1348,13 @@ class NeuralModel(ABC):
                     _finite_number(entry["train_seconds"])
                     and 0 <= entry["train_seconds"] <= entry["seconds"]
                 )
-                or not (_finite_number(entry["v1_score"]) if early else entry["v1_score"] is None)
+                or not _v1_entry_valid(entry, early=early)
             ):
                 raise ModelError(f"Saved history entry {number} is malformed")
         if [entry["epoch"] for entry in history] != list(range(1, len(history) + 1)):
             raise ModelError("Saved history must list epochs 1, 2, ... in order")
-        recorded = (schedule["metric"], schedule["patience"], schedule["max_epochs"])
-        if recorded != (settings.metric, settings.patience, settings.max_epochs):
+        recorded = (schedule["patience"], schedule["max_epochs"])
+        if recorded != (settings.patience, settings.max_epochs):
             raise ModelError("Saved schedule does not match the saved hyperparameters")
         if not (
             schedule["mode"] == ("early_stopping" if early else "fixed")
@@ -1190,24 +1366,31 @@ class NeuralModel(ABC):
             fixed = (
                 epochs == len(history)
                 and schedule["stop"] == "fixed"
-                and schedule["best_v1_score"] is None
+                and schedule["objective"] is None
+                and schedule["best_numerator"] is None
+                and schedule["best_objective"] is None
             )
             if not fixed:
                 raise ModelError("Saved schedule, history and kept epoch count are inconsistent")
             return
-        if settings.metric is None or settings.patience is None or settings.max_epochs is None:
+        if settings.patience is None or settings.max_epochs is None:
             raise ModelError("Saved early-stopping settings are incomplete")
         if not 1 <= len(history) <= settings.max_epochs:  # the epoch limit is a hard cap
             raise ModelError("Saved schedule does not follow the early-stopping rule")
-        tracker = EarlyStopping(
-            settings.patience, greater_is_better=METRICS[settings.metric].greater_is_better
-        )
+        frauds = check_identity(schedule["objective"])["frauds"]
+        if any(
+            entry["v1_numerator"] > frauds
+            or entry["v1_objective"] != entry["v1_numerator"] / frauds
+            for entry in history
+        ):
+            raise ModelError("Saved V1 objective values are inconsistent with their numerators")
+        tracker = EarlyStopping(settings.patience)
         stop = "max_epochs"
         for entry in history:
             if tracker.stop:  # the history continues after the rule stopped training
                 stop = "continued"
                 break
-            tracker.update(entry["epoch"], entry["v1_score"])
+            tracker.update(entry["epoch"], entry["v1_numerator"])
             if tracker.stop:
                 stop = "patience"
         replayed = (
@@ -1215,7 +1398,9 @@ class NeuralModel(ABC):
             and (stop == "patience" or len(history) == settings.max_epochs)
             and schedule["stop"] == stop
             and tracker.best_epoch == epochs
-            and schedule["best_v1_score"] == tracker.best
+            and schedule["best_numerator"] == tracker.best
+            and tracker.best is not None
+            and schedule["best_objective"] == tracker.best / frauds
         )
         if not replayed:
             raise ModelError("Saved schedule does not follow the early-stopping rule")
