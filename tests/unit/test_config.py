@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -10,7 +11,12 @@ from typing import Any
 import pytest
 import yaml
 
-from review_capacity.config import load_dataset_spec, load_feature_spec
+from review_capacity.config import (
+    FeatureSpec,
+    features_fingerprint,
+    load_dataset_spec,
+    load_feature_spec,
+)
 from review_capacity.errors import FileAccessError, SpecificationError
 from review_capacity.paths import ProjectPaths
 from support.synthetic import REPO_PATHS
@@ -181,3 +187,47 @@ def test_identity_columns_give_table_membership() -> None:
     assert spec.source_table("DeviceInfo") == "identity"
     assert spec.source_table("id_38") == "identity"
     assert spec.source_table("V339") == "transaction"
+
+
+def _fingerprint_of(edit: Callable[[FeatureSpec], FeatureSpec]) -> str:
+    return features_fingerprint(edit(load_feature_spec(REPO_PATHS.features_spec)))
+
+
+def test_the_fingerprint_is_the_same_for_the_same_specification() -> None:
+    assert _fingerprint_of(lambda spec: spec) == _fingerprint_of(lambda spec: spec)
+    assert re.fullmatch(r"[0-9a-f]{64}", _fingerprint_of(lambda spec: spec))
+
+
+def test_the_fingerprint_ignores_comments_and_library_handling(tmp_path: Path) -> None:
+    text = REPO_PATHS.features_spec.read_text(encoding="utf-8")
+    edited = tmp_path / "features.yaml"
+    edited.write_text(
+        "# note\n"
+        + text.replace("status: proposed", "status: accepted").replace(
+            'unseen_categories: "handled natively by CatBoost"',
+            'unseen_categories: "handled natively"',
+        ),
+        encoding="utf-8",
+    )
+    assert features_fingerprint(load_feature_spec(edited)) == _fingerprint_of(lambda spec: spec)
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda spec: replace(spec, target="label"),
+        lambda spec: replace(spec, key="Identifier"),
+        lambda spec: replace(spec, time="Time"),
+        lambda spec: replace(spec, excluded=spec.excluded[:1]),
+        lambda spec: replace(spec, categorical=spec.categorical[:-1]),
+        lambda spec: replace(spec, categorical=spec.categorical[::-1]),
+        lambda spec: replace(spec, numeric_coded=frozenset(sorted(spec.numeric_coded)[1:])),
+        lambda spec: replace(spec, numeric=spec.numeric[1:]),
+        lambda spec: replace(spec, derived=spec.derived[::-1]),
+        lambda spec: replace(spec, missing_label="NA"),
+    ],
+)
+def test_the_fingerprint_follows_every_role_the_build_uses(
+    edit: Callable[[FeatureSpec], FeatureSpec],
+) -> None:
+    assert _fingerprint_of(edit) != _fingerprint_of(lambda spec: spec)

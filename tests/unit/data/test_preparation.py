@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
+from review_capacity.config import features_fingerprint
 from review_capacity.data import preparation
 from review_capacity.data.preparation import prepare_data
 from review_capacity.errors import FileAccessError, SpecificationError
@@ -151,7 +152,10 @@ def test_configuration_hashes_are_recorded(synthetic: Synthetic, tmp_path: Path)
     config.write_text("version: 1\n", encoding="utf-8")
     prepare_data(synthetic.features, synthetic.dataset, synthetic.paths, config_files=(config,))
     record = json.loads(synthetic.paths.provenance_file("v1").read_text(encoding="utf-8"))
-    assert record["configuration"] == {"declared.yaml": file_sha256(config)}
+    assert record["configuration"] == {
+        "declared.yaml": file_sha256(config),
+        "features_fingerprint": features_fingerprint(synthetic.features),
+    }
 
 
 def test_unsealed_configuration_refused_before_reading(synthetic: Synthetic) -> None:
