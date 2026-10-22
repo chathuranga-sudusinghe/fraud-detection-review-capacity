@@ -46,6 +46,15 @@ Commands:
                    outputs/search_plan/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Reads no data and
                    fits no model; whether the predicted cost is feasible is the owner's decision
 
+    fit-neural-preprocessing
+                   the shared Train-only preprocessing of the neural models (DR-012), fitted once
+                   with the declared preprocessing seed: the artifact (manifest.json, arrays.npz
+                   and its SHA-256), the Validation 1 and Validation 2 diagnostics, result.json
+                   and its log, always run.log (--log-file is refused), in a new
+                   directory: --output, or by default
+                   outputs/neural_preprocessing/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Reads the
+                   verified processed development files only; the Test period is never read.
+
     run-development
                    the development run of the tree-based configurations (LightGBM and CatBoost,
                    unweighted and balanced; --configurations chooses a subset): the declared
@@ -371,6 +380,33 @@ def _plan_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def _preprocessing_directory(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The new directory of ``fit-neural-preprocessing``; the start time is fixed on ``args`` at
+    the first call (shown to be free then; the log file is opened in it afterwards), so that the
+    log file, the records and the directory agree."""
+    from review_capacity.development.preprocessing_run import output_directory
+    from review_capacity.development.run_output import run_id
+
+    if getattr(args, "directory", None) is None:
+        if getattr(args, "started", None) is None:
+            args.started = run_id()
+        args.directory = output_directory(paths, args.started, args.output)
+    directory: Path = args.directory
+    return directory
+
+
+def _fit_neural_preprocessing(args: argparse.Namespace) -> int:
+    from review_capacity.development.preprocessing_run import run_fit
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    directory = _preprocessing_directory(args, paths)
+    features, dataset = load_feature_spec(paths.features_spec), load_dataset_spec(paths)
+    run_fit(paths, features, dataset, directory, args.started)
+    logger.info("Neural preprocessing written to %s", directory)
+    return 0
+
+
 def _development_options(args: argparse.Namespace) -> DevelopmentOptions:
     """The options of ``run-development``; the start time is fixed on ``args`` at the first call,
     so that the log file, the records and the directory agree."""
@@ -448,6 +484,15 @@ def _log_file(args: argparse.Namespace) -> Path | None:
         output = _plan_output(args, ProjectPaths.discover(args.root))
         plan.check_output(output)
         return output / plan.LOG_NAME
+    if args.command == "fit-neural-preprocessing":
+        from review_capacity.development.preprocessing_run import LOG_NAME as FIT_LOG_NAME
+
+        if args.log_file is not None:
+            raise SpecificationError(
+                f"fit-neural-preprocessing writes its log to {FIT_LOG_NAME} in its output "
+                "directory; omit --log-file"
+            )
+        return _preprocessing_directory(args, ProjectPaths.discover(args.root)) / FIT_LOG_NAME
     if args.command == "run-development":
         from review_capacity.development.run_output import LOG_NAME as RUN_LOG_NAME
 
@@ -573,6 +618,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="new directory for the plan (default: outputs/search_plan/<UTC time>)",
     )
     plan_search.set_defaults(handler=_plan_search)
+    fit_preprocessing = commands.add_parser(
+        "fit-neural-preprocessing",
+        help="fit the shared Train-only neural preprocessing artifact (DR-012)",
+    )
+    fit_preprocessing.add_argument("--root", type=Path, default=None, help="project root directory")
+    fit_preprocessing.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="new directory for the artifact (default: outputs/neural_preprocessing/<UTC time>)",
+    )
+    fit_preprocessing.set_defaults(handler=_fit_neural_preprocessing)
     development = commands.add_parser(
         "run-development",
         help="the tree-based development run: search, selection, scoring, evaluation and timing",
@@ -642,6 +699,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "probe-gpu",
         "probe-catboost-objective",
         "plan-search",
+        "fit-neural-preprocessing",
         "run-development",
     )
     try:
