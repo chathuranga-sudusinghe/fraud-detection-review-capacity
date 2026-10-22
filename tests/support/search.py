@@ -21,6 +21,7 @@ from review_capacity.data.processed import ProvenanceRecord
 from review_capacity.development.inputs import PartitionRows, ScoringInputs, SearchInputs
 from review_capacity.development.records import DevelopmentPartitions
 from review_capacity.development.run_output import RunDirectory
+from review_capacity.development.runner import DevelopmentSetup
 from review_capacity.development.scoring import ScoringContext
 from review_capacity.development.search import search_configuration
 from review_capacity.development.trial import SearchContext, TrialOutcome, run_file
@@ -145,12 +146,13 @@ def synthetic_partitions() -> DevelopmentPartitions:
     )
 
 
-def search_context(root: Path) -> SearchContext:
-    """A new run directory under ``root`` holding its ``run`` record, and the shared search
-    state on the synthetic partitions."""
+def search_context(root: Path, *, write_run_record: bool = True) -> SearchContext:
+    """A new run directory under ``root`` (holding its ``run`` record unless the caller writes
+    it), and the shared search state on the synthetic partitions."""
     partitions = synthetic_partitions()
     run = RunDirectory.create(root, partitions, "development", RUN_ID)
-    run.write_record(example("run"))
+    if write_run_record:
+        run.write_record(example("run"))
     settings, snapshot = load_settings_with_snapshot(REPO_PATHS)
     declaration = search_declaration()
     inputs = search_inputs()
@@ -211,3 +213,32 @@ def searched(root: Path) -> tuple[ScoringContext, TrialOutcome]:
         search, configuration("LGB-u"), candidate_list(), candidate_file(search.run)
     )
     return scoring_context(search), result.selected
+
+
+def development_setup(
+    root: Path, configurations: tuple[str, ...] = ("LGB-u", "LGB-b")
+) -> DevelopmentSetup:
+    """A development run on the synthetic partitions: its directory without records, the
+    ``run`` record to write first, and the inputs, candidate lists and conditions the runner
+    uses."""
+    search = search_context(root, write_run_record=False)
+    scoring = scoring_context(search)
+    return DevelopmentSetup(
+        run=search.run,
+        identity=search.identity,
+        run_record=example("run") | {"configurations": list(configurations)},
+        declaration=scoring.declaration,
+        settings=search.settings,
+        settings_snapshot=search.settings_snapshot,
+        features=search.features,
+        search_inputs=search.inputs,
+        scoring_inputs=scoring.inputs,
+        lists={"lightgbm": candidate_list()},
+        adopt=lambda run: {"lightgbm": candidate_file(run)},
+        configurations=tuple(configuration(name) for name in configurations),
+        environment=search.environment,
+        code=search.code,
+        lightgbm_build=search.lightgbm_build,
+        session=search.session,
+        sleep=lambda _seconds: None,
+    )

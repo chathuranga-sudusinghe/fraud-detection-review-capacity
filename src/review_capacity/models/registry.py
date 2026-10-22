@@ -64,6 +64,12 @@ CONFIGURATIONS: tuple[Configuration, ...] = tuple(
 )
 
 
+# The tree-based configurations, in DR-011 order: the staged first path of the development run.
+TREE_CONFIGURATIONS: tuple[str, ...] = tuple(
+    c.name for c in CONFIGURATIONS if c.family is Family.TREE
+)
+
+
 def configuration(name: str) -> Configuration:
     """The configuration called ``name`` (e.g. ``"Cat-b"``); ``ValueError`` if there is none."""
     for candidate in CONFIGURATIONS:

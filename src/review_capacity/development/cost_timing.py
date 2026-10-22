@@ -37,7 +37,7 @@ from review_capacity.development.scoring import (
     ScoringContext,
 )
 from review_capacity.errors import SpecificationError
-from review_capacity.logging_setup import log_step
+from review_capacity.logging_setup import ProgressLogger, log_step
 from review_capacity.models.catboost_model import CatBoostModel
 from review_capacity.models.lightgbm_model import LightGBMModel
 from review_capacity.models.registry import Configuration
@@ -98,7 +98,11 @@ def _one_row_call(
     """The call that one latency measurement times for row ``i`` at ``boundary``; the one-row
     inputs are built here, before the clock starts."""
     if boundary == "model_only":
-        natives = [model.prepare(frame) for frame in one_row]
+        progress = ProgressLogger(logger, "One-row native inputs", len(one_row))
+        natives: list[Any] = []
+        for frame in one_row:
+            natives.append(model.prepare(frame))
+            progress.advance()
 
         def prepared(i: int) -> object:
             return model.predict_prepared(natives[i])
