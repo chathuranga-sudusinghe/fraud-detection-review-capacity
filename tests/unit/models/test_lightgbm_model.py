@@ -17,6 +17,7 @@ import pytest
 
 from review_capacity.config import ModelSettings, load_model_settings
 from review_capacity.errors import DataValidationError, ModelError, SpecificationError
+from review_capacity.features.model_inputs import to_lightgbm
 from review_capacity.models import lightgbm_model
 from review_capacity.models.base import ModelData
 from review_capacity.models.lightgbm_model import (
@@ -738,3 +739,61 @@ def test_reload_rejects_a_tampered_objective_record(
     _edit_manifest(tmp_path / "model", edit)
     with pytest.raises(ModelError, match=message):
         _reload(settings, tmp_path / "model")
+
+
+def test_prepared_input_gives_the_same_scores_as_predict(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    model = _model(settings)
+    model.fit(train, valid, HYPERPARAMETERS)
+    native = model.prepare(valid.features)
+    assert native.dtype == np.float64
+    assert np.array_equal(model.predict_prepared(native), model.predict(valid.features))
+
+
+def test_preparing_needs_a_fitted_model_and_the_declared_inputs(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    model = _model(settings)
+    with pytest.raises(ModelError, match="not fitted"):
+        model.prepare(valid.features)
+    model.fit(train, valid, HYPERPARAMETERS)
+    with pytest.raises(DataValidationError, match="declared canonical inputs"):
+        model.prepare(valid.features.drop(columns=["V1"]))
+
+
+def test_prepared_input_is_the_complete_native_matrix(
+    settings: ModelSettings, train: ModelData, valid: ModelData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Categorical coding and matrix construction belong to ``prepare``: the model-only clock
+    must not repeat them, and the scores must equal LightGBM's own pandas path."""
+    model = _model(settings)
+    model.fit(train, valid, HYPERPARAMETERS)
+    features = valid.features.copy()
+    features.loc[features.index[:5], "card1"] = "9999"  # unseen in Train: missing
+    features.loc[features.index[5:10], "ProductCD"] = FEATURES.missing_label
+    native = model.prepare(features)
+    assert isinstance(native, np.ndarray)
+    assert native.dtype == np.float64
+    assert native.flags["C_CONTIGUOUS"]
+    assert native.shape == (len(features), len(FEATURES.model_inputs))
+    card1 = list(FEATURES.model_inputs).index("card1")
+    assert np.isnan(native[:5, card1]).all()
+    pandas_path = model._fitted().predict(
+        to_lightgbm(features, FEATURES, model._categories),
+        num_iteration=model.fitted_iterations,
+        num_threads=model._prediction_threads(),
+    )
+    assert np.array_equal(model.predict_prepared(native), pandas_path)
+    calls: list[int] = []
+    real = to_lightgbm
+
+    def counting(*args: Any) -> pd.DataFrame:
+        calls.append(1)
+        converted: pd.DataFrame = real(*args)
+        return converted
+
+    monkeypatch.setattr("review_capacity.models.lightgbm_model.to_lightgbm", counting)
+    model.predict_prepared(native)
+    model.predict_prepared(native)
+    assert calls == []  # prediction from the prepared matrix converts nothing

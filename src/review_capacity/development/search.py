@@ -26,6 +26,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from review_capacity.development.cost_timing import timed_on
 from review_capacity.development.trial import (
     SearchContext,
     TrialOutcome,
@@ -39,8 +40,6 @@ from review_capacity.training.sampler import CandidateList
 from review_capacity.training.timing import Timed, fit_record, search_record
 
 logger = logging.getLogger(__name__)
-
-THREAD_PARAMETER = {"lightgbm": "num_threads", "catboost": "thread_count"}
 
 
 @dataclass(frozen=True)
@@ -73,18 +72,9 @@ def _timed(
     role: str | None,
     subject: Mapping[str, str] | None = None,
 ) -> Timed:
-    """Who is timed: the configuration on its training device, with its CPU threads and the
-    process's CPU affinity when that device is the CPU."""
-    model = configuration.model.name
-    device = context.settings.training_device(model)
-    if device != "cpu":
-        return Timed(configuration.name, role, device, subject=subject)
-    library = getattr(context.settings, model)
-    threads = library.params("cpu").get(THREAD_PARAMETER[model])
-    if not isinstance(threads, int) or isinstance(threads, bool):
-        raise SpecificationError(f"{configuration.name}: the CPU thread count is not declared")
-    affinity = tuple(int(cpu) for cpu in context.session["allowed_cpus"])
-    return Timed(configuration.name, role, device, threads, affinity, subject=subject)
+    """Who is timed: the configuration on its training device (DR-013 §1)."""
+    device = context.settings.training_device(configuration.model.name)
+    return timed_on(context.settings, context.session, configuration, role, device, subject)
 
 
 def _write_search_timing(

@@ -849,3 +849,42 @@ def test_reload_rejects_a_tampered_objective_record(
     _edit_manifest(tmp_path / "model", edit)
     with pytest.raises(ModelError, match=message):
         _reload(settings, tmp_path / "model")
+
+
+def test_prepared_input_gives_the_same_scores_as_predict(
+    settings: ModelSettings, train: ModelData, valid: ModelData
+) -> None:
+    model = _model(settings)
+    model.fit(train, None, HYPERPARAMETERS, iterations=7)
+    native = model.prepare(valid.features)
+    assert native.num_row() == len(valid.features)
+    assert np.array_equal(model.predict_prepared(native), model.predict(valid.features))
+
+
+def test_preparing_needs_a_fitted_model_and_the_declared_inputs(
+    settings: ModelSettings, train: ModelData
+) -> None:
+    model = _model(settings)
+    with pytest.raises(ModelError, match="not fitted"):
+        model.prepare(train.features)
+    model.fit(train, None, HYPERPARAMETERS, iterations=7)
+    with pytest.raises(DataValidationError, match="declared canonical inputs"):
+        model.prepare(train.features.drop(columns=["V1"]))
+
+
+def test_a_pool_that_cannot_be_built_is_a_model_error_in_prepare_and_predict(
+    settings: ModelSettings, train: ModelData, valid: ModelData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from catboost import CatBoostError
+
+    model = _model(settings)
+    model.fit(train, None, HYPERPARAMETERS, iterations=7)
+
+    def refuse(*_args: Any, **_kwargs: Any) -> None:
+        raise CatBoostError("cannot build the pool")
+
+    monkeypatch.setattr("catboost.Pool", refuse)
+    with pytest.raises(ModelError, match="prediction failed: cannot build the pool"):
+        model.prepare(valid.features)
+    with pytest.raises(ModelError, match="prediction failed: cannot build the pool"):
+        model.predict(valid.features)

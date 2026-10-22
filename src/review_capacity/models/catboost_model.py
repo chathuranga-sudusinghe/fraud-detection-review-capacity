@@ -595,13 +595,29 @@ class CatBoostModel(ScoringModel):
         self._history = history
         logger.info("%s fitted: %d trees kept", name, kept)
 
+    def prepare(self, features: pd.DataFrame) -> Any:
+        """The native input of ``features``: a CatBoost ``Pool`` with the declared categorical
+        inputs. The conversion is the first stage of ``predict``; the computational-cost
+        procedure times it apart from ``predict_prepared`` (DR-015 §9, model-only boundary)."""
+        from catboost import CatBoostError
+
+        self._fitted()
+        try:
+            return self._pool(features)
+        except CatBoostError as error:
+            raise ModelError(f"{self.configuration.name}: prediction failed: {error}") from error
+
     def predict(self, features: pd.DataFrame) -> Scores:
+        return self.predict_prepared(self.prepare(features))
+
+    def predict_prepared(self, native: Any) -> Scores:
+        """Scores of the ``Pool`` of ``prepare``, on the CPU prediction backend (DR-013 §5)."""
         from catboost import CatBoostError
 
         model = self._fitted()
         try:
             probabilities = model.predict_proba(
-                self._pool(features),
+                native,
                 ntree_end=self._iterations,
                 thread_count=self._prediction_threads(),
                 task_type="CPU",
@@ -611,7 +627,7 @@ class CatBoostModel(ScoringModel):
         values = np.asarray(probabilities)
         if values.ndim != 2 or values.shape[1] != 2:
             raise ModelError(f"{self.configuration.name}: unexpected probability shape")
-        return checked_scores(values[:, 1], len(features), self.configuration.name)
+        return checked_scores(values[:, 1], int(native.num_row()), self.configuration.name)
 
     def save(self, directory: Path) -> None:
         import catboost

@@ -18,10 +18,14 @@ import numpy.typing as npt
 import pandas as pd
 
 from review_capacity.data.processed import ProvenanceRecord
-from review_capacity.development.inputs import PartitionRows, SearchInputs
+from review_capacity.development.inputs import PartitionRows, ScoringInputs, SearchInputs
+from review_capacity.development.records import DevelopmentPartitions
 from review_capacity.development.run_output import RunDirectory
-from review_capacity.development.trial import SearchContext, run_file
+from review_capacity.development.scoring import ScoringContext
+from review_capacity.development.search import search_configuration
+from review_capacity.development.trial import SearchContext, TrialOutcome, run_file
 from review_capacity.models.device import LightGBMIdentity
+from review_capacity.models.registry import configuration
 from review_capacity.models.run_record import load_settings_with_snapshot
 from review_capacity.models.v1_objective import V1Objective
 from review_capacity.training.declaration import Stopping, TrainingDeclaration, load_declaration
@@ -31,7 +35,7 @@ from support.development import IDENTITY, PARTITIONS, example
 from support.runs import RUN_ID
 from support.synthetic import DAY, FEATURES, REPO_PATHS
 
-TRAIN_ROWS, V1_ROWS = 600, 300
+TRAIN_ROWS, V1_ROWS, V2_ROWS = 600, 300, 400
 TRIALS, PATIENCE, MAXIMUM, DAILY_K = 3, 5, 40, 15
 
 CANDIDATES: tuple[Candidate, ...] = (
@@ -130,10 +134,21 @@ def search_declaration() -> TrainingDeclaration:
     )
 
 
+def synthetic_partitions() -> DevelopmentPartitions:
+    """The development partitions of the project with the synthetic row counts and days 1 to 3
+    for V1 and V2, because records cover whole partitions."""
+    return replace(
+        PARTITIONS,
+        train=replace(PARTITIONS.train, rows=TRAIN_ROWS),
+        v1=replace(PARTITIONS.v1, rows=V1_ROWS, first_day=1, last_day=3),
+        v2=replace(PARTITIONS.v2, rows=V2_ROWS, first_day=1, last_day=3),
+    )
+
+
 def search_context(root: Path) -> SearchContext:
     """A new run directory under ``root`` holding its ``run`` record, and the shared search
     state on the synthetic partitions."""
-    partitions = replace(PARTITIONS, train=replace(PARTITIONS.train, rows=TRAIN_ROWS))
+    partitions = synthetic_partitions()
     run = RunDirectory.create(root, partitions, "development", RUN_ID)
     run.write_record(example("run"))
     settings, snapshot = load_settings_with_snapshot(REPO_PATHS)
@@ -161,3 +176,38 @@ def candidate_file(run: RunDirectory) -> dict[str, str]:
     path.parent.mkdir(exist_ok=True)
     path.write_text("{}\n", encoding="utf-8")
     return run_file(run, path)
+
+
+def scoring_context(search: SearchContext) -> ScoringContext:
+    """Scoring and evaluation state in the run of ``search``: synthetic V1 and V2, and a timing
+    declaration of a few small passes with no settling interval."""
+    timing = replace(
+        search.declaration.timing,
+        scoring_passes=2,
+        warmup_tree=1,
+        latency_rows=20,
+        latency_warmup=3,
+        latency_rounds=2,
+        settling_seconds=0,
+    )
+    return ScoringContext(
+        run=search.run,
+        identity=search.identity,
+        declaration=replace(search.declaration, timing=timing),
+        settings=search.settings,
+        features=search.features,
+        inputs=ScoringInputs(
+            partition("v1", V1_ROWS, 2, 2_000_000), partition("v2", V2_ROWS, 3, 3_000_000)
+        ),
+        session=search.session,
+    )
+
+
+def searched(root: Path) -> tuple[ScoringContext, TrialOutcome]:
+    """A scoring context whose run holds a finished LightGBM search (``LGB-u``), with the
+    selected trial."""
+    search = search_context(root)
+    result = search_configuration(
+        search, configuration("LGB-u"), candidate_list(), candidate_file(search.run)
+    )
+    return scoring_context(search), result.selected
