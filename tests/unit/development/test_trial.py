@@ -4,11 +4,14 @@ acceptance, not here."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+from review_capacity.development import trial as trial_module
 from review_capacity.development.run_output import load_run
 from review_capacity.development.trial import (
     SearchContext,
@@ -21,6 +24,7 @@ from review_capacity.hashing import file_sha256
 from review_capacity.models.catboost_model import CatBoostModel
 from review_capacity.models.lightgbm_model import LightGBMModel
 from review_capacity.models.registry import configuration
+from support.memory import memory_setup
 from support.search import CANDIDATES, PATIENCE, candidate_file, search_context
 
 pytestmark = pytest.mark.usefixtures("restore_lightgbm_logger")
@@ -128,3 +132,47 @@ def test_a_model_run_record_that_cannot_be_written_is_recorded_and_raised(
     assert [r["status"] for r in loaded.of_kind("trial")] == ["failed"]
     assert [r["status"] for r in loaded.of_kind("fit")] == ["failed"]
     assert loaded.of_kind("checkpoint") == []
+
+
+def test_the_fit_and_the_persistence_are_timed_by_their_own_boundaries(
+    context: SearchContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One clock: it advances one second at each reading of the trial, and 100 seconds at each
+    start and stop of the memory monitor. Only the fit's own pair and the persistence's own pair
+    of readings lie inside the trial's clocks, so no monitor time and no start-up enters either
+    duration even while memory is measured."""
+    now = {"t": 0.0}
+
+    def reading() -> float:
+        now["t"] += 1.0
+        return now["t"]
+
+    def monitor() -> None:
+        now["t"] += 100.0
+
+    monkeypatch.setattr(trial_module, "time", SimpleNamespace(perf_counter=reading))
+    measured = replace(context, memory=memory_setup(on_reset=monitor, on_read=monitor))
+    outcome = run_trial(
+        measured, configuration("LGB-u"), 1, CANDIDATES[0], candidate_file(measured.run)
+    )
+    assert outcome.fit_seconds == 1.0
+    assert outcome.persistence_seconds == 1.0
+    assert now["t"] >= 200.0  # the monitor did run, outside both
+
+
+def test_a_trial_keeps_its_fit_memory_reading(context: SearchContext) -> None:
+    measured = replace(context, memory=memory_setup([300 * 1024]))
+    outcome = run_trial(
+        measured, configuration("LGB-u"), 1, CANDIDATES[0], candidate_file(measured.run)
+    )
+    assert outcome.fit_memory is not None
+    assert outcome.fit_memory.host is not None
+    assert outcome.fit_memory.host.peak_mib == 300.0
+    assert outcome.fit_memory.scope.startswith("the trial's fit")
+
+
+def test_a_trial_without_a_memory_setup_has_no_reading(context: SearchContext) -> None:
+    outcome = run_trial(
+        context, configuration("LGB-u"), 1, CANDIDATES[0], candidate_file(context.run)
+    )
+    assert outcome.fit_memory is None

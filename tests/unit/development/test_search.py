@@ -3,6 +3,7 @@ synthetic data on the CPU (no project data)."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -10,11 +11,13 @@ import pytest
 
 from review_capacity.development.run_output import load_run
 from review_capacity.development.search import search_configuration, select
+from review_capacity.development.startup import Startup
 from review_capacity.development.trial import SearchContext, TrialOutcome
 from review_capacity.development.trial import run_trial as real_run_trial
 from review_capacity.errors import ReviewCapacityError, SpecificationError
 from review_capacity.models.registry import configuration
 from review_capacity.training.sampler import CandidateList
+from support.memory import memory_setup
 from support.search import CANDIDATES, TRIALS, candidate_file, candidate_list, search_context
 
 LGB_U = configuration("LGB-u")
@@ -30,7 +33,21 @@ def context(tmp_path: Path) -> SearchContext:
 
 def outcome(trial: int, objective: float) -> TrialOutcome:
     return TrialOutcome(
-        "LGB-u", trial, {}, objective, 3, 8, "early_stopping", 0.1, 3, Path("m"), {}, {}, {}
+        "LGB-u",
+        trial,
+        {},
+        objective,
+        3,
+        8,
+        "early_stopping",
+        0.1,
+        0.05,
+        None,
+        3,
+        Path("m"),
+        {},
+        {},
+        {},
     )
 
 
@@ -169,3 +186,102 @@ def test_the_search_time_ends_after_selection_and_its_record(
     monkeypatch.setattr(context.run, "write_record", recording)
     search_configuration(context, LGB_U, candidate_list(), candidate_file(context.run))
     assert written.index("configuration") < written.index("timingsearch")
+
+
+def test_the_selected_fit_carries_its_own_trials_readings(context: SearchContext) -> None:
+    peaks = [(900 - 100 * i) * 1024 for i in range(TRIALS)]  # a different peak for every trial
+    measured = replace(context, memory=memory_setup(peaks))
+    result = search_configuration(measured, LGB_U, candidate_list(), candidate_file(measured.run))
+    expected = peaks[result.selected.trial - 1] / 1024
+    (fit,) = timings(measured, "fit")
+    assert fit["peak_host_mib"] == expected
+    assert fit["settings"]["host_memory_method"] == "clear_refs"
+    assert fit["settings"]["memory_problems"] == []
+    assert "the trial's fit" in fit["memory_scope"]
+    (whole,) = timings(measured, "search")
+    assert whole["peak_host_mib"] == max(peaks) / 1024
+    assert "not a whole-search peak" in whole["memory_scope"]
+    assert whole["peak_gpu_mib"] is None
+
+
+def test_the_selected_fit_records_the_shared_startup_and_its_persistence(
+    context: SearchContext,
+) -> None:
+    startup = Startup(1.25, "library import, once per process")
+    started = replace(context, startups={"lightgbm": startup})
+    result = search_configuration(started, LGB_U, candidate_list(), candidate_file(started.run))
+    (fit,) = timings(started, "fit")
+    assert fit["settings"]["startup_seconds"] == 1.25
+    assert fit["settings"]["startup_scope"] == startup.scope
+    assert fit["settings"]["persistence_seconds"] == result.selected.persistence_seconds
+    assert fit["settings"]["preprocessing_seconds"] is None
+    assert fit["seconds"] == result.selected.fit_seconds  # the start-up is outside the fit time
+
+
+def test_without_a_startup_or_memory_setup_the_components_are_absent(
+    context: SearchContext,
+) -> None:
+    search_configuration(context, LGB_U, candidate_list(), candidate_file(context.run))
+    (fit,) = timings(context, "fit")
+    assert fit["peak_host_mib"] is None
+    assert fit["memory_scope"] is None
+    assert fit["settings"]["startup_seconds"] is None
+    assert fit["settings"]["startup_scope"] is None
+
+
+def test_an_interrupted_search_records_the_memory_of_its_completed_trials(
+    context: SearchContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    measured = replace(context, memory=memory_setup([200 * 1024, 400 * 1024, 300 * 1024]))
+    calls = {"n": 0}
+
+    def stop_after_two(*args: Any, **kwargs: Any) -> TrialOutcome:
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise KeyboardInterrupt
+        return real_run_trial(*args, **kwargs)
+
+    monkeypatch.setattr("review_capacity.development.search.run_trial", stop_after_two)
+    with pytest.raises(KeyboardInterrupt):
+        search_configuration(measured, LGB_U, candidate_list(), candidate_file(measured.run))
+    (whole,) = timings(measured, "search")
+    assert whole["settings"]["interrupted"] is True
+    assert whole["settings"]["trials_completed"] == 2
+    assert whole["peak_host_mib"] == 400.0
+
+
+def test_a_selected_trial_that_is_not_the_largest_keeps_its_own_reading(
+    context: SearchContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    peaks = [900 * 1024, 300 * 1024, 700 * 1024]  # trial 2 uses the least memory
+    measured = replace(context, memory=memory_setup(peaks))
+
+    def second(trials: list[TrialOutcome]) -> tuple[TrialOutcome, tuple[int, ...]]:
+        return trials[1], (trials[1].trial,)  # tied trials include the selected one
+
+    monkeypatch.setattr("review_capacity.development.search.select", second)
+    result = search_configuration(measured, LGB_U, candidate_list(), candidate_file(measured.run))
+    assert result.selected.trial == 2
+    (fit,) = timings(measured, "fit")
+    assert fit["peak_host_mib"] == 300.0  # its own, not the search's maximum
+    (whole,) = timings(measured, "search")
+    assert whole["peak_host_mib"] == 900.0
+
+
+def test_a_startup_that_could_not_be_measured_is_stated_beside_the_fit_time(
+    context: SearchContext,
+) -> None:
+    started = replace(
+        context, startups={"lightgbm": Startup(None, "library import, once per process")}
+    )
+    search_configuration(started, LGB_U, candidate_list(), candidate_file(started.run))
+    (fit,) = timings(started, "fit")
+    assert fit["settings"]["startup_seconds"] is None
+    assert fit["settings"]["startup_status"] == "not_measured"
+
+
+def test_a_measured_startup_is_stated_as_measured(context: SearchContext) -> None:
+    started = replace(context, startups={"lightgbm": Startup(0.5, "library import")})
+    search_configuration(started, LGB_U, candidate_list(), candidate_file(started.run))
+    (fit,) = timings(started, "fit")
+    assert fit["settings"]["startup_status"] == "measured"

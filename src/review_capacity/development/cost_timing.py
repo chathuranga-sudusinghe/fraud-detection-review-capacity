@@ -24,12 +24,14 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable, Mapping
+from functools import partial
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from review_capacity.config import ModelSettings
+from review_capacity.development.memory import run_measured
 from review_capacity.development.scoring import (
     MODEL_ROLE,
     SCORING_DEVICE,
@@ -56,6 +58,14 @@ from review_capacity.training.timing import (
 logger = logging.getLogger(__name__)
 
 THREAD_PARAMETER = {"lightgbm": "num_threads", "catboost": "thread_count"}
+SCORING_MEMORY_SCOPE = (
+    "the {boundary} scoring of {partition}: the partition's rows (and, at model_only, their "
+    "prepared native inputs) resident; the warm-up and the timed passes inside"
+)
+LATENCY_MEMORY_SCOPE = (
+    "the {boundary} latency measurement: the one-row inputs (and, at model_only, their prepared "
+    "native inputs) of the declared sample resident; the warm-up and the timed rounds inside"
+)
 
 type TreeModel = LightGBMModel | CatBoostModel
 
@@ -136,8 +146,16 @@ def time_scoring(
         with log_step(logger, f"Timing {name} scoring of {scored.label}, {boundary}"):
             one_pass = _boundary_calls(model, scored.rows.features, boundary)
             settle(timing.settling_seconds, sleep)
-            measurement = measure_scoring(
-                one_pass, [one_pass] * timing.warmup_tree, timing.scoring_passes, clock
+            measurement, memory = run_measured(
+                context.memory,
+                SCORING_MEMORY_SCOPE.format(boundary=boundary, partition=scored.label),
+                partial(
+                    measure_scoring,
+                    one_pass,
+                    [one_pass] * timing.warmup_tree,
+                    timing.scoring_passes,
+                    clock,
+                ),
             )
         record = scoring_record(
             context.identity,
@@ -148,6 +166,7 @@ def time_scoring(
             rows=scored.rows.rows,
             batch_rows=scored.rows.rows,
             measurement=measurement,
+            memory=None if memory is None else memory.reading(),
         )
         paths.append(context.run.write_record(record, name, "scoring", scored.label, boundary))
     return paths
@@ -178,8 +197,17 @@ def time_latency(
         with log_step(logger, f"Timing {name} latency, {boundary}"):
             call_one = _one_row_call(model, one_row, boundary)
             settle(timing.settling_seconds, sleep)
-            measurement = measure_latency(
-                call_one, len(one_row), timing.latency_warmup, timing.latency_rounds, clock
+            measurement, memory = run_measured(
+                context.memory,
+                LATENCY_MEMORY_SCOPE.format(boundary=boundary),
+                partial(
+                    measure_latency,
+                    call_one,
+                    len(one_row),
+                    timing.latency_warmup,
+                    timing.latency_rounds,
+                    clock,
+                ),
             )
         record = latency_record(
             context.identity,
@@ -188,6 +216,7 @@ def time_latency(
             boundary=boundary,
             sample_ids=sample_ids,
             measurement=measurement,
+            memory=None if memory is None else memory.reading(),
         )
         paths.append(context.run.write_record(record, name, "latency", boundary))
     return paths

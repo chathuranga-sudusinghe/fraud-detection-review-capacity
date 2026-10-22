@@ -60,6 +60,7 @@ def test_scoring_is_timed_at_both_boundaries(
         assert record["seconds"] == TICK
         assert record["rows_per_second"] == V1_ROWS / TICK
         assert record["settings"]["pass_seconds"] == [TICK, TICK]
+        assert record["settings"]["pass_min_seconds"] == record["settings"]["pass_max_seconds"]
         assert record["subject"] == scored.record
 
 

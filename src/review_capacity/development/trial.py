@@ -18,13 +18,15 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from review_capacity.config import FeatureSpec, ModelSettings
 from review_capacity.development.inputs import SearchInputs
+from review_capacity.development.memory import MemorySetup, PhaseMemory, run_measured
 from review_capacity.development.run_output import RunDirectory
+from review_capacity.development.startup import Startup
 from review_capacity.errors import (
     FileAccessError,
     ModelError,
@@ -52,6 +54,10 @@ logger = logging.getLogger(__name__)
 MODELS_DIR = "models"
 MODEL_RECORD_NAME = "model_run.json"
 UNIT = "round"  # the training unit of the tree-based models
+FIT_MEMORY_SCOPE = (
+    "the trial's fit, from its fit-specific data containers to the fitted model, with the Train "
+    "and V1 inputs and the earlier trials' retained results resident; model saving is outside"
+)
 
 # The tree-based models of DR-011 and the file each saves its model in.
 TREE_MODELS: dict[str, tuple[type[LightGBMModel] | type[CatBoostModel], str]] = {
@@ -79,6 +85,8 @@ class SearchContext:
     code: Mapping[str, Any]
     lightgbm_build: LightGBMIdentity | None
     session: Mapping[str, Any]
+    memory: MemorySetup | None = None
+    startups: Mapping[str, Startup] = field(default_factory=dict)
 
     @property
     def seed(self) -> int:
@@ -99,6 +107,8 @@ class TrialOutcome:
     stopped_at: int
     stopping_reason: str
     fit_seconds: float
+    persistence_seconds: float
+    fit_memory: PhaseMemory | None
     fitted_iterations: int
     model_directory: Path
     fit: dict[str, str]
@@ -322,12 +332,22 @@ def run_trial(
     model_file = TREE_MODELS[configuration.model.name][1]
     with log_step(logger, f"Trial {trial} of {name}"):
         try:
-            started = time.perf_counter()
-            model.fit(train, valid, settings, objective=context.objective)
-            seconds = time.perf_counter() - started
+
+            def timed_fit() -> float:
+                started = time.perf_counter()
+                model.fit(train, valid, settings, objective=context.objective)
+                return time.perf_counter() - started
+
+            seconds, fit_memory = run_measured(
+                context.memory,
+                FIT_MEMORY_SCOPE,
+                timed_fit,
+                gpu=context.settings.training_device(configuration.model.name) == "gpu",
+            )
             history = model.training_history
             if history is None:
                 raise ModelError(f"{name}: the fit returned no V1 history")
+            saving = time.perf_counter()
             try:
                 directory.mkdir(parents=True)
             except OSError as error:
@@ -347,6 +367,7 @@ def run_trial(
                     code=context.code,
                 ),
             )
+            persistence = time.perf_counter() - saving
             files = (
                 run_file(run, directory / model_file),
                 run_file(run, directory / MODEL_RECORD_NAME),
@@ -396,6 +417,8 @@ def run_trial(
         stopped_at=history.stopped_at,
         stopping_reason=history.stopping_reason,
         fit_seconds=seconds,
+        persistence_seconds=persistence,
+        fit_memory=fit_memory,
         fitted_iterations=model.fitted_iterations,
         model_directory=directory,
         fit=fit,

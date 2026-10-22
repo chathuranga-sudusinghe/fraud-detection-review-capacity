@@ -1401,14 +1401,28 @@ def _timing_settings(record: Mapping[str, Any]) -> list[str]:
     value = settings.get
     need("procedure_version", value("procedure_version") == TIMING_PROCEDURE_VERSION, "1")
     need("session", isinstance(value("session"), dict), "the session conditions (context)")
+    problem_list = value("memory_problems")
+    need(
+        "memory_problems",
+        isinstance(problem_list, list) and all(isinstance(p, str) and p for p in problem_list),
+        "a list of the memory components that could not be measured",
+    )
     if measurement == "fit":
         completed, retained = value("completed_length"), value("retained_length")
         need("completed_length", _is_count(completed, 1), "a positive integer")
         need("retained_length", _is_count(retained, 1), "a positive integer")
         if _is_count(completed, 1) and _is_count(retained, 1) and retained > completed:
             problems.append("timing.settings.retained_length: at most the completed length")
-        for name in ("startup_seconds", "preprocessing_seconds"):
+        for name in ("startup_seconds", "preprocessing_seconds", "persistence_seconds"):
             need(name, value(name) is None or _is_seconds(value(name)), "seconds, or null")
+        scope = value("startup_scope")
+        scoped = scope is None or (isinstance(scope, str) and bool(scope))
+        need("startup_scope", scoped, "text, or null")
+        status = value("startup_status")
+        known = status in (None, "measured", "not_measured")
+        need("startup_status", known, "measured, not_measured or null")
+        if status == "measured" and not _is_seconds(value("startup_seconds")):
+            problems.append("timing.settings.startup_seconds: required when measured")
     elif measurement == "search":
         done, declared = value("trials_completed"), value("trials_declared")
         need("trials_completed", _is_count(done), "a count")
@@ -1426,6 +1440,9 @@ def _timing_settings(record: Mapping[str, Any]) -> list[str]:
         passes = value("pass_seconds")
         listed = isinstance(passes, list) and all(_is_seconds(x) for x in passes) and bool(passes)
         need("pass_seconds", listed, "the seconds of every timed pass")
+        for name, pick in (("pass_min_seconds", min), ("pass_max_seconds", max)):
+            agrees = listed and _is_seconds(value(name)) and value(name) == pick(passes)
+            need(name, agrees, f"the {name[5:8]} of settings.pass_seconds")
         if listed and record["repetitions"] is not None:
             if len(passes) != record["repetitions"]:
                 problems.append("timing.settings.pass_seconds: one entry per repetition")
@@ -1562,7 +1579,7 @@ def _timing_rules(record: Mapping[str, Any]) -> list[str]:
 
 TIMING = _contract(
     "timing",
-    3,
+    4,
     "One computational-cost measurement on the study device (protocol Outcomes, computational "
     "cost; DR-015 §9).",
     (

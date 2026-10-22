@@ -156,3 +156,56 @@ def test_an_interrupted_search_is_flagged_as_partial_in_the_summary(tmp_path: Pa
     text = summary_of(run.path)
     assert "**Partial search times:**" in text
     assert "LGB-u (3 of 10 trials)" in text
+
+
+def test_memory_that_could_not_be_measured_is_listed_with_its_phase(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_records(run)
+    assert "Memory not measured" not in summary_of(run.path)
+    unmeasured = example("timing") | {"boundary": "end_to_end"}
+    unmeasured["settings"] = {
+        **unmeasured["settings"],
+        "memory_problems": ["GPU memory not measured: sampling stalled"],
+    }
+    run.write_record(unmeasured, "RES-u", "latency-end-to-end")
+    text = summary_of(run.path)
+    assert "**Memory not measured**" in text
+    assert "- RES-u latency end_to_end: GPU memory not measured: sampling stalled" in text
+
+
+def test_memory_problems_are_listed_in_a_fixed_order(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_records(run)
+    unmeasured = example("timing") | {"boundary": "end_to_end"}
+    unmeasured["settings"] = {
+        **unmeasured["settings"],
+        "memory_problems": ["b problem", "a problem"],
+    }
+    run.write_record(unmeasured, "RES-u", "latency-end-to-end")
+    text = summary_of(run.path)
+    assert text.index("a problem") < text.index("b problem")
+
+
+def test_a_fit_without_its_startup_excluded_is_flagged(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_records(run)
+    assert "Fit time may include start-up" not in summary_of(run.path)
+    fit = example("timing") | {"measurement": "fit", "model_role": "selected"}
+    fit |= {"boundary": None, "latency_ms": None, "rows": None, "repetitions": None}
+    fit |= {"warmup": None, "batch_rows": None, "rows_sha256": None, "row_selection": None}
+    fit |= {"seconds": 12.5, "configuration": "Cat-u", "device": "gpu", "synchronised": True}
+    fit["settings"] = {
+        "procedure_version": 1,
+        "session": {"load_average_1m": 0.25},
+        "memory_problems": [],
+        "completed_length": 10,
+        "retained_length": 5,
+        "startup_seconds": None,
+        "startup_scope": "warm-up",
+        "startup_status": "not_measured",
+        "preprocessing_seconds": None,
+        "persistence_seconds": 0.5,
+        "host_memory_method": "clear_refs",
+    }
+    run.write_record(fit, "Cat-u", "fit")
+    assert "Fit time may include start-up" in summary_of(run.path)

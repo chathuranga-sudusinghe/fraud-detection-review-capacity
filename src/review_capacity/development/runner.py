@@ -55,6 +55,7 @@ from review_capacity.development.inputs import (
     SearchInputs,
     read_partitions,
 )
+from review_capacity.development.memory import MemorySetup
 from review_capacity.development.records import DevelopmentPartitions
 from review_capacity.development.rendering import write_summary
 from review_capacity.development.run_output import (
@@ -77,6 +78,7 @@ from review_capacity.development.scoring import (
     score_partition,
 )
 from review_capacity.development.search import search_configuration
+from review_capacity.development.startup import Startup, measure_startups
 from review_capacity.development.trial import SearchContext
 from review_capacity.errors import SpecificationError
 from review_capacity.logging_setup import log_step
@@ -133,6 +135,8 @@ class DevelopmentSetup:
     session: Mapping[str, Any]
     clock: Clock = field(default_factory=Clock)
     sleep: Callable[[float], None] = time.sleep
+    memory: MemorySetup | None = None
+    startups: Mapping[str, Startup] = field(default_factory=dict)
 
 
 def chosen_configurations(names: Sequence[str]) -> tuple[Configuration, ...]:
@@ -179,8 +183,11 @@ def prepare_development(
         dataset: DatasetSpec = load_dataset_spec(paths)
         partitions = DevelopmentPartitions.from_spec(dataset, paths)
         build: LightGBMIdentity | None = None
+        build_seconds: float | None = None
         if any(c.model.name == "lightgbm" for c in chosen):
+            build_started = time.perf_counter()
             build = verify_lightgbm_build(settings.lightgbm_build)
+            build_seconds = time.perf_counter() - build_started
         lists = generate_candidates(declaration)
         approved: ApprovedPlan = check_plan(
             options.plan,
@@ -190,6 +197,11 @@ def prepare_development(
             lists,
             partitions,
         )
+        memory = MemorySetup.detect(
+            declaration.timing.host_sample_interval_ms,
+            gpu_monitoring=any(settings.training_device(c.model.name) == "gpu" for c in chosen),
+        )
+        startups = measure_startups(chosen, settings, lightgbm_seconds=build_seconds)
         directory = run_directory_for(paths, options, started)
         models = tuple(dict.fromkeys(c.model.name for c in chosen))
         parts = read_partitions(paths, features, dataset, (TRAIN, V1, V2))
@@ -236,6 +248,8 @@ def prepare_development(
         code=code,
         lightgbm_build=build,
         session=session,
+        memory=memory,
+        startups=startups,
     )
 
 
@@ -287,6 +301,8 @@ def run_development(setup: DevelopmentSetup) -> Path:
             code=setup.code,
             lightgbm_build=setup.lightgbm_build,
             session=setup.session,
+            memory=setup.memory,
+            startups=setup.startups,
         )
         scoring = ScoringContext(
             run=run,
@@ -296,6 +312,7 @@ def run_development(setup: DevelopmentSetup) -> Path:
             features=setup.features,
             inputs=setup.scoring_inputs,
             session=setup.session,
+            memory=setup.memory,
         )
         with log_step(logger, f"Development run {run.started}"):
             for chosen in setup.configurations:

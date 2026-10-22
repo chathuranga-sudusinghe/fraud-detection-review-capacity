@@ -27,6 +27,7 @@ import pandas as pd
 
 from review_capacity.config import SECONDS_PER_DAY, FeatureSpec, ModelSettings
 from review_capacity.development.inputs import PartitionRows, ScoringInputs
+from review_capacity.development.memory import MemorySetup
 from review_capacity.development.run_output import RunDirectory
 from review_capacity.development.trial import TREE_MODELS, TrialOutcome, run_file
 from review_capacity.errors import DataValidationError, SpecificationError
@@ -59,6 +60,7 @@ class ScoringContext:
     features: FeatureSpec
     inputs: ScoringInputs
     session: Mapping[str, Any]
+    memory: MemorySetup | None = None
 
     @property
     def seed(self) -> int:
