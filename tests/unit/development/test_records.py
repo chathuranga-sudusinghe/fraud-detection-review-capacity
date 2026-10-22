@@ -678,35 +678,187 @@ def test_timing_records_its_procedure() -> None:
     timing = example("timing")
     assert_rejected(timing | {"rows_sha256": None}, "timing.rows_sha256: required")
     assert_rejected(timing | {"row_selection": None}, "timing.row_selection: required")
-    assert_rejected(timing | {"cpu_affinity": None}, "timing.cpu_affinity: required")
     assert_rejected(timing | {"memory_scope": None}, "timing.memory_scope: required")
     assert_rejected(timing | {"model_role": None}, "timing.model_role: required")
     assert_rejected(timing | {"attention_backend": "math"}, "the model has no attention")
+    assert_rejected(timing | {"batch_rows": 16}, "a batch of 1")
     transformer = timing | {"configuration": "FTT-u"}
     assert_rejected(transformer, "timing.attention_backend: required")
-    validate(transformer | {"attention_backend": "math"})
+    validate(transformer | {"attention_backend": "efficient"})
+    assert_rejected(transformer | {"attention_backend": "math"}, "uses the efficient backend")
+
+
+def test_gpu_timing_is_synchronised() -> None:
+    assert_rejected(example("timing") | {"synchronised": False}, "GPU work is synchronised")
 
 
 def test_search_timing_names_no_single_model() -> None:
     search = example("timing") | {
+        "configuration": "LGB-u",
         "measurement": "search",
         "model_role": None,
         "latency_ms": None,
         "boundary": None,
         "seconds": 3600.0,
-        "study_device": True,
+        "device": "cpu",
+        "threads": 24,
+        "cpu_affinity": [0, 1],
+        "batch_rows": None,
+        "warmup": None,
+        "repetitions": None,
+        "rows": None,
+        "rows_sha256": None,
+        "row_selection": None,
+        "settings": {
+            "procedure_version": 1,
+            "session_confirmed": True,
+            "session": {"confirmed": True},
+            "trials_completed": 10,
+            "trials_declared": 10,
+            "interrupted": False,
+            "host_memory_method": "clear_refs",
+        },
     }
     validate(search)
     assert_rejected(search | {"model_role": "selected"}, "timing.model_role: must be null")
+    for missing in ("trials_completed", "trials_declared", "interrupted"):
+        broken = {k: v for k, v in search["settings"].items() if k != missing}
+        assert_rejected(search | {"settings": broken}, f"timing.settings.{missing}: required")
 
 
-def test_additional_cpu_timing_is_for_neural_scoring_only() -> None:
-    assert_rejected(example("timing") | {"configuration": "LGB-u"}, "only neural models")
-    fit = example("timing") | {"measurement": "fit", "boundary": None, "latency_ms": None}
-    assert_rejected(fit | {"seconds": 1.0}, "covers scoring only")
-    on_gpu = fit | {"seconds": 1.0, "study_device": True, "device": "gpu", "cpu_affinity": None}
-    assert_rejected(on_gpu, "GPU work is synchronised")
-    validate(on_gpu | {"synchronised": True})
+FIT = {
+    "measurement": "fit",
+    "boundary": None,
+    "latency_ms": None,
+    "seconds": 12.5,
+    "batch_rows": None,
+    "warmup": None,
+    "repetitions": None,
+    "rows": None,
+    "rows_sha256": None,
+    "row_selection": None,
+    "settings": {
+        "procedure_version": 1,
+        "session_confirmed": True,
+        "session": {"confirmed": True},
+        "completed_length": 170,
+        "retained_length": 120,
+        "startup_seconds": 1.5,
+        "preprocessing_seconds": None,
+        "host_memory_method": "clear_refs",
+    },
+}
+
+
+@pytest.mark.parametrize(
+    ("configuration", "role", "device"),
+    [
+        ("LGB-u", "selected", "cpu"),
+        ("Cat-b", "selected", "gpu"),
+        ("Cat-b", "cpu_refit", "cpu"),
+        ("RES-b", "selected", "gpu"),
+        ("FTT-u", "seed_refit", "gpu"),
+        ("LR", "selected", "cpu"),
+    ],
+)
+def test_a_fit_runs_on_its_study_device(configuration: str, role: str, device: str) -> None:
+    other = "gpu" if device == "cpu" else "cpu"
+    record = example("timing") | FIT | {"configuration": configuration, "model_role": role}
+    if configuration.startswith("FTT"):
+        record["attention_backend"] = "efficient"
+    cpu = {"threads": 24, "cpu_affinity": [0, 1], "synchronised": False}
+    gpu = {"threads": None, "cpu_affinity": None, "synchronised": True}
+    validate(record | {"device": device} | (cpu if device == "cpu" else gpu))
+    wrong = record | {"device": other} | (cpu if other == "cpu" else gpu)
+    assert_rejected(wrong, f"runs on the {device}")
+
+
+@pytest.mark.parametrize(
+    ("configuration", "device"),
+    [("LGB-u", "cpu"), ("Cat-u", "cpu"), ("RES-u", "gpu"), ("FTT-b", "gpu"), ("LR", "cpu")],
+)
+def test_scoring_runs_on_the_prediction_device(configuration: str, device: str) -> None:
+    other = "gpu" if device == "cpu" else "cpu"
+    cpu = {"threads": 24, "cpu_affinity": [0, 1], "synchronised": False}
+    gpu = {"threads": None, "cpu_affinity": None, "synchronised": True}
+    base = example("timing") | {"configuration": configuration, "measurement": "scoring"}
+    base |= {"boundary": "end_to_end", "partition": "V2", "batch_rows": 4096, "latency_ms": None}
+    base |= {"rows": V2_ROWS, "seconds": 2.0, "rows_per_second": V2_ROWS / 2.0, "warmup": 1}
+    base |= {"repetitions": 3, "rows_sha256": None, "row_selection": None}
+    base["settings"] = {
+        "procedure_version": 1,
+        "session_confirmed": True,
+        "session": {"confirmed": True},
+        "pass_seconds": [2.5, 2.0, 1.9],
+        "host_memory_method": "clear_refs",
+    }
+    if configuration.startswith("FTT"):
+        base["attention_backend"] = "efficient"
+    validate(base | {"device": device} | (cpu if device == "cpu" else gpu))
+    wrong = base | {"device": other} | (cpu if other == "cpu" else gpu)
+    assert_rejected(wrong, f"runs on the {device}")
+
+
+def test_scoring_seconds_are_the_median_of_the_passes() -> None:
+    base = example("timing") | {"measurement": "scoring", "boundary": "end_to_end"}
+    base |= {"partition": "V2", "batch_rows": 4096, "latency_ms": None, "rows": V2_ROWS}
+    base |= {"seconds": 2.0, "rows_per_second": V2_ROWS / 2.0, "warmup": 3, "repetitions": 3}
+    base |= {"rows_sha256": None, "row_selection": None}
+    base["settings"] = {
+        "procedure_version": 1,
+        "session_confirmed": True,
+        "session": {"confirmed": True},
+        "pass_seconds": [2.5, 2.0, 1.9],
+        "host_memory_method": "clear_refs",
+    }
+    validate(base)
+    assert_rejected(base | {"seconds": 2.5}, "median of settings.pass_seconds")
+    short = {**base["settings"], "pass_seconds": [2.5, 2.0]}
+    assert_rejected(base | {"settings": short}, "one entry per repetition")
+    assert_rejected(base | {"warmup": None}, "timing.warmup: required")
+    assert_rejected(base | {"repetitions": None}, "timing.repetitions: required")
+
+
+def test_latency_counts_agree_with_the_rounds() -> None:
+    timing = example("timing")
+    assert_rejected(timing | {"rows": 9_999}, "rows x repetitions")
+    settings = timing["settings"]
+    assert_rejected(timing | {"repetitions": 2}, "one entry per round")
+    unordered = [{"median": 0.9, "p95": 0.6, "p99": 0.4}] * 3
+    assert_rejected(timing | {"settings": {**settings, "round_latency_ms": unordered}}, "in order")
+    assert_rejected(
+        timing | {"settings": {**settings, "percentile_method": "lower"}},
+        "percentile_method: must be linear",
+    )
+
+
+def test_every_timing_records_the_procedure_and_the_session() -> None:
+    timing = example("timing")
+    for name in ("procedure_version", "session_confirmed"):
+        broken = {k: v for k, v in timing["settings"].items() if k != name}
+        assert_rejected(timing | {"settings": broken}, f"timing.settings.{name}: required")
+    assert_rejected(
+        timing | {"settings": {**timing["settings"], "procedure_version": 2}},
+        "procedure_version: must be 1",
+    )
+    assert_rejected(
+        timing | {"settings": {**timing["settings"], "session_confirmed": "yes"}},
+        "session_confirmed: must be true or false",
+    )
+
+
+def test_the_host_memory_method_is_named() -> None:
+    timing = example("timing")
+    settings = {k: v for k, v in timing["settings"].items() if k != "host_memory_method"}
+    assert_rejected(timing | {"settings": settings}, "host_memory_method")
+    validate(timing | {"settings": {**settings, "host_memory_method": "clear_refs"}})
+
+
+def test_a_fit_records_its_lengths() -> None:
+    record = example("timing") | FIT | {"device": "gpu"}
+    validate(record)
+    longer = {**record["settings"], "retained_length": 171}
+    assert_rejected(record | {"settings": longer}, "at most the completed length")
 
 
 def test_platt_records_its_smoothed_targets_and_a_positive_slope() -> None:
@@ -924,3 +1076,126 @@ def test_run_end_paths_are_unique_and_name_other_records() -> None:
 )
 def test_run_end_names_flat_json_record_files_only(path: str) -> None:
     assert_rejected(example("run_end") | {"records": [file(path)]}, "not another record")
+
+
+def scoring_example() -> dict[str, Any]:
+    base = example("timing") | {
+        "measurement": "scoring",
+        "boundary": "end_to_end",
+        "partition": "V2",
+        "batch_rows": 4096,
+        "latency_ms": None,
+        "rows": V2_ROWS,
+        "seconds": 2.0,
+        "rows_per_second": V2_ROWS / 2.0,
+        "warmup": 3,
+        "repetitions": 3,
+        "rows_sha256": None,
+        "row_selection": None,
+    }
+    base["settings"] = {
+        "procedure_version": 1,
+        "session_confirmed": True,
+        "session": {"confirmed": True},
+        "pass_seconds": [2.5, 2.0, 1.9],
+        "host_memory_method": "clear_refs",
+    }
+    return base
+
+
+def search_example() -> dict[str, Any]:
+    search = example("timing") | {
+        "configuration": "LGB-u",
+        "measurement": "search",
+        "model_role": None,
+        "latency_ms": None,
+        "boundary": None,
+        "seconds": 3600.0,
+        "device": "cpu",
+        "threads": 24,
+        "cpu_affinity": [0, 1],
+        "batch_rows": None,
+        "warmup": None,
+        "repetitions": None,
+        "rows": None,
+        "rows_sha256": None,
+        "row_selection": None,
+        "peak_host_mib": None,
+        "memory_scope": None,
+    }
+    search["settings"] = {
+        "procedure_version": 1,
+        "session_confirmed": True,
+        "session": {"confirmed": True},
+        "trials_completed": 10,
+        "trials_declared": 10,
+        "interrupted": False,
+    }
+    return search
+
+
+def test_a_scoring_time_covers_the_whole_partition() -> None:
+    base = scoring_example()
+    validate(base)
+    assert_rejected(base | {"rows": 63_000, "rows_per_second": 63_000 / 2.0}, "covers all")
+    v1_rows = PARTITIONS.v1.rows
+    v1 = base | {"partition": "V1", "rows": v1_rows, "rows_per_second": v1_rows / 2.0}
+    validate(v1)
+    assert_rejected(v1 | {"rows": V2_ROWS, "rows_per_second": V2_ROWS / 2.0}, "covers all")
+
+
+def test_throughput_is_the_rows_over_the_seconds() -> None:
+    base = scoring_example()
+    assert_rejected(base | {"rows_per_second": 1.0}, "rows divided by the seconds")
+    assert_rejected(base | {"seconds": 0.0, "rows_per_second": 5.0}, "rows divided by the seconds")
+
+
+def test_a_search_is_complete_or_marked_partial() -> None:
+    search = search_example()
+    validate(search)
+    settings = search["settings"]
+    short = search | {"settings": {**settings, "trials_completed": 4}}
+    assert_rejected(short, "completed every declared trial")
+    partial = {**settings, "trials_completed": 4, "interrupted": True}
+    validate(search | {"settings": partial})
+    overdone = {**settings, "trials_completed": 10, "interrupted": True}
+    assert_rejected(search | {"settings": overdone}, "an interrupted search is partial")
+
+
+def test_the_session_flag_agrees_with_its_conditions() -> None:
+    timing = example("timing")
+    inconsistent = {**timing["settings"], "session": {"confirmed": False}}
+    assert_rejected(timing | {"settings": inconsistent}, "confirmed flag equals session_confirmed")
+    missing = {k: v for k, v in timing["settings"].items() if k != "session"}
+    assert_rejected(timing | {"settings": missing}, "timing.settings.session: required")
+
+
+GPU_MEMORY = {
+    "sampled_max_mib": 5200,
+    "baseline_mib": 1200,
+    "increase_above_baseline_mib": 4000,
+    "samples": 40,
+    "interval_ms": 500,
+}
+
+
+def test_reported_gpu_memory_carries_its_baseline_and_sampling() -> None:
+    timing = example("timing") | {"peak_gpu_mib": 5200}
+    with_memory = {**timing["settings"], "gpu_memory": GPU_MEMORY}
+    validate(timing | {"settings": with_memory})
+    assert_rejected(timing, "timing.settings.gpu_memory: required")
+    wrong_max = {**with_memory, "gpu_memory": {**GPU_MEMORY, "sampled_max_mib": 5100}}
+    assert_rejected(timing | {"settings": wrong_max}, "must equal peak_gpu_mib")
+    wrong_gain = {**with_memory, "gpu_memory": {**GPU_MEMORY, "increase_above_baseline_mib": 1}}
+    assert_rejected(timing | {"settings": wrong_gain}, "the increase is the maximum minus baseline")
+    no_samples = {**with_memory, "gpu_memory": {**GPU_MEMORY, "samples": 0}}
+    assert_rejected(timing | {"settings": no_samples}, "gpu_memory.samples: required")
+    unknown_base = {**with_memory, "gpu_memory": {**GPU_MEMORY, "baseline_mib": None}}
+    validate(timing | {"settings": unknown_base})
+
+
+def test_sampled_host_memory_names_its_interval() -> None:
+    timing = example("timing")
+    sampled = {**timing["settings"], "host_memory_method": "sampled"}
+    assert_rejected(timing | {"settings": sampled}, "host_sample_interval_ms: required")
+    validate(timing | {"settings": {**sampled, "host_sample_interval_ms": 100}})

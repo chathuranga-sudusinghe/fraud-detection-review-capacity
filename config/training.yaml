@@ -1,6 +1,7 @@
 # The training declaration: the machine-readable form of the common training rules,
 # docs/decisions/DR-015-common-training-rules.md (§1 search, §2 early stopping, §3 V1 objective,
-# §4 seeds, §6 tree-based and §7 neural search spaces, §8 logistic-regression reference), read by
+# §4 seeds, §6 tree-based and §7 neural search spaces, §8 logistic-regression reference, §9
+# computational-cost procedure), read by
 # review_capacity.training.declaration. Device and numerical settings are not here: they are in
 # config/models.yaml (DR-013), which also holds the main training seed (reproducibility.main_seed).
 # A difference between this file and DR-015 is a defect, resolved through an issue; a unit test
@@ -43,6 +44,21 @@ early_stopping:                     # DR-015 §2
   neural:
     patience: 5                     # epochs
     maximum: 15
+
+timing:                             # DR-015 §9: the computational-cost procedure
+  scoring:
+    passes: 3                       # timed full passes per partition and boundary
+    warmup_tree: 1                  # untimed full predictions per boundary
+    warmup_neural: 3                # untimed batch calls: the normal batch shape and the final short one
+  latency:
+    sample_rows: 10000              # distinct V1 rows: smallest SHA-256 digests of the TransactionID
+    warmup_calls: 100               # untimed batch-of-one calls before each block
+    rounds: 3                       # passes through the same rows, per boundary
+    percentile_method: linear       # numpy.percentile
+  session:
+    settling_seconds: 60            # before each standalone scoring block
+  memory:
+    host_sample_interval_ms: 100    # resident-size sampler, when the VmHWM reset is unavailable
 
 neural_training:                    # DR-015 §7
   effective_batch: 1024             # Train rows per optimiser update

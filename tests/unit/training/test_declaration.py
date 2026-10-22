@@ -410,3 +410,60 @@ def test_the_catboost_reference_learning_rate_is_the_documented_rule(
         p for p in declaration.space("catboost").parameters if p.name == "learning_rate"
     ]
     assert learning_rate.reference == round(rate, 6) == 0.03234
+
+
+# --- the computational-cost procedure (DR-015 §9) ------------------------------------------------
+
+
+def test_timing_settings_match_dr015(declaration: TrainingDeclaration) -> None:
+    timing = declaration.timing
+    assert "**3 timed full passes**" in TEXT
+    assert timing.scoring_passes == 3
+    assert "**one full prediction per boundary** for the tree-based models" in TEXT
+    assert timing.warmup_tree == 1
+    assert "**three batch calls**" in TEXT
+    assert timing.warmup_neural == 3
+    assert "**10,000 distinct V1 rows**" in TEXT
+    assert timing.latency_rows == 10_000
+    assert "**100 untimed warm-up calls**" in TEXT
+    assert timing.latency_warmup == 100
+    assert "**3 rounds**" in TEXT
+    assert timing.latency_rounds == 3
+    assert "`numpy.percentile` using the `linear` method" in TEXT
+    assert timing.percentile_method == "linear"
+    assert "**60-second settling interval**" in TEXT
+    assert timing.settling_seconds == 60
+    assert "**every 100 ms**" in TEXT
+    assert timing.host_sample_interval_ms == 100
+
+
+def test_the_timing_batches_are_the_evaluation_batches_of_the_neural_models(
+    declaration: TrainingDeclaration,
+) -> None:
+    assert "4,096 rows for the ResNet-style MLP, 16 for FT-Transformer" in TEXT
+    assert dict(declaration.neural.evaluation_batch) == {"resnet": 4096, "ft_transformer": 16}
+
+
+def test_the_latency_sample_fits_in_v1() -> None:
+    """Feasibility only: that the rows come from V1 is the runner's rule (C11a)."""
+    v1 = load_dataset_spec(REPO_PATHS).partition("v1")
+    assert load_declaration(REPO_PATHS)[0].timing.latency_rows <= v1.rows
+
+
+def test_the_timing_block_is_checked() -> None:
+    rejects(lambda d: d.pop("timing"), "missing")
+    rejects(lambda d: d["timing"].update({"extra": 1}), "unknown")
+    rejects(lambda d: d["timing"]["scoring"].update({"passes": 0}), "passes")
+    rejects(lambda d: d["timing"]["scoring"].update({"warmup_tree": True}), "warmup_tree")
+    rejects(lambda d: d["timing"]["latency"].update({"rounds": 1.5}), "rounds")
+    rejects(
+        lambda d: d["timing"]["latency"].update({"percentile_method": "lower"}),
+        "percentile_method",
+    )
+    rejects(lambda d: d["timing"]["session"].update({"settling_seconds": -1}), "settling_seconds")
+    rejects(lambda d: d["timing"]["memory"].pop("host_sample_interval_ms"), "missing")
+    rejects(lambda d: d["timing"]["memory"].update({"host_sample_interval_ms": 0}), "interval_ms")
+    rejects(lambda d: d["timing"]["latency"].update({"sample_rows": 0}), "sample_rows")
+    rejects(lambda d: d["timing"]["latency"].update({"warmup_calls": 0}), "warmup_calls")
+    rejects(lambda d: d["timing"]["scoring"].update({"warmup_neural": 0}), "warmup_neural")
+    rejects(lambda d: d["timing"]["scoring"].update({"warmup_tree": "1"}), "warmup_tree")
