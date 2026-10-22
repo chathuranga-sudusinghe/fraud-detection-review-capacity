@@ -94,7 +94,6 @@ STUDY_SCORING: Selection = (
     ("measurement", ("scoring",)),
     ("partition", ("V2",)),
     ("boundary", ("end_to_end",)),
-    ("study_device", (True,)),
 )
 
 
@@ -334,28 +333,24 @@ COMPARISON_TABLES: tuple[ComparisonTable, ...] = (
                 Source(
                     "timing",
                     "latency_ms",
-                    (
-                        *SELECTED,
-                        ("measurement", ("latency",)),
-                        ("boundary", ("model_only",)),
-                        ("study_device", (True,)),
-                    ),
+                    (*SELECTED, ("measurement", ("latency",)), ("boundary", ("model_only",))),
                 ),
             ),
             _column(
-                "CPU latency median / p95 / p99 (ms)",
-                "Model-only latency of the neural models on the cpu (scores discarded)",
+                "End-to-end latency median / p95 / p99 (ms)",
+                "End-to-end single-transaction latency on the study device",
                 "decimal",
                 Source(
                     "timing",
                     "latency_ms",
-                    (
-                        *SELECTED,
-                        ("measurement", ("latency",)),
-                        ("boundary", ("model_only",)),
-                        ("study_device", (False,)),
-                    ),
+                    (*SELECTED, ("measurement", ("latency",)), ("boundary", ("end_to_end",))),
                 ),
+            ),
+            _column(
+                "Session confirmed",
+                "Whether the operator confirmed the timing session conditions (DR-015 §9)",
+                "boolean",
+                Source("timing", "settings.session_confirmed", (("measurement", ("search",)),)),
             ),
         ),
     ),

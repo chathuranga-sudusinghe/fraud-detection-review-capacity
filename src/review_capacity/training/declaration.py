@@ -149,6 +149,24 @@ class NeuralTraining:
     optimiser: Mapping[str, Value]
 
 
+PERCENTILE_METHODS = ("linear",)
+
+
+@dataclass(frozen=True)
+class TimingDeclaration:
+    """The computational-cost procedure's counts and intervals (DR-015 §9)."""
+
+    scoring_passes: int
+    warmup_tree: int
+    warmup_neural: int
+    latency_rows: int
+    latency_warmup: int
+    latency_rounds: int
+    percentile_method: str
+    settling_seconds: int
+    host_sample_interval_ms: int
+
+
 @dataclass(frozen=True)
 class TrainingDeclaration:
     """Everything DR-015 fixes, as data."""
@@ -162,6 +180,7 @@ class TrainingDeclaration:
     tree_stopping: Stopping
     neural_stopping: Stopping
     neural: NeuralTraining
+    timing: TimingDeclaration
     models: Mapping[str, ModelSpace]
 
     def space(self, model: str) -> ModelSpace:
@@ -350,6 +369,38 @@ def _neural(raw: object) -> NeuralTraining:
     )
 
 
+def _timing(raw: object) -> TimingDeclaration:
+    entry = _mapping(raw, "timing", ("scoring", "latency", "session", "memory"))
+    scoring = _mapping(
+        entry["scoring"], "timing.scoring", ("passes", "warmup_tree", "warmup_neural")
+    )
+    latency = _mapping(
+        entry["latency"],
+        "timing.latency",
+        ("sample_rows", "warmup_calls", "rounds", "percentile_method"),
+    )
+    session = _mapping(entry["session"], "timing.session", ("settling_seconds",))
+    memory = _mapping(entry["memory"], "timing.memory", ("host_sample_interval_ms",))
+    method = latency["percentile_method"]
+    if method not in PERCENTILE_METHODS:
+        raise SpecificationError(
+            f"timing.latency.percentile_method must be one of {list(PERCENTILE_METHODS)}"
+        )
+    return TimingDeclaration(
+        scoring_passes=_integer(scoring["passes"], "timing.scoring.passes", minimum=1),
+        warmup_tree=_integer(scoring["warmup_tree"], "timing.scoring.warmup_tree", minimum=1),
+        warmup_neural=_integer(scoring["warmup_neural"], "timing.scoring.warmup_neural", minimum=1),
+        latency_rows=_integer(latency["sample_rows"], "timing.latency.sample_rows", minimum=1),
+        latency_warmup=_integer(latency["warmup_calls"], "timing.latency.warmup_calls", minimum=1),
+        latency_rounds=_integer(latency["rounds"], "timing.latency.rounds", minimum=1),
+        percentile_method=method,
+        settling_seconds=_integer(session["settling_seconds"], "timing.session.settling_seconds"),
+        host_sample_interval_ms=_integer(
+            memory["host_sample_interval_ms"], "timing.memory.host_sample_interval_ms", minimum=1
+        ),
+    )
+
+
 def parse_declaration(raw: dict[str, Any]) -> TrainingDeclaration:
     """The declaration in a parsed ``config/training.yaml``; ``SpecificationError`` if it is
     malformed or inconsistent."""
@@ -361,6 +412,7 @@ def parse_declaration(raw: dict[str, Any]) -> TrainingDeclaration:
             "seeds",
             "v1_objective",
             "early_stopping",
+            "timing",
             "neural_training",
             "models",
         ),
@@ -395,6 +447,7 @@ def parse_declaration(raw: dict[str, Any]) -> TrainingDeclaration:
         tree_stopping=tree,
         neural_stopping=_stopping(stopping["neural"], "early_stopping.neural"),
         neural=_neural(top["neural_training"]),
+        timing=_timing(top["timing"]),
         models=spaces,
     )
 

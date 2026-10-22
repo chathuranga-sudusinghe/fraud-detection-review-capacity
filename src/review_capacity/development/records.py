@@ -38,6 +38,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 from review_capacity.config import DEVICES, SEED_LIMIT, DatasetSpec, PartitionSpec
@@ -1361,50 +1362,215 @@ LATENCY = Object(
 )
 
 
+TIMING_PROCEDURE_VERSION = 1  # the computational-cost procedure of DR-015 §9
+TIMING_FIT_DEVICE = {"lightgbm": "cpu", "catboost": "gpu", "resnet": "gpu", "ft_transformer": "gpu"}
+HOST_MEMORY_METHODS = ("clear_refs", "sampled")
+STUDY_ATTENTION_BACKEND = "efficient"  # config/models.yaml gpu_attention_backend (DR-013 §4)
+
+
+def _timing_device(measurement: str, configuration: str, role: str | None) -> str:
+    """The study device of a measurement (DR-013 §1, §5, §7): fits and searches run on the
+    model's training device (the CatBoost CPU refit on the cpu), scoring and latency on the
+    cpu for the tree-based models and the reference and on the gpu for the neural models."""
+    if measurement in ("fit", "search"):
+        if role == "cpu_refit":
+            return "cpu"
+        return TIMING_FIT_DEVICE.get(MODEL_OF[configuration], "cpu")
+    return "gpu" if FAMILY_OF[configuration] is Family.NEURAL else "cpu"
+
+
+def _is_count(value: object, minimum: int = 0) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= minimum
+
+
+def _is_seconds(value: object) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool) and value >= 0
+
+
+def _timing_settings(record: Mapping[str, Any]) -> list[str]:
+    """The settings every timing carries, and those of its measurement (DR-015 §9)."""
+    settings, measurement = record["settings"], record["measurement"]
+    problems: list[str] = []
+
+    def need(name: str, ok: bool, what: str) -> None:
+        if name not in settings:
+            problems.append(f"timing.settings.{name}: required when measuring {measurement}")
+        elif not ok:
+            problems.append(f"timing.settings.{name}: must be {what}")
+
+    value = settings.get
+    need("procedure_version", value("procedure_version") == TIMING_PROCEDURE_VERSION, "1")
+    need("session_confirmed", isinstance(value("session_confirmed"), bool), "true or false")
+    session = value("session")
+    need(
+        "session",
+        isinstance(session, dict) and session.get("confirmed") is value("session_confirmed"),
+        "the session conditions, whose confirmed flag equals session_confirmed",
+    )
+    if measurement == "fit":
+        completed, retained = value("completed_length"), value("retained_length")
+        need("completed_length", _is_count(completed, 1), "a positive integer")
+        need("retained_length", _is_count(retained, 1), "a positive integer")
+        if _is_count(completed, 1) and _is_count(retained, 1) and retained > completed:
+            problems.append("timing.settings.retained_length: at most the completed length")
+        for name in ("startup_seconds", "preprocessing_seconds"):
+            need(name, value(name) is None or _is_seconds(value(name)), "seconds, or null")
+    elif measurement == "search":
+        done, declared = value("trials_completed"), value("trials_declared")
+        need("trials_completed", _is_count(done), "a count")
+        need("trials_declared", _is_count(declared, 1), "the declared number of trials")
+        need("interrupted", isinstance(value("interrupted"), bool), "true or false")
+        if _is_count(done) and _is_count(declared, 1) and isinstance(value("interrupted"), bool):
+            if value("interrupted") and done >= declared:
+                problems.append("timing.settings.interrupted: an interrupted search is partial")
+            elif not value("interrupted") and done != declared:
+                problems.append(
+                    "timing.settings.trials_completed: a search that was not interrupted "
+                    "completed every declared trial"
+                )
+    elif measurement == "scoring":
+        passes = value("pass_seconds")
+        listed = isinstance(passes, list) and all(_is_seconds(x) for x in passes) and bool(passes)
+        need("pass_seconds", listed, "the seconds of every timed pass")
+        if listed and record["repetitions"] is not None:
+            if len(passes) != record["repetitions"]:
+                problems.append("timing.settings.pass_seconds: one entry per repetition")
+            elif record["seconds"] is not None and record["seconds"] != median(passes):
+                problems.append("timing.seconds: must be the median of settings.pass_seconds")
+    else:
+        rounds = value("round_latency_ms")
+        listed = (
+            isinstance(rounds, list)
+            and bool(rounds)
+            and all(
+                isinstance(r, dict) and LATENCY.problems(r, "round") == [] and _ordered(r)
+                for r in rounds
+            )
+        )
+        need("round_latency_ms", listed, "the median, p95 and p99 of every round, in order")
+        need("percentile_method", value("percentile_method") == "linear", "linear")
+        calls = value("timed_calls")
+        need("timed_calls", _is_count(calls, 1), "a positive integer")
+        if listed and record["repetitions"] is not None and len(rounds) != record["repetitions"]:
+            problems.append("timing.settings.round_latency_ms: one entry per round")
+        counted = _is_count(calls, 1) and None not in (record["rows"], record["repetitions"])
+        if counted and calls != record["rows"] * record["repetitions"]:
+            problems.append("timing.settings.timed_calls: must be rows x repetitions")
+    if record["peak_host_mib"] is not None:
+        method = settings.get("host_memory_method")
+        if method not in HOST_MEMORY_METHODS:
+            problems.append(f"timing.settings.host_memory_method: one of {HOST_MEMORY_METHODS}")
+        elif method == "sampled" and not _is_count(settings.get("host_sample_interval_ms"), 1):
+            problems.append("timing.settings.host_sample_interval_ms: required when sampled")
+    if record["peak_gpu_mib"] is not None:
+        problems += _gpu_memory_problems(record)
+    return problems
+
+
+def _gpu_memory_problems(record: Mapping[str, Any]) -> list[str]:
+    """The sampled GPU memory is stored with its baseline, increase and sampling quality, and
+    agrees with the record's sampled maximum."""
+    memory = record["settings"].get("gpu_memory")
+    if not isinstance(memory, dict):
+        return ["timing.settings.gpu_memory: required when peak_gpu_mib is reported"]
+    problems: list[str] = []
+    maximum, baseline = memory.get("sampled_max_mib"), memory.get("baseline_mib")
+    if maximum != record["peak_gpu_mib"]:
+        problems.append("timing.settings.gpu_memory.sampled_max_mib: must equal peak_gpu_mib")
+    if (
+        isinstance(maximum, int | float)
+        and isinstance(baseline, int | float)
+        and memory.get("increase_above_baseline_mib") != maximum - baseline
+    ):
+        problems.append("timing.settings.gpu_memory: the increase is the maximum minus baseline")
+    problems += [
+        f"timing.settings.gpu_memory.{name}: required (a positive integer)"
+        for name in ("samples", "interval_ms")
+        if not _is_count(memory.get(name), 1)
+    ]
+    return problems
+
+
+def _ordered(latency: Mapping[str, Any]) -> bool:
+    return bool(latency["median"] <= latency["p95"] <= latency["p99"])
+
+
+def _timing_rows(record: Mapping[str, Any], partitions: DevelopmentPartitions) -> list[str]:
+    """A scoring time covers the whole partition (a latency sample is a sample)."""
+    if record["measurement"] != "scoring" or record["partition"] is None:
+        return []
+    rows = partitions.named(record["partition"]).rows
+    if record["rows"] is not None and record["rows"] != rows:
+        return [f"timing.rows: scoring {record['partition']} covers all {rows} of its rows"]
+    return []
+
+
 def _timing_rules(record: Mapping[str, Any]) -> list[str]:
-    measurement = record["measurement"]
+    measurement, configuration = record["measurement"], record["configuration"]
     when = f"measuring {measurement}"
     if measurement in ("fit", "search"):
         problems = _required("timing", record, ("seconds",), when)
         problems += _absent("timing", record, ("partition", "latency_ms", "boundary"), when)
     elif measurement == "scoring":
-        scoring = ("partition", "boundary", "rows", "seconds", "rows_per_second", "batch_rows")
+        scoring = (
+            "partition",
+            "boundary",
+            "rows",
+            "seconds",
+            "rows_per_second",
+            "batch_rows",
+            "warmup",
+            "repetitions",
+        )
         problems = _required("timing", record, scoring, when)
         problems += _absent("timing", record, ("latency_ms",), when)
     else:
         latency_fields = ("boundary", "rows", "warmup", "repetitions", "latency_ms")
         problems = _required("timing", record, latency_fields, when)
         latency = record["latency_ms"]
-        if latency is not None and not latency["median"] <= latency["p95"] <= latency["p99"]:
+        if latency is not None and not _ordered(latency):
             problems.append("timing.latency_ms: median ≤ p95 ≤ p99 must hold")
+        if record["batch_rows"] != 1:
+            problems.append("timing.batch_rows: single-transaction latency is a batch of 1")
         problems += _required("timing", record, ("rows_sha256", "row_selection"), when)
+    if measurement == "scoring" and None not in (record["rows"], record["seconds"]):
+        expected_rate = record["rows"] / record["seconds"] if record["seconds"] > 0 else 0.0
+        if record["rows_per_second"] is not None and record["rows_per_second"] != expected_rate:
+            problems.append("timing.rows_per_second: must be rows divided by the seconds")
     if measurement == "search":
         problems += _absent("timing", record, ("model_role",), when)
     else:
         problems += _required("timing", record, ("model_role",), when)
-    if not record["study_device"]:
-        if FAMILY_OF[record["configuration"]] is not Family.NEURAL or record["device"] != "cpu":
-            problems.append("timing.study_device: only neural models are also timed on the cpu")
-        if measurement not in ("scoring", "latency"):
-            problems.append("timing.study_device: the additional cpu timing covers scoring only")
+    role = record["model_role"]
+    if role == "cpu_refit" and MODEL_OF[configuration] != "catboost":
+        problems.append("timing.model_role: a CPU refit is a CatBoost refit")
+    expected = _timing_device(measurement, configuration, role)
+    if record["device"] != expected:
+        problems.append(f"timing.device: {measurement} of {configuration} runs on the {expected}")
     device = f"the device is {record['device']}"
     if record["device"] == "cpu":
-        problems += _required("timing", record, ("cpu_affinity",), device)
+        problems += _required("timing", record, ("cpu_affinity", "threads"), device)
     elif not record["synchronised"]:
         problems.append("timing.synchronised: GPU work is synchronised before each clock reading")
-    if MODEL_OF[record["configuration"]] == "ft_transformer":
+    if MODEL_OF[configuration] == "ft_transformer":
         problems += _required("timing", record, ("attention_backend",), "timing FT-Transformer")
+        if record["attention_backend"] not in (None, STUDY_ATTENTION_BACKEND):
+            problems.append(
+                f"timing.attention_backend: study timing uses the {STUDY_ATTENTION_BACKEND} "
+                "backend (DR-013 §4)"
+            )
     else:
         problems += _absent("timing", record, ("attention_backend",), "the model has no attention")
     if (record["peak_gpu_mib"], record["peak_host_mib"]) != (None, None):
         problems += _required("timing", record, ("memory_scope",), "memory is reported")
-    return problems
+    return problems + _timing_settings(record)
 
 
 TIMING = _contract(
     "timing",
-    1,
-    "One computational-cost measurement (protocol Outcomes, computational cost).",
+    2,
+    "One computational-cost measurement on the study device (protocol Outcomes, computational "
+    "cost; DR-015 §9).",
     (
         Field("configuration", CONFIGURATION, "Configuration"),
         Field("measurement", Choice(("fit", "search", "scoring", "latency")), "What was timed"),
@@ -1417,13 +1583,7 @@ TIMING = _contract(
         ),
         Field("subject", RUN_FILE, "Record of what was timed (fit or score)", nullable=True),
         Field("partition", PARTITION, "Partition scored", nullable=True),
-        Field("device", DEVICE, "Device"),
-        Field(
-            "study_device",
-            Boolean(),
-            "The study device (DR-013 §5); false only for the additional neural cpu timing, "
-            "whose scores are discarded",
-        ),
+        Field("device", DEVICE, "Device of the measurement (its study device, DR-013 §1, §5)"),
         Field(
             "boundary",
             Choice(("model_only", "end_to_end")),
@@ -1442,14 +1602,30 @@ TIMING = _contract(
         Field("row_selection", Text(), "Rule selecting the latency rows", nullable=True),
         Field("rows_sha256", SHA256, "Identity of the timed rows (latency)", nullable=True),
         Field("batch_rows", POSITIVE, "Batch rows", nullable=True),
-        Field("warmup", COUNT, "Warm-up runs", nullable=True),
-        Field("repetitions", POSITIVE, "Timed repetitions", nullable=True),
-        Field("rows", POSITIVE, "Rows timed", nullable=True),
-        Field("seconds", SECONDS, "Wall-clock seconds", nullable=True),
+        Field("warmup", COUNT, "Untimed warm-up calls", nullable=True),
+        Field("repetitions", POSITIVE, "Timed passes (scoring) or rounds (latency)", nullable=True),
+        Field(
+            "rows", POSITIVE, "Rows per pass (scoring) or distinct rows (latency)", nullable=True
+        ),
+        Field(
+            "seconds", SECONDS, "Wall-clock seconds (scoring: median of the passes)", nullable=True
+        ),
         Field("rows_per_second", Number(minimum=0), "Throughput", nullable=True),
-        Field("latency_ms", LATENCY, "Single-transaction latency", nullable=True),
-        Field("peak_gpu_mib", MIB, "Peak GPU memory", nullable=True),
-        Field("peak_host_mib", MIB, "Peak host memory", nullable=True),
+        Field(
+            "latency_ms", LATENCY, "Single-transaction latency over all timed calls", nullable=True
+        ),
+        Field(
+            "peak_gpu_mib",
+            MIB,
+            "Sampled whole-device GPU memory maximum (not a true peak)",
+            nullable=True,
+        ),
+        Field(
+            "peak_host_mib",
+            MIB,
+            "Peak resident memory of the process during the phase",
+            nullable=True,
+        ),
         Field("memory_scope", Text(), "What the peak memory covers", nullable=True),
         Field("settings", MapOf(AnyJSON()), "Further settings of the timing procedure"),
     ),
@@ -1923,6 +2099,7 @@ DAY_CHECKS: dict[str, tuple[DayCheck, ...]] = {
     "fit": (_train_rows("fit"),),
     "score": (_score_days,),
     "evaluation": (_evaluation_days,),
+    "timing": (_timing_rows,),
     "calibration": (_calibration_days,),
     "r1_selection": (_selection_days("r1_selection"), _r1_rows),
     "h3_selection": (_selection_days("h3_selection"),),

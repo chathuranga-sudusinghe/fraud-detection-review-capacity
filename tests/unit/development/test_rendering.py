@@ -11,7 +11,8 @@ from review_capacity.development.rendering import render_summary, write_summary
 from review_capacity.development.run_output import SUMMARY_NAME, load_run
 from review_capacity.development.summary import cell, record_markdown
 from review_capacity.errors import RecordContractError
-from support.development import PARTITIONS, example
+from review_capacity.training.timing import Timed, search_record
+from support.development import IDENTITY, PARTITIONS, example
 from support.runs import finished_run, new_run, write_records
 
 
@@ -130,3 +131,38 @@ def test_conflicting_trial_records_are_an_error(tmp_path: Path) -> None:
     run.write_record(example("trial") | {"runtime_seconds": 99.0}, "LGB-u", "again")
     with pytest.raises(RecordContractError, match="same trial"):
         write_summary(run.path, PARTITIONS)
+
+
+def test_unconfirmed_timing_sessions_are_flagged_in_the_summary(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_records(run)
+    assert "Not valid for the computational-cost outcome" not in summary_of(run.path)
+    unconfirmed = example("timing") | {"boundary": "end_to_end"}
+    unconfirmed["settings"] = {
+        **unconfirmed["settings"],
+        "session_confirmed": False,
+        "session": {"confirmed": False},
+    }
+    run.write_record(unconfirmed, "RES-u", "latency-end-to-end")
+    text = summary_of(run.path)
+    assert "**Not valid for the computational-cost outcome:** 1 timing records" in text
+    assert "RES-u latency" in text
+
+
+def test_an_interrupted_search_is_flagged_as_partial_in_the_summary(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_records(run)
+    assert "Partial search times" not in summary_of(run.path)
+    partial = search_record(
+        IDENTITY,
+        Timed("LGB-u", None, "cpu", threads=24, cpu_affinity=(0, 1)),
+        {"confirmed": True},
+        seconds=100.0,
+        trials_completed=3,
+        trials_declared=10,
+        interrupted=True,
+    )
+    run.write_record(partial, "LGB-u", "search")
+    text = summary_of(run.path)
+    assert "**Partial search times:**" in text
+    assert "LGB-u (3 of 10 trials)" in text
