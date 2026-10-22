@@ -205,8 +205,10 @@ def test_file_built_under_another_feature_declaration_is_stale(processed: Synthe
 def test_a_change_outside_the_stored_values_keeps_the_file_valid(processed: Synthetic) -> None:
     spec = processed.paths.features_spec
     text = spec.read_text(encoding="utf-8")
-    assert "status: proposed" in text
-    spec.write_text("# a comment\n" + text.replace("status: proposed", "status: accepted"), "utf-8")
+    old = 'unseen_categories: "handled natively by CatBoost"'
+    edited = text.replace(old, 'unseen_categories: "x"')
+    assert edited != text
+    spec.write_text("# a comment\n" + edited, "utf-8")
     verify_processed(processed.paths, "train", processed.features, processed.dataset)
 
 

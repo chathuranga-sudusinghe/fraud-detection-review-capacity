@@ -203,7 +203,7 @@ def test_the_fingerprint_ignores_comments_and_library_handling(tmp_path: Path) -
     edited = tmp_path / "features.yaml"
     edited.write_text(
         "# note\n"
-        + text.replace("status: proposed", "status: accepted").replace(
+        + text.replace(
             'unseen_categories: "handled natively by CatBoost"',
             'unseen_categories: "handled natively"',
         ),
