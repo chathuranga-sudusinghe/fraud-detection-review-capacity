@@ -3,7 +3,6 @@ synthetic data on the CPU (no project data)."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +13,6 @@ from review_capacity.development.search import search_configuration, select
 from review_capacity.development.trial import SearchContext, TrialOutcome
 from review_capacity.development.trial import run_trial as real_run_trial
 from review_capacity.errors import ReviewCapacityError, SpecificationError
-from review_capacity.models import lightgbm_model
 from review_capacity.models.registry import configuration
 from review_capacity.training.sampler import CandidateList
 from support.search import CANDIDATES, TRIALS, candidate_file, candidate_list, search_context
@@ -22,19 +20,7 @@ from support.search import CANDIDATES, TRIALS, candidate_file, candidate_list, s
 LGB_U = configuration("LGB-u")
 
 
-@pytest.fixture(autouse=True)
-def restore_lightgbm_logger() -> Iterator[None]:
-    """LightGBM's registered logger is process-wide: restore it after each test."""
-    import lightgbm
-    from lightgbm import basic
-
-    previous = (basic._LOGGER, basic._INFO_METHOD_NAME, basic._WARNING_METHOD_NAME)
-    lightgbm_model._route_library_messages.cache_clear()
-    yield
-    lightgbm.register_logger(
-        previous[0], info_method_name=previous[1], warning_method_name=previous[2]
-    )
-    lightgbm_model._route_library_messages.cache_clear()
+pytestmark = pytest.mark.usefixtures("restore_lightgbm_logger")
 
 
 @pytest.fixture

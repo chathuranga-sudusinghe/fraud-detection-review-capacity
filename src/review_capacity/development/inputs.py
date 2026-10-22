@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 
 TRAIN = "train"
 V1 = "v1"
+V2 = "v2"
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,18 @@ class SearchInputs:
         return self.v1.model_data(None)
 
 
+@dataclass(frozen=True)
+class ScoringInputs:
+    """The partitions the selected models are scored on: V1 and V2 (DR-015 §9)."""
+
+    v1: PartitionRows
+    v2: PartitionRows
+
+    def partition(self, label: str) -> PartitionRows:
+        """The partition a record names: ``"V1"`` or ``"V2"``."""
+        return {"V1": self.v1, "V2": self.v2}[label]
+
+
 def _times_by_id(joined: pd.DataFrame, features: FeatureSpec) -> pd.Series:
     times = pd.Series(
         joined[features.time].to_numpy(dtype=np.int64),
@@ -145,17 +158,23 @@ def _partition(
     return rows
 
 
-def read_search_inputs(
-    paths: ProjectPaths, features: FeatureSpec, dataset: DatasetSpec
-) -> SearchInputs:
-    """Train and V1, verified and checked against the joined file's ``TransactionDT``."""
-    with log_step(logger, "Reading the verified Train and V1 inputs"):
+def read_partitions(
+    paths: ProjectPaths, features: FeatureSpec, dataset: DatasetSpec, stems: tuple[str, ...]
+) -> dict[str, PartitionRows]:
+    """The development partitions ``stems`` (``train``, ``v1`` or ``v2``), verified and checked
+    against the joined file's ``TransactionDT``. The Test period is not a development partition
+    and cannot be named."""
+    allowed = {p.name for p in dataset.development}
+    unknown = sorted(set(stems) - allowed)
+    if unknown:
+        raise DataValidationError(f"Not development partitions: {unknown}")
+    with log_step(logger, f"Reading the verified partitions {', '.join(stems)}"):
         joined = read_processed(
             paths, JOINED, features, dataset, columns=[features.key, features.time]
         )
         times_of = _times_by_id(joined, features)
         parts: dict[str, PartitionRows] = {}
-        for stem in (TRAIN, V1):
+        for stem in stems:
             frame = read_processed(paths, stem, features, dataset)
             provenance = read_record(paths.provenance_file(stem))
             parts[stem] = _partition(stem, frame, times_of, features, provenance)
@@ -166,4 +185,20 @@ def read_search_inputs(
                 parts[stem].frauds,
                 parts[stem].ordered_ids_sha256[:12],
             )
+    return parts
+
+
+def read_search_inputs(
+    paths: ProjectPaths, features: FeatureSpec, dataset: DatasetSpec
+) -> SearchInputs:
+    """Train and V1 for the search."""
+    parts = read_partitions(paths, features, dataset, (TRAIN, V1))
     return SearchInputs(parts[TRAIN], parts[V1])
+
+
+def read_scoring_inputs(
+    paths: ProjectPaths, features: FeatureSpec, dataset: DatasetSpec
+) -> ScoringInputs:
+    """V1 and V2 for scoring the selected models."""
+    parts = read_partitions(paths, features, dataset, (V1, V2))
+    return ScoringInputs(parts[V1], parts[V2])

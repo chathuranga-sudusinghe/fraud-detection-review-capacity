@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from review_capacity.models import lightgbm_model
 from support.synthetic import Synthetic, build_synthetic
 
 
@@ -45,3 +46,18 @@ def restore_logging() -> Iterator[None]:
             logger.addHandler(handler)
         logger.setLevel(level)
         logger.propagate = propagate
+
+
+@pytest.fixture
+def restore_lightgbm_logger() -> Iterator[None]:
+    """Restore LightGBM's process-wide registered logger after a test that fits LightGBM."""
+    import lightgbm
+    from lightgbm import basic
+
+    previous = (basic._LOGGER, basic._INFO_METHOD_NAME, basic._WARNING_METHOD_NAME)
+    lightgbm_model._route_library_messages.cache_clear()
+    yield
+    lightgbm.register_logger(
+        previous[0], info_method_name=previous[1], warning_method_name=previous[2]
+    )
+    lightgbm_model._route_library_messages.cache_clear()

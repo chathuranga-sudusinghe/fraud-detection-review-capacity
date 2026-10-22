@@ -495,22 +495,39 @@ class LightGBMModel(ScoringModel):
         self._history = history
         logger.info("%s fitted: %d trees kept", name, kept)
 
-    def predict(self, features: pd.DataFrame) -> Scores:
+    def prepare(self, features: pd.DataFrame) -> npt.NDArray[np.float64]:
+        """The native input of ``features``: a C-contiguous float64 matrix in the declared input
+        order, with each categorical input as its code in the Train-fixed category list (a value
+        unseen in Train is missing, NaN). This is the conversion LightGBM applies to a pandas
+        frame inside ``Booster.predict``, done here so that the computational-cost procedure
+        times it apart from ``predict_prepared`` (DR-015 §9, model-only boundary)."""
+        self._fitted()
+        self.check_inputs(features)
+        frame = to_lightgbm(features, self.features, self._categories)
+        for name in self.features.categorical:
+            codes = frame[name].cat.codes.to_numpy()
+            frame[name] = np.where(codes < 0, np.nan, codes.astype(np.float64))
+        return np.ascontiguousarray(frame.to_numpy(dtype=np.float64))
+
+    def predict_prepared(self, native: npt.NDArray[np.float64]) -> Scores:
+        """Scores of the matrix of ``prepare``, on the host (CPU) predictor."""
         from lightgbm.basic import LightGBMError
 
         booster = self._fitted()
-        self.check_inputs(features)
         try:
             scores = booster.predict(
-                to_lightgbm(features, self.features, self._categories),
+                native,
                 num_iteration=self._iterations,
                 num_threads=self._prediction_threads(),
             )
         except LightGBMError as error:
             raise ModelError(f"{self.configuration.name}: prediction failed: {error}") from error
         return checked_scores(
-            cast(npt.NDArray[np.float64], scores), len(features), self.configuration.name
+            cast(npt.NDArray[np.float64], scores), len(native), self.configuration.name
         )
+
+    def predict(self, features: pd.DataFrame) -> Scores:
+        return self.predict_prepared(self.prepare(features))
 
     def _model_text(self, iterations: int | None = None) -> str:
         from lightgbm.basic import LightGBMError

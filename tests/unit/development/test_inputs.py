@@ -9,7 +9,11 @@ import pandas as pd
 import pytest
 
 from review_capacity.development import inputs
-from review_capacity.development.inputs import read_search_inputs
+from review_capacity.development.inputs import (
+    read_partitions,
+    read_scoring_inputs,
+    read_search_inputs,
+)
 from review_capacity.errors import DataValidationError
 from review_capacity.models.registry import Weighting
 from support.synthetic import DAY, Synthetic, build_processed
@@ -108,3 +112,17 @@ def test_the_joined_file_is_read_without_the_target(
     assert joined
     target = processed.features.target
     assert all(columns is not None and target not in columns for columns in joined)
+
+
+def test_v1_and_v2_are_read_for_scoring(processed: Synthetic) -> None:
+    data = read_scoring_inputs(processed.paths, processed.features, processed.dataset)
+    assert (data.v1.rows, data.v2.rows) == (4, 4)
+    assert data.partition("V2") is data.v2
+    assert set((data.v2.times // DAY).tolist()) == {4}
+    assert data.v2.model_data(None).in_time_order()
+    assert data.v2.provenance.scope == "v2"
+
+
+def test_the_sealed_test_partition_cannot_be_read(processed: Synthetic) -> None:
+    with pytest.raises(DataValidationError, match="Not development partitions"):
+        read_partitions(processed.paths, processed.features, processed.dataset, ("test",))
