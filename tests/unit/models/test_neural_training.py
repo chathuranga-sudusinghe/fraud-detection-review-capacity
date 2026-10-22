@@ -452,8 +452,14 @@ class _Counting(torch.optim.AdamW):
     steps = 0
     clears = 0
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.gradients: list[list[Tensor]] = []  # the accumulated gradients before each step
+
     def step(self, *args: Any, **kwargs: Any) -> Any:
         self.steps += 1
+        parameters = [p for group in self.param_groups for p in group["params"]]
+        self.gradients.append([p.grad.clone() for p in parameters if p.grad is not None])
         return super().step(*args, **kwargs)
 
     def zero_grad(self, *args: Any, **kwargs: Any) -> None:
@@ -504,12 +510,50 @@ def test_an_accumulated_update_equals_the_unsplit_update(
     assert (reference.steps, reference.clears) == (6, 6)  # 3 effective batches x 2 epochs
     assert (split.steps, split.clears) == (6, 6)  # one step and one clearing per effective batch
     np.testing.assert_allclose(losses_b, losses_a, rtol=1e-5)
+    assert len(split.gradients) == len(reference.gradients) == 6
+    for before_a, before_b in zip(reference.gradients, split.gradients, strict=True):
+        for grad_a, grad_b in zip(before_a, before_b, strict=True):
+            torch.testing.assert_close(grad_b, grad_a, rtol=1e-4, atol=1e-7)
     for a, b in zip(network_a.parameters(), network_b.parameters(), strict=True):
         torch.testing.assert_close(b, a, rtol=1e-4, atol=1e-6)
     state_a, state_b = reference.state_dict()["state"], split.state_dict()["state"]
     for key in state_a:
         for name in ("exp_avg", "exp_avg_sq"):
             torch.testing.assert_close(state_b[key][name], state_a[key][name], rtol=1e-4, atol=1e-8)
+
+
+def test_the_study_effective_batch_has_a_1016_row_tail_and_accumulates_exactly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """2,040 rows in effective batches of 1,024: 1,024 and a final batch of 1,016 rows, split into
+    uneven micro-batches (300, 300, 300, 124 and 300, 300, 300, 116)."""
+    monkeypatch.setattr(torch, "autocast", lambda **_: contextlib.nullcontext())
+    layout = replace(LAYOUT, category_dropout=0.2)
+    reference, network_a, losses_a = _train(BatchPlan(1024, 1024), rows=2040, layout=layout)
+    split, network_b, losses_b = _train(BatchPlan(1024, 300), rows=2040, layout=layout)
+    assert (reference.steps, split.steps) == (4, 4)  # 2 effective batches x 2 epochs
+    assert BatchPlan(1024, 300).micro_sizes(1016) == [300, 300, 300, 116]
+    np.testing.assert_allclose(losses_b, losses_a, rtol=1e-5)
+    for before_a, before_b in zip(reference.gradients, split.gradients, strict=True):
+        for grad_a, grad_b in zip(before_a, before_b, strict=True):
+            torch.testing.assert_close(grad_b, grad_a, rtol=1e-4, atol=1e-7)
+    for a, b in zip(network_a.parameters(), network_b.parameters(), strict=True):
+        torch.testing.assert_close(b, a, rtol=1e-4, atol=1e-6)
+
+
+def test_category_dropout_is_drawn_once_per_effective_batch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    shapes: list[int] = []
+    original = drop_categories
+
+    def spy(categorical: Tensor, *args: Any) -> Tensor:
+        shapes.append(categorical.shape[0])
+        return original(categorical, *args)
+
+    monkeypatch.setattr("review_capacity.models.neural_training.drop_categories", spy)
+    _train(BatchPlan(64, 24), layout=replace(LAYOUT, category_dropout=0.3))
+    assert shapes == [64, 64, 22] * 2  # whole effective batches, never micro-batches
 
 
 def test_the_same_plan_and_seed_repeat_exactly_with_dropout_on() -> None:
@@ -624,8 +668,9 @@ def test_earlier_updates_are_kept_when_a_later_batch_fails() -> None:
 # --- Early stopping on the shared V1 objective ----------------------------------------------------
 
 
-def _fit_on_v1(patience: int, max_epochs: int) -> Any:
+def _fit_on_v1(patience: int, max_epochs: int, *, v1_weight: float = 1.0) -> Any:
     valid = neural_data(240, seed=9, with_rows=True)
+    valid = replace(valid, weights=np.where(valid.labels == 1, v1_weight, 1.0))
     objective = v1_objective(valid)
     torch.manual_seed(0)
     network = _Linear()
@@ -662,6 +707,13 @@ def test_early_stopping_uses_the_shared_unweighted_v1_objective() -> None:
     assert history.unit == "epoch"
     assert history.best_checkpoint == result.epochs_kept
     assert [c.numerator for c in history.checkpoints] == numerators
+
+
+def test_the_v1_sample_weights_do_not_enter_the_objective() -> None:
+    plain, _ = _fit_on_v1(patience=1, max_epochs=6)
+    weighted, _ = _fit_on_v1(patience=1, max_epochs=6, v1_weight=37.0)
+    assert [r.v1_numerator for r in plain.history] == [r.v1_numerator for r in weighted.history]
+    assert plain.epochs_kept == weighted.epochs_kept
 
 
 def test_a_neural_fit_stops_patience_plus_one_epochs_after_the_best() -> None:

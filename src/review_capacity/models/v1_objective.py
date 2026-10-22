@@ -5,8 +5,9 @@ early-stop on it:
 
 * ``V1Objective``: the V1 partition's daily queue, labels and budget K, fixed once from the
   partition's rows. It is unweighted: the V1 sample weights play no part.
-* ``ObjectiveRecorder``: one per fit. It scores the library's per-round predictions with the
-  shared queue and keeps the integer numerator of every checkpoint, so the history, the strict
+* ``ObjectiveRecorder``: one per fit. It scores the predictions of each round (trees) or epoch
+  (neural models) with the shared queue and keeps the integer numerator of every checkpoint, so
+  the history, the strict
   improvement rule and the earliest-best checkpoint are decided on exact integers; the objective
   value is ``numerator / frauds``, and two values are equal exactly when their numerators are.
 * ``lightgbm_evaluation`` and ``CatBoostObjective``: the custom evaluation function of LightGBM
@@ -150,7 +151,8 @@ def check_identity(identity: object) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class Checkpoint:
-    """One boosting round: the V1 objective after it (the fields of a trial's checkpoint row)."""
+    """One boosting round or training epoch: the V1 objective after it (the fields of a trial's
+    checkpoint row)."""
 
     checkpoint: int
     numerator: int
@@ -162,7 +164,8 @@ class Checkpoint:
 
 @dataclass(frozen=True)
 class TrainingHistory:
-    """The finished fit's V1 history: every round, the earliest best, and why training stopped."""
+    """The finished fit's V1 history: every round or epoch (``unit``), the earliest best, and why
+    training stopped."""
 
     objective: dict[str, Any]
     checkpoints: tuple[Checkpoint, ...]
@@ -177,7 +180,7 @@ class TrainingHistory:
 
 
 class ObjectiveRecorder:
-    """The V1 objective of one fit, evaluated after every round, with its history.
+    """The V1 objective of one fit, evaluated after every round or epoch, with its history.
 
     ``observe`` scores one library evaluation. It returns ``None`` when the library evaluated
     something other than the V1 partition (a different row count or different labels, for

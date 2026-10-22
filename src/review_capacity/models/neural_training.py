@@ -109,9 +109,10 @@ FORMAT_VERSION = 3  # 3: V1 objective history and the batch plan; 2: per-epoch t
 STATE_FILE = "model.pt"
 MANIFEST_FILE = "manifest.json"
 
-# Hyperparameters of the training loop, required for every fit; with V1 early stopping the three
-# early-stopping names are required as well. A fixed-epoch fit accepts them (so that the selected
-# hyperparameters can be reused as they are) and records them, but does not use them.
+# Hyperparameters of the training loop, required for every fit; with V1 early stopping the two
+# early-stopping names (the epoch limit and the patience) are required as well. A fixed-epoch fit
+# accepts them (so that the selected hyperparameters can be reused as they are) and records them,
+# but does not use them.
 TRAINING_PARAMETERS = ("lr", "weight_decay", "batch_size", "eval_batch_size")
 EARLY_STOPPING_PARAMETERS = ("max_epochs", "patience")
 
@@ -1318,6 +1319,12 @@ class NeuralModel(ABC):
         )
         if not consistent:
             raise ModelError("Saved batch plan does not match the saved hyperparameters")
+        plan = BatchPlan(effective, micro)
+        if any(plan.micro_sizes(size)[-1] < self.MIN_BATCH_ROWS for size in {effective, final}):
+            raise ModelError(
+                f"Saved batch plan leaves a last micro-batch of fewer than {self.MIN_BATCH_ROWS} "
+                f"rows, which {self.MODEL} does not accept"
+            )
 
     @staticmethod
     def _check_schedule(

@@ -535,6 +535,7 @@ def _edit(key: str, value: Any) -> Callable[[dict[str, Any]], None]:
         (_edit_record("batching", "evaluation_batch", 7), "batch plan"),
         (_edit_record("batching", "loss_reduction", "mean"), "batch plan"),
         (_edit_record("batching", "final_batch_rows", 65), "batch plan"),
+        (_edit_record("batching", "final_batch_rows", 1), "batch plan"),  # a one-row BatchNorm tail
         (lambda manifest: manifest["training"]["batching"].pop("micro_batch"), "batch plan"),
         (lambda manifest: manifest["training"].pop("batching"), "incomplete"),
         (
