@@ -531,4 +531,4 @@ encoding:
     constant_inputs: "no special rule: s_i = 0 gives noise std 1"
     all_missing_inputs: "stop with an error (none among the declared inputs)"
     numeric_missing: "0 after the transformation, plus one binary missingness indicator per numeric input with at least one missing Train value (324 indicators; 757 neural inputs)"
-    fitting: "vocabularies, transformations and indicator list fitted on Train only, stored with each model, applied unchanged to Validation 1, Validation 2 and Test"
+    fitting: "vocabularies, transformations and indicator list fitted on Train only, stored in the shared preprocessing artifact (each model records and verifies its identity and hash), applied unchanged to Validation 1, Validation 2 and Test"

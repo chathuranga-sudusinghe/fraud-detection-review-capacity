@@ -140,6 +140,14 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
    `run-development` runs the declared search of each tree-based configuration (`--configurations` chooses a subset), selects on V1, scores V1 and V2, evaluates R3 and the ranking, and times scoring, writing dated, ignored records, `summary.md` and `run.log` to `outputs/development/<UTC start time>/` (`--output` must name a new directory inside `outputs/`). It refuses to start if the plan differs from the approved cost or from the training declaration. The conditions of the timing session are recorded with each timing as context; no condition is required ([DR-015](docs/decisions/DR-015-common-training-rules.md) §9). `review-capacity --help` lists every option.
 
+   Before any neural run, the shared Train-only preprocessing of the two neural models ([DR-012](docs/decisions/DR-012-neural-network-input-representation.md)) is fitted once (a consequential step under the same execution rules; it reads the processed development files only):
+
+   ```bash
+   .venv/bin/review-capacity fit-neural-preprocessing
+   ```
+
+   It writes the artifact (`manifest.json`, `arrays.npz`), its SHA-256 in `result.json`, the Validation 1 and Validation 2 diagnostics and `run.log` to `outputs/neural_preprocessing/<UTC start time>/`.
+
 **Continuous integration:** code-affecting pull requests to `main` receive the checks defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml); CI never trains or scores a model on research data, reads research data or writes research output; unit tests fit only small models on synthetic data.
 
 ## Repository map
@@ -161,7 +169,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (433 inputs: 431 declared columns and 2 time-of-day inputs) |
 | [`config/dataset.yaml`](config/dataset.yaml) | Machine-readable raw files, DR-001 partitions and their integrity anchors |
 | [`config/models.yaml`](config/models.yaml) | Machine-readable DR-013 device and numerical settings and the recorded LightGBM build |
-| [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs (`features/`), model interface, configurations and device controls (`models/`), development record contracts and Markdown summary specification (`development/`), the shared daily review queue and V1 objective (`evaluation/`), the training declaration, candidate sampler and search-cost prediction (`training/`); command `review-capacity` |
+| [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs and the shared neural preprocessing (`features/`), model interface, configurations and device controls (`models/`), development record contracts and Markdown summary specification (`development/`), the shared daily review queue and V1 objective (`evaluation/`), the training declaration, candidate sampler and search-cost prediction (`training/`); command `review-capacity` |
 | [`pyproject.toml`](pyproject.toml), [`uv.lock`](uv.lock), [`.python-version`](.python-version) | Pinned dependencies, locked environment (uv) and Python version |
 | `evidence/` | Engineering evidence: [GPU memory probe results](evidence/gpu_probe/README.md) (Issue #50); [GPU acceptance probe records](evidence/gpu_acceptance_probe/README.md) (Issue #77) |
 | [`tests/`](tests/) | Unit tests on synthetic data; opt-in integration tests on the local processed development files (no raw file is read), subject to the execution rules in [`AGENTS.md`](AGENTS.md#experiment-execution-responsibility) |
