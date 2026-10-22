@@ -277,3 +277,11 @@ def test_the_queue_copies_its_days() -> None:
     q = DailyQueue.build(keys(1, 2), days)
     days[0] = 9
     assert q.select(np.array([0.5, 0.4]), 1).days[0].day == 1
+
+
+def test_the_queue_exposes_its_days_read_only() -> None:
+    days = keys(1, 1, 2)
+    exposed = DailyQueue.build(keys(1, 2, 3), days).days
+    assert exposed.tolist() == [1, 1, 2]
+    with pytest.raises(ValueError, match="read-only"):
+        exposed[0] = 9

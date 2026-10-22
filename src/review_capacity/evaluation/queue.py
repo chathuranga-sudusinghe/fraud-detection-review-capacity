@@ -69,8 +69,10 @@ def tie_ranks(ids: Keys) -> Positions:
 def _checked_scores(scores: object, rows: int) -> Scores:
     if not isinstance(scores, np.ndarray) or scores.ndim != 1 or scores.shape != (rows,):
         raise DataValidationError(f"Scores must be a one-dimensional array of {rows} rows")
-    if scores.dtype.kind != "f":
-        raise DataValidationError(f"Scores must be floating point, not {scores.dtype}")
+    if scores.dtype not in (np.float32, np.float64):
+        raise DataValidationError(
+            f"Scores must be floating point (float32 or float64), not {scores.dtype}"
+        )
     exact = scores.astype(np.float64)  # float32 widens exactly
     if not np.isfinite(exact).all():
         raise DataValidationError("Scores must be finite; the review order is undefined for NaN")
@@ -162,6 +164,13 @@ class DailyQueue:
     @property
     def rows(self) -> int:
         return len(self._days)
+
+    @property
+    def days(self) -> Keys:
+        """The relative day of every row, in the queue's input row order (read only)."""
+        view = self._days.view()
+        view.flags.writeable = False
+        return view
 
     def order(self, scores: FloatScores) -> Positions:
         """Row positions in queue order: by relative day, then the daily order of the module."""
