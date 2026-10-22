@@ -10,7 +10,8 @@ Every record is one JSON object with an envelope and kind-specific fields:
 The kinds, in the order a run produces them: ``candidates`` and ``cost_prediction`` (the search
 plan, written before any fit), ``run``, ``preprocessing``, ``preflight``, ``fit``,
 ``checkpoint``, ``trial``, ``configuration``, ``refit``, ``score``, ``evaluation``, ``timing``,
-``calibration``, ``r1_selection`` and ``h3_selection``. Records link to one another and to the
+``calibration``, ``r1_selection`` and ``h3_selection``; ``run_end`` closes the run (Issue #120).
+Records link to one another and to the
 model-run records of ``models.run_record`` by path (relative to the run directory) and SHA-256.
 JSON is the pipeline's machine-readable output and has no CSV companion: long tables live inside
 the record they belong to (a trial's checkpoint history, an evaluation's per-day values, a
@@ -32,6 +33,7 @@ and ends before the last, and its held-out evaluation range ends on the last V2 
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from itertools import pairwise
@@ -1846,6 +1848,50 @@ H3_SELECTION = _contract(
     _h3_rules,
 )
 
+# --- run end -------------------------------------------------------------------------------------
+
+
+_RECORD_FILE = re.compile(r"records/[A-Za-z0-9_.-]+\.json")
+
+
+def _run_end_rules(record: Mapping[str, Any]) -> list[str]:
+    problems: list[str] = []
+    if record["outcome"] == "completed":
+        problems += _absent("run_end", record, ("error",), "the run completed")
+    else:
+        problems += _required("run_end", record, ("error",), f"the run {record['outcome']}")
+    paths = [entry["path"] for entry in record["records"]]
+    if len(set(paths)) != len(paths):
+        problems.append("run_end.records: a path is listed once")
+    if paths != sorted(paths):
+        problems.append("run_end.records: must be listed in increasing path order")
+    problems += [
+        f"run_end.records: {path} is not another record of the run"
+        for path in paths
+        if not _RECORD_FILE.fullmatch(path) or path == "records/run_end.json"
+    ]
+    return problems
+
+
+RUN_END = _contract(
+    "run_end",
+    1,
+    "Written last: how the run ended and the SHA-256 of every other record. A run directory "
+    "without it was interrupted before it could close (a killed process); its completed records "
+    "are preserved and its summary can be regenerated (Issue #96, no resume).",
+    (
+        Field("finished", TIMESTAMP, "When the run ended"),
+        Field("outcome", Choice(("completed", "failed", "interrupted")), "How the run ended"),
+        Field("error", Text(), "Failure or interruption description", nullable=True),
+        Field(
+            "records",
+            ListOf(RUN_FILE, min_items=1, unique=True),
+            "Every other record of the run, in increasing path order",
+        ),
+    ),
+    _run_end_rules,
+)
+
 RECORD_CONTRACTS: dict[str, RecordContract] = {
     contract.kind: contract
     for contract in (
@@ -1865,6 +1911,7 @@ RECORD_CONTRACTS: dict[str, RecordContract] = {
         CALIBRATION,
         R1_SELECTION,
         H3_SELECTION,
+        RUN_END,
     )
 }
 

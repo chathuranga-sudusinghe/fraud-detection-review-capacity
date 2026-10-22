@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,35 @@ def write_atomically(path: Path, write: Callable[[Path], object]) -> None:
         raise FileAccessError(f"{path}: cannot be written ({error.strerror})") from error
     finally:
         _remove_temporary(temporary)
+
+
+def write_new_atomically(path: Path, text: str) -> None:
+    """Write ``text`` as UTF-8 to the new file ``path``: complete or absent, never replacing.
+
+    The text is written to a temporary file in the same directory and hard-linked to ``path``,
+    which fails if ``path`` exists (even if it was created after the caller last looked), so a
+    file written this way is never overwritten. A missing directory is created.
+    """
+    temporary: Path | None = None
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # a temporary file of this call alone: created exclusively under a unique name, so that
+        # no other call (or leftover) shares its inode with a published file
+        descriptor, name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        temporary = Path(name)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        try:
+            os.link(temporary, path)
+        except FileExistsError as error:
+            raise FileAccessError(f"{path}: already exists and is never replaced") from error
+    except FileAccessError:
+        raise
+    except OSError as error:
+        raise FileAccessError(f"{path}: cannot be written ({error.strerror})") from error
+    finally:
+        if temporary is not None:
+            _remove_temporary(temporary)
 
 
 def _remove_temporary(temporary: Path) -> None:

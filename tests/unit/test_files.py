@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import errno
+import os
 from pathlib import Path
 
 import pytest
 
 from review_capacity.errors import FileAccessError
-from review_capacity.files import write_atomically, write_json
+from review_capacity.files import write_atomically, write_json, write_new_atomically
 
 
 def test_write_json_replaces_the_file_and_leaves_no_temporary(tmp_path: Path) -> None:
@@ -77,3 +79,62 @@ def test_clean_up_failure_never_hides_the_writer_error(
     ):
         write_atomically(tmp_path / "x.txt", partial)
     assert "could not be removed" in caplog.text
+
+
+def test_a_new_file_is_written_whole_and_never_replaced(tmp_path: Path) -> None:
+    path = tmp_path / "out" / "record.json"
+    write_new_atomically(path, "first\n")
+    assert path.read_text(encoding="utf-8") == "first\n"
+    with pytest.raises(FileAccessError, match="already exists"):
+        write_new_atomically(path, "second\n")
+    assert path.read_text(encoding="utf-8") == "first\n"
+    assert [p.name for p in path.parent.iterdir()] == ["record.json"]
+
+
+def test_an_unwritable_new_file_is_a_file_access_error(tmp_path: Path) -> None:
+    blocker = tmp_path / "not_a_directory"
+    blocker.write_text("", encoding="utf-8")
+    with pytest.raises(FileAccessError, match="cannot be written"):
+        write_new_atomically(blocker / "record.json", "x")
+
+
+def test_a_leftover_hard_link_never_changes_a_published_file(tmp_path: Path) -> None:
+    path = tmp_path / "record.json"
+    write_new_atomically(path, "published\n")
+    leftover = tmp_path / f".record.json.{os.getpid()}.tmp"  # the name an older writer used
+    os.link(path, leftover)
+    with pytest.raises(FileAccessError, match="already exists"):
+        write_new_atomically(path, "other\n")
+    other = tmp_path / "other.json"
+    write_new_atomically(other, "other\n")
+    assert path.read_text(encoding="utf-8") == "published\n"
+    assert leftover.read_text(encoding="utf-8") == "published\n"
+
+
+def test_every_call_uses_its_own_temporary_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    names: list[str] = []
+    real = os.link
+
+    def recording(source: Path, target: Path) -> None:
+        names.append(Path(source).name)
+        real(source, target)
+
+    monkeypatch.setattr(os, "link", recording)
+    write_new_atomically(tmp_path / "a.json", "a")
+    write_new_atomically(tmp_path / "b.json", "b")
+    assert len(set(names)) == 2
+    assert [p.name for p in tmp_path.iterdir() if p.name.startswith(".")] == []
+
+
+def test_a_file_system_without_hard_links_is_an_error_not_an_overwrite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refused(_source: Path, _target: Path) -> None:
+        raise OSError(errno.EPERM, "Operation not permitted")
+
+    monkeypatch.setattr(os, "link", refused)
+    with pytest.raises(FileAccessError, match="cannot be written"):
+        write_new_atomically(tmp_path / "record.json", "x")
+    assert list(tmp_path.iterdir()) == []

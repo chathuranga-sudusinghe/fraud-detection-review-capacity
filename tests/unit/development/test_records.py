@@ -78,6 +78,7 @@ def test_every_kind_has_a_valid_example_in_production_order() -> None:
         "calibration",
         "r1_selection",
         "h3_selection",
+        "run_end",
     ]
     for kind in KINDS:
         validate(example(kind), kind)
@@ -895,3 +896,31 @@ def test_h3_recall_matches_the_counts() -> None:
     record = example("h3_selection")
     record["candidates"][0]["recall"] = 0.5
     assert_rejected(record, "LGB-u recall ≠ captured / frauds")
+
+
+def test_run_end_error_follows_the_outcome() -> None:
+    assert_rejected(example("run_end") | {"error": "boom"}, "run_end.error: must be null")
+    assert_rejected(example("run_end") | {"outcome": "failed"}, "run_end.error: required")
+    validate(example("run_end") | {"outcome": "interrupted", "error": "KeyboardInterrupt"})
+
+
+def test_run_end_lists_records_in_path_order() -> None:
+    records = [file("records/b.json"), file("records/a.json")]
+    assert_rejected(example("run_end") | {"records": records}, "increasing path order")
+
+
+def test_run_end_paths_are_unique_and_name_other_records() -> None:
+    first, second = file("records/a.json"), file("records/a.json") | {"sha256": "b" * 64}
+    assert_rejected(example("run_end") | {"records": [first, second]}, "listed once")
+    assert_rejected(
+        example("run_end") | {"records": [file("records/run_end.json")]}, "not another record"
+    )
+    assert_rejected(example("run_end") | {"records": [file("scores/a.parquet")]}, "not another")
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["records/scores.parquet", "records/nested/a.json", "records/.hidden", "records/a b.json"],
+)
+def test_run_end_names_flat_json_record_files_only(path: str) -> None:
+    assert_rejected(example("run_end") | {"records": [file(path)]}, "not another record")
