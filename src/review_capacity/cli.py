@@ -41,6 +41,15 @@ Commands:
                    outputs/search_plan/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Reads no data and
                    fits no model; whether the predicted cost is feasible is the owner's decision
 
+    summarise-run  regenerate summary.md of a development run directory from its records alone
+                   (also after an interrupted run); reads no data and fits no model
+
+    promote-evidence
+                   copy a completed development run's aggregate evidence (records, summary.md,
+                   run.log and a manifest with SHA-256 values) to evidence/<run type>/<run id>/,
+                   a new directory; never row-level scores, fitted preprocessing artifacts or
+                   models. A separate, explicit step; no run calls it
+
 Every message is logged with a timestamp to the terminal and, with --log-file PATH, also to a
 file kept with the run's evidence. --verbose adds detail; --quiet shows warnings and errors only.
 
@@ -320,6 +329,30 @@ def _plan_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def _summarise_run(args: argparse.Namespace) -> int:
+    from review_capacity.development.records import DevelopmentPartitions
+    from review_capacity.development.rendering import write_summary
+
+    paths = ProjectPaths.discover(args.root)
+    partitions = DevelopmentPartitions.from_spec(load_dataset_spec(paths), paths)
+    write_summary(args.run_directory.resolve(), partitions)
+    return 0
+
+
+def _promote_evidence(args: argparse.Namespace) -> int:
+    from review_capacity.development.promotion import promote, verify_promoted
+    from review_capacity.development.records import DevelopmentPartitions
+
+    paths = ProjectPaths.discover(args.root)
+    partitions = DevelopmentPartitions.from_spec(load_dataset_spec(paths), paths)
+    destination = promote(
+        args.run_directory, paths.root, partitions, evidence_root=args.evidence_root
+    )
+    verify_promoted(destination)
+    logger.info("Evidence promoted to %s", destination)
+    return 0
+
+
 def _log_file(args: argparse.Namespace) -> Path | None:
     """The log file: ``--log-file``; for ``probe-gpu`` always ``probe.log`` and for ``plan-search``
     ``plan.log`` in its output directory (Section 5 of the probe specification), and only once the
@@ -443,6 +476,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="new directory for the plan (default: outputs/search_plan/<UTC time>)",
     )
     plan_search.set_defaults(handler=_plan_search)
+    summarise = commands.add_parser(
+        "summarise-run",
+        help="regenerate summary.md of a development run directory from its records",
+    )
+    summarise.add_argument("run_directory", type=Path, help="the run's directory under outputs/")
+    summarise.add_argument("--root", type=Path, default=None, help="project root directory")
+    summarise.set_defaults(handler=_summarise_run)
+    promote = commands.add_parser(
+        "promote-evidence",
+        help="copy a completed development run's aggregate evidence into evidence/",
+    )
+    promote.add_argument("run_directory", type=Path, help="the run's directory under outputs/")
+    promote.add_argument("--root", type=Path, default=None, help="project root directory")
+    promote.add_argument(
+        "--evidence-root",
+        type=Path,
+        default=None,
+        help="directory receiving evidence/<run type>/<run id>/ (default: evidence)",
+    )
+    promote.set_defaults(handler=_promote_evidence)
     return parser
 
 

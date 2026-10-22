@@ -567,6 +567,12 @@ _BODIES: dict[str, dict[str, Any]] = {
 
 
 _BODIES["evaluation"] = with_days(_BODIES["evaluation"], 127, 154)
+_BODIES["run_end"] = {
+    "finished": "2026-10-20T10:15:30.5Z",
+    "outcome": "completed",
+    "error": None,
+    "records": [file("records/run.json")],
+}
 
 
 def example(kind: str) -> dict[str, Any]:

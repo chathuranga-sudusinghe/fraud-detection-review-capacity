@@ -25,7 +25,9 @@ from review_capacity.errors import (
 from review_capacity.hashing import file_sha256
 from review_capacity.paths import ProjectPaths
 from support.catalog import catalog_text
+from support.runs import finished_run
 from support.synthetic import (
+    REPO_PATHS,
     Synthetic,
     build_processed,
     repeat_identity_values,
@@ -256,3 +258,24 @@ def test_audit_duplicates_without_processed_files_is_a_file_access_error(
     data = _profile_project(tmp_path, monkeypatch)
     data.paths.processed_file("development_joined").unlink()
     assert main(["audit-duplicates"]) == 5
+
+
+def test_summarise_run_and_promote_evidence_options() -> None:
+    summarise = build_parser().parse_args(["summarise-run", "outputs/development/run"])
+    assert summarise.command == "summarise-run"
+    assert summarise.run_directory == Path("outputs/development/run")
+    promote = build_parser().parse_args(
+        ["promote-evidence", "outputs/development/run", "--evidence-root", "evidence"]
+    )
+    assert promote.command == "promote-evidence"
+    assert promote.evidence_root == Path("evidence")
+    assert build_parser().parse_args(["promote-evidence", "run"]).evidence_root is None
+
+
+def test_summarise_run_regenerates_the_summary_from_the_records(tmp_path: Path) -> None:
+    run = finished_run(tmp_path)
+    summary = run.path / "summary.md"
+    original = summary.read_text(encoding="utf-8")
+    summary.write_text("stale\n", encoding="utf-8")
+    assert main(["summarise-run", str(run.path), "--root", str(REPO_PATHS.root)]) == 0
+    assert summary.read_text(encoding="utf-8") == original
