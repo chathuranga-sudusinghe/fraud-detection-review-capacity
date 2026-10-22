@@ -490,6 +490,55 @@ def test_a_fit_record_carries_the_lengths_and_the_session() -> None:
     assert record["settings"]["completed_length"] == 170
     assert "session_confirmed" not in record["settings"]
     assert record["settings"]["session"]["load_average_1m"] == 0.25
+    assert record["settings"]["memory_problems"] == []
+    assert record["settings"]["persistence_seconds"] is None  # a caller that does not measure it
+
+
+def test_a_fit_record_states_the_shared_startup_and_the_persistence() -> None:
+    record = check(
+        timing.fit_record(
+            IDENTITY,
+            CPU,
+            conditions(),
+            seconds=12.5,
+            completed_length=170,
+            retained_length=120,
+            startup_seconds=1.0,
+            preprocessing_seconds=None,
+            persistence_seconds=0.75,
+            startup_scope="library import, once per process",
+        )
+    )
+    assert record["seconds"] == 12.5
+    assert record["settings"]["startup_seconds"] == 1.0
+    assert record["settings"]["startup_scope"] == "library import, once per process"
+    assert record["settings"]["persistence_seconds"] == 0.75
+
+
+def test_memory_problems_are_recorded_beside_the_readings_that_stand() -> None:
+    record = check(
+        timing.fit_record(
+            IDENTITY,
+            CPU,
+            conditions(),
+            seconds=1.0,
+            completed_length=2,
+            retained_length=1,
+            startup_seconds=None,
+            preprocessing_seconds=None,
+            memory=timing.MemoryReading(
+                "a phase", host=timing.HostPeak(10.0, "clear_refs"), problems=("GPU: stalled",)
+            ),
+        )
+    )
+    assert record["peak_host_mib"] == 10.0
+    assert record["peak_gpu_mib"] is None
+    assert record["settings"]["memory_problems"] == ["GPU: stalled"]
+
+
+def test_memory_problems_is_builder_owned() -> None:
+    with pytest.raises(SpecificationError, match="builder-owned"):
+        Timed("LGB-u", "selected", "cpu", threads=24, extra={"memory_problems": []})
 
 
 def test_a_search_record_says_whether_it_was_interrupted() -> None:
@@ -545,6 +594,11 @@ def test_a_scoring_record_has_the_median_pass_and_throughput_from_it() -> None:
     assert record["threads"] is None
     assert (record["warmup"], record["repetitions"]) == (3, 3)
     assert record["settings"]["pass_seconds"] == [2.5, 2.0, 1.9]
+    # unequal passes: the slow pass is kept and the range is explicit
+    assert (record["settings"]["pass_min_seconds"], record["settings"]["pass_max_seconds"]) == (
+        1.9,
+        2.5,
+    )
 
 
 def test_memory_is_recorded_with_its_methods_and_scope() -> None:

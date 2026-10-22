@@ -17,6 +17,7 @@ from review_capacity.development.runner import (
     run_development,
     run_directory_for,
 )
+from review_capacity.development.startup import Startup
 from review_capacity.errors import (
     DataValidationError,
     FileAccessError,
@@ -24,6 +25,7 @@ from review_capacity.errors import (
     SpecificationError,
 )
 from review_capacity.models.device import LightGBMIdentity
+from support.memory import memory_setup
 from support.search import development_setup
 from support.synthetic import REPO_PATHS
 
@@ -163,6 +165,30 @@ def test_the_session_conditions_are_recorded_in_every_timing(tmp_path: Path) -> 
     assert all("load_average_1m" in t["settings"]["session"] for t in timings)
 
 
+def test_every_timing_of_a_measured_run_carries_its_memory_and_the_fit_its_startup(
+    tmp_path: Path,
+) -> None:
+    setup = replace(
+        development_setup(tmp_path, ("LGB-u",)),
+        memory=memory_setup(),
+        startups={"lightgbm": Startup(0.5, "library import, once per process")},
+    )
+    run_development(setup)
+    loaded = load_run(setup.run.path, setup.run.partitions)
+    timings = loaded.of_kind("timing")
+    assert {t["measurement"] for t in timings} == {"fit", "search", "scoring", "latency"}
+    for timing in timings:
+        assert timing["peak_host_mib"] == 512.0
+        assert timing["memory_scope"]
+        assert timing["settings"]["memory_problems"] == []
+        assert timing["settings"]["host_memory_method"] == "clear_refs"
+    (fit,) = (t for t in timings if t["measurement"] == "fit")
+    assert fit["settings"]["startup_seconds"] == 0.5
+    assert fit["settings"]["persistence_seconds"] >= 0
+    summary = (setup.run.path / SUMMARY_NAME).read_text(encoding="utf-8")
+    assert "Memory not measured" not in summary
+
+
 def test_an_unapproved_cost_stops_the_run_before_a_directory_or_any_data_is_used(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -174,6 +200,12 @@ def test_an_unapproved_cost_stops_the_run_before_a_directory_or_any_data_is_used
         "review_capacity.development.runner.verify_lightgbm_build",
         lambda _expected: LightGBMIdentity("4.7.0", Path("lib"), "c" * 64),
     )
+
+    def started(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("monitoring or start-up began before the plan was approved")
+
+    monkeypatch.setattr("review_capacity.development.runner.measure_startups", started)
+    monkeypatch.setattr("review_capacity.development.runner.MemorySetup.detect", started)
     options = DevelopmentOptions(plan=plan, approved_cost_sha256="0" * 64, output=output)
     with pytest.raises(SpecificationError, match="not the approved cost prediction"):
         prepare_development(REPO_PATHS, options)

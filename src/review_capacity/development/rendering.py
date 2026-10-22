@@ -230,8 +230,8 @@ def _tables(run: LoadedRun) -> list[str]:
 
 
 def _cost_notes(run: LoadedRun) -> list[str]:
-    """Notes under the computational-cost table: search times of interrupted searches
-    (DR-015 §9)."""
+    """Notes under the computational-cost table: search times of interrupted searches and the
+    memory components that could not be measured (DR-015 §9)."""
     timings = run.of_kind("timing")
     partial = sorted(
         f"{t['configuration']} ({t['settings']['trials_completed']} of "
@@ -239,7 +239,29 @@ def _cost_notes(run: LoadedRun) -> list[str]:
         for t in timings
         if t["measurement"] == "search" and t["settings"].get("interrupted") is True
     )
+    unmeasured = sorted(
+        f"{t['configuration']} {t['measurement']}"
+        + (f" {t['boundary']}" if t["boundary"] else "")
+        + f": {problem}"
+        for t in timings
+        for problem in t["settings"].get("memory_problems", [])
+    )
+    startup_open = sorted(
+        str(t["configuration"])
+        for t in timings
+        if t["measurement"] == "fit" and t["settings"].get("startup_status") == "not_measured"
+    )
     lines: list[str] = []
+    if startup_open:
+        lines += [
+            "",
+            "**Fit time may include start-up:** the shared start-up of the library of "
+            f"{', '.join(startup_open)} could not be measured, so the library and device "
+            "initialisation may lie inside its fit time.",
+        ]
+    if unmeasured:
+        lines += ["", "**Memory not measured** (the time and the other readings stand):", ""]
+        lines += [f"- {entry}" for entry in unmeasured]
     if partial:
         lines += [
             "",

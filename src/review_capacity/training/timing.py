@@ -69,6 +69,7 @@ RESERVED_SETTINGS = frozenset(
     {
         "procedure_version",
         "session",
+        "memory_problems",
         "gpu_memory",
         "allocator_peaks",
         "host_memory_method",
@@ -404,12 +405,14 @@ def gpu_memory_fields(snapshot: Mapping[str, Any] | None) -> dict[str, Any] | No
 class MemoryReading:
     """What a phase measured: GPU sampler fields, the neural allocator's peaks, host peak, and
     ``scope``, the caller's statement of what the phase covered (resident inputs, models,
-    whether warm-up is inside the interval), so that different boundaries stay distinguishable."""
+    whether warm-up is inside the interval), so that different boundaries stay distinguishable;
+    ``problems`` name each component that could not be measured (its value is then absent)."""
 
     scope: str
     gpu: Mapping[str, Any] | None = None
     allocator: Mapping[str, int] | None = None
     host: HostPeak | None = None
+    problems: tuple[str, ...] = ()
 
 
 def allocator_peaks(torch: Any, device: Any) -> dict[str, int] | None:
@@ -566,6 +569,7 @@ def _record(
         # the authoritative entries come last: nothing above can change them
         "procedure_version": PROCEDURE_VERSION,
         "session": dict(session),
+        "memory_problems": [] if memory is None else list(memory.problems),
     }
     if gpu_fields is not None:
         full["gpu_memory"] = gpu_fields
@@ -589,14 +593,27 @@ def fit_record(
     retained_length: int,
     startup_seconds: float | None,
     preprocessing_seconds: float | None,
+    persistence_seconds: float | None = None,
+    startup_scope: str | None = None,
+    startup_status: str | None = None,
     memory: MemoryReading | None = None,
 ) -> dict[str, Any]:
-    """The selected trial's own elapsed fit time with its lengths (DR-015 §9, Fit)."""
+    """The selected trial's own elapsed fit time with its lengths (DR-015 §9, Fit).
+
+    ``startup_seconds`` is the shared start-up of the library (once per process, with its
+    ``startup_scope``); ``preprocessing_seconds`` is the shared preprocessing artifact's fit
+    (none for the tree-based models); ``persistence_seconds`` is the saving of the model, its
+    manifest and its model-run record. None of them is inside ``seconds``. ``startup_status`` is
+    ``measured``, or ``not_measured`` when the start-up could not be measured, in which case the
+    fit's time may include the library and device initialisation (null: no shared start-up)."""
     settings = {
         "completed_length": completed_length,
         "retained_length": retained_length,
         "startup_seconds": startup_seconds,
+        "startup_scope": startup_scope,
+        "startup_status": startup_status,
         "preprocessing_seconds": preprocessing_seconds,
+        "persistence_seconds": persistence_seconds,
     }
     return _record(identity, who, "fit", session, memory, {"seconds": seconds}, settings)
 
@@ -648,7 +665,11 @@ def scoring_record(
         "seconds": seconds,
         "rows_per_second": rows / seconds if seconds > 0 else 0.0,
     }
-    settings = {"pass_seconds": list(measurement.pass_seconds)}
+    settings = {
+        "pass_seconds": list(measurement.pass_seconds),
+        "pass_min_seconds": min(measurement.pass_seconds),
+        "pass_max_seconds": max(measurement.pass_seconds),
+    }
     return _record(identity, who, "scoring", session, memory, details, settings)
 
 

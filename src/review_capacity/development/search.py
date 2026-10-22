@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from review_capacity.development.cost_timing import timed_on
+from review_capacity.development.memory import trials_maximum
 from review_capacity.development.trial import (
     SearchContext,
     TrialOutcome,
@@ -40,6 +41,11 @@ from review_capacity.training.sampler import CandidateList
 from review_capacity.training.timing import Timed, fit_record, search_record
 
 logger = logging.getLogger(__name__)
+
+SEARCH_MEMORY_SCOPE = (
+    "the maximum over the trials' fit phases (model saving and selection excluded); not a "
+    "whole-search peak"
+)
 
 
 @dataclass(frozen=True)
@@ -82,17 +88,22 @@ def _write_search_timing(
     configuration: Configuration,
     *,
     seconds: float,
-    completed: int,
+    outcomes: Sequence[TrialOutcome],
     interrupted: bool,
 ) -> None:
+    memory = None
+    if context.memory is not None:
+        trials = [(t.trial, t.fit_memory) for t in outcomes]
+        memory = trials_maximum(trials, SEARCH_MEMORY_SCOPE).reading()
     record = search_record(
         context.identity,
         _timed(context, configuration, None),
         context.session,
         seconds=seconds,
-        trials_completed=completed,
+        trials_completed=len(outcomes),
         trials_declared=context.declaration.trials,
         interrupted=interrupted,
+        memory=memory,
     )
     context.run.write_record(record, configuration.name, "search")
 
@@ -166,7 +177,7 @@ def search_configuration(
                     context,
                     configuration,
                     seconds=time.perf_counter() - started,
-                    completed=len(outcomes),
+                    outcomes=outcomes,
                     interrupted=True,
                 )
             raise
@@ -177,8 +188,9 @@ def search_configuration(
         )
         seconds = time.perf_counter() - started  # trial set-up to recording and selection (§9)
         _write_search_timing(
-            context, configuration, seconds=seconds, completed=len(outcomes), interrupted=False
+            context, configuration, seconds=seconds, outcomes=outcomes, interrupted=False
         )
+        startup = context.startups.get(configuration.model.name)
         context.run.write_record(
             fit_record(
                 context.identity,
@@ -187,8 +199,12 @@ def search_configuration(
                 seconds=selected.fit_seconds,
                 completed_length=selected.stopped_at,
                 retained_length=selected.best_checkpoint,
-                startup_seconds=None,
-                preprocessing_seconds=None,
+                startup_seconds=None if startup is None else startup.seconds,
+                preprocessing_seconds=None,  # the tree-based models have no shared artifact
+                persistence_seconds=selected.persistence_seconds,
+                startup_scope=None if startup is None else startup.scope,
+                startup_status=None if startup is None else startup.status,
+                memory=None if selected.fit_memory is None else selected.fit_memory.reading(),
             ),
             name,
             "fit",

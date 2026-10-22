@@ -712,6 +712,7 @@ def test_search_timing_names_no_single_model() -> None:
         "settings": {
             "procedure_version": 1,
             "session": {"load_average_1m": 0.25},
+            "memory_problems": [],
             "trials_completed": 10,
             "trials_declared": 10,
             "interrupted": False,
@@ -725,7 +726,7 @@ def test_search_timing_names_no_single_model() -> None:
         assert_rejected(search | {"settings": broken}, f"timing.settings.{missing}: required")
 
 
-FIT = {
+FIT: dict[str, Any] = {
     "measurement": "fit",
     "boundary": None,
     "latency_ms": None,
@@ -739,10 +740,14 @@ FIT = {
     "settings": {
         "procedure_version": 1,
         "session": {"load_average_1m": 0.25},
+        "memory_problems": [],
         "completed_length": 170,
         "retained_length": 120,
         "startup_seconds": 1.5,
+        "startup_scope": "library import, once per process",
+        "startup_status": "measured",
         "preprocessing_seconds": None,
+        "persistence_seconds": 0.4,
         "host_memory_method": "clear_refs",
     },
 }
@@ -786,7 +791,10 @@ def test_scoring_runs_on_the_prediction_device(configuration: str, device: str) 
     base["settings"] = {
         "procedure_version": 1,
         "session": {"load_average_1m": 0.25},
+        "memory_problems": [],
         "pass_seconds": [2.5, 2.0, 1.9],
+        "pass_min_seconds": 1.9,
+        "pass_max_seconds": 2.5,
         "host_memory_method": "clear_refs",
     }
     if configuration.startswith("FTT"):
@@ -804,7 +812,10 @@ def test_scoring_seconds_are_the_median_of_the_passes() -> None:
     base["settings"] = {
         "procedure_version": 1,
         "session": {"load_average_1m": 0.25},
+        "memory_problems": [],
         "pass_seconds": [2.5, 2.0, 1.9],
+        "pass_min_seconds": 1.9,
+        "pass_max_seconds": 2.5,
         "host_memory_method": "clear_refs",
     }
     validate(base)
@@ -1092,7 +1103,10 @@ def scoring_example() -> dict[str, Any]:
     base["settings"] = {
         "procedure_version": 1,
         "session": {"load_average_1m": 0.25},
+        "memory_problems": [],
         "pass_seconds": [2.5, 2.0, 1.9],
+        "pass_min_seconds": 1.9,
+        "pass_max_seconds": 2.5,
         "host_memory_method": "clear_refs",
     }
     return base
@@ -1121,6 +1135,7 @@ def search_example() -> dict[str, Any]:
     search["settings"] = {
         "procedure_version": 1,
         "session": {"load_average_1m": 0.25},
+        "memory_problems": [],
         "trials_completed": 10,
         "trials_declared": 10,
         "interrupted": False,
@@ -1192,3 +1207,66 @@ def test_sampled_host_memory_names_its_interval() -> None:
     sampled = {**timing["settings"], "host_memory_method": "sampled"}
     assert_rejected(timing | {"settings": sampled}, "host_sample_interval_ms: required")
     validate(timing | {"settings": {**sampled, "host_sample_interval_ms": 100}})
+
+
+def test_timing_names_the_memory_components_it_could_not_measure() -> None:
+    timing = example("timing")
+    validate(timing)
+    broken = {k: v for k, v in timing["settings"].items() if k != "memory_problems"}
+    assert_rejected(timing | {"settings": broken}, "timing.settings.memory_problems: required")
+    assert_rejected(
+        timing | {"settings": {**timing["settings"], "memory_problems": ["", 3]}},
+        "memory_problems: must be a list",
+    )
+    listed = {**timing["settings"], "memory_problems": ["GPU memory not measured: stalled"]}
+    validate(timing | {"settings": listed})
+
+
+def _scoring_timing() -> dict[str, Any]:
+    base = example("timing") | {"measurement": "scoring", "boundary": "end_to_end"}
+    base |= {"partition": "V2", "batch_rows": 4096, "latency_ms": None, "rows": V2_ROWS}
+    base |= {"seconds": 2.0, "rows_per_second": V2_ROWS / 2.0, "warmup": 3, "repetitions": 3}
+    base |= {"rows_sha256": None, "row_selection": None}
+    base["settings"] = {
+        "procedure_version": 1,
+        "session": {"load_average_1m": 0.25},
+        "memory_problems": [],
+        "pass_seconds": [2.5, 2.0, 1.9],
+        "pass_min_seconds": 1.9,
+        "pass_max_seconds": 2.5,
+        "host_memory_method": "clear_refs",
+    }
+    return base
+
+
+def test_a_scoring_timing_states_the_range_of_its_passes() -> None:
+    scoring = _scoring_timing()
+    validate(scoring)
+    for name in ("pass_min_seconds", "pass_max_seconds"):
+        broken = {k: v for k, v in scoring["settings"].items() if k != name}
+        assert_rejected(scoring | {"settings": broken}, f"timing.settings.{name}: required")
+    wrong = {**scoring["settings"], "pass_min_seconds": 1.0}
+    assert_rejected(scoring | {"settings": wrong}, "pass_min_seconds: must be the min")
+
+
+def test_a_boolean_is_not_a_pass_range_in_seconds() -> None:
+    scoring = _scoring_timing()
+    scoring["settings"] = {
+        **scoring["settings"],
+        "pass_seconds": [1.0, 2.0, 3.0],
+        "pass_min_seconds": True,
+    }
+    assert_rejected(scoring | {"seconds": 2.0}, "pass_min_seconds: must be the min")
+
+
+def test_the_startup_status_is_known_and_consistent() -> None:
+    fit = example("timing") | FIT | {"device": "gpu"}
+    validate(fit)
+    settings = fit["settings"]
+    for bad in ("later", 1):
+        record = fit | {"settings": {**settings, "startup_status": bad}}
+        assert_rejected(record, "startup_status: must be")
+    measured = {**settings, "startup_seconds": None, "startup_status": "measured"}
+    assert_rejected(fit | {"settings": measured}, "required when measured")
+    unmeasured = {**settings, "startup_seconds": None, "startup_status": "not_measured"}
+    validate(fit | {"settings": unmeasured})
