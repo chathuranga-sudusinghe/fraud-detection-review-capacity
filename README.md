@@ -118,6 +118,22 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
    Every command logs its progress with timestamps to the terminal; `--log-file PATH` (before the command name) also keeps the log in a file, as an evidence-producing run should. `review-capacity --help` lists the options and exit codes.
 
+6. Plan the search, then run the tree-based development search. Both are consequential steps governed by the [execution rules](AGENTS.md#experiment-execution-responsibility); the run starts only after its scope is approved. The plan reads no data and fits no model. Its `cost_prediction.json` is identified by its SHA-256, which the development run takes as the approval of the predicted cost ([DR-015](docs/decisions/DR-015-common-training-rules.md) §7):
+
+   ```bash
+   .venv/bin/review-capacity plan-search
+   ```
+
+   ```bash
+   sha256sum outputs/search_plan/<UTC start time>/cost_prediction.json
+   ```
+
+   ```bash
+   .venv/bin/review-capacity run-development --plan outputs/search_plan/<UTC start time> --approved-cost <SHA-256 of cost_prediction.json> --confirm-session
+   ```
+
+   `run-development` runs the declared search of each tree-based configuration (`--configurations` chooses a subset), selects on V1, scores V1 and V2, evaluates R3 and the ranking, and times scoring, writing dated, ignored records, `summary.md` and `run.log` to `outputs/development/<UTC start time>/` (`--output` must name a new directory inside `outputs/`). It refuses to start if the plan differs from the approved cost or from the training declaration. `--confirm-session` states that the timing session had alternating-current power, a fixed power profile and no competing workload; without it the session is recorded as not confirmed and the timings are not valid for the computational-cost outcome ([DR-015](docs/decisions/DR-015-common-training-rules.md) §9). `review-capacity --help` lists every option.
+
 **Continuous integration:** code-affecting pull requests to `main` receive the checks defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml); CI never trains or scores a model on research data, reads research data or writes research output; unit tests fit only small models on synthetic data.
 
 ## Repository map

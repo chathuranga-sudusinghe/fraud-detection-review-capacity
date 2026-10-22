@@ -41,6 +41,22 @@ Commands:
                    outputs/search_plan/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Reads no data and
                    fits no model; whether the predicted cost is feasible is the owner's decision
 
+    run-development
+                   the development run of the tree-based configurations (LightGBM and CatBoost,
+                   unweighted and balanced; --configurations chooses a subset): the declared
+                   search for each configuration (DR-015 §1), selection on V1, scoring of V1 and
+                   V2, R3 and ranking outcomes, and the computational-cost timings; records, a
+                   generated summary.md and its log, always run.log (--log-file is refused), in a
+                   new directory inside outputs/: --output, or by default
+                   outputs/development/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Starts only from
+                   the search plan --plan whose cost_prediction.json has the SHA-256 given in
+                   --approved-cost (the owner's approval of the predicted cost). --confirm-session
+                   states that the timing session had AC power, a fixed power profile and no
+                   competing workload; without it the session is recorded as not confirmed and
+                   the timings are not valid for the computational-cost outcome. Reads the
+                   verified processed development files only; the Test period is never read.
+                   Consequential: the owner runs it after approving its scope
+
     summarise-run  regenerate summary.md of a development run directory from its records alone
                    (also after an interrupted run); reads no data and fits no model
 
@@ -71,6 +87,7 @@ import logging
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from review_capacity.config import load_dataset_spec, load_feature_spec
 from review_capacity.data.catalog import read_catalog
@@ -91,6 +108,7 @@ from review_capacity.errors import (
 from review_capacity.files import write_atomically, write_json
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import configure_logging
+from review_capacity.models.registry import TREE_CONFIGURATIONS
 from review_capacity.paths import ProjectPaths
 from review_capacity.probe.records import (
     ACCEPTANCE_LOG_NAME,
@@ -100,6 +118,9 @@ from review_capacity.probe.records import (
     check_output,
 )
 from review_capacity.provenance import code_provenance, write_record
+
+if TYPE_CHECKING:
+    from review_capacity.development.runner import DevelopmentOptions
 
 logger = logging.getLogger(__name__)
 
@@ -329,6 +350,49 @@ def _plan_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def _development_options(args: argparse.Namespace) -> DevelopmentOptions:
+    """The options of ``run-development``; the start time is fixed on ``args`` at the first call,
+    so that the log file, the records and the directory agree."""
+    from review_capacity.development.run_output import run_id
+    from review_capacity.development.runner import DevelopmentOptions
+
+    if getattr(args, "started", None) is None:
+        args.started = run_id()
+    return DevelopmentOptions(
+        plan=args.plan.resolve(),
+        approved_cost_sha256=args.approved_cost,
+        configurations=tuple(args.configurations or TREE_CONFIGURATIONS),
+        output=args.output,
+        confirm_session=args.confirm_session,
+        started=args.started,
+    )
+
+
+def _development_directory(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The new run directory of ``run-development``, shown to be free for a new run."""
+    from review_capacity.development.run_output import check_new_directory
+    from review_capacity.development.runner import run_directory_for
+
+    options = _development_options(args)
+    return check_new_directory(run_directory_for(paths, options, args.started), paths.root)
+
+
+def _run_development(args: argparse.Namespace) -> int:
+    from review_capacity.development.runner import prepare_development, run_development
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    if not args.confirm_session:
+        logger.warning(
+            "The timing session is not confirmed: it is recorded as such, and the timings are "
+            "not valid for the computational-cost outcome (DR-015 §9)"
+        )
+    setup = prepare_development(paths, _development_options(args))
+    directory = run_development(setup)
+    logger.info("Development run written to %s", directory)
+    return 0
+
+
 def _summarise_run(args: argparse.Namespace) -> int:
     from review_capacity.development.records import DevelopmentPartitions
     from review_capacity.development.rendering import write_summary
@@ -369,6 +433,15 @@ def _log_file(args: argparse.Namespace) -> Path | None:
         output = _plan_output(args, ProjectPaths.discover(args.root))
         plan.check_output(output)
         return output / plan.LOG_NAME
+    if args.command == "run-development":
+        from review_capacity.development.run_output import LOG_NAME as RUN_LOG_NAME
+
+        if args.log_file is not None:
+            raise SpecificationError(
+                f"run-development writes its log to {RUN_LOG_NAME} in its output directory; "
+                "omit --log-file"
+            )
+        return _development_directory(args, ProjectPaths.discover(args.root)) / RUN_LOG_NAME
     if args.command == "probe-catboost-objective":
         if args.log_file is not None:
             raise SpecificationError(
@@ -476,6 +549,43 @@ def build_parser() -> argparse.ArgumentParser:
         help="new directory for the plan (default: outputs/search_plan/<UTC time>)",
     )
     plan_search.set_defaults(handler=_plan_search)
+    development = commands.add_parser(
+        "run-development",
+        help="the tree-based development run: search, selection, scoring, evaluation and timing",
+    )
+    development.add_argument("--root", type=Path, default=None, help="project root directory")
+    development.add_argument(
+        "--plan",
+        type=Path,
+        required=True,
+        help="the search plan directory written by plan-search",
+    )
+    development.add_argument(
+        "--approved-cost",
+        required=True,
+        metavar="SHA256",
+        help="SHA-256 of the plan's cost_prediction.json that the owner approved",
+    )
+    development.add_argument(
+        "--configurations",
+        nargs="+",
+        choices=TREE_CONFIGURATIONS,
+        default=None,
+        help="the configurations to run (default: all four tree-based configurations)",
+    )
+    development.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="new directory for this run (default: outputs/development/<UTC time>)",
+    )
+    development.add_argument(
+        "--confirm-session",
+        action="store_true",
+        help="state that the timing session had AC power, a fixed power profile and no "
+        "competing workload (DR-015 §9)",
+    )
+    development.set_defaults(handler=_run_development)
     summarise = commands.add_parser(
         "summarise-run",
         help="regenerate summary.md of a development run directory from its records",
@@ -510,7 +620,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     level = logging.DEBUG if args.verbose else logging.WARNING if args.quiet else logging.INFO
     handler: Callable[[argparse.Namespace], int] = args.handler
-    own_log = args.command in ("probe-gpu", "probe-catboost-objective", "plan-search")
+    own_log = args.command in (
+        "probe-gpu",
+        "probe-catboost-objective",
+        "plan-search",
+        "run-development",
+    )
     try:
         configure_logging(level, terminal_tracebacks=args.debug)  # until the log file is known
         configure_logging(

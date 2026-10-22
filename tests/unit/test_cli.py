@@ -279,3 +279,59 @@ def test_summarise_run_regenerates_the_summary_from_the_records(tmp_path: Path) 
     summary.write_text("stale\n", encoding="utf-8")
     assert main(["summarise-run", str(run.path), "--root", str(REPO_PATHS.root)]) == 0
     assert summary.read_text(encoding="utf-8") == original
+
+
+def test_run_development_options() -> None:
+    args = build_parser().parse_args(
+        ["run-development", "--plan", "outputs/search_plan/x", "--approved-cost", "a" * 64]
+    )
+    assert args.command == "run-development"
+    assert args.plan == Path("outputs/search_plan/x")
+    assert args.approved_cost == "a" * 64
+    assert args.configurations is None  # the four tree-based configurations
+    assert args.confirm_session is False
+    assert args.output is None
+    chosen = build_parser().parse_args(
+        [
+            "run-development",
+            "--plan",
+            "p",
+            "--approved-cost",
+            "a" * 64,
+            "--configurations",
+            "LGB-u",
+            "Cat-b",
+            "--confirm-session",
+        ]
+    )
+    assert chosen.configurations == ["LGB-u", "Cat-b"]
+    assert chosen.confirm_session is True
+
+
+def test_run_development_needs_the_plan_and_the_cost_approval_and_tree_configurations() -> None:
+    parser = build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["run-development", "--approved-cost", "a" * 64])
+    with pytest.raises(SystemExit):
+        parser.parse_args(["run-development", "--plan", "p"])
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            ["run-development", "--plan", "p", "--approved-cost", "a", "--configurations", "RES-u"]
+        )
+
+
+def test_run_development_refuses_a_separate_log_file_and_a_directory_outside_the_project(
+    tmp_path: Path,
+) -> None:
+    arguments = [
+        "run-development",
+        "--root",
+        str(REPO_PATHS.root),
+        "--plan",
+        str(tmp_path),
+        "--approved-cost",
+        "a" * 64,
+    ]
+    assert main(["--log-file", str(tmp_path / "x.log"), *arguments]) == 2
+    assert main([*arguments, "--output", str(tmp_path / "elsewhere")]) == 2  # inside the project
+    assert not (tmp_path / "elsewhere").exists()

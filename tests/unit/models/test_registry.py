@@ -7,6 +7,7 @@ import pytest
 from review_capacity.models.registry import (
     CONFIGURATIONS,
     MODELS,
+    TREE_CONFIGURATIONS,
     Family,
     Weighting,
     configuration,
@@ -29,6 +30,10 @@ def test_eight_configurations_in_the_fixed_order() -> None:
 def test_two_models_per_family() -> None:
     assert [m.name for m in MODELS if m.family is Family.TREE] == ["lightgbm", "catboost"]
     assert [m.name for m in MODELS if m.family is Family.NEURAL] == ["resnet", "ft_transformer"]
+
+
+def test_the_tree_configurations_are_the_staged_first_path_in_dr011_order() -> None:
+    assert TREE_CONFIGURATIONS == ("LGB-u", "Cat-u", "LGB-b", "Cat-b")
 
 
 def test_configuration_lookup() -> None:
