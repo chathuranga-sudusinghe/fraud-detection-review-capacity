@@ -168,7 +168,7 @@ def search_context(root: Path, *, write_run_record: bool = True) -> SearchContex
         environment={"python": "test"},
         code={"git_commit": None},
         lightgbm_build=LightGBMIdentity("4.7.0", Path("lib_lightgbm.so"), "c" * 64),
-        session=session_conditions(True, telemetry=lambda: {"available": False}),
+        session=session_conditions(telemetry=lambda: {"available": False}),
     )
 
 

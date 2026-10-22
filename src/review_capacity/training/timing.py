@@ -16,7 +16,7 @@ callables to time and the facts of the run, and receives measurements and ``timi
   counters; host: the process high-water mark (``VmHWM``) reset through
   ``/proc/self/clear_refs`` where the kernel supports it (``host_reset_supported`` checks that with
   a synthetic allocation), otherwise a sampler of the resident size. A method is always named.
-* **Session.** The operator's confirmation of the session conditions with the load average, the
+* **Session.** The conditions of the session, recorded as context: the load average, the
   affinity, the kernel and memory limits, and GPU telemetry where the system exposes it.
 
 The values (passes, warm-up counts, rounds, the sample size) come from the ``timing`` block of
@@ -68,7 +68,6 @@ SAMPLER_JOIN_SECONDS = 10.0
 RESERVED_SETTINGS = frozenset(
     {
         "procedure_version",
-        "session_confirmed",
         "session",
         "gpu_memory",
         "allocator_peaks",
@@ -470,19 +469,17 @@ def gpu_telemetry(run: Callable[..., Any] = subprocess.run) -> dict[str, Any]:
 
 
 def session_conditions(
-    confirmed: bool,
     *,
     loadavg: Callable[[], tuple[float, float, float]] = os.getloadavg,
     affinity: Callable[[int], set[int]] = os.sched_getaffinity,
     meminfo: Callable[[], str] = lambda: Path("/proc/meminfo").read_text(encoding="utf-8"),
     telemetry: Callable[[], dict[str, Any]] = gpu_telemetry,
 ) -> dict[str, Any]:
-    """The conditions of a timing session (DR-015 §9): the operator's confirmation of AC power, a
-    fixed power profile and no competing workload, with what the system reports. The load average
-    is context only; WSL memory and swap are the limits the guest sees."""
+    """The conditions of a timing session (DR-015 §9), recorded as context with what the system
+    reports; no condition is required. The load average is context only; WSL memory and swap are
+    the limits the guest sees."""
     memory = meminfo()
     return {
-        "confirmed": confirmed,
         "load_average_1m": loadavg()[0],
         "visible_cpus": os.cpu_count(),
         "allowed_cpus": sorted(affinity(0)),
@@ -568,7 +565,6 @@ def _record(
         **settings,
         # the authoritative entries come last: nothing above can change them
         "procedure_version": PROCEDURE_VERSION,
-        "session_confirmed": bool(session["confirmed"]),
         "session": dict(session),
     }
     if gpu_fields is not None:

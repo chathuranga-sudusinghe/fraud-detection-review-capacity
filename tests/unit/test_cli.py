@@ -289,7 +289,6 @@ def test_run_development_options() -> None:
     assert args.plan == Path("outputs/search_plan/x")
     assert args.approved_cost == "a" * 64
     assert args.configurations is None  # the four tree-based configurations
-    assert args.confirm_session is False
     assert args.output is None
     chosen = build_parser().parse_args(
         [
@@ -301,11 +300,9 @@ def test_run_development_options() -> None:
             "--configurations",
             "LGB-u",
             "Cat-b",
-            "--confirm-session",
         ]
     )
     assert chosen.configurations == ["LGB-u", "Cat-b"]
-    assert chosen.confirm_session is True
 
 
 def test_run_development_needs_the_plan_and_the_cost_approval_and_tree_configurations() -> None:

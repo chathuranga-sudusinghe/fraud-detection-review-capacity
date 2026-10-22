@@ -22,9 +22,8 @@ record itself fails, the run has no identity to close with: the error is raised 
 keeps it. The setup holds everything the run uses, so a test can run the whole pipeline on
 synthetic inputs.
 
-The conditions of the timing session are recorded with every timing; a session that is not
-confirmed is recorded as such, and its timings are not valid for the computational-cost outcome
-(DR-015 §9). Timings are descriptive and never enter selection.
+The conditions of the timing session are recorded with every timing as context (DR-015 §9).
+Timings are descriptive and never enter selection.
 """
 
 from __future__ import annotations
@@ -109,7 +108,6 @@ class DevelopmentOptions:
     approved_cost_sha256: str
     configurations: tuple[str, ...] = TREE_CONFIGURATIONS
     output: Path | None = None
-    confirm_session: bool = False
     started: str | None = None
 
 
@@ -217,7 +215,7 @@ def prepare_development(
             (JOINED, TRAIN, V1, V2),
             [c.name for c in chosen],
         )
-        session = session_conditions(options.confirm_session)
+        session = session_conditions()
         run = RunDirectory.create(
             paths.root, partitions, RUN_TYPE, started, directory, log_opened=True
         )

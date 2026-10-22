@@ -1400,13 +1400,7 @@ def _timing_settings(record: Mapping[str, Any]) -> list[str]:
 
     value = settings.get
     need("procedure_version", value("procedure_version") == TIMING_PROCEDURE_VERSION, "1")
-    need("session_confirmed", isinstance(value("session_confirmed"), bool), "true or false")
-    session = value("session")
-    need(
-        "session",
-        isinstance(session, dict) and session.get("confirmed") is value("session_confirmed"),
-        "the session conditions, whose confirmed flag equals session_confirmed",
-    )
+    need("session", isinstance(value("session"), dict), "the session conditions (context)")
     if measurement == "fit":
         completed, retained = value("completed_length"), value("retained_length")
         need("completed_length", _is_count(completed, 1), "a positive integer")
@@ -1568,7 +1562,7 @@ def _timing_rules(record: Mapping[str, Any]) -> list[str]:
 
 TIMING = _contract(
     "timing",
-    2,
+    3,
     "One computational-cost measurement on the study device (protocol Outcomes, computational "
     "cost; DR-015 §9).",
     (
