@@ -510,7 +510,12 @@ def test_dropout_replay_counts_the_training_replacements(monkeypatch: pytest.Mon
         **SMALL["NEURAL_SHARED"]["resnet"],
         **SMALL["NEURAL_VARIANTS"]["resnet"]["small"],
     }
-    model.fit(data.train[Weighting.UNWEIGHTED], data.valid[Weighting.UNWEIGHTED], hyperparameters)
+    model.fit(
+        data.train[Weighting.UNWEIGHTED],
+        data.valid[Weighting.UNWEIGHTED],
+        hyperparameters,
+        objective=data.objective,
+    )
     epochs = model.parameters["resolved"]["schedule"]["epochs_run"]
     train = data.train[Weighting.UNWEIGHTED]
     replayed = runner.dropout_replacements(train, layout, 64, 42, epochs)

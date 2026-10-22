@@ -124,6 +124,7 @@ class ResNetModel(NeuralModel):
         "d_embedding",
     )
     MIN_BATCH_ROWS: ClassVar[int] = 2  # batch normalisation cannot normalise a single row
+    ACCUMULATES: ClassVar[bool] = False  # its batch normalisation needs the whole effective batch
 
     def check_architecture(self, values: Mapping[str, Any]) -> dict[str, Any]:
         has_categories = bool(self.layout.categorical)

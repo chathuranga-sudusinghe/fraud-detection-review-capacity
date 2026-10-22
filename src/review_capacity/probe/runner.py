@@ -152,7 +152,6 @@ NEURAL_TRAINING: dict[str, Any] = {
     "weight_decay": 1e-5,
     "max_epochs": 3,
     "patience": 1,
-    "metric": "binary_logloss",
 }
 NEURAL_SHARED: dict[str, dict[str, Any]] = {
     "resnet": {
@@ -760,7 +759,9 @@ def _fit_neural(
     probe.checkpoint(f"fitting {subject}")
     probe.reset_peak()
     start = time.perf_counter()
-    model.fit(data.train[weighting], data.valid[weighting], hyperparameters)
+    model.fit(
+        data.train[weighting], data.valid[weighting], hyperparameters, objective=data.objective
+    )
     probe.synchronise()
     record = _fit_record(model, subject, probe.device, time.perf_counter() - start)
     probe.fits.append({**record, **probe.peak_mib()})

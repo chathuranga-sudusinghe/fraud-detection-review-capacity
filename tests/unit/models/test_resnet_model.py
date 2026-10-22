@@ -13,7 +13,6 @@ from typing import Any
 import numpy as np
 import pytest
 import torch
-from sklearn.metrics import average_precision_score
 
 from review_capacity.config import ModelSettings, load_model_settings
 from review_capacity.errors import (
@@ -26,6 +25,7 @@ from review_capacity.models.base import class_weights, sample_weights
 from review_capacity.models.neural_training import (
     MANIFEST_FILE,
     STATE_FILE,
+    BatchPlan,
     InputLayout,
     NeuralData,
     predict_logits,
@@ -45,6 +45,7 @@ from support.neural import (
     neural_data,
     neural_inputs,
     preserved_torch_state,
+    v1_objective,
 )
 from support.synthetic import REPO_PATHS
 
@@ -74,7 +75,7 @@ def train() -> NeuralData:
 
 @pytest.fixture(scope="module")
 def valid(train: NeuralData) -> NeuralData:
-    return _balanced(neural_data(320, seed=2), train)
+    return _balanced(neural_data(320, seed=2, with_rows=True), train)
 
 
 def _model(settings: ModelSettings, seed: int = 42, name: str = "RES-b") -> ResNetModel:
@@ -85,6 +86,8 @@ def _fit(
     settings: ModelSettings, train: NeuralData, valid: NeuralData | None, **kwargs: Any
 ) -> ResNetModel:
     model = _model(settings, kwargs.pop("seed", 42))
+    if valid is not None:
+        kwargs.setdefault("objective", v1_objective(valid))
     model.fit(train, valid, kwargs.pop("hyperparameters", HYPERPARAMETERS), **kwargs)
     return model
 
@@ -243,15 +246,38 @@ def test_embedding_size_follows_the_categorical_inputs(settings: ModelSettings) 
 
 def test_a_single_row_last_batch_is_rejected(settings: ModelSettings, valid: NeuralData) -> None:
     data = neural_data(129, seed=5)  # 64 + 64 + 1 rows
-    with pytest.raises(SpecificationError, match="last batch of 1 rows"):
-        _model(settings).fit(data, valid, HYPERPARAMETERS)
+    with pytest.raises(SpecificationError, match="last micro-batch of 1 rows"):
+        _model(settings).fit(data, valid, HYPERPARAMETERS, objective=v1_objective(valid))
 
 
-def test_v1_metric_needs_both_classes(settings: ModelSettings, train: NeuralData) -> None:
-    single = neural_data(100, seed=6)
-    single = replace(single, labels=np.zeros(100, np.int8), weights=np.ones(100))
-    with pytest.raises(DataValidationError, match="both classes"):
-        _model(settings).fit(train, single, HYPERPARAMETERS)
+def test_early_stopping_needs_the_v1_objective_and_its_rows(
+    settings: ModelSettings, train: NeuralData, valid: NeuralData
+) -> None:
+    with pytest.raises(SpecificationError, match="needs the V1 objective"):
+        _model(settings).fit(train, valid, HYPERPARAMETERS)
+    other = neural_data(320, seed=2, with_rows=True)
+    shifted = replace(other, ids=other.ids + 1 if other.ids is not None else None)
+    with pytest.raises(DataValidationError, match="different V1 rows"):
+        _model(settings).fit(train, shifted, HYPERPARAMETERS, objective=v1_objective(valid))
+    no_rows = replace(valid, ids=None, times=None)
+    with pytest.raises(DataValidationError, match="different V1 rows"):
+        _model(settings).fit(train, no_rows, HYPERPARAMETERS, objective=v1_objective(valid))
+
+
+def test_the_resnet_runs_each_effective_batch_whole(
+    settings: ModelSettings, train: NeuralData
+) -> None:
+    """Batch normalisation needs the statistics of the whole batch: no accumulation."""
+    with pytest.raises(SpecificationError, match="cannot accumulate"):
+        _model(settings).fit(train, None, HYPERPARAMETERS, iterations=1, plan=BatchPlan(64, 32))
+    with pytest.raises(SpecificationError, match="not the batch_size"):
+        _model(settings).fit(train, None, HYPERPARAMETERS, iterations=1, plan=BatchPlan(32, 32))
+    model = _model(settings)
+    model.fit(train, None, HYPERPARAMETERS, iterations=1, plan=BatchPlan(64, 64))
+    batching = model.parameters["resolved"]["batching"]
+    assert (batching["effective_batch"], batching["micro_batch"]) == (64, 64)
+    assert batching["evaluation_batch"] == HYPERPARAMETERS["eval_batch_size"]
+    assert batching["final_batch_rows"] == 64  # 640 rows in batches of 64
 
 
 def test_model_and_device_are_checked(
@@ -263,7 +289,7 @@ def test_model_and_device_are_checked(
     model = ResNetModel(configuration("RES-u"), 42, settings=settings, layout=LAYOUT, device="gpu")
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     with pytest.raises(EnvironmentMismatchError, match="CUDA"):
-        model.fit(train, valid, HYPERPARAMETERS)
+        model.fit(train, valid, HYPERPARAMETERS, objective=v1_objective(valid))
     with pytest.raises(ModelError, match="not fitted"):
         model.predict(valid.inputs)
 
@@ -274,21 +300,22 @@ def test_model_and_device_are_checked(
 def test_early_stopping_keeps_the_best_v1_epoch(fitted: ResNetModel, valid: NeuralData) -> None:
     resolved = fitted.parameters["resolved"]
     schedule, history = resolved["schedule"], resolved["history"]
-    scores = [epoch["v1_score"] for epoch in history]
+    numerators = [epoch["v1_numerator"] for epoch in history]
     assert schedule["mode"] == "early_stopping"
     assert schedule["epochs_run"] == len(history)
-    best = scores.index(max(scores)) + 1  # the earliest best epoch
+    best = numerators.index(max(numerators)) + 1  # the earliest best epoch
     assert fitted.fitted_iterations == schedule["epochs_kept"] == best
     if schedule["stop"] == "patience":
         assert len(history) == best + TRAINING["patience"] + 1
     else:
         assert schedule["stop"] == "max_epochs"
         assert len(history) == TRAINING["max_epochs"]
-    # The restored network reproduces the best epoch's V1 score exactly.
-    restored = average_precision_score(
-        valid.labels, fitted.predict(valid.inputs), sample_weight=valid.weights
-    )
-    assert restored == schedule["best_v1_score"] == max(scores)
+    # The restored network reproduces the best epoch's V1 objective exactly.
+    objective = v1_objective(valid)
+    restored = objective.queue.recall(fitted.predict(valid.inputs), objective.labels, objective.k)
+    assert restored.numerator == schedule["best_numerator"] == max(numerators)
+    assert schedule["best_objective"] == restored.value
+    assert schedule["objective"] == objective.identity
 
 
 def test_restored_state_is_exactly_the_best_epoch(
@@ -311,12 +338,12 @@ def test_restored_state_is_exactly_the_best_epoch(
 
 
 def test_the_network_learns_the_signal(fitted: ResNetModel, valid: NeuralData) -> None:
-    """Better than a constant score, whose weighted V1 average precision is the weighted fraud
-    rate of V1."""
-    constant = np.full(valid.inputs.rows, 0.5)
-    baseline = average_precision_score(valid.labels, constant, sample_weight=valid.weights)
-    assert baseline == pytest.approx(np.average(valid.labels, weights=valid.weights))
-    assert fitted.parameters["resolved"]["schedule"]["best_v1_score"] > baseline + 0.15
+    """Better than a constant score, whose daily top-K review is decided by the tie order alone."""
+    objective = v1_objective(valid)
+    constant = objective.queue.recall(
+        np.full(valid.inputs.rows, 0.5), objective.labels, objective.k
+    )
+    assert fitted.parameters["resolved"]["schedule"]["best_objective"] > constant.value + 0.08
 
 
 def test_the_fit_is_float32_under_any_default_dtype(
@@ -375,7 +402,7 @@ def test_the_same_seed_repeats_exactly(
 
     def trajectory(model: ResNetModel) -> list[tuple[float, float]]:
         history = model.parameters["resolved"]["history"]
-        return [(epoch["train_loss"], epoch["v1_score"]) for epoch in history]
+        return [(epoch["train_loss"], epoch["v1_numerator"]) for epoch in history]
 
     assert trajectory(again) == trajectory(fitted)
     other = _fit(settings, train, valid, seed=7)
@@ -390,7 +417,9 @@ def test_fixed_epochs_train_exactly_that_many(settings: ModelSettings, train: Ne
     assert model.fitted_iterations == 3
     assert resolved["schedule"]["mode"] == "fixed"
     assert resolved["schedule"]["stop"] == "fixed"
-    assert [epoch["v1_score"] for epoch in resolved["history"]] == [None] * 3
+    assert [epoch["v1_numerator"] for epoch in resolved["history"]] == [None] * 3
+    assert [epoch["v1_objective"] for epoch in resolved["history"]] == [None] * 3
+    assert resolved["schedule"]["objective"] is None
     with pytest.raises(SpecificationError, match="max_epochs"):
         _model(settings).fit(train, train, hyperparameters)
 
@@ -465,7 +494,8 @@ def _edit(key: str, value: Any) -> Callable[[dict[str, Any]], None]:
     ("edit", "message"),
     [
         (_edit("format_version", 1), "format version"),  # version 1 has no train_seconds
-        (_edit("format_version", 3), "format version"),
+        (_edit("format_version", 2), "format version"),  # no batch plan, no V1 objective
+        (_edit("format_version", 4), "format version"),
         (_edit("library_version", "2.10.0"), "does not match"),
         (_edit("seed", 7), "does not match"),
         (_edit("seed", 42.0), "integer"),
@@ -485,7 +515,10 @@ def _edit(key: str, value: Any) -> Callable[[dict[str, Any]], None]:
         (_edit("epochs", 99), "inconsistent"),
         (lambda manifest: manifest["training"]["history"].pop(), "inconsistent"),
         (lambda manifest: manifest["training"]["history"].reverse(), "epochs 1, 2"),
-        (lambda manifest: manifest["training"]["history"][0].pop("v1_score"), "history entry 1"),
+        (
+            lambda manifest: manifest["training"]["history"][0].pop("v1_numerator"),
+            "history entry 1",
+        ),
         (lambda manifest: manifest["training"]["history"][1].update(train_loss=None), "entry 2"),
         (lambda manifest: manifest["training"]["history"][0].update(seconds=10**400), "entry 1"),
         (lambda manifest: manifest["training"]["history"][0].update(train_seconds=1e9), "entry 1"),
@@ -496,6 +529,22 @@ def _edit(key: str, value: Any) -> Callable[[dict[str, Any]], None]:
         (_edit_record("device", "type", "cuda"), "device type"),
         (_edit_record("schedule", "patience", 5), "does not match the saved hyperparameters"),
         (_edit_record("schedule", "stop", "fixed"), "early-stopping rule"),
+        (_edit_record("batching", "effective_batch", 128), "batch plan"),
+        (_edit_record("batching", "micro_batch", 32), "batch plan"),  # the ResNet cannot accumulate
+        (_edit_record("batching", "micro_batch", 0), "batch plan"),
+        (_edit_record("batching", "evaluation_batch", 7), "batch plan"),
+        (_edit_record("batching", "loss_reduction", "mean"), "batch plan"),
+        (_edit_record("batching", "final_batch_rows", 65), "batch plan"),
+        (lambda manifest: manifest["training"]["batching"].pop("micro_batch"), "batch plan"),
+        (lambda manifest: manifest["training"].pop("batching"), "incomplete"),
+        (
+            lambda manifest: manifest["training"]["schedule"].update(objective={"name": "x"}),
+            "V1 objective",
+        ),
+        (
+            lambda manifest: manifest["training"]["history"][0].update(v1_objective=0.123456),
+            "inconsistent with their numerators",
+        ),
     ],
 )
 def test_load_rejects_a_mismatched_manifest(
@@ -515,7 +564,8 @@ def _claim_a_later_tied_epoch(manifest: dict[str, Any]) -> None:
     """Give the epoch after the best one the best score, and claim it as the kept epoch."""
     best = manifest["epochs"]
     history = manifest["training"]["history"]
-    history[best]["v1_score"] = history[best - 1]["v1_score"]  # epoch best + 1 ties the best
+    for key in ("v1_numerator", "v1_objective"):
+        history[best][key] = history[best - 1][key]  # epoch best + 1 ties the best
     manifest["epochs"] = manifest["training"]["schedule"]["epochs_kept"] = best + 1
 
 
@@ -573,9 +623,9 @@ def _truncate(manifest: dict[str, Any]) -> None:
     ("edit", "message"),
     [
         (_truncate, "inconsistent"),
-        (_edit_record("schedule", "best_v1_score", 0.5), "inconsistent"),
+        (_edit_record("schedule", "best_numerator", 5), "inconsistent"),
         (_edit_record("schedule", "stop", "patience"), "inconsistent"),
-        (lambda manifest: manifest["training"]["history"][0].update(v1_score=0.5), "entry 1"),
+        (lambda manifest: manifest["training"]["history"][0].update(v1_numerator=5), "entry 1"),
     ],
 )
 def test_load_rejects_an_inconsistent_fixed_epoch_record(

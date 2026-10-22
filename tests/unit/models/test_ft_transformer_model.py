@@ -16,7 +16,6 @@ from typing import Any
 import numpy as np
 import pytest
 import torch
-from sklearn.metrics import average_precision_score
 from torch import Tensor
 from torch.nn.attention import SDPBackend
 
@@ -31,7 +30,12 @@ from review_capacity.models.ft_transformer_model import (
     TransformerBlock,
     attention_backend,
 )
-from review_capacity.models.neural_training import MANIFEST_FILE, NeuralData, predict_logits
+from review_capacity.models.neural_training import (
+    MANIFEST_FILE,
+    BatchPlan,
+    NeuralData,
+    predict_logits,
+)
 from review_capacity.models.registry import Weighting, configuration
 from review_capacity.models.run_record import (
     jsonable,
@@ -45,6 +49,7 @@ from support.neural import (
     neural_data,
     neural_inputs,
     preserved_torch_state,
+    v1_objective,
 )
 from support.synthetic import REPO_PATHS
 
@@ -73,7 +78,7 @@ def train() -> NeuralData:
 
 @pytest.fixture(scope="module")
 def valid(train: NeuralData) -> NeuralData:
-    return _balanced(neural_data(320, seed=2), train)
+    return _balanced(neural_data(320, seed=2, with_rows=True), train)
 
 
 def _model(settings: ModelSettings, seed: int = 42, name: str = "FTT-b") -> FTTransformerModel:
@@ -84,7 +89,7 @@ def _model(settings: ModelSettings, seed: int = 42, name: str = "FTT-b") -> FTTr
 
 def _fit(settings: ModelSettings, train: NeuralData, valid: NeuralData) -> FTTransformerModel:
     model = _model(settings)
-    model.fit(train, valid, FT_HYPERPARAMETERS)
+    model.fit(train, valid, FT_HYPERPARAMETERS, objective=v1_objective(valid))
     return model
 
 
@@ -370,10 +375,11 @@ def test_fit_applies_and_records_dr013_settings(fitted: FTTransformerModel) -> N
 
 
 def test_the_network_learns_the_signal(fitted: FTTransformerModel, valid: NeuralData) -> None:
-    baseline = average_precision_score(
-        valid.labels, np.full(valid.inputs.rows, 0.5), sample_weight=valid.weights
-    )
-    assert fitted.parameters["resolved"]["schedule"]["best_v1_score"] > baseline + 0.1
+    objective = v1_objective(valid)
+    baseline = objective.queue.recall(
+        np.full(valid.inputs.rows, 0.5), objective.labels, objective.k
+    ).value
+    assert fitted.parameters["resolved"]["schedule"]["best_objective"] > baseline + 0.08
 
 
 def test_prediction_uses_float32_logits_and_repeats(
@@ -456,3 +462,25 @@ def test_run_record_carries_the_attention_backend(fitted: FTTransformerModel) ->
     precision = resolved["precision"]
     assert isinstance(precision, dict)
     assert precision["gpu_attention_backend"] == "efficient"
+
+
+def test_the_ft_transformer_accumulates_micro_batches(
+    settings: ModelSettings, train: NeuralData, valid: NeuralData, tmp_path: Path
+) -> None:
+    """Its LayerNorm acts on each row, so an effective batch may be split (DR-015 §7)."""
+    with preserved_torch_state():
+        model = _model(settings)
+        model.fit(
+            train,
+            valid,
+            FT_HYPERPARAMETERS,
+            objective=v1_objective(valid),
+            plan=BatchPlan(64, 24),
+        )
+    batching = model.parameters["resolved"]["batching"]
+    assert (batching["effective_batch"], batching["micro_batch"]) == (64, 24)
+    model.save(tmp_path)
+    loaded = FTTransformerModel.load(
+        tmp_path, configuration("FTT-b"), 42, settings=settings, layout=LAYOUT, device="cpu"
+    )
+    assert np.array_equal(loaded.predict(valid.inputs), model.predict(valid.inputs))

@@ -33,6 +33,7 @@ from review_capacity.errors import SpecificationError
 from review_capacity.models.base import Labels, ModelData, class_weights, sample_weights
 from review_capacity.models.neural_training import InputLayout, NeuralData, NeuralInputs
 from review_capacity.models.registry import Weighting
+from review_capacity.models.v1_objective import V1Objective
 
 DATA_SEED = 77  # the probe's data seed (Issue #77), separate from the model seeds
 MISSING_SHARE = 0.05  # share of missing categorical values in every input
@@ -41,6 +42,8 @@ NUMERIC_MISSING_SHARE = 0.10  # share of NaN in half of the numeric inputs
 FRAUD_RATE = 0.035  # approximate fraud rate of the synthetic labels
 INDICATOR_COUNT = 324  # missingness indicators of DR-012
 CATEGORY_DROPOUT = 0.01  # DR-012
+V1_DAYS = 21  # relative days of the synthetic V1 rows (the study's V1 spans 21 days)
+V1_DAILY_K = 20  # daily budget of the synthetic V1 objective (probe value, not a research value)
 
 
 @dataclass(frozen=True)
@@ -77,6 +80,7 @@ class NeuralSet:
     valid: dict[Weighting, NeuralData]
     score: NeuralInputs
     score_ids: npt.NDArray[np.int64]
+    objective: V1Objective
     diagnostics: dict[str, Any]
     sha256: str
 
@@ -244,6 +248,15 @@ def neural_layout(features: FeatureSpec, levels: dict[str, int]) -> InputLayout:
     )
 
 
+def _valid_rows(rows: int) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.int64]]:
+    """Identifiers and times of the synthetic V1 rows: increasing identifiers on ``V1_DAYS``
+    consecutive relative days, the first being day 1 (metadata of the V1 objective, never
+    inputs)."""
+    ids = np.arange(1, rows + 1, dtype=np.int64)
+    days = ids * V1_DAYS // (rows + 1) + 1
+    return ids, (days * SECONDS_PER_DAY + 1).astype(np.int64)
+
+
 def neural_data(
     layout: InputLayout, sizes: ProbeSizes, rng: np.random.Generator | None = None
 ) -> NeuralSet:
@@ -272,15 +285,20 @@ def neural_data(
     train_labels = labels_all[train_rows]
     train: dict[Weighting, NeuralData] = {}
     valid: dict[Weighting, NeuralData] = {}
+    valid_ids, valid_times = _valid_rows(sizes.neural_valid)
     for weighting in (Weighting.UNWEIGHTED, Weighting.BALANCED):
         weights = class_weights(train_labels, weighting)
         for target, part in ((train, train_rows), (valid, valid_rows)):
             labels = labels_all[part]
+            is_valid = target is valid
             target[weighting] = NeuralData(
                 inputs=NeuralInputs(numeric[part].copy(), categorical[part].copy()),
                 labels=labels,
                 weights=sample_weights(labels, weights),
+                ids=valid_ids if is_valid else None,
+                times=valid_times if is_valid else None,
             )
+    objective = V1Objective.from_rows(valid_ids, valid_times, labels_all[valid_rows], V1_DAILY_K)
     score = NeuralInputs(numeric[starts[2] :].copy(), categorical[starts[2] :].copy())
     ids = np.arange(1, sizes.neural_score + 1, dtype=np.int64)
     layout_bytes = np.frombuffer(
@@ -305,7 +323,7 @@ def neural_data(
         },
         "layout": layout.to_json(),
     }
-    return NeuralSet(layout, train, valid, score, ids, diagnostics, digest)
+    return NeuralSet(layout, train, valid, score, ids, objective, diagnostics, digest)
 
 
 def top_k(rows: int, share: float = 0.02) -> int:

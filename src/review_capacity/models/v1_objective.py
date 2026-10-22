@@ -33,7 +33,7 @@ import numpy.typing as npt
 from review_capacity.config import SECONDS_PER_DAY
 from review_capacity.errors import DataValidationError, ModelError
 from review_capacity.evaluation.queue import DailyQueue, DailyRecall, FloatScores
-from review_capacity.models.base import ModelData
+from review_capacity.models.base import Keys, Labels, ModelData
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,10 @@ IDENTITY_FIELDS = (
     "frauds",
 )
 STOPPING_REASONS = ("early_stopping", "maximum")
+# DR-015 §2: a tree-based fit stops after ``patience`` consecutive rounds without improvement (its
+# last round is best + patience); a neural fit stops at the (patience + 1)-th consecutive epoch
+# without improvement (its last epoch is best + patience + 1).
+STOP_OFFSET = {"round": 0, "epoch": 1}
 
 
 class V1Objective:
@@ -65,10 +69,21 @@ class V1Objective:
             raise DataValidationError(
                 "The V1 objective needs the V1 rows' TransactionID and TransactionDT"
             )
+        self._build(valid.ids, valid.times, valid.labels, k)
+
+    @classmethod
+    def from_rows(cls, ids: Keys, times: Keys, labels: Labels, k: int) -> V1Objective:
+        """The objective of V1 rows given as arrays (the neural models' V1 inputs carry their
+        identifiers and times as metadata, never as network features)."""
+        objective = cls.__new__(cls)
+        objective._build(ids, times, labels, k)
+        return objective
+
+    def _build(self, ids: Keys, times: Keys, labels: Labels, k: int) -> None:
         self.k = k
-        self.labels = valid.labels.copy()
-        self.ids = valid.ids.copy()
-        self.days = valid.times // SECONDS_PER_DAY
+        self.labels = labels.copy()
+        self.ids = ids.copy()
+        self.days = times // SECONDS_PER_DAY
         self.queue = DailyQueue.build(self.ids, self.days)
         self.rows = len(self.labels)
         self.frauds = int(self.labels.sum())
@@ -93,13 +108,18 @@ class V1Objective:
     def check_partition(self, valid: ModelData) -> None:
         """The partition a fit early-stops on must be the one the objective was built from:
         the same rows, labels and relative days (the queues group by day)."""
+        self.check_rows(valid.ids, valid.times, valid.labels)
+
+    def check_rows(self, ids: Keys | None, times: Keys | None, labels: Labels) -> None:
+        """``check_partition`` for V1 rows given as arrays: the same identifiers in the same
+        order, labels and relative days."""
         if (
-            valid.ids is None
-            or valid.times is None
-            or valid.labels.shape != self.labels.shape
-            or not np.array_equal(valid.labels, self.labels)
-            or not np.array_equal(valid.ids, self.ids)
-            or not np.array_equal(valid.times // SECONDS_PER_DAY, self.days)
+            ids is None
+            or times is None
+            or labels.shape != self.labels.shape
+            or not np.array_equal(labels, self.labels)
+            or not np.array_equal(ids, self.ids)
+            or not np.array_equal(times // SECONDS_PER_DAY, self.days)
         ):
             raise DataValidationError("The V1 objective was built from different V1 rows")
 
@@ -153,6 +173,7 @@ class TrainingHistory:
     patience: int
     maximum: int
     other_evaluations: int  # evaluations of other sets (not the V1 partition), not scored
+    unit: str = "round"  # "round" (trees) or "epoch" (neural models)
 
 
 class ObjectiveRecorder:
@@ -190,13 +211,17 @@ class ObjectiveRecorder:
         self._seconds.append(time.perf_counter() - self._started)
         return recall
 
-    def history(self, *, patience: int, maximum: int) -> TrainingHistory:
+    def history(self, *, patience: int, maximum: int, unit: str = "round") -> TrainingHistory:
         """The checkpoint history with its stopping reason.
 
         Improvement is strict and compared on the integer numerators; the earliest best is kept
         (DR-015 §5). Training must have stopped for a declared reason: ``patience`` rounds after
-        the earliest best, or at ``maximum`` rounds. Any other length is a ``ModelError``.
+        the earliest best (``patience`` + 1 epochs for a neural fit, ``unit="epoch"``), or at
+        ``maximum``. Any other length is a ``ModelError``.
         """
+        if unit not in STOP_OFFSET:
+            raise ModelError(f"The training unit must be one of {sorted(STOP_OFFSET)}")
+        after_best = patience + STOP_OFFSET[unit]
         trained = len(self._numerators)
         if trained == 0:
             raise ModelError("No V1 objective evaluation was recorded")
@@ -210,13 +235,13 @@ class ObjectiveRecorder:
             if improved:
                 best_numerator, best = numerator, number
             rows.append(Checkpoint(number, numerator, numerator / frauds, improved, best, seconds))
-        if trained == best + patience:
+        if trained == best + after_best:
             reason = "early_stopping"
         elif trained == maximum:
             reason = "maximum"
         else:
             raise ModelError(
-                f"Training stopped after {trained} rounds, which is neither {patience} rounds "
+                f"Training stopped after {trained} {unit}s, which is neither {after_best} {unit}s "
                 f"after the earliest best ({best}) nor the maximum of {maximum}"
             )
         return TrainingHistory(
@@ -229,6 +254,7 @@ class ObjectiveRecorder:
             patience,
             maximum,
             self.other_evaluations,
+            unit,
         )
 
 

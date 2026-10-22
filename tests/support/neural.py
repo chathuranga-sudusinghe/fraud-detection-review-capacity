@@ -17,7 +17,9 @@ from typing import Any
 import numpy as np
 import torch
 
+from review_capacity.config import SECONDS_PER_DAY
 from review_capacity.models.neural_training import InputLayout, NeuralData, NeuralInputs
+from review_capacity.models.v1_objective import V1Objective
 
 LAYOUT = InputLayout(
     numeric=("TransactionAmt", "V1", "V1_missing", "tod_sin"),
@@ -34,7 +36,6 @@ TRAINING: dict[str, Any] = {
     "eval_batch_size": 96,
     "max_epochs": 12,
     "patience": 2,
-    "metric": "average_precision",
 }
 
 RESNET: dict[str, Any] = {
@@ -71,9 +72,16 @@ def neural_inputs(rows: int, seed: int) -> NeuralInputs:
     return NeuralInputs(numeric=numeric, categorical=categorical)
 
 
-def neural_data(rows: int, seed: int, *, fraud_weight: float = 1.0) -> NeuralData:
+V1_DAYS = 3
+DAILY_K = 12
+
+
+def neural_data(
+    rows: int, seed: int, *, fraud_weight: float = 1.0, with_rows: bool = False
+) -> NeuralData:
     """Inputs and labels drawn from a logistic model of two numeric inputs and one category;
-    each fraud row weighs ``fraud_weight``, each legitimate row 1."""
+    each fraud row weighs ``fraud_weight``, each legitimate row 1. With ``with_rows`` the data
+    carry identifiers and times on ``V1_DAYS`` days, as V1 data do (see ``v1_objective``)."""
     inputs = neural_inputs(rows, seed)
     rng = np.random.default_rng(seed + 1)
     amount, v1 = inputs.numeric[:, 0], inputs.numeric[:, 1]
@@ -81,7 +89,19 @@ def neural_data(rows: int, seed: int, *, fraud_weight: float = 1.0) -> NeuralDat
     logit = 2.0 * amount - 1.5 * v1 + 1.5 * (product == 3) - 1.5
     labels = (rng.random(rows) < 1.0 / (1.0 + np.exp(-logit))).astype(np.int8)
     weights = np.where(labels == 1, fraud_weight, 1.0).astype(np.float64)
-    return NeuralData(inputs=inputs, labels=labels, weights=weights)
+    if not with_rows:
+        return NeuralData(inputs=inputs, labels=labels, weights=weights)
+    ids = np.arange(1, rows + 1, dtype=np.int64) * 7  # increasing, not consecutive
+    days = np.arange(rows, dtype=np.int64) * V1_DAYS // rows + 1  # relative days start at 1
+    times = days * SECONDS_PER_DAY + 5
+    return NeuralData(inputs=inputs, labels=labels, weights=weights, ids=ids, times=times)
+
+
+def v1_objective(valid: NeuralData, k: int = DAILY_K) -> V1Objective:
+    """The shared V1 objective of ``valid`` (data built with ``with_rows=True``)."""
+    assert valid.ids is not None
+    assert valid.times is not None
+    return V1Objective.from_rows(valid.ids, valid.times, valid.labels, k)
 
 
 @contextmanager

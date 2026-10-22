@@ -298,3 +298,47 @@ def test_logistic_saturates_without_warnings() -> None:
     with np.errstate(all="raise"):
         values = logistic(np.array([-800.0, -40.0, 0.0, 40.0, 800.0]))
     assert values.tolist() == [0.0, 1.0 / (1.0 + float(np.exp(40.0))), 0.5, 1.0, 1.0]
+
+
+def test_an_objective_built_from_arrays_equals_one_built_from_a_partition() -> None:
+    partition = _partition([0, 1, 1, 0, 1], [1, 1, 2, 2, 2])
+    assert partition.ids is not None
+    assert partition.times is not None
+    from_partition = V1Objective(partition, 2)
+    from_rows = V1Objective.from_rows(partition.ids, partition.times, partition.labels, 2)
+    assert from_rows.identity == from_partition.identity
+    scores = np.array([0.1, 0.9, 0.8, 0.2, 0.7])
+    assert from_rows.queue.recall(scores, from_rows.labels, 2) == from_partition.queue.recall(
+        scores, from_partition.labels, 2
+    )
+
+
+def test_the_rows_of_an_objective_are_checked_as_arrays() -> None:
+    partition = _partition([0, 1, 1, 0], [1, 1, 2, 2])
+    assert partition.ids is not None
+    assert partition.times is not None
+    objective = V1Objective(partition, 1)
+    objective.check_rows(partition.ids, partition.times, partition.labels)
+    for ids, times, labels in (
+        (None, partition.times, partition.labels),
+        (partition.ids, None, partition.labels),
+        (partition.ids + 1, partition.times, partition.labels),
+        (partition.ids, partition.times + DAY, partition.labels),
+        (partition.ids, partition.times, 1 - partition.labels),
+        (partition.ids[:3], partition.times[:3], partition.labels[:3]),
+    ):
+        with pytest.raises(DataValidationError, match="different V1 rows"):
+            objective.check_rows(ids, times, labels)
+
+
+def test_a_neural_history_stops_one_epoch_later_than_a_tree_history() -> None:
+    objective = V1Objective(_partition([1, 0, 0, 0], [1, 1, 1, 1]), 1)
+    recorder = objective.recorder()
+    for first in (0, 1, 2):  # the first top-1 pick is the fraud: the only gain
+        _top(recorder, 4, first)
+    assert recorder.history(patience=2, maximum=60).unit == "round"  # best 1 + patience 2
+    assert recorder.history(patience=1, maximum=60, unit="epoch").unit == "epoch"  # 1 + 1 + 1
+    with pytest.raises(ModelError, match="neither"):
+        recorder.history(patience=2, maximum=60, unit="epoch")
+    with pytest.raises(ModelError, match="training unit"):
+        recorder.history(patience=1, maximum=60, unit="step")
