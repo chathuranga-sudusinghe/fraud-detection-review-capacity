@@ -5,6 +5,11 @@ Commands:
     prepare-data   validate the raw data; write the manifest and the development files, once
                    (--check-only: validate and report, write nothing). The only command that
                    reads the raw files before the confirmatory Test run.
+    migrate-provenance
+                   verify the processed development files (SHA-256, rows, columns, types,
+                   raw-source hashes, DR-001 anchors) and write their provenance records again
+                   with the feature-declaration fingerprint; the data files are not rewritten
+                   and no raw file is read (--check-only: verify and report, write nothing)
     profile-data   recompute the feature-catalog statistics from the verified processed
                    development file (no labels, no raw file) and report every difference from
                    docs/feature-catalog.md (--save: also write the profile and its provenance
@@ -90,6 +95,7 @@ from typing import TYPE_CHECKING
 from review_capacity.config import load_dataset_spec, load_feature_spec
 from review_capacity.data.catalog import read_catalog
 from review_capacity.data.duplicates import audit_duplicates, audit_summary
+from review_capacity.data.migration import migrate_provenance
 from review_capacity.data.preparation import prepare_data
 from review_capacity.data.processed import JOINED, read_development_features
 from review_capacity.data.profiling import compare_with_catalog
@@ -162,6 +168,23 @@ def _prepare_data(args: argparse.Namespace) -> int:
     logger.info("Validation contract: passed")
     for path in result.written:
         logger.info("Written: %s", path)
+    return 0
+
+
+def _migrate_provenance(args: argparse.Namespace) -> int:
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    result = migrate_provenance(
+        paths,
+        load_feature_spec(paths.features_spec),
+        load_dataset_spec(paths),
+        check_only=args.check_only,
+    )
+    for stem in result.current:
+        logger.info("%s: already records the current fingerprint", stem)
+    verb = "would be migrated" if result.check_only else "migrated"
+    for stem in result.migrated:
+        logger.info("%s: record %s; the data file is unchanged", stem, verb)
     return 0
 
 
@@ -481,6 +504,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--check-only", action="store_true", help="validate and report; write nothing"
     )
     prepare.set_defaults(handler=_prepare_data)
+    migrate = commands.add_parser(
+        "migrate-provenance",
+        help="record the feature-declaration fingerprint in the processed files' provenance",
+    )
+    migrate.add_argument("--root", type=Path, default=None, help="project root directory")
+    migrate.add_argument(
+        "--check-only", action="store_true", help="verify and report; write nothing"
+    )
+    migrate.set_defaults(handler=_migrate_provenance)
     profile = commands.add_parser(
         "profile-data",
         help="recompute the feature-catalog statistics from the processed development file",

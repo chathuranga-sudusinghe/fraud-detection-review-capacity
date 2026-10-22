@@ -97,7 +97,7 @@ All models start from one canonical frame of the 433 inputs in declared order ([
 | Dataset manifest: raw-file checksums and the label-free partition summary | [`data/datapackage.json`](../data/datapackage.json) | Yes |
 | Duplicate-audit counts with their provenance | [`evidence/duplicate_audit/`](../evidence/duplicate_audit/README.md) | Yes |
 
-- **Verified reading.** Before returning any data, the reader checks each processed file against its provenance record, the declared schema and the DR-001 anchors ([`data/processed.py`](../src/review_capacity/data/processed.py)); a file built under another feature declaration is rejected.
+- **Verified reading.** Before returning any data, the reader checks each processed file against its provenance record, the declared schema and the DR-001 anchors ([`data/processed.py`](../src/review_capacity/data/processed.py)); a file built under another feature declaration (compared by a fingerprint of the column roles and the missing label loaded from `config/features.yaml`) is rejected, and a record written before the fingerprint existed is re-recorded without rewriting its data by `review-capacity migrate-provenance` ([Dataset](dataset.md#data-access-after-the-parquet-build)).
 - **Built once.** The stage refuses to write over existing processed files.
 - **Recorded runs.** Data preparation and the audit are run locally; the commands, dates and results are recorded in Issues #62 and #86 and in the files above.
 

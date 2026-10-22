@@ -11,6 +11,8 @@ raises ``SpecificationError`` for any malformed or inconsistent declaration.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import re
 from collections import Counter
@@ -160,6 +162,30 @@ def load_feature_spec(
     """Read ``config/features.yaml`` and check it against its own declared counts."""
     raw = _read_yaml(path)
     return _parse(path, lambda: _feature_spec(raw, key, time))
+
+
+def features_fingerprint(spec: FeatureSpec) -> str:
+    """SHA-256 over the column roles the processed files are built from: the key, time and target
+    names, the excluded, categorical, numeric-coded, numeric and derived inputs, and the missing
+    label. The fingerprint is taken from the loaded specification, not from the file, so it
+    describes exactly what the build used, and a change to a comment, a library-handling block or
+    a prose reason of ``config/features.yaml`` cannot change it: such a change cannot alter a
+    processed file, so a file built before it stays valid. The rules the code applies to these
+    roles (the canonical form, the float64 type, the time-of-day inputs) are fixed in the code,
+    which a record identifies by its commit and source fingerprint."""
+    decided = {
+        "key": spec.key,
+        "time": spec.time,
+        "target": spec.target,
+        "excluded": list(spec.excluded),
+        "categorical": list(spec.categorical),
+        "numeric_coded": sorted(spec.numeric_coded),
+        "numeric": list(spec.numeric),
+        "derived": list(spec.derived),
+        "missing_label": spec.missing_label,
+    }
+    text = json.dumps(decided, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _names(values: object, what: str) -> tuple[str, ...]:

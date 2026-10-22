@@ -116,6 +116,12 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
    This one-time build ran on 10 October 2026. After it, every step reads only the verified processed files in `data/processed/`, and the raw files are read again only by the confirmatory Test evaluation ([data access rule](docs/dataset.md#data-access-after-the-parquet-build)).
 
+   The provenance records of that build are re-recorded with the feature-declaration fingerprint, once and without rewriting any data file, by `migrate-provenance` (a manual step; `--check-only` verifies without writing):
+
+   ```bash
+   .venv/bin/review-capacity --log-file logs/migrate-provenance.log migrate-provenance
+   ```
+
    Every command logs its progress with timestamps to the terminal; `--log-file PATH` (before the command name) also keeps the log in a file, as an evidence-producing run should. `review-capacity --help` lists the options and exit codes.
 
 6. Plan the search, then run the tree-based development search. Both are consequential steps governed by the [execution rules](AGENTS.md#experiment-execution-responsibility); the run starts only after its scope is approved. The plan reads no data and fits no model. Its `cost_prediction.json` is identified by its SHA-256, which the development run takes as the approval of the predicted cost ([DR-015](docs/decisions/DR-015-common-training-rules.md) §7):

@@ -30,10 +30,16 @@ from typing import Any, Final, Literal
 
 import pandas as pd
 
-from review_capacity.config import DatasetSpec, FeatureSpec
+from review_capacity.config import DatasetSpec, FeatureSpec, features_fingerprint
 from review_capacity.data.loading import RawData, check_file_checksums, load_labels, load_raw
 from review_capacity.data.manifest import build_datapackage, write_datapackage
-from review_capacity.data.processed import DAY_COLUMN, JOINED, PARTITION_COLUMN, stems
+from review_capacity.data.processed import (
+    DAY_COLUMN,
+    FINGERPRINT,
+    JOINED,
+    PARTITION_COLUMN,
+    stems,
+)
 from review_capacity.data.validation import PartitionSummary, validate
 from review_capacity.errors import FileAccessError, SealedTestError
 from review_capacity.features.model_inputs import build_canonical_frame
@@ -149,7 +155,10 @@ def prepare_data(
 
     common: dict[str, Any] = {
         "sources": checksums,
-        "configuration": {path.name: file_sha256(path) for path in config_files},
+        "configuration": {
+            **{path.name: file_sha256(path) for path in config_files},
+            FINGERPRINT: features_fingerprint(features),
+        },
         "code": code_provenance(paths.root),
     }
     for stem, scope, frame in _development_frames(raw, labels, features, dataset):

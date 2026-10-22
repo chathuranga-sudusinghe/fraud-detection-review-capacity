@@ -8,9 +8,12 @@ checks a file before returning any of its data:
 * the file's SHA-256, rows and columns equal the recorded values;
 * the recorded raw-source hashes equal those declared in ``config/dataset.yaml``, so the file
   comes from the verified raw data;
-* the recorded ``config/features.yaml`` hash equals the current file's: the feature declaration
-  decides the stored values (categories, missing label, inputs), so a file built under another
-  declaration is stale and rejected;
+* the recorded feature-declaration fingerprint equals that of the specification in use
+  (``config.features_fingerprint``): the column roles and the missing label decide the stored
+  values, so a file built under another declaration is stale and rejected, while a change to the
+  library-handling blocks or to comments of ``config/features.yaml`` does not invalidate it; a
+  record without a fingerprint (built before it existed) is rejected until ``migrate-provenance``
+  has verified and re-recorded it;
 * its columns are exactly the declared schema, with the declared physical types (integer, text
   or float64) in the Parquet schema; a partition file has no missing categorical label;
 * its content reproduces the DR-001 anchors, from the identifier and time columns only and
@@ -45,7 +48,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from review_capacity.config import DatasetSpec, FeatureSpec
+from review_capacity.config import DatasetSpec, FeatureSpec, features_fingerprint
 from review_capacity.data.partitions import assign_partitions, relative_day
 from review_capacity.errors import DataValidationError, FileAccessError
 from review_capacity.hashing import file_sha256, id_set_sha256
@@ -151,10 +154,22 @@ def read_record(path: Path) -> ProvenanceRecord:
     )
 
 
+FINGERPRINT = "features_fingerprint"
+
+
 def verify_processed(
-    paths: ProjectPaths, stem: str, features: FeatureSpec, dataset: DatasetSpec
+    paths: ProjectPaths,
+    stem: str,
+    features: FeatureSpec,
+    dataset: DatasetSpec,
+    *,
+    migrating: bool = False,
 ) -> ProvenanceRecord:
-    """Check a processed file against its record, the declared sources, schema and anchors."""
+    """Check a processed file against its record, the declared sources, schema and anchors.
+
+    ``migrating`` is for ``migrate-provenance`` only: the record predates the fingerprint, so its
+    declaration is checked by the whole-file hash it recorded, which must still equal the current
+    file's; everything else that this function checks is checked as usual."""
     scope = _scope(stem, dataset)
     path = paths.processed_file(stem)
     record = read_record(paths.provenance_file(stem))
@@ -171,8 +186,21 @@ def verify_processed(
         if not record.transaction_id_sha256.startswith(prefix):
             problems.append(f"identifier hash does not start with the DR-001 anchor {prefix}")
     declaration = paths.features_spec.name
-    if record.configuration.get(declaration) != file_sha256(paths.features_spec):
-        problems.append(f"built under another {declaration} (stale); rebuild before use")
+    if migrating:
+        if record.configuration.get(declaration) != file_sha256(paths.features_spec):
+            problems.append(
+                f"cannot migrate: the recorded {declaration} hash differs from the current file. "
+                f"Migrate with the {declaration} the files were built with, before any status or "
+                "comment edit; never rebuild from the raw data"
+            )
+    else:
+        recorded = record.configuration.get(FINGERPRINT)
+        if recorded is None:
+            problems.append(
+                f"has no {FINGERPRINT} (built before it existed); run migrate-provenance"
+            )
+        elif recorded != features_fingerprint(features):
+            problems.append(f"built under another {declaration} declaration (stale)")
     if problems:
         raise DataValidationError(f"{path.name}: " + "; ".join(problems))
     digest = file_sha256(path)

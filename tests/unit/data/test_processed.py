@@ -12,7 +12,9 @@ from typing import Any
 import pandas as pd
 import pytest
 
+from review_capacity.config import features_fingerprint
 from review_capacity.data.processed import (
+    FINGERPRINT,
     JOINED,
     read_development_features,
     read_processed,
@@ -119,6 +121,12 @@ def test_record_that_is_not_json_is_rejected(processed: Synthetic) -> None:
 
 def test_changed_feature_declaration_is_a_schema_difference(processed: Synthetic) -> None:
     features = replace(processed.features, numeric=(*processed.features.numeric[:-1],))
+    # the record carries the fingerprint of this declaration, so only the schema check is left
+    _edit_record(
+        processed,
+        "train",
+        lambda r: r["configuration"].update({FINGERPRINT: features_fingerprint(features)}),
+    )
     with pytest.raises(DataValidationError, match=r"unexpected \['id_01'\]"):
         verify_processed(processed.paths, "train", features, processed.dataset)
 
@@ -188,7 +196,23 @@ def test_joined_content_must_reproduce_the_time_anchors(processed: Synthetic) ->
 
 
 def test_file_built_under_another_feature_declaration_is_stale(processed: Synthetic) -> None:
-    with processed.paths.features_spec.open("a", encoding="utf-8") as handle:
-        handle.write("# changed\n")
-    with pytest.raises(DataValidationError, match=r"another features\.yaml \(stale\)"):
+    other = replace(processed.features, missing_label="NA")
+    match = r"another features\.yaml declaration \(stale\)"
+    with pytest.raises(DataValidationError, match=match):
+        verify_processed(processed.paths, "train", other, processed.dataset)
+
+
+def test_a_change_outside_the_stored_values_keeps_the_file_valid(processed: Synthetic) -> None:
+    spec = processed.paths.features_spec
+    text = spec.read_text(encoding="utf-8")
+    old = 'unseen_categories: "handled natively by CatBoost"'
+    edited = text.replace(old, 'unseen_categories: "x"')
+    assert edited != text
+    spec.write_text("# a comment\n" + edited, "utf-8")
+    verify_processed(processed.paths, "train", processed.features, processed.dataset)
+
+
+def test_record_without_a_fingerprint_asks_for_the_migration(processed: Synthetic) -> None:
+    _edit_record(processed, "train", lambda r: r["configuration"].pop("features_fingerprint"))
+    with pytest.raises(DataValidationError, match="run migrate-provenance"):
         verify_processed(processed.paths, "train", processed.features, processed.dataset)

@@ -521,9 +521,9 @@ encoding:
     unseen_categories: "handled natively by CatBoost"
     numeric_missing: "library default nan_mode = Min"
   neural:
-    # docs/decisions/DR-012-neural-network-input-representation.md: PROPOSED for the design review (GitHub Issue #56); identical for ResNet-style MLP and FT-Transformer.
+    # docs/decisions/DR-012-neural-network-input-representation.md: Accepted; identical for ResNet-style MLP and FT-Transformer.
     # Rules apply by input role (categorical / numeric), including any input added later through an approved Issue.
-    status: proposed
+    status: accepted
     categorical: "per-input vocabulary of canonical labels observed in Train only; __MISSING__ reserved in every vocabulary; values unseen in Train map to the __MISSING__ index (missing and unseen share one index); learned embeddings in the model"
     category_dropout: "training only: each categorical value replaced by __MISSING__ with probability 0.01 (fixed, not tuned), independently per value and epoch, from the declared training seed; none when scoring"
     numeric_transform: "quantile transformation to a normal output distribution, fitted per numeric input (including the derived inputs) on its non-missing Train values, n_quantiles = max(min(n_Train // 30, 1000), 10) = 1000 (n_Train = number of Train rows), no subsampling; Gaussian noise with std 1e-3 / max(s_i, 1e-3) (s_i = population std, ddof = 0, of the non-missing Train values of input i) added to every non-missing Train value for fitting only; transformation applied to the original values; values outside the fitted range (of the noise-perturbed Train values) map to the output bounds (REF-087 Appendix B.2; noise and quantiles from reference implementation REF-103, pinned commit, adapted: no Train-mean filling before fitting)"

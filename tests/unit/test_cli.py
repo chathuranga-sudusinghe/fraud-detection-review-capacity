@@ -10,6 +10,7 @@ import pytest
 
 from review_capacity import cli
 from review_capacity.cli import build_parser, main
+from review_capacity.data.migration import MigrationResult
 from review_capacity.data.processed import read_development_features
 from review_capacity.data.profiling import profile_columns
 from review_capacity.errors import (
@@ -332,3 +333,27 @@ def test_run_development_refuses_a_separate_log_file_and_a_directory_outside_the
     assert main(["--log-file", str(tmp_path / "x.log"), *arguments]) == 2
     assert main([*arguments, "--output", str(tmp_path / "elsewhere")]) == 2  # inside the project
     assert not (tmp_path / "elsewhere").exists()
+
+
+def test_migrate_provenance_options() -> None:
+    assert build_parser().parse_args(["migrate-provenance"]).check_only is False
+    args = build_parser().parse_args(["migrate-provenance", "--check-only"])
+    assert (args.command, args.check_only) == ("migrate-provenance", True)
+
+
+def test_migrate_provenance_passes_check_only_to_the_migration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[bool] = []
+
+    def migrate(
+        _paths: ProjectPaths, _features: object, _dataset: object, *, check_only: bool
+    ) -> MigrationResult:
+        calls.append(check_only)
+        return MigrationResult(("train",), ("v1",), check_only)
+
+    monkeypatch.setattr(cli, "migrate_provenance", migrate)
+    root = str(REPO_PATHS.root)
+    assert main(["migrate-provenance", "--check-only", "--root", root]) == 0
+    assert main(["migrate-provenance", "--root", root]) == 0
+    assert calls == [True, False]
