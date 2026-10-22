@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner (Issue #23) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Accepted (pre-freeze), Issue #23, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-24; revised 2026-10-09 (Issue #54), 2026-10-10 (Issue #57: neural-network representation moved to DR-012) and 2026-10-10 (Issue #64: time-of-day inputs) and 2026-10-12 (Issue #66: CatBoost row order) and 2026-10-13 (Issue #87: population preservation, §9) |
 | Evidence source | Raw-file headers (schema only); development-period values (relative days 1–154) for type, missingness and cardinality checks, **with the target column never loaded**; organiser data description; LightGBM and CatBoost documentation; input-type checks on synthetic data; `notebooks/01_dataset_feasibility_audit.ipynb` §§2.3, 2.6, 8, 9 (§2.6: label-free completeness of `TransactionDT` over all 182 relative days); fraud-detection and software literature on periodic time features [REF-007, REF-104]; the label-free audit of repeated input vectors in the development rows (Issue #86) |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [DR-012](DR-012-neural-network-input-representation.md), [protocol](../protocol.md), [`config/features.yaml`](../../config/features.yaml), [feature catalog](../feature-catalog.md) |
@@ -319,7 +319,7 @@ Observed value types in development data [D]:
 | Alternative | Why not chosen |
 |---|---|
 | Treat numeric-coded fields (`card1`, `addr1`, `id_*` codes) as numeric | Contradicts the organiser's declaration and imposes an undocumented order on masked labels |
-| Treat only high-cardinality fields as numeric (LightGBM's guidance) | A researcher-chosen cardinality cut-off would be arbitrary. Applying it to one library only breaks parity; applying it to both removes CatBoost's native categorical handling for exactly the fields where the families differ |
+| Treat only high-cardinality fields as numeric (LightGBM's guidance) | A chosen cardinality cut-off would be arbitrary. Applying it to one library only breaks parity; applying it to both removes CatBoost's native categorical handling for exactly the fields where the families differ |
 | Merge rare levels / frequency-encode | Feature engineering, outside the accepted scope. Frequency counts would also have to be fitted on Train only, adding a leakage surface |
 | Drop sparse identity fields (> 99 % missing) | Missingness is informative and handled natively; dropping is not methodologically required |
 | Let each library use its own defaults (e.g. LightGBM auto-detecting pandas categories; CatBoost only on text columns) | Would give the two libraries **different** categorical sets, which the protocol forbids |
@@ -328,7 +328,7 @@ Observed value types in development data [D]:
 | Declared columns only, without time-of-day inputs | A valid simpler design, not shown to be inferior. Not chosen because `D9`, the declared column identified as partly encoding the hour of the relative day, is missing on 87.3 % of development rows, while `TransactionDT` gives a complete, row-local time of day |
 | Whole hour of the relative day (24 values) instead of the continuous angle | Whole-hour boundaries counted from an undisclosed reference point have no documented meaning, and a shift of the reference point that is not a whole number of hours moves transactions between hourly bins. It also discards the time within the hour and allows only 24 possible pairs, with 13 distinct values per coordinate, to the neural networks' quantile transformation |
 | Time of day as one linear value (θ or the hour) | Places the end of a relative day far from the start of the next, although they are adjacent in time |
-| Periodic spline features [REF-104] | More inputs per period and researcher-chosen knots, with no evidence of benefit here |
+| Periodic spline features [REF-104] | More inputs per period and chosen knots, with no evidence of benefit here |
 | An additional seven-day phase | Weekdays are unknown, because the reference point is undisclosed. A relative seven-day phase could be computed, but it adds inputs without a documented weekly meaning |
 | Fill or correct `D9` from `TransactionDT` | Would alter an organiser field. `D9` is kept as observed, and its missingness remains information |
 | CatBoost's default random permutations (`has_time = false`) | The permutation is the method's artificial time for data without a time order [REF-012, Section 3.2]. Both settings stay within Train, so neither is leakage into the validation or Test periods; the time order is chosen for consistency with the temporal design. It is fixed before any run, not tuned |

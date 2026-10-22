@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner (Issue #13) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Accepted (pre-freeze), Issue #13, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight configurations; boundary cases; interpretation of R4 losses) and 2026-10-17 (Issue #91: calibration details; conditional bootstrap intervals) |
 | Evidence source | Decision-theoretic derivation (checked numerically on synthetic data only); cost-sensitive learning, cost-curve and decision-curve literature; `notebooks/01_dataset_feasibility_audit.ipynb` §§6, 11, 12; for the calibration details (§8), Kull et al. [REF-132], Lin, Lin and Weng [REF-133], the REF-018 supplement and the scikit-learn 1.9.1 source of isotonic regression [REF-134], with an independent review in Issue #91. **No Test labels, no model scores and no new dataset computations were used.** |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
@@ -424,7 +424,7 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 
 ### Break-even analysis in fraud detection
 
-- **[L]** No verified source prescribes this project's specific cost-ratio grid or break-even rule for capacity-constrained fraud review. The fraud literature supplies the cost-matrix structure [REF-006, REF-073] and the capacity framing [REF-004, REF-005, REF-006]. The grid and break-even rule in [Decision](#decision) apply the general methods above and are **researcher decisions [I]**.
+- **[L]** No verified source prescribes this project's specific cost-ratio grid or break-even rule for capacity-constrained fraud review. The fraud literature supplies the cost-matrix structure [REF-006, REF-073] and the capacity framing [REF-004, REF-005, REF-006]. The grid and break-even rule in [Decision](#decision) apply the general methods above and are **design decisions [I]**.
 
 - **[L]** Zhang et al. [REF-078] show, on IEEE-CIS with a separate policy-selection period, the binding-versus-slack pattern this record anticipates: at a tight capacity ceiling their calibrated cost-threshold queue was clipped to the ceiling in almost every run, while at a slack ceiling full-capacity review cost markedly more than the calibrated threshold.
   - Their calibrated rule overlaps strongly with R4: a Platt-calibrated probability compared with a cost-derived threshold of the same form as p\* = (C_R + C_FP) / (C_miss + C_FP), capped at the review ceiling. Their ceiling applies per evaluation period rather than per day, and they report regret against a retrospective oracle rather than break-even ratios.

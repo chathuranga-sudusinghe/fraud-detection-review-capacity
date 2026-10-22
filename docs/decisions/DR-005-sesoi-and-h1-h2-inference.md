@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner (Issue #8) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Accepted (pre-freeze), Issue #8, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-24 (Issue #8: SESOI fixed at 2 percentage points of Recall@2%); revised 2026-10-09 (Issue #54: estimands for the eight-configuration model set; bootstrap p-value definition) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§6–7, 15; development-period (V2) projections; equivalence-testing and practical-significance literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
@@ -150,7 +150,7 @@ A hypothesis is rejected if and only if its adjusted p-value is at most 0.05. Th
 - **[L] Equivalence bounds express the SESOI.** Equivalence is tested by TOST, which corresponds to a (1 − 2α) CI inside the bounds [REF-061, REF-030, REF-063]. An intersection-union test needs no α split among its components [REF-062].
 - **[L] The only machine-learning (ML) precedent is analyst-chosen.** Benavoli et al. treat a mean accuracy difference of less than 1 % as "practically equivalent" (a region of practical equivalence, ROPE, of ±0.01) for generic classifier benchmarks [REF-067]. That is an analyst-chosen value for **accuracy averaged over datasets**, not for Recall@capacity in fraud, so it is **not** adopted as the SESOI here.
 
-**Consequence.** The SESOI is a **pre-specified researcher judgement**, justified below. It is not a literature convention.
+**Consequence.** The SESOI is a **pre-specified judgement**, justified below. It is not a literature convention.
 
 ### Operational meaning of candidate SESOIs (projection; no Test data)
 
@@ -237,7 +237,7 @@ The TOST power figures are for a single contrast. H2's intersection-union test o
 
 ## Threats and limitations
 
-- **The SESOI is a researcher judgement.** No fraud-domain standard exists. The operational anchors (frauds per day at fixed workload, and the random-review comparison) are illustrative framings, not market or institutional values.
+- **The SESOI is a judgement.** No fraud-domain standard exists. The operational anchors (frauds per day at fixed workload, and the random-review comparison) are illustrative framings, not market or institutional values.
 - **The power figures rest on assumed discordance and design effects.** No model scores exist yet, and the approximation treats the family effect's SE as equal to a single contrast's.
 - **The operational meaning scales with the realised Test fraud count**, which is unknown and sealed. The SESOI itself is fixed on the recall scale, so it does not depend on that count.
 - **The pseudo-entity key is heuristic** ([DR-001](DR-001-temporal-split-strategy.md), [DR-006](DR-006-bootstrap-inference-strategy.md)); residual dependence may remain.

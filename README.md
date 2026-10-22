@@ -40,9 +40,9 @@ The study is organised along the ten stages of the Foundational Methodology for 
 
 | # | Stage (IBM) | In this study | Status | Evidence |
 |---|---|---|---|---|
-| 1 | Business understanding | Research problem, gap, RQ1–RQ3, H1–H3; structured literature review | Done; accepted by the project owner | [Protocol](docs/protocol.md), [research foundation](docs/research-foundation.md), [literature review](docs/literature-review.md) |
-| 2 | Analytic approach | Predictive, prescriptive, inferential and descriptive components, each mapped to RQ1–RQ3 and H1–H3 | Done; accepted by the project owner | [Protocol: Analytic Approach](docs/protocol.md#analytic-approach) |
-| 3 | Data requirements | Data each research question and hypothesis needs, and how the dataset's limits are handled (no real costs, real capacity, label-report dates or account identifiers) | Done; accepted by the project owner | [Protocol: Data Requirements](docs/protocol.md#data-requirements) |
+| 1 | Business understanding | Research problem, gap, RQ1–RQ3, H1–H3; structured literature review | Done; accepted | [Protocol](docs/protocol.md), [research foundation](docs/research-foundation.md), [literature review](docs/literature-review.md) |
+| 2 | Analytic approach | Predictive, prescriptive, inferential and descriptive components, each mapped to RQ1–RQ3 and H1–H3 | Done; accepted | [Protocol: Analytic Approach](docs/protocol.md#analytic-approach) |
+| 3 | Data requirements | Data each research question and hypothesis needs, and how the dataset's limits are handled (no real costs, real capacity, label-report dates or account identifiers) | Done; accepted | [Protocol: Data Requirements](docs/protocol.md#data-requirements) |
 | 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; dataset manifest generated and committed (Issue #62) | [Dataset](docs/dataset.md#dataset-manifest), [`data/datapackage.json`](data/datapackage.json), notebooks 01–02 |
 | 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
 | 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based and neural-network input representations fixed; validation contract and data-preparation pipeline implemented and verified on the raw data (Issue #62) | [Data-preparation record](docs/data-preparation.md), [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md), [`src/review_capacity/`](src/review_capacity/) |
@@ -108,7 +108,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
 4. Obtain the raw data from Kaggle by accepting the Competition Rules, and place both files in `data/raw/` ([dataset documentation](docs/dataset.md)). The data are never committed.
 
-5. Validate the raw data and prepare the development files, **once** (run by the project owner; [execution rules](AGENTS.md#experiment-execution-responsibility)):
+5. Validate the raw data and prepare the development files, **once** ([execution rules](AGENTS.md#experiment-execution-responsibility)):
 
    ```bash
    .venv/bin/review-capacity --log-file logs/prepare-data.log prepare-data
@@ -167,7 +167,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
 ## Status
 
-**Research design documented and accepted by the project owner in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); remaining design items pending; protocol not yet frozen.**
+**Research design documented and accepted in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); remaining design items pending; protocol not yet frozen.**
 
 The ethics and governance status is documented in the [protocol](docs/protocol.md#ethics); no formal ethics approval or exemption is claimed.
 

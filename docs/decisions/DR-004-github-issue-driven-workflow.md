@@ -9,9 +9,9 @@
 
 ## Context
 
-This is a single-student MSc research project. Its credibility depends on being able to show *when* and *why* each methodological choice was made, and that no choice was influenced by the sealed Test period (relative days 155–182; [DR-001](DR-001-temporal-split-strategy.md)).
+This is an MSc research project. Its credibility depends on being able to show *when* and *why* each methodological choice was made, and that no choice was influenced by the sealed Test period (relative days 155–182; [DR-001](DR-001-temporal-split-strategy.md)).
 
-Work is carried out by the student with the help of artificial intelligence (AI) assistants: **Claude**, **Codex** and **ChatGPT**. They are used for:
+Work is carried out with the help of artificial intelligence (AI) assistants: **Claude**, **Codex** and **ChatGPT**. They are used for:
 - research planning;
 - methodological review;
 - literature discovery and verification;
@@ -34,11 +34,11 @@ These risks matter most before the protocol freeze, when research questions, hyp
 
 **Every meaningful research, documentation or implementation change must start with a GitHub Issue.**
 
-The working rules that put this into practice, for the student and for every AI assistant, are recorded in the root [`AGENTS.md`](../../AGENTS.md).
+The working rules that put this into practice, for every AI assistant, are recorded in the root [`AGENTS.md`](../../AGENTS.md).
 
 **Every decision reached with an AI assistant is recorded in the repository or its GitHub issues, never only in a chat session or an assistant's memory.** A finalized decision enters its owner file through the active issue the same day, or an issue comment where no issue covers it yet; open items are listed in the issue that will decide them; assistants read the owner files and open issues before asking about a design item; and each working session ends with a "current state / next step" comment on the active issue. The operational rule is the "Decision capture" section of [`AGENTS.md`](../../AGENTS.md#decision-capture).
 
-**Claude, Codex and ChatGPT are recorded as the AI-assisted research and implementation tools used in this project.** Their output is never accepted automatically. The student reviews, checks and corrects it, and discloses AI use according to University of Greenwich requirements (AI Reflection, AIR; `REF-053` in [`../references.md`](../references.md)).
+**Claude, Codex and ChatGPT are recorded as the AI-assisted research and implementation tools used in this project.** Their output is never accepted automatically. It is reviewed, checked and corrected, and AI use is disclosed according to University of Greenwich requirements (AI Reflection, AIR; `REF-053` in [`../references.md`](../references.md)).
 
 ## Workflow
 
@@ -55,7 +55,7 @@ GitHub Issue
 1. **Issue.** State the objective, scope and acceptance criteria before work starts.
 2. **Branch.** One issue-specific branch per issue, e.g. `docs/issue-6-agent-workflow`. No direct commits to `main`.
 3. **Work.** Only the changes the issue requires.
-4. **Review.** The student reviews all changes, including AI-generated ones, against the issue's acceptance criteria and, where relevant, against the dataset, literature or University guidance.
+4. **Review.** All changes, including AI-generated ones, are reviewed against the issue's acceptance criteria and, where relevant, against the dataset, literature or University guidance.
 5. **Pull request (PR).** The description links the issue with a closing keyword.
 6. **Merge** into `main` after review.
 7. **Automatic closure.** GitHub closes the linked issue when the PR is merged.
@@ -75,7 +75,7 @@ GitHub Issue
   - code;
   - documentation structure.
 - **Methodological changes** additionally need an update to the relevant research document(s) and Decision Record(s) in `docs/decisions/`, following the [record maintenance policy](README.md#record-maintenance-policy): revised in place before the protocol freeze, superseded by a new record after it. Where external evidence is introduced, `docs/references.md` must also be updated.
-- **Commits, pushes, pull requests and merges are performed by the project owner**; assistant permissions are defined in [`AGENTS.md`](../../AGENTS.md#git-rules).
+- **Commits, pushes, pull requests and merges are performed by hand, never by an assistant**; assistant permissions are defined in [`AGENTS.md`](../../AGENTS.md#git-rules).
 
 ## Automatic issue closure via PR keywords
 
@@ -104,7 +104,7 @@ Tiny **typo-only** fixes may be made without an issue: spelling, punctuation or 
 
 - **Traceability.** Every change links to a stated objective (issue), a reviewed diff (PR) and, for methodology, a Decision Record. Together these form an auditable timeline of what was decided before the Test period is unsealed. That timeline supports the protocol freeze and its Git tag.
 - **Continuity across sessions and assistants.** Several assistants and many chat sessions work on the same design. Recording each decision where every assistant reads (owner files and issues) keeps settled items settled and makes the decision date part of the record.
-- **Scope control for AI assistance.** An issue gives an AI assistant a bounded task and gives the student a checklist to review against. This reduces unrelated or unreviewed edits.
+- **Scope control for AI assistance.** An issue gives an AI assistant a bounded task and gives the review a checklist (the acceptance criteria). This reduces unrelated or unreviewed edits.
 - **Research integrity.** A dated issue and PR history is concrete evidence that model, policy and threshold choices were not informed by Test results. This is consistent with the University's commitment to the Concordat to Support Research Integrity (`REF-052`) and with the requirement to disclose AI use (`REF-053`).
 
 ## Consequences
@@ -119,7 +119,7 @@ Tiny **typo-only** fixes may be made without an issue: spelling, punctuation or 
 - **Process rules are not technical controls.** Nothing in this decision *enforces* the workflow. Branch protection on `main` (e.g. required PRs) could enforce part of it, but that is a repository setting outside this decision.
 - **Automatic closure depends on the target branch.** A PR merged into any branch other than `main` will not close its issue.
 - **Tool-specific instruction files.** Some AI coding tools read their own instruction file names by default and may not load `AGENTS.md` automatically. For those tools, `AGENTS.md` must be supplied explicitly or referenced from the tool's own instruction file.
-- **Review quality depends on the student.** The workflow creates review points; it does not guarantee the review is thorough.
+- **Review quality depends on the care taken in each review.** The workflow creates review points; it does not guarantee the review is thorough.
 
 ## Relationship to `AGENTS.md`
 
