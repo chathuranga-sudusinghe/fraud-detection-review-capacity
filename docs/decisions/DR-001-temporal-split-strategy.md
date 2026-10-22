@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-23; revised 2026-10-09 (Issue #54) and 2026-10-10 (Issue #62: link to the machine-readable declaration) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3–4, 5.1, 14, 15 |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
@@ -115,7 +115,7 @@ Reproducibility anchors, from the notebook (§4.3):
 - **Episodic prevalence.** Weekly fraud rates range from 2.1 % to 5.1 %, so a single 4-week Test window may be atypical.
 - **Relative time only.** No seasonal or calendar claims are possible.
 - **The relative-day boundary falls during active hours** (the activity trough is 8–9 hours after it). This affects which transactions compete in the same daily top-K queue, but not model comparisons.
-- **The split was chosen by the researcher.** Its defence is that it was fixed from volume alone, before any label analysis, and is recorded with partition hashes.
+- **The split is a design choice.** Its defence is that it was fixed from volume alone, before any label analysis, and is recorded with partition hashes.
 
 ## References
 

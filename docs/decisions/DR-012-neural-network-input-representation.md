@@ -82,7 +82,7 @@ All non-missing Train values are used to fit the quantiles (no subsampling). The
 | Standardisation instead of the quantile transformation | Leaves heavy tails and extreme values that destabilise neural training [REF-089]; departs from the evaluated setting of REF-087. |
 | Quantile transformation without noise | Maps a dominant repeated value to an extreme of the output distribution (−5.20 instead of −0.52 in the synthetic check). |
 | Noise of a fixed standard deviation 10⁻³ for every input, as a reading of the paper's notation N(0, 1e−3) (a normal distribution with mean 0 and second parameter 10⁻³) | The paper's notation does not state whether 10⁻³ is a standard deviation or a variance, and its text refers to the source code for the exact implementation. Following the reference implementation [REF-103] removes this ambiguity and makes the preprocessing reproducible against a pinned commit. |
-| Noise only for inputs with few distinct values | Requires a researcher-chosen cut-off per input; the uniform rule is simpler and matches REF-087. |
+| Noise only for inputs with few distinct values | Requires a chosen cut-off per input; the uniform rule is simpler and matches REF-087. |
 | `"__MISSING__"` added only where Train has missing values | The index would not exist for other inputs, so the unseen-to-missing rule could not be applied to them. |
 | A fixed zero vector, instead of a trained embedding, for unseen values | Gives unseen values no learned representation and differs from how observed missing values are represented. |
 | One indicator per missingness block (14 `V` blocks) | Fewer inputs, but the block grouping is a derived feature. Retained as a contingency only if training time requires it, to be decided before the development runs. |

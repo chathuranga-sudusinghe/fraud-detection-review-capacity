@@ -1,6 +1,6 @@
 # Notebooks
 
-Executed notebooks are research evidence for the data-understanding stage. Each is run by the project owner and saved with its outputs. Committed outputs contain aggregates and schema information only: raw competition data never enter the repository ([`docs/dataset.md`](../docs/dataset.md#data-use-terms)).
+Executed notebooks are research evidence for the data-understanding stage. Each is run and saved with its outputs. Committed outputs contain aggregates and schema information only: raw competition data never enter the repository ([`docs/dataset.md`](../docs/dataset.md#data-use-terms)).
 
 The final Test period (relative days 155–182) is sealed ([DR-001](../docs/decisions/DR-001-temporal-split-strategy.md)). A relative day is `TransactionDT` (time offset in seconds from an undisclosed reference point) divided by 86,400 seconds and rounded down.
 
@@ -67,7 +67,7 @@ Notebook 01 is the pre-freeze feasibility record and is kept unchanged. Where it
 
 - Use the project kernel **Python (fraud-detection-review-capacity)** from the repository root's `.venv`; raw files are expected in `data/raw/`.
 - **Notebook 01 is a historical evidence record and must not be rerun** while the Test period is sealed: its loader reads the complete target column before restricting analysis to development rows. Its saved outputs are the evidence; corrections are made in new notebooks through the issue workflow, not by re-executing it.
-- **Notebook 02** reads headers, key columns and (locally) a raw-row preview with `isFraud` excluded for Test-period rows. **Notebook 03** reads keys for all rows and full columns for development rows only. Both are run by the project owner; neither trains a model.
+- **Notebook 02** reads headers, key columns and (locally) a raw-row preview with `isFraud` excluded for Test-period rows. **Notebook 03** reads keys for all rows and full columns for development rows only. Neither trains a model.
 - Before committing notebook 02, remove the outputs of cells tagged `local-only`:
 
   ```bash

@@ -106,7 +106,7 @@ Targeted searches covered theme T2 and specific claims: the primary sources for 
 
 ## 6. Reviewer and AI assistance
 
-Searching in IEEE Xplore and downloading paywalled full texts were done by the project owner. Title and abstract screening, full-text reading, evidence extraction and bibliographic verification were carried out with an AI assistant (Claude), under the rules in [`AGENTS.md`](../AGENTS.md). All selection decisions are subject to the project owner's review before they are used in the dissertation, and the use of AI is disclosed in the AI Reflection (AIR) required by the University of Greenwich [REF-053].
+Searching in IEEE Xplore and downloading paywalled full texts were done manually. Title and abstract screening, full-text reading, evidence extraction and bibliographic verification were carried out with an AI assistant (Claude), under the rules in [`AGENTS.md`](../AGENTS.md). All selection decisions are reviewed before they are used in the dissertation, and the use of AI is disclosed in the AI Reflection (AIR) required by the University of Greenwich [REF-053].
 
 Bibliographic details of every new source were checked against Crossref or the official proceedings record; verification status is recorded in [`references.md`](references.md).
 

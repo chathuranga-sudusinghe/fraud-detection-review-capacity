@@ -12,7 +12,7 @@ The file is an unchanged copy of the run's output `data/processed/duplicate_audi
 
 ## Run
 
-- **Date:** 13 October 2026, run by the project owner on the project workstation.
+- **Date:** 13 October 2026, run on the project workstation.
 - **Command:** `review-capacity --log-file evidence/duplicate_audit/duplicate_audit.log audit-duplicates --save`
 - **Code:** commit `01f0d8f`, with no uncommitted changes in the working tree.
 - **Input:** `development_joined.parquet` (SHA-256 `8c657e5c4094915cf4d1271d52d36fe61e3366489f44174cac845589c0ee8d85`), verified against its provenance record by the reader; 511,998 development rows, read without the target.

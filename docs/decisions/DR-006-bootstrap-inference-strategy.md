@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner (Issue #14) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Accepted (pre-freeze), Issue #14, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values) |
 | Evidence source | Development-period (V2, relative days 127–154) dependence diagnostics, computed for this decision with no Test labels and no model scores; `notebooks/01_dataset_feasibility_audit.ipynb` §15; bootstrap and clustered-inference literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |

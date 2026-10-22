@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) and 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (H1/H2 bootstrap), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (H3 configuration), [protocol](../protocol.md) |
@@ -120,10 +120,10 @@ These statistics are reported descriptively with bootstrap intervals where appro
 - **[L] The general framework is well established.**
   - Equivalence is tested with the TOST procedure. At α = 0.05 this is equivalent to requiring the 90 % confidence interval (CI) to lie inside the equivalence bounds [REF-061, REF-062].
   - TOST is an intersection-union test, so the two one-sided tests are each carried out at α without splitting it [REF-062].
-  - The equivalence bounds express the **Smallest Effect Size Of Interest (SESOI)**, which the researcher must justify [REF-030, REF-063].
+  - The equivalence bounds express the **Smallest Effect Size Of Interest (SESOI)**, which must be justified [REF-030, REF-063].
 - **[L] Precedent for relative (ratio) margins.** In regulatory bioequivalence, the acceptance interval is defined on the *ratio* of test to reference (80.00–125.00 %), and the 90 % CI of the ratio must lie within it [REF-065]. This is cited only as a precedent that equivalence margins for positive quantities are commonly defined **relative to a reference value**. It gives **no** support for any particular magnitude in fraud-alerting, because that margin was set for a different field and purpose.
 
-**Consequence.** The magnitude of Δ cannot be taken from the literature. It is a **pre-specified researcher judgement**, justified below by the research design and by development-period evidence that uses no labels and no Test data.
+**Consequence.** The magnitude of Δ cannot be taken from the literature. It is a **pre-specified judgement**, justified below by the research design and by development-period evidence that uses no labels and no Test data.
 
 #### Candidate definitions compared
 
@@ -220,7 +220,7 @@ The rate component answers the research question, *does a validation-selected op
 
 ## Threats and limitations
 
-- **Δ is a researcher judgement.** No fraud- or alerting-specific literature standard exists. The 20 % magnitude rests on development-period volume variation and operational reasoning, and is reported with sensitivity bounds. It should be reviewed with the supervisor before the protocol freeze.
+- **Δ is a judgement.** No fraud- or alerting-specific literature standard exists. The 20 % magnitude rests on development-period volume variation and operational reasoning, and is reported with sensitivity bounds. It should be reviewed with the supervisor before the protocol freeze.
 - **The feasibility table relies on planning assumptions** (day-level SD, autocorrelation), not measured model behaviour.
 - **With 28 days and ℓ = 3, the bootstrap has about 26 distinct blocks.** Coverage of the 90 % interval is approximate.
 - **The volume anchor uses V2 only (28 days).** A different reference period would give somewhat different percentiles.

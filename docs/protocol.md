@@ -120,7 +120,7 @@ r is the share of all Test transactions that the transferred threshold flags. **
 
   At K = 56 this is ±11 reviews per day.
 - It was fixed before any Test access (Issue #7).
-- No fraud- or alerting-specific literature standard exists, so the magnitude is a pre-specified researcher judgement. It is anchored in V2 volume-driven workload variation (upper quartile 16.7 %, 90th percentile 26.5 %) and in a precision-feasibility check.
+- No fraud- or alerting-specific literature standard exists, so the magnitude is a pre-specified judgement. It is anchored in V2 volume-driven workload variation (upper quartile 16.7 %, 90th percentile 26.5 %) and in a precision-feasibility check.
 - The relative form follows the common practice of defining equivalence margins relative to a reference value [REF-065].
 - Full justification and the alternatives considered (absolute, budget-derived; 10 %, 25 %, 50 %) are in [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
 
@@ -672,7 +672,7 @@ The computational-cost outcome above is measured on the development partitions u
 - **GPU synchronisation.** Neural timings synchronise the explicit CUDA device before the clock starts and after the work completes, around each full pass and around each latency call. CPU timings use no synchronisation.
 - **Session conditions.** The timings are taken under the machine's working conditions at the time and are valid descriptive measurements: no condition is required, and other local workloads may run during a timing. The conditions are recorded as context with the run: a **60-second settling interval** before each standalone scoring block, the one-minute load average, the visible and allowed CPUs, the kernel, the WSL2 memory and swap limits, and GPU temperature and clock data where the system exposes them. A timing is read together with its recorded context and reflects the machine's conditions as well as the model.
 - **GPU memory.** The absolute sampled whole-device maximum, the idle baseline and the increase above the baseline are stored separately and called a **sampled maximum**, not a true peak. The neural models also record the allocator's maximum allocated and reserved bytes after a reset at the start of the phase. The libraries of the tree-based models are invisible to those counters.
-- **Host memory.** The peak resident memory of each phase is the process high-water mark (`VmHWM`) read after resetting it by writing `5` to `/proc/self/clear_refs` (which resets it to the current resident size, not to zero; the check resets first, so that an earlier, higher mark cannot hide it). Whether the reset works on the project machine is checked with a synthetic allocation in the first owner-run; where it does not, a sampler thread reads the resident size **every 100 ms** (the `timing` block) and the record names the method and the interval; a failed sampler or one that does not stop invalidates the phase's measurement instead of returning a peak. The scope (parent process, resident inputs, models, and whether warm-up lies inside the interval) is stated by the caller with each value.
+- **Host memory.** The peak resident memory of each phase is the process high-water mark (`VmHWM`) read after resetting it by writing `5` to `/proc/self/clear_refs` (which resets it to the current resident size, not to zero; the check resets first, so that an earlier, higher mark cannot hide it). Whether the reset works on the project machine is checked with a synthetic allocation in the first run; where it does not, a sampler thread reads the resident size **every 100 ms** (the `timing` block) and the record names the method and the interval; a failed sampler or one that does not stop invalidates the phase's measurement instead of returning a peak. The scope (parent process, resident inputs, models, and whether warm-up lies inside the interval) is stated by the caller with each value.
 - **Test period.** Test scoring time is obtained only by instrumenting the single authorised Test scoring pass after the protocol freeze; no Test pass is repeated for timing.
 - **Records.** One versioned `timing` record per measurement; a scoring record covers the whole partition and its throughput is the rows divided by the median seconds; an FT-Transformer timing names the efficient attention backend ([DR-013](decisions/DR-013-training-device-policy.md) §4); the free `settings` map holds the procedure version, the durations of every pass, the number of distinct rows and of timed calls, the percentile method, the memory method, baseline and maxima, and the session conditions.
 
@@ -826,11 +826,11 @@ The University of Greenwich Research Ethics Policy applies to master's students'
 - human oversight;
 - responsible interpretation of model outputs.
 
-Artificial intelligence (AI) assistance used in this project will be declared at submission in an AI Reflection (AIR), which replaces the Declaration of AI use from 2026/27 [REF-109, REF-111]; the AI-use tier is Tier 2 ("Supported by AI") as the owner's working basis, to be confirmed against the COMP1885 assessment brief ([criteria checklist](greenwich-criteria-checklist.md#5-use-of-ai)).
+Artificial intelligence (AI) assistance used in this project will be declared at submission in an AI Reflection (AIR), which replaces the Declaration of AI use from 2026/27 [REF-109, REF-111]; the AI-use tier is Tier 2 ("Supported by AI") as the working basis, to be confirmed against the COMP1885 assessment brief ([criteria checklist](greenwich-criteria-checklist.md#5-use-of-ai)).
 
 ## Design items before protocol freeze
 
-**Fixed design elements** (recorded in Decision Records and accepted by the project owner in line with the University of Greenwich criteria; supervisor feedback welcome, not a precondition):
+**Fixed design elements** (recorded in Decision Records and accepted in line with the University of Greenwich criteria; supervisor feedback welcome, not a precondition):
 
 | Element | Specification | Record |
 |---|---|---|

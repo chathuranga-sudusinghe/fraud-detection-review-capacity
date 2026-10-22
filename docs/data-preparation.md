@@ -64,7 +64,7 @@ Preparation performs declared parsing and input-representation conversions; it d
 
 **Neural-network inputs ([DR-012](decisions/DR-012-neural-network-input-representation.md)).** The neural representation does transform values: numeric inputs are quantile-transformed with Train-fitted quantiles, and missing numeric values are set to 0 after the transformation, with a missingness indicator for each numeric input that has missing Train values. The quantile transformations and the indicator list are fitted on Train only; the zero fill after the transformation is a fixed constant, reused in later partitions.
 
-**Repeated input vectors [D]** (owner-run audit, 13 October 2026; Issue #86; [definitions and evidence](../evidence/duplicate_audit/README.md)). The label-free audit compares exact canonical input values among the 511,998 development rows:
+**Repeated input vectors [D]** (audit of 13 October 2026; Issue #86; [definitions and evidence](../evidence/duplicate_audit/README.md)). The label-free audit compares exact canonical input values among the 511,998 development rows:
 
 - **all 433 model inputs identical:** 2 repeated vectors on 4 rows (one pair in Train, one in V2), and no vector shared between partitions;
 - **the 431 supplied inputs identical, excluding the two derived time-of-day inputs:** 332 repeated vectors on 699 rows (0.14 %), 367 of them beyond the first row of their vector; 110 of these vectors occur in more than one partition.
@@ -99,7 +99,7 @@ All models start from one canonical frame of the 433 inputs in declared order ([
 
 - **Verified reading.** Before returning any data, the reader checks each processed file against its provenance record, the declared schema and the DR-001 anchors ([`data/processed.py`](../src/review_capacity/data/processed.py)); a file built under another feature declaration is rejected.
 - **Built once.** The stage refuses to write over existing processed files.
-- **Run by the project owner.** Data preparation and the audit are run by the project owner; the commands, dates and results are recorded in Issues #62 and #86 and in the files above.
+- **Recorded runs.** Data preparation and the audit are run locally; the commands, dates and results are recorded in Issues #62 and #86 and in the files above.
 
 ## 8. Limitations
 

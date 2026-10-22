@@ -85,7 +85,7 @@ Parquet files are derivative storage formats only; they are not a separate datas
 
 ## Data-Use Terms
 
-The competition data are used under the official IEEE-CIS Fraud Detection Competition Rules, Section 7 [REF-049]. The student reports having accepted these Rules on their Kaggle account (Issue #25). This acceptance is recorded as the student's report; it was not independently checked.
+The competition data are used under the official IEEE-CIS Fraud Detection Competition Rules, Section 7 [REF-049]. The Rules were accepted on a Kaggle account (Issue #25). This acceptance is recorded as a report; it was not independently checked.
 
 ### What the Competition Rules require
 
@@ -99,7 +99,7 @@ Section 7B therefore requires keeping the Competition Data from persons who have
 
 This project adopts the following rules. Where they go beyond the Competition Rules, that is a deliberate, conservative project choice, not a Kaggle requirement:
 
-- **Raw competition files** (`data/raw/`) stay on the student's local machine and are never committed, published or uploaded. **They are not sent to anyone, including supervisors or examiners, even if that person has accepted the Rules.** The project does not rely on any sharing that the Rules might permit. A reader who needs the data obtains it from Kaggle by accepting the Rules themselves.
+- **Raw competition files** (`data/raw/`) stay on the local machine and are never committed, published or uploaded. **They are not sent to anyone, including supervisors or examiners, even if that person has accepted the Rules.** The project does not rely on any sharing that the Rules might permit. A reader who needs the data obtains it from Kaggle by accepting the Rules themselves.
 - **Row-level derived data** (e.g. Parquet copies, processed splits, per-transaction scores or predictions, feature extracts) is handled exactly like raw data. It can still reproduce Competition Data row by row, so the project treats it as covered by Section 7B. This is the project's interpretation.
 - **Aggregate results** (counts, rates, metrics, figures), together with code, documentation, column names, schema information and file checksums, may be kept in the repository and published. The Rules neither permit nor forbid aggregate statistics explicitly; publishing them is standard research practice and is the project's interpretation, not an explicit permission.
 
@@ -136,7 +136,7 @@ The dataset manifest resolves protocol design item 8 (Issue #62). It is generate
 - Each file's SHA-256 (Secure Hash Algorithm, 256-bit) checksum, written in the standard's `sha256:` form.
 - Under `_split`, a label-free summary of each partition of [DR-001](decisions/DR-001-temporal-split-strategy.md): row count, `TransactionDT` bounds and the full SHA-256 of the partition's sorted `TransactionID`s. The first 16 characters of each hash are the anchors recorded in DR-001.
 
-**How it is produced and checked.** The project owner runs the data-preparation stage on the local raw files:
+**How it is produced and checked.** The data-preparation stage runs on the local raw files:
 
 ```text
 review-capacity prepare-data               # validate, then write the processed files and the manifest
@@ -151,7 +151,7 @@ review-capacity prepare-data --check-only  # validate and print the summary; wri
 
 ## Data Access After the Parquet Build
 
-**Rule (project owner's decision, 11 October 2026; Issue #70).** The raw files are read only to build the processed development files. That build ran once, on 10 October 2026 ([Dataset Manifest](#dataset-manifest)). From then until the confirmatory Test evaluation:
+**Rule (decision of 11 October 2026; Issue #70).** The raw files are read only to build the processed development files. That build ran once, on 10 October 2026 ([Dataset Manifest](#dataset-manifest)). From then until the confirmatory Test evaluation:
 
 - every step, including data profiling, the integration tests, training, tuning, calibration, threshold selection and every Validation 1 and Validation 2 analysis, reads the development data only from `data/processed/`, through the verified reader of the `review_capacity` package;
 - no step reads `data/raw/`; this includes `prepare-data --check-only`, which validates the raw files;
@@ -167,7 +167,7 @@ No separate copy of the Test rows is made: they stay only in the raw files, whos
 - **Built once.** The data-preparation stage refuses to write over processed files that already exist.
 - **Development labels only.** Labels are parsed only up to the last development row ([Dataset Manifest](#dataset-manifest)).
 
-**Verification.** **[D]** On 11 October 2026 the project owner ran the integration tests on the processed files only, with the raw-file paths disabled. The DR-001 anchors were reproduced from the files' content, and the stored Train, Validation 1 and Validation 2 files were reproduced value for value from `development_joined.parquet` by the current code.
+**Verification.** **[D]** On 11 October 2026 the integration tests ran on the processed files only, with the raw-file paths disabled. The DR-001 anchors were reproduced from the files' content, and the stored Train, Validation 1 and Validation 2 files were reproduced value for value from `development_joined.parquet` by the current code.
 
 ## Research Split Policy
 

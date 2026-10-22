@@ -19,7 +19,7 @@ The log header records the environment:
 - NVIDIA GeForce RTX 5060 Laptop GPU, compute capability 12.0, 8,151 MiB (mebibytes) in total, 7,033 MiB free at the start;
 - the PyTorch memory allocator capped at 6,521 MiB (the free memory minus a 512 MiB safety margin), so that an oversized configuration fails with an out-of-memory error instead of spilling into system memory.
 
-The project owner ran the probe on 8 October 2026; the GPU, PyTorch, CUDA and memory figures are also recorded in the [Issue #50 results summary](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/50#issuecomment-6071998608).
+The probe ran on 8 October 2026; the GPU, PyTorch, CUDA and memory figures are also recorded in the [Issue #50 results summary](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/50#issuecomment-6071998608).
 
 ## Method
 

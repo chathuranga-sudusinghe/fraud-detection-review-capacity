@@ -2,14 +2,14 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) by the project owner (Issue #85) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)) |
+| Status | Accepted (pre-freeze), Issue #85, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)) |
 | Date | 2026-10-13 (Issue #85; resolves protocol design item 7) |
 | Evidence source | The Foundational Methodology for Data Science published by International Business Machines Corporation (IBM) [REF-085], read in full (reference identifiers REF-NNN are listed in [`docs/references.md`](../references.md)); two peer-reviewed reviews of data-science process methodologies [REF-125, REF-126], read in the parts cited; University of Greenwich guidance [REF-054, REF-112, REF-113]. No dataset values, labels or model results were used. |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-004](DR-004-github-issue-driven-workflow.md), [protocol](../protocol.md), [README research path](../../README.md#research-path) |
 
 ## Context
 
-A data-science study is easier to follow and to assess when its work is organised along a recognised process model. Such models describe the stages of a project, from understanding the problem to using the results, and the loops between them. The research path in the [README](../../README.md#research-path) already followed the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085], but the framing was marked as proposed and awaiting the project owner's decision (protocol design item 7).
+A data-science study is easier to follow and to assess when its work is organised along a recognised process model. Such models describe the stages of a project, from understanding the problem to using the results, and the loops between them. The research path in the [README](../../README.md#research-path) already followed the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085], but the framing was marked as proposed and awaiting a decision (protocol design item 7).
 
 Two facts shape the decision:
 
@@ -49,7 +49,7 @@ A peer-reviewed review of the methodology reports that it lacks team roles and g
 - **reproducibility:** checksummed raw files, a dataset manifest and partition hashes ([dataset.md: Dataset Manifest](../dataset.md#dataset-manifest)), a pinned and locked environment, automated checks in continuous integration (CI), and a protocol tagged in Git before the Test evaluation;
 - **knowledge accumulation:** Decision Records with their context, evidence and rejected alternatives, and an issue-driven workflow ([DR-004](DR-004-github-issue-driven-workflow.md));
 - **data security:** raw data kept local and never committed, the dataset's use terms ([dataset.md: Data-Use Terms](../dataset.md#data-use-terms)) and the sealed Test period;
-- **roles:** a single-researcher study; the authority of the project owner and the limited roles of artificial-intelligence (AI) assistants are defined in [`AGENTS.md`](../../AGENTS.md).
+- **roles:** the final authority and the limited roles of artificial-intelligence (AI) assistants are defined in [`AGENTS.md`](../../AGENTS.md).
 
 ## Evidence
 
