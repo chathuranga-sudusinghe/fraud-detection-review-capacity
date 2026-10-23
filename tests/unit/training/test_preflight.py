@@ -47,6 +47,13 @@ TOTAL_MIB = 8_000
 AMPLE_MIB = 3_000  # free memory of an ordinary attempt
 MARGIN = 1_024
 ARTIFACT = "a" * 64
+IDENTITY: dict[str, Any] = {
+    "artifact_sha256": ARTIFACT,
+    "declaration_sha256": "d" * 64,
+    "settings_sha256": "e" * 64,
+    "source_sha256": "f" * 64,
+    "gpu_name": "Test GPU",
+}
 RESNET: Candidate = {
     "n_layers": 1,
     "d": 16,
@@ -99,9 +106,10 @@ class Scripted:
     """A memory meter that reports the next scripted free memory (MiB) for each watched phase and
     ``AMPLE_MIB`` once the script is used up."""
 
-    def __init__(self, *free: int, problems: tuple[str, ...] = ()) -> None:
+    def __init__(self, *free: int, problems: tuple[str, ...] = (), samples: int = 10) -> None:
         self.free = list(free)
         self.problems = problems
+        self.samples = samples
         self.phases = 0
 
     @contextmanager
@@ -110,7 +118,7 @@ class Scripted:
         yield watch
         free = self.free.pop(0) if self.free else AMPLE_MIB
         self.phases += 1
-        watch.reading = Reading(TOTAL_MIB, 1_000, TOTAL_MIB - free, self.problems)
+        watch.reading = Reading(TOTAL_MIB, 1_000, TOTAL_MIB - free, self.problems, self.samples)
 
 
 def run(
@@ -259,18 +267,72 @@ def test_out_of_memory_is_a_failed_attempt_and_other_errors_propagate(
         run(declaration, settings, Scripted(), models=("ft_transformer",))
 
 
-def test_the_random_states_are_unchanged(
+def _states() -> tuple[Any, Any, Any]:
+    numpy_state = np.random.get_state()
+    return (
+        random.getstate(),
+        (numpy_state[0], numpy_state[1].tolist(), *numpy_state[2:]),
+        (torch.get_rng_state().tolist()),
+    )
+
+
+def test_the_random_states_are_unchanged_also_after_an_error(
+    monkeypatch: pytest.MonkeyPatch, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    before = _states()
+    run(declaration, settings, Scripted())
+    assert _states() == before
+    original: Callable[..., None] = FTTransformerModel.fit
+
+    def seeds_then_fails(model: FTTransformerModel, *args: Any, **kwargs: Any) -> None:
+        original(model, *args, **kwargs)  # the fit seeds the generators
+        raise ModelError("the loss is not finite")
+
+    monkeypatch.setattr(FTTransformerModel, "fit", seeds_then_fails)
+    with pytest.raises(ModelError, match="loss is not finite"):
+        run(declaration, settings, Scripted(), models=("ft_transformer",))
+    assert _states() == before
+
+
+def test_the_training_phase_runs_two_effective_batches_and_the_evaluation_runs_in_the_loop(
+    monkeypatch: pytest.MonkeyPatch, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    original: Callable[..., None] = FTTransformerModel.fit
+    calls: list[tuple[int, bool, dict[str, Any]]] = []
+
+    def watching(
+        model: FTTransformerModel, train: Any, valid: Any, hyperparameters: Any, **kwargs: Any
+    ) -> None:
+        calls.append((train.inputs.rows, valid is not None, dict(hyperparameters)))
+        original(model, train, valid, hyperparameters, **kwargs)
+
+    monkeypatch.setattr(FTTransformerModel, "fit", watching)
+    run(declaration, settings, Scripted(), models=("ft_transformer",))
+    effective = declaration.neural.effective_batch
+    assert len(calls) == 4  # per candidate: one training fit, one evaluation fit
+    # two effective batches in one fit: the second runs with the optimiser state alive
+    assert {rows for rows, _, _ in calls} == {2 * effective}
+    assert [with_validation for _, with_validation, _ in calls] == [False, True, False, True]
+    assert calls[1][2]["max_epochs"] == 1
+    assert "max_epochs" not in calls[0][2]
+
+
+def test_a_phase_with_too_few_memory_samples_fails() -> None:
+    reading = Reading(TOTAL_MIB, 1_000, 2_000, (), samples=1)
+    phase = _phase(reading, None, MARGIN)
+    assert phase["completed"]
+    assert not phase["passes"]
+    assert phase["problems"] == ["1 memory samples; at least 3 are required"]
+
+
+def test_every_attempt_failing_for_lack_of_samples_stops_the_search(
     declaration: TrainingDeclaration, settings: ModelSettings
 ) -> None:
-    python_state, numpy_state = random.getstate(), np.random.get_state()
-    torch_state = torch.get_rng_state()
-    run(declaration, settings, Scripted())
-    assert random.getstate() == python_state
-    np.testing.assert_array_equal(np.random.get_state()[1], numpy_state[1])
-    assert torch.equal(torch.get_rng_state(), torch_state)
+    with pytest.raises(ModelError, match="passes at no listed micro-batch"):
+        run(declaration, settings, Scripted(samples=1), models=("ft_transformer",))
 
 
-def test_the_preflight_is_repeatable(
+def test_the_batch_plan_is_identical_under_identical_readings(
     declaration: TrainingDeclaration, settings: ModelSettings
 ) -> None:
     first = run(declaration, settings, Scripted())
@@ -289,14 +351,12 @@ def recorded(
     # 32 rows leave 500 MiB (fails), 16 leave 2,000 (passes)
     meter = Scripted(*[AMPLE_MIB] * 4, 500, 2_000, AMPLE_MIB)
     models = run(declaration, settings, meter)
-    record = build_record(declaration, {"artifact_sha256": ARTIFACT}, models)
+    record = build_record(declaration, IDENTITY, models)
     return write_preflight(tmp_path, record), record
 
 
 def read(path: Path, declaration: TrainingDeclaration, **changes: Any) -> Any:
-    options: dict[str, Any] = {"artifact_sha256": ARTIFACT}
-    options.update(changes)
-    return read_preflight(path, declaration, CANDIDATES, **options)
+    return read_preflight(path, declaration, CANDIDATES, identity={**IDENTITY, **changes})
 
 
 def test_a_recorded_plan_is_read_back_as_batch_plans(
@@ -315,14 +375,18 @@ def test_a_plan_for_other_inputs_is_refused(
     tmp_path: Path, declaration: TrainingDeclaration, settings: ModelSettings
 ) -> None:
     path, _ = recorded(tmp_path, declaration, settings)
-    with pytest.raises(SpecificationError, match="another preprocessing artifact"):
-        read(path, declaration, artifact_sha256="b" * 64)
+    for name in IDENTITY:
+        with pytest.raises(SpecificationError, match=f"another {name}"):
+            read(path, declaration, **{name: "other"})
     other = replace(declaration, neural=replace(declaration.neural, preflight_free_margin_mib=1))
     with pytest.raises(SpecificationError, match="margin or micro-batch"):
         read(path, other)
     changed = {**CANDIDATES, "resnet": [RESNET, {**RESNET, "d": 25}]}
+    with pytest.raises(SpecificationError, match="another candidate"):
+        read_preflight(path, declaration, changed, identity=IDENTITY)
+    fewer = {**CANDIDATES, "resnet": CANDIDATES["resnet"][:1]}
     with pytest.raises(SpecificationError, match="other candidates"):
-        read_preflight(path, declaration, changed, artifact_sha256=ARTIFACT)
+        read_preflight(path, declaration, fewer, identity=IDENTITY)
     wider = replace(declaration, neural=replace(declaration.neural, effective_batch=64))
     with pytest.raises(SpecificationError, match="other batch sizes"):
         read(path, wider)
@@ -330,7 +394,21 @@ def test_a_plan_for_other_inputs_is_refused(
 
 @pytest.mark.parametrize(
     "tamper",
-    ["unlisted", "resnet_split", "not_passing", "evaluation", "missing_model", "format"],
+    [
+        "unlisted",
+        "resnet_split",
+        "not_passing",
+        "evaluation",
+        "missing_model",
+        "format",
+        "duplicate_trial",
+        "identity_null",
+        "empty_attempts",
+        "free_arithmetic",
+        "short_sampling",
+        "attempt_order",
+        "candidate_payload",
+    ],
 )
 def test_a_tampered_plan_is_refused(
     tmp_path: Path, declaration: TrainingDeclaration, settings: ModelSettings, tamper: str
@@ -348,6 +426,20 @@ def test_a_tampered_plan_is_refused(
         ftt["evaluation"]["passes"] = False
     elif tamper == "missing_model":
         del record["models"]["ft_transformer"]
+    elif tamper == "duplicate_trial":
+        record["models"]["ft_transformer"]["candidates"][1]["trial"] = 1
+    elif tamper == "identity_null":
+        record["identity"] = None
+    elif tamper == "empty_attempts":
+        ftt["attempts"] = []
+    elif tamper == "free_arithmetic":
+        ftt["evaluation"]["free_at_peak_mib"] += 1
+    elif tamper == "short_sampling":
+        ftt["evaluation"]["samples"] = 1
+    elif tamper == "attempt_order":
+        ftt["attempts"][0]["micro_batch"] = 16
+    elif tamper == "candidate_payload":
+        ftt["candidate"]["lr"] = 0.5
     else:
         record["format_version"] = 99
     path.write_text(json.dumps(record), encoding="utf-8")

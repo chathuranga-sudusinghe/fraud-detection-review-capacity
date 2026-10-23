@@ -4,8 +4,9 @@
 Reads no research data: the vocabularies and column counts come from the shared preprocessing
 artifact (DR-012), the candidate lists from the training declaration, and the inputs are
 synthetic. Writes ``preflight.json`` and the run's log inside ``outputs/``. The record names the
-artifact's SHA-256, the declaration and settings hashes and the environment, so that a
-development run can check the plan against them (``training.preflight.read_preflight``).
+artifact's SHA-256, the declaration and settings hashes, the package source fingerprint, the GPU
+and the environment, taken before the workload starts; a development run passes the values it
+runs under to ``training.preflight.read_preflight``, which refuses a plan made under others.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from review_capacity.features.neural_preprocessing import load_neural_preprocess
 from review_capacity.models.device import environment_record
 from review_capacity.models.run_record import load_settings_with_snapshot
 from review_capacity.paths import ProjectPaths
+from review_capacity.probe.diagnostics import NVIDIA_SMI
 from review_capacity.provenance import code_provenance
 from review_capacity.training.declaration import load_declaration
 from review_capacity.training.preflight import (
@@ -64,6 +66,22 @@ def run_preflight_command(
         )
     lists = generate_candidates(declaration)
     candidates = {model: lists[model].candidates for model in MODELS}
+    # the identity is taken before the workload starts, so that it describes the code and the
+    # environment under which the measurement begins
+    code = code_provenance(paths.root)
+    environment = environment_record()
+    identity = {
+        "run_id": started,
+        "run_type": RUN_TYPE,
+        "code": code,
+        "declaration_sha256": declaration_file.sha256,
+        "settings_sha256": settings_file.sha256,
+        "artifact_sha256": artifact.artifact_sha256,
+        "source_sha256": code["package"]["source_sha256"],
+        "gpu_name": environment["gpu"].get("name"),
+        "sampler_command": list(NVIDIA_SMI),
+        "environment": environment,
+    }
     models = run_preflight(
         declaration,
         settings,
@@ -73,15 +91,6 @@ def run_preflight_command(
         meter=GpuMeter(),
         seed=settings.main_seed,
     )
-    identity = {
-        "run_id": started,
-        "run_type": RUN_TYPE,
-        "code": code_provenance(paths.root),
-        "declaration_sha256": declaration_file.sha256,
-        "settings_sha256": settings_file.sha256,
-        "artifact_sha256": artifact.artifact_sha256,
-        "environment": environment_record(),
-    }
     record = build_record(declaration, identity, models)
     path = write_preflight(directory, record)
     logger.info("Neural preflight written to %s", path)

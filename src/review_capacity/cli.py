@@ -58,10 +58,11 @@ Commands:
     preflight-neural
                    the micro-batch preflight of the neural models (DR-015 §7) on the project GPU:
                    for each of the ten candidates of the ResNet-style MLP and FT-Transformer, the
-                   largest micro-batch that completes one effective batch, in training and in
-                   float32 evaluation, with at least the declared free GPU memory at the sampled
-                   peak; synthetic inputs of the vocabularies of the shared preprocessing
-                   artifact (--preprocessing), no research data. Writes preflight.json and its
+                   largest micro-batch whose training epoch of two effective batches and whose
+                   float32 evaluation inside the training loop (one evaluation batch, optimiser
+                   state alive) leave at least the declared free GPU memory at the sampled peak;
+                   synthetic inputs of the vocabularies of the shared preprocessing artifact
+                   (--preprocessing), no research data. Writes preflight.json and its
                    log, always run.log (--log-file is refused), to a new directory: --output, or
                    by default outputs/neural_preflight/<UTC start time, YYYY-MM-DDTHHMMSSZ>/
 
