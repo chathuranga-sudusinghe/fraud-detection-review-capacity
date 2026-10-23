@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from review_capacity.development.rendering import render_summary, write_summary
-from review_capacity.development.run_output import SUMMARY_NAME, load_run
+from review_capacity.development.run_output import SUMMARY_NAME, RunDirectory, load_run
 from review_capacity.development.summary import cell, record_markdown
 from review_capacity.errors import RecordContractError
 from review_capacity.training.timing import Timed, search_record
@@ -114,7 +114,7 @@ def test_the_range_needs_every_declared_seed(tmp_path: Path) -> None:
 def test_a_configuration_without_records_shows_dashes(tmp_path: Path) -> None:
     text = summary_of(finished_run(tmp_path).path)
     row = next(line for line in text.splitlines() if line.startswith("| `Cat-b` |"))
-    assert set(row.replace("|", "").split()) == {"`Cat-b`", "—"}
+    assert set(row.replace("|", "").split()) == {"`Cat-b`", "`tree`", "—"}
 
 
 def test_several_records_matching_one_row_are_an_error(tmp_path: Path) -> None:
@@ -209,3 +209,132 @@ def test_a_fit_without_its_startup_excluded_is_flagged(tmp_path: Path) -> None:
     }
     run.write_record(fit, "Cat-u", "fit")
     assert "Fit time may include start-up" in summary_of(run.path)
+
+
+# --- the family column and the descriptive contrasts (Issue #153) --------------------------------
+
+RECALLS = {
+    "LGB-u": 0.30,
+    "Cat-u": 0.34,
+    "RES-u": 0.31,
+    "FTT-u": 0.38,
+    "LGB-b": 0.32,
+    "Cat-b": 0.33,
+    "RES-b": 0.35,
+    "FTT-b": 0.36,
+}
+
+
+def write_recalls(run: RunDirectory, recalls: dict[str, float]) -> None:
+    """The ``run`` record and, for each configuration, the V2 R3 evaluation at 2 % of its
+    selected model with the given recall."""
+    run.write_record(example("run"))
+    for name, recall in recalls.items():
+        record = example("evaluation") | {
+            "configuration": name,
+            "metrics": example("evaluation")["metrics"] | {"recall": recall},
+        }
+        run.write_record(record, name, "selected")
+
+
+def contrast_rows(text: str) -> dict[str, list[str]]:
+    """The cells of the contrast table, by contrast name (without the code span)."""
+    start = text.index("### Descriptive contrasts of V2 Recall@2%")
+    end = text.index("### ", start + 1)
+    rows = {}
+    for line in text[start:end].splitlines():
+        if line.startswith("| `") and "---" not in line:
+            cells = [part.strip() for part in line.strip("|").split("|")]
+            rows[cells[0].strip("`")] = [c.strip("`") for c in cells[1:]]
+    return rows
+
+
+def numbers(cells: list[str]) -> list[float | None]:
+    return [None if c == "—" else float(c) for c in cells]
+
+
+def test_the_contrasts_are_exact_differences_of_the_recalls_of_the_records(
+    tmp_path: Path,
+) -> None:
+    run = new_run(tmp_path)
+    write_recalls(run, RECALLS)
+    rows = contrast_rows(summary_of(run.path))
+    assert list(rows) == [
+        "CatBoost − LightGBM",
+        "FT-Transformer − ResNet-style MLP",
+        "Neural mean − tree-based mean",
+    ]
+    expected = {
+        "CatBoost − LightGBM": [0.04, 0.01, 0.025],
+        "FT-Transformer − ResNet-style MLP": [0.07, 0.01, 0.04],
+        "Neural mean − tree-based mean": [0.025, 0.03, 0.0275],
+    }
+    for name, values in expected.items():
+        assert numbers(rows[name]) == pytest.approx(values, abs=1e-12)
+
+
+def test_the_contrast_table_states_that_it_is_descriptive(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_recalls(run, RECALLS)
+    text = summary_of(run.path)
+    assert "no interval, no test, no use in selection" in text
+    assert "The logistic-regression reference enters no contrast." in text
+
+
+def test_a_contrast_whose_configurations_were_not_scored_is_omitted_with_its_reason(
+    tmp_path: Path,
+) -> None:
+    run = new_run(tmp_path)
+    write_recalls(run, {"LGB-u": 0.30, "Cat-u": 0.34, "LGB-b": 0.32})  # no Cat-b
+    text = summary_of(run.path)
+    rows = contrast_rows(text)
+    values = numbers(rows["CatBoost − LightGBM"])
+    assert values[0] == pytest.approx(0.04, abs=1e-12)
+    assert values[1:] == [None, None]
+    assert numbers(rows["FT-Transformer − ResNet-style MLP"]) == [None, None, None]
+    assert "**Contrasts not computed:**" in text
+    assert "- CatBoost − LightGBM, balanced: not computed; no V2 Recall@2% record of" in text
+    assert "Cat-b" in text.split("**Contrasts not computed:**")[1]
+
+
+def test_the_reference_enters_no_contrast(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_recalls(run, RECALLS | {"LR": 0.99})
+    rows = contrast_rows(summary_of(run.path))
+    assert numbers(rows["Neural mean − tree-based mean"]) == pytest.approx(
+        [0.025, 0.03, 0.0275], abs=1e-12
+    )
+
+
+def test_two_records_for_one_contrast_input_are_an_error(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_recalls(run, RECALLS)
+    run.write_record(example("evaluation"), "LGB-u", "duplicate")
+    with pytest.raises(RecordContractError, match="must identify one"):
+        write_summary(run.path, PARTITIONS)
+
+
+def test_every_configuration_row_names_its_model_family(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    write_recalls(run, RECALLS | {"LR": 0.2})
+    text = summary_of(run.path)
+    start = text.index("### Development metrics")
+    section = text[start : text.index("### ", start + 1)]
+    header = next(line for line in section.splitlines() if line.startswith("| Configuration"))
+    assert header.startswith("| Configuration | Family | ")
+    rows = {
+        line.split("|")[1].strip().strip("`"): line.split("|")[2].strip().strip("`")
+        for line in section.splitlines()
+        if line.startswith("| `")
+    }
+    assert rows == {
+        "LR": "reference",
+        "LGB-u": "tree",
+        "Cat-u": "tree",
+        "RES-u": "neural",
+        "FTT-u": "neural",
+        "LGB-b": "tree",
+        "Cat-b": "tree",
+        "RES-b": "neural",
+        "FTT-b": "neural",
+    }

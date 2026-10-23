@@ -268,6 +268,9 @@ def test_a_run_of_the_reference_and_a_tree_and_both_neural_models_is_complete_an
     summary = (directory / SUMMARY_NAME).read_text(encoding="utf-8")
     for name in ("LR", "RES-u", "FTT-b"):
         assert name in summary
+    assert "| Configuration | Family |" in summary
+    assert "### Descriptive contrasts of V2 Recall@2%" in summary
+    assert "**Contrasts not computed:**" in summary  # this run scored only four configurations
 
 
 def test_a_reloaded_neural_model_must_match_its_candidate_and_its_batch_plan(

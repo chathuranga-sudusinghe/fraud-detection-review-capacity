@@ -21,17 +21,24 @@ from typing import Any
 from review_capacity.development.records import (
     ALL_CONFIGURATIONS,
     MODEL_OF,
+    WEIGHTING_OF,
     DevelopmentPartitions,
     contract_of,
 )
 from review_capacity.development.run_output import SUMMARY_NAME, LoadedRun, load_run
 from review_capacity.development.summary import (
     COMPARISON_TABLES,
+    CONTRAST_BALANCED,
+    CONTRAST_MEAN,
+    CONTRAST_UNWEIGHTED,
+    CONTRASTS,
     ComparisonColumn,
     ComparisonTable,
+    Contrast,
     Source,
     cell,
     code,
+    family_label,
     record_markdown,
 )
 from review_capacity.errors import RecordContractError
@@ -181,10 +188,12 @@ class _Table:
             )
 
     def markdown(self, label: Callable[[Record], str]) -> list[str]:
-        header = ["Configuration", *(name for name, _ in self.columns)]
+        family = self.table.rows in ("configuration", "model")
+        header = ["Configuration", *(["Family"] if family else []), *(n for n, _ in self.columns)]
         lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
         for row in self.rows:
-            cells = [label(row), *(cell(get(row)) for _, get in self.columns)]
+            leading = [label(row), *([code(family_label(row["configuration"]))] if family else [])]
+            cells = [*leading, *(cell(get(row)) for _, get in self.columns)]
             lines.append("| " + " | ".join(cells) + " |")
         return lines
 
@@ -192,6 +201,82 @@ class _Table:
 def _configurations(run: LoadedRun) -> list[str]:
     names = run.of_kind("run")[0]["configurations"]
     return sorted(names, key=_order)
+
+
+def _contrast_recall(run: LoadedRun, source: Source, configuration: str) -> float | None:
+    """The V2 Recall@2% of the selected model of ``configuration``: its one evaluation record's
+    value, or ``None`` if the run holds none."""
+    found = [
+        r
+        for r in run.of_kind(source.kind)
+        if _selected(r, source) and r.get("configuration") == configuration
+    ]
+    if len(found) > 1:
+        raise RecordContractError(
+            f"family_contrasts: {len(found)} {source.kind} records match {configuration} "
+            f"{source.select}; the selection must identify one"
+        )
+    value = _value(found[0], source.field) if found else None
+    return float(value) if isinstance(value, int | float) else None
+
+
+def _configuration_of(model: str, weighting: str) -> str:
+    return next(
+        n for n in ALL_CONFIGURATIONS if MODEL_OF[n] == model and WEIGHTING_OF[n] == weighting
+    )
+
+
+def _contrast(
+    run: LoadedRun, source: Source, contrast: Contrast, weighting: str
+) -> tuple[float | None, list[str]]:
+    """One contrast within a weighting: the mean of the ``plus`` models' recall minus the mean of
+    the ``minus`` models', and the configurations whose recall is missing (then the value is
+    ``None``)."""
+    names = [_configuration_of(m, weighting) for m in (*contrast.plus, *contrast.minus)]
+    recalls = {name: _contrast_recall(run, source, name) for name in names}
+    missing = [name for name, recall in recalls.items() if recall is None]
+    if missing:
+        return None, missing
+
+    def mean(models: Sequence[str]) -> float:
+        values = [recalls[_configuration_of(m, weighting)] for m in models]
+        return sum(v for v in values if v is not None) / len(values)
+
+    return mean(contrast.plus) - mean(contrast.minus), []
+
+
+def _contrast_table(run: LoadedRun, table: ComparisonTable) -> list[str]:
+    """The contrast table: one row per contrast, derived from the evaluation records of the run;
+    a contrast whose configurations the run did not score is shown as ``—`` with the missing
+    configurations named below the table."""
+    source = table.reads
+    if source is None:
+        raise RecordContractError(f"{table.name}: a contrast table reads a source")
+    weightings = {CONTRAST_UNWEIGHTED: "u", CONTRAST_BALANCED: "b"}
+    header = ["Contrast", *(column.header for column in table.columns)]
+    lines = ["", "| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
+    notes: list[str] = []
+    for contrast in CONTRASTS:
+        values: dict[str, float | None] = {}
+        for column in table.columns:
+            if column.derivation in weightings:
+                value, missing = _contrast(run, source, contrast, weightings[column.derivation])
+                values[column.header] = value
+                if missing:
+                    notes.append(
+                        f"- {contrast.name}, {column.header.lower()}: not computed; no V2 "
+                        f"Recall@2% record of {', '.join(missing)}"
+                    )
+        pair = [values[c.header] for c in table.columns if c.derivation in weightings]
+        mean = None if None in pair else sum(v for v in pair if v is not None) / len(pair)
+        cells = [
+            cell(mean if column.derivation == CONTRAST_MEAN else values[column.header])
+            for column in table.columns
+        ]
+        lines.append("| " + " | ".join([code(contrast.name), *cells]) + " |")
+    if notes:
+        lines += ["", "**Contrasts not computed:**", "", *notes]
+    return lines
 
 
 def _tables(run: LoadedRun) -> list[str]:
@@ -203,6 +288,9 @@ def _tables(run: LoadedRun) -> list[str]:
         raise RecordContractError(f"Several trial records describe the same trial: {repeated}")
     for table in COMPARISON_TABLES:
         lines += ["", f"### {table.title}", "", table.meaning]
+        if table.rows == "contrast":
+            lines += _contrast_table(run, table)
+            continue
         if table.rows == "configuration":
             groups: list[tuple[str, list[dict[str, Any]]]] = [
                 ("", [{"configuration": name} for name in configurations])
