@@ -55,6 +55,16 @@ Commands:
                    outputs/neural_preprocessing/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Reads the
                    verified processed development files only; the Test period is never read.
 
+    preflight-neural
+                   the micro-batch preflight of the neural models (DR-015 §7) on the project GPU:
+                   for each of the ten candidates of the ResNet-style MLP and FT-Transformer, the
+                   largest micro-batch that completes one effective batch, in training and in
+                   float32 evaluation, with at least the declared free GPU memory at the sampled
+                   peak; synthetic inputs of the vocabularies of the shared preprocessing
+                   artifact (--preprocessing), no research data. Writes preflight.json and its
+                   log, always run.log (--log-file is refused), to a new directory: --output, or
+                   by default outputs/neural_preflight/<UTC start time, YYYY-MM-DDTHHMMSSZ>/
+
     run-development
                    the development run of the tree-based configurations (LightGBM and CatBoost,
                    unweighted and balanced; --configurations chooses a subset): the declared
@@ -407,6 +417,32 @@ def _fit_neural_preprocessing(args: argparse.Namespace) -> int:
     return 0
 
 
+def _preflight_directory(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The new directory of ``preflight-neural``, fixed on ``args`` at the first call (shown to
+    be free then; the log file is opened in it afterwards)."""
+    from review_capacity.development.preflight_run import output_directory
+    from review_capacity.development.run_output import run_id
+
+    if getattr(args, "directory", None) is None:
+        if getattr(args, "started", None) is None:
+            args.started = run_id()
+        args.directory = output_directory(paths, args.started, args.output)
+    directory: Path = args.directory
+    return directory
+
+
+def _preflight_neural(args: argparse.Namespace) -> int:
+    from review_capacity.development.preflight_run import run_preflight_command
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    directory = _preflight_directory(args, paths)
+    features = load_feature_spec(paths.features_spec)
+    run_preflight_command(paths, features, directory, args.started, args.preprocessing.resolve())
+    logger.info("Neural preflight written to %s", directory)
+    return 0
+
+
 def _development_options(args: argparse.Namespace) -> DevelopmentOptions:
     """The options of ``run-development``; the start time is fixed on ``args`` at the first call,
     so that the log file, the records and the directory agree."""
@@ -493,6 +529,15 @@ def _log_file(args: argparse.Namespace) -> Path | None:
                 "directory; omit --log-file"
             )
         return _preprocessing_directory(args, ProjectPaths.discover(args.root)) / FIT_LOG_NAME
+    if args.command == "preflight-neural":
+        from review_capacity.development.preflight_run import LOG_NAME as PREFLIGHT_LOG_NAME
+
+        if args.log_file is not None:
+            raise SpecificationError(
+                f"preflight-neural writes its log to {PREFLIGHT_LOG_NAME} in its output "
+                "directory; omit --log-file"
+            )
+        return _preflight_directory(args, ProjectPaths.discover(args.root)) / PREFLIGHT_LOG_NAME
     if args.command == "run-development":
         from review_capacity.development.run_output import LOG_NAME as RUN_LOG_NAME
 
@@ -630,6 +675,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="new directory for the artifact (default: outputs/neural_preprocessing/<UTC time>)",
     )
     fit_preprocessing.set_defaults(handler=_fit_neural_preprocessing)
+    preflight = commands.add_parser(
+        "preflight-neural",
+        help="micro-batch preflight of the neural models on the project GPU (DR-015 §7)",
+    )
+    preflight.add_argument("--root", type=Path, default=None, help="project root directory")
+    preflight.add_argument(
+        "--preprocessing",
+        type=Path,
+        required=True,
+        help="directory of the shared preprocessing artifact (fit-neural-preprocessing)",
+    )
+    preflight.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="new directory for the preflight (default: outputs/neural_preflight/<UTC time>)",
+    )
+    preflight.set_defaults(handler=_preflight_neural)
     development = commands.add_parser(
         "run-development",
         help="the tree-based development run: search, selection, scoring, evaluation and timing",
@@ -700,6 +763,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "probe-catboost-objective",
         "plan-search",
         "fit-neural-preprocessing",
+        "preflight-neural",
         "run-development",
     )
     try:
