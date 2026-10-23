@@ -5,12 +5,19 @@ machine-readable output; Markdown is the human-readable output. The Markdown is 
 the JSON records alone, never written by hand, so that its values cannot differ from them, and it
 presents every output of a run with its related information:
 
-* **Comparison tables** (``COMPARISON_TABLES``), each with one of three row scopes:
+* **Comparison tables** (``COMPARISON_TABLES``), each with one of four row scopes:
   ``configuration`` (one row per configuration, in DR-011 order, then the logistic-regression
-  reference), ``model`` (one table per model, one row per weighting) and ``trial`` (one table per
-  configuration, one row per search trial). A column reads one record field, chosen by the record
-  values it selects; ``keys`` spreads a free-key object (the searched hyperparameters) over one
-  column per parameter, so every model is compared across each of its parameters.
+  reference), ``model`` (one table per model, one row per weighting), ``trial`` (one table per
+  configuration, one row per search trial) and ``contrast`` (one row per descriptive contrast of
+  ``CONTRASTS``). A column reads one record field, chosen by the record values it selects; ``keys``
+  spreads a free-key object (the searched hyperparameters) over one column per parameter, so
+  every model is compared across each of its parameters. Every table of a ``configuration`` or
+  ``model`` scope has a ``Family`` column (``tree``, ``neural`` or ``reference``) after its
+  configuration, taken from the model family of DR-011 and not from a record.
+* **Contrasts** (``CONTRASTS``): differences of the V2 Recall@2% of selected main-seed models
+  under R3, for each weighting and for the mean of the two. They are derived from the evaluation
+  records of the run, computed only from records that exist, and are descriptive point values on
+  V2: no interval, no test and no use in selection.
 * **Record sections**: ``record_markdown`` presents every field of a record. Nested fields are
   written as dotted paths, and lists of objects (a trial's checkpoint history, an evaluation's
   per-day values, a calibrator's reliability bins) as tables. Every value is written as its
@@ -29,7 +36,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from review_capacity.development.records import RECORD_CONTRACTS, contract_of
+from review_capacity.development.records import (
+    FAMILY_OF,
+    MODEL_OF,
+    RECORD_CONTRACTS,
+    contract_of,
+)
 from review_capacity.development.schema import Field, ListOf, MapOf, Object, RecordContract
 
 # The primary capacity share of the protocol (Review Capacity: 2 %), at which the seed refits are
@@ -39,7 +51,7 @@ PRIMARY_CAPACITY = 0.02
 type Selected = str | int | float | bool
 type Selection = tuple[tuple[str, tuple[Selected, ...]], ...]
 
-ROW_SCOPES = ("configuration", "model", "trial")
+ROW_SCOPES = ("configuration", "model", "trial", "contrast")
 FORMS = ("integer", "decimal", "seconds", "text", "boolean", "list", "mapping")
 
 
@@ -82,6 +94,29 @@ class ComparisonTable:
     meaning: str
     rows: str
     columns: tuple[ComparisonColumn, ...]
+    reads: Source | None = None  # the record field a ``contrast`` table derives its values from
+
+
+@dataclass(frozen=True)
+class Contrast:
+    """A descriptive contrast: the mean of the V2 Recall@2% of the ``plus`` models minus the mean
+    of the ``minus`` models (package model names), within one weighting."""
+
+    name: str
+    plus: tuple[str, ...]
+    minus: tuple[str, ...]
+
+
+CONTRASTS: tuple[Contrast, ...] = (
+    Contrast("CatBoost − LightGBM", ("catboost",), ("lightgbm",)),
+    Contrast("FT-Transformer − ResNet-style MLP", ("ft_transformer",), ("resnet",)),
+    Contrast(
+        "Neural mean − tree-based mean", ("resnet", "ft_transformer"), ("lightgbm", "catboost")
+    ),
+)
+CONTRAST_UNWEIGHTED = "contrast of the unweighted configurations"
+CONTRAST_BALANCED = "contrast of the balanced configurations"
+CONTRAST_MEAN = "mean of the two weightings"
 
 
 SELECTED: Selection = (("model_role", ("selected",)),)
@@ -99,6 +134,11 @@ STUDY_SCORING: Selection = (
 
 def _column(header: str, meaning: str, form: str, source: Source) -> ComparisonColumn:
     return ComparisonColumn(header, meaning, form, source)
+
+
+V2_RECALL_AT_PRIMARY = Source(
+    "evaluation", "metrics.recall", (*V2_R3, ("capacity", (PRIMARY_CAPACITY,)))
+)
 
 
 COMPARISON_TABLES: tuple[ComparisonTable, ...] = (
@@ -285,6 +325,39 @@ COMPARISON_TABLES: tuple[ComparisonTable, ...] = (
         ),
     ),
     ComparisonTable(
+        "family_contrasts",
+        "Descriptive contrasts of V2 Recall@2%",
+        "Differences of the V2 Recall@2% under R3 of the selected main-seed models: within a "
+        "family (CatBoost against LightGBM, FT-Transformer against the ResNet-style MLP) and "
+        "between the families (the mean of the two neural models against the mean of the two "
+        "tree-based models), for each weighting and for the mean of the two weightings (the "
+        "point value of the model-family effect δ_F on V2). Descriptive point differences: no "
+        "interval, no test, no use in selection; the inference on δ_F is the Test evaluation "
+        "(DR-005). The logistic-regression reference enters no contrast.",
+        "contrast",
+        (
+            ComparisonColumn(
+                "Unweighted",
+                "Contrast within the unweighted configurations",
+                "decimal",
+                derivation=CONTRAST_UNWEIGHTED,
+            ),
+            ComparisonColumn(
+                "Balanced",
+                "Contrast within the balanced configurations",
+                "decimal",
+                derivation=CONTRAST_BALANCED,
+            ),
+            ComparisonColumn(
+                "Mean of the two weightings",
+                "Mean of the unweighted and the balanced contrast",
+                "decimal",
+                derivation=CONTRAST_MEAN,
+            ),
+        ),
+        V2_RECALL_AT_PRIMARY,
+    ),
+    ComparisonTable(
         "computational_cost",
         "Computational cost",
         "Training, scoring and latency on the project machine (protocol Outcomes; descriptive).",
@@ -351,6 +424,13 @@ COMPARISON_TABLES: tuple[ComparisonTable, ...] = (
 )
 
 
+def family_label(configuration: str) -> str:
+    """The model family of a configuration for the summary: ``tree``, ``neural`` or, for the
+    logistic-regression reference, ``reference``."""
+    family = FAMILY_OF[configuration]
+    return "reference" if family is None else family.value
+
+
 def _field(contract: RecordContract, path: str) -> Field | None:
     try:
         return contract.resolve(path)
@@ -396,6 +476,14 @@ def comparison_problems() -> list[str]:
                 problems.append(f"{where}: needs exactly one of a source and a derivation")
             if column.source is not None:
                 problems += _source_problems(table, column.source, where)
+        if (table.rows == "contrast") != (table.reads is not None):
+            problems.append(f"{table.name}: exactly the contrast tables read a source")
+        if table.reads is not None:
+            problems += _source_problems(table, table.reads, f"{table.name}.reads")
+    models = set(MODEL_OF.values())
+    for contrast in CONTRASTS:
+        unknown = sorted((set(contrast.plus) | set(contrast.minus)) - models)
+        problems += [f"contrast {contrast.name}: unknown model {name!r}" for name in unknown]
     return problems
 
 
@@ -478,6 +566,20 @@ def _escape(text: str) -> str:
     return text.replace("|", "\\|")
 
 
+def _source_text(source: Source, *, columns: bool = False) -> str:
+    """A source as reference text: its record field and its selection (``columns``: also how it
+    spreads over columns)."""
+    select = "; ".join(
+        f"{name} in {{{', '.join(map(str, values))}}}" for name, values in source.select
+    )
+    text = f"`{source.kind}.{source.field}`" + (f" where {select}" if select else "")
+    if columns and source.per is not None:
+        text += f"; one column per `{source.per}`"
+    if columns and source.keys:
+        text += "; one column per parameter"
+    return text
+
+
 def reference_markdown() -> str:
     """Reference documentation of every record contract and comparison table, generated from
     them."""
@@ -487,7 +589,9 @@ def reference_markdown() -> str:
         "Generated from `review_capacity.development` (records, summary); not edited by hand.",
         "JSON records are the machine-readable output and Markdown the human-readable output; no",
         "CSV files are written. Every record carries `record`, `schema_version` and the run",
-        "`identity`; paths are relative to the run directory unless stated.",
+        "`identity`; paths are relative to the run directory unless stated. Every comparison table",
+        "of a configuration or model scope has a `Family` column (`tree`, `neural` or",
+        "`reference`).",
         "",
         "## JSON records",
     ]
@@ -511,24 +615,23 @@ def reference_markdown() -> str:
             "",
             f"### {comparison.title}",
             "",
-            f"{_escape(comparison.meaning)} Rows: one per `{comparison.rows}`.",
+            f"{_escape(comparison.meaning)} Rows: one per `{comparison.rows}`."
+            + (
+                " Derived from " + _source_text(comparison.reads) + "."
+                if comparison.reads is not None
+                else ""
+            ),
             "",
             "| Column | Meaning | Source |",
             "|---|---|---|",
         ]
         for column in comparison.columns:
             source = column.source
-            if source is None:
-                origin = f"derived: {column.derivation}"
-            else:
-                select = "; ".join(
-                    f"{name} in {{{', '.join(map(str, values))}}}" for name, values in source.select
-                )
-                origin = f"`{source.kind}.{source.field}`" + (f" where {select}" if select else "")
-                if source.per is not None:
-                    origin += f"; one column per `{source.per}`"
-                if source.keys:
-                    origin += "; one column per parameter"
+            origin = (
+                f"derived: {column.derivation}"
+                if source is None
+                else _source_text(source, columns=True)
+            )
             lines.append(f"| {column.header} | {_escape(column.meaning)} | {_escape(origin)} |")
     lines.append("")
     return "\n".join(lines)

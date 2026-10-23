@@ -32,6 +32,7 @@ def test_comparison_tables_match_the_record_contracts() -> None:
         ("search_trials", "trial"),
         ("development_metrics", "configuration"),
         ("seed_variation", "configuration"),
+        ("family_contrasts", "contrast"),
         ("computational_cost", "configuration"),
     ]
     assert comparison_problems() == []
