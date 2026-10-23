@@ -17,7 +17,9 @@ from review_capacity.development.runner import (
     run_development,
     run_directory_for,
 )
+from review_capacity.development.scoring import ScoringContext, load_selected
 from review_capacity.development.startup import Startup
+from review_capacity.development.trial import TrialOutcome, trial_directory
 from review_capacity.errors import (
     DataValidationError,
     FileAccessError,
@@ -25,8 +27,10 @@ from review_capacity.errors import (
     SpecificationError,
 )
 from review_capacity.models.device import LightGBMIdentity
+from review_capacity.models.neural_training import BatchPlan
+from review_capacity.models.registry import RUN_CONFIGURATIONS, configuration
 from support.memory import memory_setup
-from support.search import development_setup
+from support.search import FTT_CANDIDATES, NEURAL_BATCH, development_setup, mixed_setup
 from support.synthetic import REPO_PATHS
 
 pytestmark = pytest.mark.usefixtures("restore_lightgbm_logger")
@@ -53,13 +57,28 @@ def test_a_run_searches_scores_evaluates_times_and_summarises(tmp_path: Path) ->
     assert "LGB-b" in summary
 
 
-def test_the_configurations_follow_dr011_order_and_are_tree_based() -> None:
-    chosen = chosen_configurations(["Cat-b", "LGB-u", "LGB-b"])
-    assert [c.name for c in chosen] == ["LGB-u", "LGB-b", "Cat-b"]
-    with pytest.raises(SpecificationError, match="Not tree-based configurations"):
-        chosen_configurations(["LGB-u", "RES-u"])
+def test_the_reference_runs_first_and_the_configurations_follow_dr011_order() -> None:
+    chosen = chosen_configurations(["Cat-b", "RES-u", "LR", "LGB-u", "LGB-b"])
+    assert [c.name for c in chosen] == ["LR", "LGB-u", "RES-u", "LGB-b", "Cat-b"]
+    everything = chosen_configurations(RUN_CONFIGURATIONS)
+    assert [c.name for c in everything] == list(RUN_CONFIGURATIONS)
+    assert RUN_CONFIGURATIONS[0] == "LR"
+    assert len(RUN_CONFIGURATIONS) == 9
+    with pytest.raises(SpecificationError, match="Not configurations of this run"):
+        chosen_configurations(["LGB-u", "XGB-u"])
     with pytest.raises(SpecificationError, match="at least one"):
         chosen_configurations([])
+
+
+def test_the_neural_models_and_the_reference_need_their_inputs_before_anything_is_read() -> None:
+    options = DevelopmentOptions(plan=Path("plan"), approved_cost_sha256="a" * 64)
+    with pytest.raises(SpecificationError, match="--preprocessing"):
+        prepare_development(REPO_PATHS, replace(options, configurations=("LR",)))
+    with pytest.raises(SpecificationError, match="--preprocessing"):
+        prepare_development(REPO_PATHS, replace(options, configurations=("RES-u",)))
+    with_artifact = replace(options, configurations=("RES-u",), preprocessing=Path("artifact"))
+    with pytest.raises(SpecificationError, match="--preflight"):
+        prepare_development(REPO_PATHS, with_artifact)
 
 
 def test_a_failed_run_still_closes_and_writes_its_summary(
@@ -206,7 +225,80 @@ def test_an_unapproved_cost_stops_the_run_before_a_directory_or_any_data_is_used
 
     monkeypatch.setattr("review_capacity.development.runner.measure_startups", started)
     monkeypatch.setattr("review_capacity.development.runner.MemorySetup.detect", started)
-    options = DevelopmentOptions(plan=plan, approved_cost_sha256="0" * 64, output=output)
+    options = DevelopmentOptions(
+        plan=plan, approved_cost_sha256="0" * 64, output=output, configurations=("LGB-u",)
+    )
     with pytest.raises(SpecificationError, match="not the approved cost prediction"):
         prepare_development(REPO_PATHS, options)
     assert not output.exists()
+
+
+def test_a_run_of_the_reference_and_a_tree_and_both_neural_models_is_complete_and_valid(
+    tmp_path: Path,
+) -> None:
+    setup = mixed_setup(tmp_path)
+    directory = run_development(setup)
+    loaded = load_run(directory, setup.run.partitions)  # every record satisfies its contract
+    assert loaded.end is not None
+    assert loaded.end["outcome"] == "completed"
+    assert len(loaded.of_kind("preprocessing")) == 1
+    assert len(loaded.of_kind("preflight")) == 6  # three candidates of each neural model
+    configurations = loaded.of_kind("configuration")
+    assert {r["configuration"] for r in configurations} == {"LR", "LGB-u", "RES-u", "FTT-b"}
+    trials = {(t["configuration"], t["trial"]): t for t in loaded.of_kind("trial")}
+    assert len(trials) == 12
+    assert {t["unit"] for (name, _), t in trials.items() if name == "LR"} == {"convergence"}
+    assert {t["unit"] for (name, _), t in trials.items() if name == "RES-u"} == {"epoch"}
+    assert {t["unit"] for (name, _), t in trials.items() if name == "LGB-u"} == {"round"}
+    fits = {(f["configuration"], f["trial"]): f for f in loaded.of_kind("fit")}
+    assert fits[("LR", 1)]["preflight"] is None
+    assert fits[("LR", 1)]["early_stopping"] is False
+    assert fits[("FTT-b", 2)]["preflight"] is not None
+    assert fits[("FTT-b", 2)]["preprocessing"] == fits[("RES-u", 1)]["preprocessing"]
+    assert fits[("LGB-u", 1)]["preprocessing"] is None
+    checkpoints = {c["configuration"] for c in loaded.of_kind("checkpoint")}
+    assert checkpoints == {"LGB-u", "RES-u", "FTT-b"}  # the reference has none
+    scores = {(s["configuration"], s["partition"]): s for s in loaded.of_kind("score")}
+    assert len(scores) == 8
+    assert scores[("RES-u", "V1")]["batch_rows"] == 64
+    assert scores[("FTT-b", "V2")]["batch_rows"] == 8
+    assert scores[("LR", "V2")]["batch_rows"] is None
+    timings = loaded.of_kind("timing")
+    assert {t["configuration"] for t in timings} == {"LR", "LGB-u", "RES-u", "FTT-b"}
+    summary = (directory / SUMMARY_NAME).read_text(encoding="utf-8")
+    for name in ("LR", "RES-u", "FTT-b"):
+        assert name in summary
+
+
+def test_a_reloaded_neural_model_must_match_its_candidate_and_its_batch_plan(
+    tmp_path: Path,
+) -> None:
+    setup = mixed_setup(tmp_path, ("FTT-b",))
+    assert setup.neural is not None
+    run_development(setup)
+    directory = trial_directory(setup.run, "FTT-b", 1)
+    scoring = ScoringContext(
+        run=setup.run,
+        identity=setup.identity,
+        declaration=setup.declaration,
+        settings=setup.settings,
+        features=setup.features,
+        inputs=setup.scoring_inputs,
+        session=setup.session,
+        neural=setup.neural,
+    )
+    chosen = configuration("FTT-b")
+    selected = TrialOutcome(
+        "FTT-b", 1, dict(FTT_CANDIDATES[0]), 0.5, 1, 2, "maximum", 1.0, 0.1, None, 1,
+        directory, {}, {}, {},
+    )  # fmt: skip
+    model = load_selected(scoring, chosen, selected)  # the saved model is the selected candidate
+    assert model.fitted_iterations >= 1
+    other_plan = replace(
+        setup.neural, plans={"ft_transformer": {1: BatchPlan(NEURAL_BATCH, NEURAL_BATCH)}}
+    )
+    with pytest.raises(ModelError, match="recorded batch plan"):
+        load_selected(replace(scoring, neural=other_plan), chosen, selected)
+    other_candidate = replace(selected, hyperparameters=dict(FTT_CANDIDATES[1]))
+    with pytest.raises(ModelError, match="selected candidate"):
+        load_selected(scoring, chosen, other_candidate)

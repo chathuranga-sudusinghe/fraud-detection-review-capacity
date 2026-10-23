@@ -238,6 +238,19 @@ def neural_hyperparameters(
     }
 
 
+def fit_hyperparameters(
+    declaration: TrainingDeclaration, model: str, candidate: Candidate
+) -> dict[str, Any]:
+    """The hyperparameters of a search trial of a neural model: those of the preflight
+    (``neural_hyperparameters``) with the declared early stopping (DR-015 §2), so that the fit
+    uses exactly the candidate, fixed values and batches the preflight measured."""
+    return {
+        **neural_hyperparameters(declaration, model, candidate),
+        "max_epochs": declaration.neural_stopping.maximum,
+        "patience": declaration.neural_stopping.patience,
+    }
+
+
 RandomState = tuple[Any, Any, Any, Any]
 
 

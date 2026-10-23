@@ -22,7 +22,7 @@ from typing import Any
 
 from review_capacity.data.processed import read_record
 from review_capacity.development.cost_gate import ApprovedPlan
-from review_capacity.development.records import contract_versions
+from review_capacity.development.records import RECORD_CONTRACTS, contract_versions
 from review_capacity.development.run_output import RunDirectory
 from review_capacity.development.trial import run_file
 from review_capacity.errors import FileAccessError, SpecificationError
@@ -93,17 +93,20 @@ def run_record(
     declaration_file: SettingsSnapshot,
     stems: Iterable[str],
     configurations: Iterable[str],
+    plan: Mapping[str, str],
 ) -> dict[str, Any]:
-    """The ``run`` record: the full provenance of the run, written first."""
+    """The ``run`` record: the full provenance of the run, written first. ``plan`` is the
+    approved search plan's cost prediction (its path and its approved SHA-256)."""
     return {
         "record": "run",
-        "schema_version": 1,
+        "schema_version": RECORD_CONTRACTS["run"].version,
         "identity": dict(identity),
         "started": started,
         "code": dict(code),
         "environment": dict(environment),
         "settings": {"path": settings_file.path, "sha256": settings_file.sha256},
         "declaration": {"path": declaration_file.path, "sha256": declaration_file.sha256},
+        "plan": dict(plan),
         "dataset": {
             "manifest": project_file(paths, paths.manifest),
             "processed": processed_files(paths, stems),

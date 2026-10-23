@@ -373,3 +373,9 @@ def test_an_unfitted_model_cannot_be_saved(tmp_path: Path) -> None:
     artifact, _ = train_data()
     with pytest.raises(ModelError, match="not fitted"):
         LogisticRegressionReference(artifact, FIXED).save(tmp_path / "model")
+
+
+def test_a_prepared_matrix_scores_exactly_as_the_frame_does() -> None:
+    reference, data = fitted()
+    matrix = reference.prepare(data.features)
+    assert np.array_equal(reference.predict_prepared(matrix), reference.predict(data.features))

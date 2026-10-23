@@ -105,7 +105,7 @@ from review_capacity.models.v1_objective import (
 
 logger = logging.getLogger(__name__)
 
-FORMAT_VERSION = 3  # 3: V1 objective history and the batch plan; 2: per-epoch train_seconds
+FORMAT_VERSION = 4  # 4: artifact identity; 3: V1 objective history and batch plan; 2: train_seconds
 STATE_FILE = "model.pt"
 MANIFEST_FILE = "manifest.json"
 
@@ -636,6 +636,53 @@ def _gradients_finite(network: nn.Module) -> bool:
     return bool(torch.stack(checks).all()) if checks else True
 
 
+def accumulate_gradients(
+    network: nn.Module,
+    numeric: npt.NDArray[np.float32],
+    categorical: Tensor,
+    labels: npt.NDArray[np.float32],
+    weights: npt.NDArray[np.float32],
+    index: npt.NDArray[np.int64],
+    plan: BatchPlan,
+    *,
+    device: torch.device,
+    name: str,
+    where: str,
+    logits_dtypes: set[str],
+    autocast: bool = True,
+) -> Tensor:
+    """Add the gradient of one effective batch to the network's ``.grad``, micro-batch by
+    micro-batch (DR-015 §7): the rows ``index`` of the Train arrays, with ``categorical`` the
+    batch's category indices (after category dropout, in the order of ``index``). Every
+    micro-batch loss is the weighted sum of its rows divided by the rows of the whole effective
+    batch, so the micro-batches add up to the loss of the effective batch. Returns that loss
+    (float32, on ``device``) and adds the data types of the logits to ``logits_dtypes``. The caller
+    clears the gradients before and steps the optimiser after. ``autocast=False`` runs the forward
+    pass in float32 (the training loop never does; the batching acceptance uses it to compare the
+    accumulation algebra with an independent oracle without bfloat16 rounding)."""
+    m = len(index)
+    batch_loss = torch.zeros((), dtype=torch.float32, device=device)
+    start = 0
+    for micro_number, size in enumerate(plan.micro_sizes(m), start=1):
+        part = index[start : start + size]
+        numeric_part = torch.from_numpy(numeric[part]).to(device)
+        categorical_part = categorical[start : start + size].to(device)
+        label_part = torch.from_numpy(labels[part]).to(device)
+        weight_part = torch.from_numpy(weights[part]).to(device)
+        start += size
+        with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=autocast):
+            logits: Tensor = network(numeric_part, categorical_part)
+        logits_dtypes.add(str(logits.dtype))
+        loss = weighted_bce(logits, label_part, weight_part, rows=m)
+        if not bool(torch.isfinite(loss)):  # before any update from this batch
+            raise ModelError(
+                f"{name}: non-finite Train loss in {where}, micro-batch {micro_number}"
+            )
+        loss.backward()  # type: ignore[no-untyped-call]
+        batch_loss += loss.detach()
+    return batch_loss
+
+
 def train_network(
     network: nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -695,26 +742,19 @@ def train_network(
                 dropout_rng,
             )
             optimizer.zero_grad(set_to_none=True)
-            batch_loss = torch.zeros((), dtype=torch.float32, device=device)
-            start = 0
-            for micro_number, size in enumerate(plan.micro_sizes(m), start=1):
-                part = index[start : start + size]
-                numeric_part = torch.from_numpy(train.inputs.numeric[part]).to(device)
-                categorical_part = categorical[start : start + size].to(device)
-                label_part = torch.from_numpy(labels[part]).to(device)
-                weight_part = torch.from_numpy(weights[part]).to(device)
-                start += size
-                with torch.autocast(device_type=device.type, dtype=torch.bfloat16):
-                    logits: Tensor = network(numeric_part, categorical_part)
-                logits_dtypes.add(str(logits.dtype))
-                loss = weighted_bce(logits, label_part, weight_part, rows=m)
-                if not bool(torch.isfinite(loss)):  # before any update from this batch
-                    raise ModelError(
-                        f"{name}: non-finite Train loss in epoch {epoch}, batch {number}, "
-                        f"micro-batch {micro_number}"
-                    )
-                loss.backward()  # type: ignore[no-untyped-call]
-                batch_loss += loss.detach()
+            batch_loss = accumulate_gradients(
+                network,
+                train.inputs.numeric,
+                categorical,
+                labels,
+                weights,
+                index,
+                plan,
+                device=device,
+                name=name,
+                where=f"epoch {epoch}, batch {number}",
+                logits_dtypes=logits_dtypes,
+            )
             if not _gradients_finite(network):
                 raise ModelError(
                     f"{name}: non-finite gradients in epoch {epoch}, batch {number}; "
@@ -822,6 +862,7 @@ class NeuralModel(ABC):
         settings: ModelSettings,
         layout: InputLayout,
         device: Device,
+        artifact_sha256: str | None = None,
     ) -> None:
         if device not in DEVICES:
             raise ValueError(f"Unsupported device {device!r}; expected one of {DEVICES}")
@@ -836,12 +877,14 @@ class NeuralModel(ABC):
         self.settings = settings
         self.layout = layout
         self.device = device
+        self.artifact_sha256 = artifact_sha256  # the preprocessing artifact the inputs come from
         self._network: nn.Module | None = None
         self._hyperparameters: dict[str, Any] = {}
         self._architecture: dict[str, Any] = {}
         self._early_stopping = True
         self._training: dict[str, Any] = {}
         self._epochs = 0
+        self._history: TrainingHistory | None = None
 
     @abstractmethod
     def check_architecture(self, values: Mapping[str, Any]) -> dict[str, Any]:
@@ -983,6 +1026,7 @@ class NeuralModel(ABC):
         self._architecture = architecture
         self._early_stopping = early
         self._epochs = result.epochs_kept
+        self._history = result.v1_history
         self._training = {
             "precision": self._precision_record(precision, device),
             "observed_dtypes": {
@@ -1086,6 +1130,39 @@ class NeuralModel(ABC):
             raise ModelError(f"{name}: out of GPU memory") from error
         return checked_scores(probabilities(logits), inputs.rows, name)
 
+    def prepare(self, inputs: NeuralInputs) -> list[tuple[Tensor, Tensor]]:
+        """The inputs as device tensors in evaluation batches: the model's native input for the
+        model-only boundary of the timing (DR-015 §9). Nothing is scored."""
+        self._network_or_raise()
+        inputs.check(self.layout)
+        batch_size = positive_integer(self._hyperparameters["eval_batch_size"], "eval_batch_size")
+        device = torch_device(self.device)
+        return [
+            (
+                torch.from_numpy(inputs.numeric[start : start + batch_size].copy()).to(device),
+                torch.from_numpy(inputs.categorical[start : start + batch_size].copy()).to(device),
+            )
+            for start in range(0, inputs.rows, batch_size)
+        ]
+
+    def predict_prepared(self, prepared: Sequence[tuple[Tensor, Tensor]]) -> Tensor:
+        """The fraud probabilities (float64) of prepared batches, on the prediction device: the
+        float32 prediction path of ``predict`` without the host transfers, the finiteness read
+        and the logging. For timing; ``predict`` is the scoring path."""
+        network = self._network_or_raise()
+        network.eval()
+        outputs: list[Tensor] = []
+        with (
+            torch.inference_mode(),
+            torch.autocast(device_type=torch_device(self.device).type, enabled=False),
+        ):
+            for numeric, categorical in prepared:
+                logits: Tensor = network(numeric, categorical)
+                if logits.dtype != torch.float32:
+                    raise ModelError(f"Prediction: {logits.dtype} logits, not float32")
+                outputs.append(logits)
+            return torch.sigmoid(torch.cat(outputs).double())
+
     def save(self, directory: Path) -> None:
         """Save the network state and its manifest (written last, with the state's SHA-256)."""
         network = self._network_or_raise()
@@ -1104,6 +1181,7 @@ class NeuralModel(ABC):
                 "seed": self.seed,
                 "device": self.device,
                 "layout": self.layout.to_json(),
+                "artifact_sha256": self.artifact_sha256,
                 "hyperparameters": jsonable(self._hyperparameters),
                 "early_stopping": self._early_stopping,
                 "architecture": jsonable(self._architecture),
@@ -1123,10 +1201,11 @@ class NeuralModel(ABC):
         settings: ModelSettings,
         layout: InputLayout,
         device: Device,
+        artifact_sha256: str | None = None,
     ) -> Self:
-        """A model saved by ``save``; its manifest must match the request, and the saved state
-        must match the rebuilt network exactly. ``device`` is the training device, on which the
-        model also predicts."""
+        """A model saved by ``save``; its manifest must match the request (including the
+        preprocessing artifact it was fitted on), and the saved state must match the rebuilt
+        network exactly. ``device`` is the training device, on which the model also predicts."""
         try:
             manifest = json.loads((directory / MANIFEST_FILE).read_text(encoding="utf-8"))
             content = (directory / STATE_FILE).read_bytes()
@@ -1134,7 +1213,14 @@ class NeuralModel(ABC):
             raise FileAccessError(f"{directory}: saved model cannot be read") from error
         except ValueError as error:
             raise ModelError(f"{directory}: saved model manifest is not valid JSON") from error
-        model = cls(configuration, seed, settings=settings, layout=layout, device=device)
+        model = cls(
+            configuration,
+            seed,
+            settings=settings,
+            layout=layout,
+            device=device,
+            artifact_sha256=artifact_sha256,
+        )
         model._restore(manifest, content, directory)
         return model
 
@@ -1180,6 +1266,11 @@ class NeuralModel(ABC):
             raise ModelError(
                 "Saved model does not match the requested library version, model, "
                 "configuration, seed, training device or input layout"
+            )
+        if manifest.get("artifact_sha256") != self.artifact_sha256:
+            raise ModelError(
+                "Saved model was fitted on inputs of another preprocessing artifact "
+                f"({manifest.get('artifact_sha256')!r}, requested {self.artifact_sha256!r})"
             )
         if type(early) is not bool or type(epochs) is not int or epochs <= 0:
             raise ModelError("Saved schedule or epoch count is malformed")
@@ -1415,6 +1506,7 @@ class NeuralModel(ABC):
             "requested": self._hyperparameters,
             "resolved": {
                 "architecture": self._architecture,
+                "artifact_sha256": self.artifact_sha256,
                 "parameter_count": sum(tensor.numel() for tensor in network.parameters()),
                 **self._training,
             },
@@ -1426,6 +1518,13 @@ class NeuralModel(ABC):
                 "eval_batch_size": self._hyperparameters["eval_batch_size"],
             },
         }
+
+    @property
+    def training_history(self) -> TrainingHistory | None:
+        """The V1 history of the fit that early-stopped on the shared objective (``None`` for a
+        fixed-epoch fit, and for a reloaded model: the history belongs to the trial's record)."""
+        self._network_or_raise()
+        return self._history
 
     @property
     def fitted_iterations(self) -> int:

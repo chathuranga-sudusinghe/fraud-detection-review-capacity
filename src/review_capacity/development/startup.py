@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from review_capacity.config import ModelSettings
-from review_capacity.models.registry import Configuration
+from review_capacity.models.registry import Subject
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ def catboost_startup(
 
 
 def measure_startups(
-    chosen: Sequence[Configuration],
+    chosen: Sequence[Subject],
     settings: ModelSettings,
     *,
     lightgbm_seconds: float | None,

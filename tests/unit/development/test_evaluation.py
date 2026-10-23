@@ -16,6 +16,7 @@ from review_capacity.development.scoring import ScoringContext, load_selected, s
 from review_capacity.development.trial import TrialOutcome, run_file
 from review_capacity.errors import DataValidationError
 from review_capacity.evaluation.ranking import capacity_budgets
+from review_capacity.models.lightgbm_model import LightGBMModel
 from review_capacity.models.registry import configuration
 from support.search import V1_ROWS, V2_ROWS, searched
 
@@ -64,6 +65,7 @@ def test_r3_recall_follows_the_daily_top_k_of_the_scores(
 ) -> None:
     context, selected = scoring
     model = load_selected(context, LGB_U, selected)
+    assert isinstance(model, LightGBMModel)
     scored = score_partition(context, LGB_U, selected, model, "V2")
     evaluate_partition(context, scored)
     (record,) = [

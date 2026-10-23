@@ -28,6 +28,7 @@ from typing import Any
 
 from review_capacity.development.cost_timing import timed_on
 from review_capacity.development.memory import trials_maximum
+from review_capacity.development.subjects import study_device, training_device
 from review_capacity.development.trial import (
     SearchContext,
     TrialOutcome,
@@ -36,7 +37,7 @@ from review_capacity.development.trial import (
 )
 from review_capacity.errors import SpecificationError
 from review_capacity.logging_setup import ProgressLogger, log_step
-from review_capacity.models.registry import Configuration
+from review_capacity.models.registry import Subject
 from review_capacity.training.sampler import CandidateList
 from review_capacity.training.timing import Timed, fit_record, search_record
 
@@ -74,18 +75,18 @@ def select(trials: Sequence[TrialOutcome]) -> tuple[TrialOutcome, tuple[int, ...
 
 def _timed(
     context: SearchContext,
-    configuration: Configuration,
+    configuration: Subject,
     role: str | None,
     subject: Mapping[str, str] | None = None,
 ) -> Timed:
     """Who is timed: the configuration on its training device (DR-013 §1)."""
-    device = context.settings.training_device(configuration.model.name)
+    device = study_device(configuration, training_device(context.settings, configuration))
     return timed_on(context.settings, context.session, configuration, role, device, subject)
 
 
 def _write_search_timing(
     context: SearchContext,
-    configuration: Configuration,
+    configuration: Subject,
     *,
     seconds: float,
     outcomes: Sequence[TrialOutcome],
@@ -110,7 +111,7 @@ def _write_search_timing(
 
 def _configuration_record(
     context: SearchContext,
-    configuration: Configuration,
+    configuration: Subject,
     candidate_file: Mapping[str, str],
     trials: Sequence[TrialOutcome],
     selected: TrialOutcome,
@@ -135,7 +136,7 @@ def _configuration_record(
         "selected_objective": selected.objective,
         "tied_trials": list(tied),
         "selected_hyperparameters": dict(selected.hyperparameters),
-        "selected_length": selected.best_checkpoint,
+        "selected_length": selected.best_checkpoint if selected.checkpoint else None,
         "selected_stopping_reason": selected.stopping_reason,
         "selected_fit": selected.fit,
         "selected_checkpoint": selected.checkpoint,
@@ -144,7 +145,7 @@ def _configuration_record(
 
 def search_configuration(
     context: SearchContext,
-    configuration: Configuration,
+    configuration: Subject,
     listed: CandidateList,
     candidate_file: Mapping[str, str],
 ) -> ConfigurationResult:
@@ -200,7 +201,7 @@ def search_configuration(
                 completed_length=selected.stopped_at,
                 retained_length=selected.best_checkpoint,
                 startup_seconds=None if startup is None else startup.seconds,
-                preprocessing_seconds=None,  # the tree-based models have no shared artifact
+                preprocessing_seconds=None,  # the artifact was fitted by its own command
                 persistence_seconds=selected.persistence_seconds,
                 startup_scope=None if startup is None else startup.scope,
                 startup_status=None if startup is None else startup.status,

@@ -20,6 +20,7 @@ from review_capacity.development.scoring import (
 )
 from review_capacity.development.trial import TrialOutcome, run_file
 from review_capacity.errors import DataValidationError, FileAccessError, SpecificationError
+from review_capacity.models.lightgbm_model import LightGBMModel
 from review_capacity.models.registry import configuration
 from support.search import V1_ROWS, V2_ROWS, searched
 
@@ -40,6 +41,8 @@ def test_the_selected_model_is_reloaded_and_scores_like_the_saved_one(
     context, selected = scoring
     first = load_selected(context, LGB_U, selected)
     second = load_selected(context, LGB_U, selected)
+    assert isinstance(first, LightGBMModel)
+    assert isinstance(second, LightGBMModel)
     features = context.inputs.v1.features
     assert first.fitted_iterations == selected.fitted_iterations
     assert np.array_equal(first.predict(features), second.predict(features))
@@ -49,7 +52,7 @@ def test_only_tree_models_are_loaded_here(
     scoring: tuple[ScoringContext, TrialOutcome],
 ) -> None:
     context, selected = scoring
-    with pytest.raises(SpecificationError, match="only the tree-based models"):
+    with pytest.raises(SpecificationError, match="neural inputs"):
         load_selected(context, configuration("RES-u"), selected)
 
 
@@ -59,6 +62,7 @@ def test_a_partition_is_scored_to_a_local_file_and_a_record(
 ) -> None:
     context, selected = scoring
     model = load_selected(context, LGB_U, selected)
+    assert isinstance(model, LightGBMModel)
     scored = score_partition(context, LGB_U, selected, model, label)
     frame = pd.read_parquet(context.run.path / scored.file["path"])
     partition = context.inputs.partition(label)

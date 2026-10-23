@@ -27,8 +27,10 @@ from review_capacity.training.timing import (
     HostInterface,
     HostPeak,
     MemoryReading,
+    allocator_peaks,
     host_memory_phase,
     host_reset_supported,
+    reset_allocator_peaks,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,18 +70,29 @@ class PhaseMemory:
     host: HostPeak | None = None
     gpu: dict[str, Any] | None = None
     problems: list[str] = field(default_factory=list)
+    allocator: dict[str, int] | None = None
 
     def reading(self) -> MemoryReading:
         return MemoryReading(
-            self.scope, gpu=self.gpu, host=self.host, problems=tuple(self.problems)
+            self.scope,
+            gpu=self.gpu,
+            allocator=self.allocator,
+            host=self.host,
+            problems=tuple(self.problems),
         )
 
 
 def run_measured[T](
-    setup: MemorySetup | None, scope: str, work: Callable[[], T], *, gpu: bool = False
+    setup: MemorySetup | None,
+    scope: str,
+    work: Callable[[], T],
+    *,
+    gpu: bool = False,
+    allocator: bool = False,
 ) -> tuple[T, PhaseMemory | None]:
     """Run ``work`` and measure its memory; ``scope`` states what the phase covers. Without a
-    ``setup`` nothing is measured. ``gpu`` marks a phase on the GPU.
+    ``setup`` nothing is measured. ``gpu`` marks a phase on the GPU; ``allocator`` also records
+    PyTorch's allocator peaks of the phase (its counters are reset at the start; a neural phase).
 
     Monitors are acquired inside the protected block and every one that was acquired is released
     whatever happens: a failing release is a recorded problem (a warning when the work itself
@@ -92,12 +105,31 @@ def run_measured[T](
     try:
         sampler = _start_gpu(setup, phase) if gpu and setup.gpu_monitoring else None
         host = _start_host(setup, phase)
+        if allocator:
+            _reset_allocator()
         result = work()
+        if allocator:
+            phase.allocator = _read_allocator()
     except BaseException:
         _release(host, sampler, phase, keep=False)
         raise
     _release(host, sampler, phase, keep=True)
     return result, phase
+
+
+def _reset_allocator() -> None:
+    import torch
+
+    reset_allocator_peaks(torch, torch.device("cuda", 0))
+
+
+def _read_allocator() -> dict[str, int] | None:
+    """The allocator's peaks since the reset, read after the phase's GPU work has finished."""
+    import torch
+
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    return allocator_peaks(torch, torch.device("cuda", 0))
 
 
 def _release(
@@ -185,11 +217,22 @@ def trials_maximum(trials: Sequence[tuple[int, PhaseMemory | None]], scope: str)
             result.problems += [f"trial {number}: {problem}" for problem in phase.problems]
     hosts = {n: p.host for n, p in trials if p is not None and p.host is not None}
     gpus = {n: p.gpu for n, p in trials if p is not None and p.gpu is not None}
+    allocators = {n: p.allocator for n, p in trials if p is not None and p.allocator is not None}
     if trials and len(hosts) == len(trials):
         result.host = max(hosts.values(), key=lambda peak: peak.peak_mib)
     elif hosts:
         missing = [n for n, _ in trials if n not in hosts]
         result.problems.append(f"host maximum not established: no reading for trials {missing}")
+    if trials and allocators and len(allocators) == len(trials):
+        result.allocator = {
+            name: max(peaks[name] for peaks in allocators.values())
+            for name in ("max_allocated_bytes", "max_reserved_bytes")
+        }
+    elif allocators:
+        missing = [n for n, _ in trials if n not in allocators]
+        result.problems.append(
+            f"allocator maximum not established: no reading for trials {missing}"
+        )
     if trials and len(gpus) == len(trials):
         result.gpu = max(gpus.values(), key=lambda snap: snap["sampled_max_used_mib"])
     elif gpus:

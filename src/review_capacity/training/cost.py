@@ -3,8 +3,8 @@
 The neural search dominates the study's compute: one full Train epoch of FT-Transformer takes
 7.6 to 44.5 minutes depending on the candidate. DR-015 §7 therefore asks that the cost of the
 actual candidate lists be computed from the sampler before any fit and recorded; no list is
-redrawn and no candidate is rejected for its cost. Whether a prediction is feasible is the
-owner's decision, taken explicitly before any run: this module only predicts.
+redrawn and no candidate is rejected for its cost. Whether a prediction is feasible is decided
+explicitly before any run: this module only predicts.
 
 **FT-Transformer.** The epoch time of a candidate is its layer count times a per-layer time that
 is linear in ``d_token`` between the two settings measured in acceptance-probe run 5 (default:

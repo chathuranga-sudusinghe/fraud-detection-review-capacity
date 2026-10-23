@@ -495,7 +495,7 @@ def _edit(key: str, value: Any) -> Callable[[dict[str, Any]], None]:
     [
         (_edit("format_version", 1), "format version"),  # version 1 has no train_seconds
         (_edit("format_version", 2), "format version"),  # no batch plan, no V1 objective
-        (_edit("format_version", 4), "format version"),
+        (_edit("format_version", 5), "format version"),  # newer than this code
         (_edit("library_version", "2.10.0"), "does not match"),
         (_edit("seed", 7), "does not match"),
         (_edit("seed", 42.0), "integer"),
@@ -686,3 +686,13 @@ def test_run_record_carries_the_precision_settings(fitted: ResNetModel) -> None:
     assert isinstance(precision, dict)
     assert precision["matmul_fp32_precision"] == "ieee"
     assert precision["deterministic_algorithms"] is True
+
+
+def test_the_v1_history_is_kept_for_an_early_stopped_fit_only(
+    fitted: ResNetModel, fixed_epochs: ResNetModel
+) -> None:
+    history = fitted.training_history
+    assert history is not None
+    assert history.unit == "epoch"
+    assert history.best_checkpoint == fitted.fitted_iterations
+    assert fixed_epochs.training_history is None

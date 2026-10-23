@@ -215,14 +215,23 @@ class LogisticRegressionReference:
         self._n_iter, self._warnings = n_iter, notes
         logger.info("Logistic regression fitted: C = %g, %d iterations", c, n_iter)
 
-    def predict(self, features: pd.DataFrame) -> Scores:
-        """The fraud probability of each row, float64 in [0, 1]."""
+    def prepare(self, features: pd.DataFrame) -> Any:
+        """The float64 CSR matrix of the canonical rows: the model's native input, built apart
+        from prediction so that the two can be timed separately."""
+        self._fitted()
+        return build_logistic_matrix(self.artifact, features)
+
+    def predict_prepared(self, matrix: Any) -> Scores:
+        """The fraud probability of each row of a prepared matrix, float64 in [0, 1]."""
         model = self._fitted()
-        matrix = build_logistic_matrix(self.artifact, features)
         probabilities = np.asarray(model.predict_proba(matrix), dtype=np.float64)
         if probabilities.ndim != 2 or probabilities.shape[1] != 2:
             raise ModelError("The logistic regression returned unexpected probabilities")
         return checked_scores(probabilities[:, 1], matrix.shape[0], "Logistic regression")
+
+    def predict(self, features: pd.DataFrame) -> Scores:
+        """The fraud probability of each row, float64 in [0, 1]."""
+        return self.predict_prepared(self.prepare(features))
 
     @property
     def parameters(self) -> dict[str, Any]:

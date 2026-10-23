@@ -1,7 +1,7 @@
 """The data-preparation stage: validate the raw data, write the development files and manifest.
 
-Run by the project owner on the local raw data (AGENTS.md, experiment execution responsibility)
-through the command line (``review_capacity.cli``):
+Run on the local raw data under the execution rules of AGENTS.md (experiment execution
+responsibility) through the command line (``review_capacity.cli``):
 
     review-capacity prepare-data               # validate, processed files and manifest
     review-capacity prepare-data --check-only  # validate and print; write nothing

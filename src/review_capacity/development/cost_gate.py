@@ -1,10 +1,10 @@
 """The candidate-cost gate of the development search (DR-015 §1 and §7; Issue #133).
 
 ``review-capacity plan-search`` writes the candidate lists and their predicted cost with the
-decision ``pending_owner_decision``: whether the predicted cost is feasible is the owner's explicit
-decision, taken before any run. The decision itself is not written into the record. The gate
-makes it verifiable: the owner approves one ``cost_prediction.json`` by its SHA-256, and the
-search starts only if
+decision ``pending_approval``: whether the predicted cost is feasible is decided explicitly
+before any run. The decision itself is not written into the record. The gate makes it
+verifiable: one ``cost_prediction.json`` is approved by its SHA-256, and the search starts only
+if
 
 * the file in the plan directory has exactly that SHA-256;
 * the training declaration in use is the one the plan was written from (its SHA-256, so that a

@@ -1,6 +1,6 @@
 """One search trial of a tree-based configuration: LightGBM on synthetic data on the CPU (no
-project data). CatBoost trains on the GPU and is covered by its adapter tests and the owner-run
-acceptance, not here."""
+project data). CatBoost trains on the GPU and is covered by its adapter tests and the GPU
+acceptance runs, not here."""
 
 from __future__ import annotations
 
@@ -84,7 +84,7 @@ def test_a_failed_trial_is_recorded_and_raised(context: SearchContext) -> None:
 
 
 def test_only_the_tree_models_are_searched_here(context: SearchContext) -> None:
-    with pytest.raises(SpecificationError, match="tree-based models only"):
+    with pytest.raises(SpecificationError, match="neural inputs"):
         run_trial(context, configuration("RES-u"), 1, CANDIDATES[0], candidate_file(context.run))
     assert load_run(context.run.path, context.run.partitions).of_kind("trial") == []
 

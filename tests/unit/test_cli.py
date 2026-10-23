@@ -306,7 +306,7 @@ def test_run_development_options() -> None:
     assert chosen.configurations == ["LGB-u", "Cat-b"]
 
 
-def test_run_development_needs_the_plan_and_the_cost_approval_and_tree_configurations() -> None:
+def test_run_development_needs_the_plan_the_cost_approval_and_a_known_configuration() -> None:
     parser = build_parser()
     with pytest.raises(SystemExit):
         parser.parse_args(["run-development", "--approved-cost", "a" * 64])
@@ -314,7 +314,7 @@ def test_run_development_needs_the_plan_and_the_cost_approval_and_tree_configura
         parser.parse_args(["run-development", "--plan", "p"])
     with pytest.raises(SystemExit):
         parser.parse_args(
-            ["run-development", "--plan", "p", "--approved-cost", "a", "--configurations", "RES-u"]
+            ["run-development", "--plan", "p", "--approved-cost", "a", "--configurations", "XGB-u"]
         )
 
 

@@ -39,12 +39,23 @@ Commands:
                    --output, or by default
                    outputs/catboost_objective_acceptance/<UTC start time, YYYY-MM-DDTHHMMSSZ>/
 
+    probe-neural-batching
+                   the neural batching acceptance (docs/gpu-acceptance-probe.md, Section 9,
+                   checks B1-B5), on synthetic data only: accumulated against unsplit gradients
+                   (unequal micro-batches, non-uniform weights, the final batch of 1,016 rows,
+                   padded attention heads), same-seed repeatability under a micro-batch plan,
+                   and the corners of the neural search spaces through the preflight; writes
+                   batching.json, the generated batching.md and its log, always batching.log
+                   (--log-file is refused), to a new directory: --output, or by default
+                   outputs/neural_batching_acceptance/<UTC start time, YYYY-MM-DDTHHMMSSZ>/
+
     plan-search    the search plan of DR-015 §1 and §7, before any fit: the candidate list of each
                    model and the predicted cost of the lists, as records and a generated
                    search_plan.md, and its log, always plan.log (--log-file is refused), in a
                    new directory: --output, or by default
                    outputs/search_plan/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Reads no data and
-                   fits no model; whether the predicted cost is feasible is the owner's decision
+                   fits no model; whether the predicted cost is feasible is decided explicitly
+                   before any run
 
     fit-neural-preprocessing
                    the shared Train-only preprocessing of the neural models (DR-012), fitted once
@@ -67,18 +78,23 @@ Commands:
                    by default outputs/neural_preflight/<UTC start time, YYYY-MM-DDTHHMMSSZ>/
 
     run-development
-                   the development run of the tree-based configurations (LightGBM and CatBoost,
-                   unweighted and balanced; --configurations chooses a subset): the declared
-                   search for each configuration (DR-015 §1), selection on V1, scoring of V1 and
-                   V2, R3 and ranking outcomes, and the computational-cost timings; records, a
-                   generated summary.md and its log, always run.log (--log-file is refused), in a
-                   new directory inside outputs/: --output, or by default
+                   the development run of the eight configurations (LightGBM, CatBoost,
+                   ResNet-style MLP and FT-Transformer, each unweighted and balanced) and the
+                   logistic-regression reference, which runs first (--configurations chooses a
+                   subset, the reference is named LR): the declared search for each
+                   configuration (DR-015 §1), selection on V1, scoring of V1 and V2, R3 and
+                   ranking outcomes, and the computational-cost timings; records, a generated
+                   summary.md and its log, always run.log (--log-file is refused), in a new
+                   directory inside outputs/: --output, or by default
                    outputs/development/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Starts only from
                    the search plan --plan whose cost_prediction.json has the SHA-256 given in
-                   --approved-cost (the owner's approval of the predicted cost). The timing
-                   session conditions are recorded as context. Reads the
-                   verified processed development files only; the Test period is never read.
-                   Consequential: the owner runs it after approving its scope
+                   --approved-cost (the approval of the predicted cost). The neural models and
+                   the reference need the shared preprocessing artifact (--preprocessing) and
+                   the neural models the micro-batch preflight (--preflight), made under the
+                   same artifact, declaration, settings, package source and GPU. The timing
+                   session conditions are recorded as context. Reads the verified processed
+                   development files only; the Test period is never read. Consequential: run
+                   only after its scope is approved
 
     summarise-run  regenerate summary.md of a development run directory from its records alone
                    (also after an interrupted run); reads no data and fits no model
@@ -92,15 +108,15 @@ Commands:
 Every message is logged with a timestamp to the terminal and, with --log-file PATH, also to a
 file kept with the run's evidence. --verbose adds detail; --quiet shows warnings and errors only.
 
-Exit codes: 0 success (for probe-gpu: pass, or pending second run; for probe-catboost-objective:
-pass); 1 profile-data found differences, or a probe did not pass; 2 configuration or
-project-root error; 3 data-validation error; 4 sealed Test period; 5 file access (a required
-file cannot be read or an output or log file cannot be written); 6 environment mismatch (for
-example, a LightGBM library that is not the recorded build); 7 model failure (a model failed to
-fit or produced invalid output); 130 interrupted. An expected failure is summarised in one line
-with its exit code (steps that were running also log that they failed); the log file always keeps
-its traceback and cause, the terminal only with --debug. Any other error is a defect: it is
-logged with its traceback and raised.
+Exit codes: 0 success (for probe-gpu: pass, or pending second run; for probe-catboost-objective
+and probe-neural-batching: pass); 1 profile-data found differences, or a probe did not pass; 2
+configuration or project-root error; 3 data-validation error; 4 sealed Test period; 5 file
+access (a required file cannot be read or an output or log file cannot be written); 6
+environment mismatch (for example, a LightGBM library that is not the recorded build); 7
+model failure (a model failed to fit or produced invalid output); 130 interrupted. An
+expected failure is summarised in one line with its exit code (steps that were running also
+log that they failed); the log file always keeps its traceback and cause, the terminal only
+with --debug. Any other error is a defect: it is logged with its traceback and raised.
 """
 
 from __future__ import annotations
@@ -132,11 +148,13 @@ from review_capacity.errors import (
 from review_capacity.files import write_atomically, write_json
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import configure_logging
-from review_capacity.models.registry import TREE_CONFIGURATIONS
+from review_capacity.models.registry import RUN_CONFIGURATIONS
 from review_capacity.paths import ProjectPaths
 from review_capacity.probe.records import (
     ACCEPTANCE_LOG_NAME,
     ACCEPTANCE_ROOT,
+    BATCHING_LOG_NAME,
+    BATCHING_ROOT,
     LOG_NAME,
     check_acceptance_output,
     check_output,
@@ -351,6 +369,26 @@ def _probe_catboost_objective(args: argparse.Namespace) -> int:
     return 0 if record["overall"] == "pass" else EXIT_DIFFERENCES
 
 
+def _batching_output(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The neural batching acceptance's output directory: ``--output``, or by default a new
+    directory named by the UTC start time under ``BATCHING_ROOT``, fixed on ``args`` at the first
+    call."""
+    if args.output is None:
+        args.output = BATCHING_ROOT / datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
+    output: Path = args.output if args.output.is_absolute() else paths.root / args.output
+    return output
+
+
+def _probe_neural_batching(args: argparse.Namespace) -> int:
+    from review_capacity.probe.neural_batching import run_acceptance  # PyTorch
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    record = run_acceptance(paths, _batching_output(args, paths), log_opened=True)
+    logger.info("Acceptance result: %s", record["overall"])
+    return 0 if record["overall"] == "pass" else EXIT_DIFFERENCES
+
+
 def _plan_output(args: argparse.Namespace, paths: ProjectPaths) -> Path:
     """The plan's output directory. Without ``--output``, a new directory named by the UTC start
     time under ``plan.OUTPUT_ROOT``; the start time is fixed on ``args`` at the first call, so that
@@ -455,7 +493,9 @@ def _development_options(args: argparse.Namespace) -> DevelopmentOptions:
     return DevelopmentOptions(
         plan=args.plan.resolve(),
         approved_cost_sha256=args.approved_cost,
-        configurations=tuple(args.configurations or TREE_CONFIGURATIONS),
+        configurations=tuple(args.configurations or RUN_CONFIGURATIONS),
+        preprocessing=args.preprocessing,
+        preflight=args.preflight,
         output=args.output,
         started=args.started,
     )
@@ -557,6 +597,15 @@ def _log_file(args: argparse.Namespace) -> Path | None:
         output = _acceptance_output(args, ProjectPaths.discover(args.root))
         check_acceptance_output(output)
         return output / ACCEPTANCE_LOG_NAME
+    if args.command == "probe-neural-batching":
+        if args.log_file is not None:
+            raise SpecificationError(
+                f"probe-neural-batching writes its log to {BATCHING_LOG_NAME} in its output "
+                "directory; omit --log-file"
+            )
+        output = _batching_output(args, ProjectPaths.discover(args.root))
+        check_acceptance_output(output, log_name=BATCHING_LOG_NAME)
+        return output / BATCHING_LOG_NAME
     if args.command != "probe-gpu":
         log_file: Path | None = args.log_file
         return log_file
@@ -652,6 +701,18 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"new directory for this run's records (default: {ACCEPTANCE_ROOT}/<UTC time>)",
     )
     acceptance.set_defaults(handler=_probe_catboost_objective)
+    batching = commands.add_parser(
+        "probe-neural-batching",
+        help="run the neural batching acceptance (probe specification, Section 9)",
+    )
+    batching.add_argument("--root", type=Path, default=None, help="project root directory")
+    batching.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=f"new directory for this run's records (default: {BATCHING_ROOT}/<UTC time>)",
+    )
+    batching.set_defaults(handler=_probe_neural_batching)
     plan_search = commands.add_parser(
         "plan-search",
         help="generate the candidate lists and predict their cost, before any fit (DR-015)",
@@ -696,7 +757,7 @@ def build_parser() -> argparse.ArgumentParser:
     preflight.set_defaults(handler=_preflight_neural)
     development = commands.add_parser(
         "run-development",
-        help="the tree-based development run: search, selection, scoring, evaluation and timing",
+        help="the development run: search, selection, scoring, evaluation and timing",
     )
     development.add_argument("--root", type=Path, default=None, help="project root directory")
     development.add_argument(
@@ -709,14 +770,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--approved-cost",
         required=True,
         metavar="SHA256",
-        help="SHA-256 of the plan's cost_prediction.json that the owner approved",
+        help="SHA-256 of the plan's cost_prediction.json that was approved",
     )
     development.add_argument(
         "--configurations",
         nargs="+",
-        choices=TREE_CONFIGURATIONS,
+        choices=RUN_CONFIGURATIONS,
         default=None,
-        help="the configurations to run (default: all four tree-based configurations)",
+        help="the configurations to run (default: the reference LR and all eight configurations)",
+    )
+    development.add_argument(
+        "--preprocessing",
+        type=Path,
+        default=None,
+        help="directory of the shared preprocessing artifact (needed by the neural models and LR)",
+    )
+    development.add_argument(
+        "--preflight",
+        type=Path,
+        default=None,
+        help="the preflight.json of preflight-neural (needed by the neural models)",
     )
     development.add_argument(
         "--output",
@@ -762,6 +835,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     own_log = args.command in (
         "probe-gpu",
         "probe-catboost-objective",
+        "probe-neural-batching",
         "plan-search",
         "fit-neural-preprocessing",
         "preflight-neural",

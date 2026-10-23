@@ -124,7 +124,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
    Every command logs its progress with timestamps to the terminal; `--log-file PATH` (before the command name) also keeps the log in a file, as an evidence-producing run should. `review-capacity --help` lists the options and exit codes.
 
-6. Plan the search, then run the tree-based development search. Both are consequential steps governed by the [execution rules](AGENTS.md#experiment-execution-responsibility); the run starts only after its scope is approved. The plan reads no data and fits no model. Its `cost_prediction.json` is identified by its SHA-256, which the development run takes as the approval of the predicted cost ([DR-015](docs/decisions/DR-015-common-training-rules.md) §7):
+6. Plan the search, then run the development search. Both are consequential steps governed by the [execution rules](AGENTS.md#experiment-execution-responsibility); the run starts only after its scope is approved. The plan reads no data and fits no model. Its `cost_prediction.json` is identified by its SHA-256, which the development run takes as the approval of the predicted cost ([DR-015](docs/decisions/DR-015-common-training-rules.md) §7):
 
    ```bash
    .venv/bin/review-capacity plan-search
@@ -135,18 +135,18 @@ The environment is pinned for reproducibility: every direct dependency has an ex
    ```
 
    ```bash
-   .venv/bin/review-capacity run-development --plan outputs/search_plan/<UTC start time> --approved-cost <SHA-256 of cost_prediction.json>
+   .venv/bin/review-capacity run-development --plan outputs/search_plan/<UTC start time> --approved-cost <SHA-256 of cost_prediction.json> --preprocessing outputs/neural_preprocessing/<UTC start time> --preflight outputs/neural_preflight/<UTC start time>/preflight.json
    ```
 
-   `run-development` runs the declared search of each tree-based configuration (`--configurations` chooses a subset), selects on V1, scores V1 and V2, evaluates R3 and the ranking, and times scoring, writing dated, ignored records, `summary.md` and `run.log` to `outputs/development/<UTC start time>/` (`--output` must name a new directory inside `outputs/`). It refuses to start if the plan differs from the approved cost or from the training declaration. The conditions of the timing session are recorded with each timing as context; no condition is required ([DR-015](docs/decisions/DR-015-common-training-rules.md) §9). `review-capacity --help` lists every option.
+   `run-development` runs, in one run, the logistic-regression reference (`LR`, first, so that a convergence failure shows before the model searches start) and the eight configurations in DR-011 order (`--configurations` chooses a subset). For each it runs the declared search, selects on V1, scores V1 and V2, evaluates R3 and the ranking, and times scoring, writing dated, ignored records, `summary.md` and `run.log` to `outputs/development/<UTC start time>/` (`--output` must name a new directory inside `outputs/`). The neural models and the reference need the shared preprocessing artifact (`--preprocessing`), and the neural models the micro-batch preflight (`--preflight`), which must have been made for the same artifact, training declaration, model settings, package source and GPU. A neural model is reloaded only after its saved hyperparameters and batching are checked against the declaration and the recorded batch plan. The run record names the approved cost prediction. It refuses to start if the plan differs from the approved cost or from the training declaration. The conditions of the timing session are recorded with each timing as context; no condition is required ([DR-015](docs/decisions/DR-015-common-training-rules.md) §9). `review-capacity --help` lists every option.
 
-   Before any neural run, the shared Train-only preprocessing of the two neural models ([DR-012](docs/decisions/DR-012-neural-network-input-representation.md)) is fitted once (a consequential step under the same execution rules; it reads the processed development files only):
+   Before any neural run or run of the reference, the shared Train-only preprocessing of the two neural models ([DR-012](docs/decisions/DR-012-neural-network-input-representation.md)) is fitted once (a consequential step under the same execution rules; it reads the processed development files only):
 
    ```bash
    .venv/bin/review-capacity fit-neural-preprocessing
    ```
 
-   It writes the artifact (`manifest.json`, `arrays.npz`), its SHA-256 in `result.json`, the Validation 1 and Validation 2 diagnostics and `run.log` to `outputs/neural_preprocessing/<UTC start time>/`.
+   It writes the artifact (`manifest.json`, `arrays.npz`), its SHA-256 in `result.json`, the Validation 1 and Validation 2 diagnostics and `run.log` to `outputs/neural_preprocessing/<UTC start time>/`. The neural models' micro-batches are then fixed by the preflight (`review-capacity preflight-neural --preprocessing <that directory>`, GPU), after the neural batching acceptance (`review-capacity probe-neural-batching`, [`docs/gpu-acceptance-probe.md`](docs/gpu-acceptance-probe.md) Section 9) has passed.
 
 **Continuous integration:** code-affecting pull requests to `main` receive the checks defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml); CI never trains or scores a model on research data, reads research data or writes research output; unit tests fit only small models on synthetic data.
 
