@@ -24,6 +24,7 @@ from review_capacity.errors import (
 )
 from review_capacity.models.ft_transformer_model import FTTransformerModel
 from review_capacity.models.neural_training import BatchPlan
+from review_capacity.training import preflight as preflight_module
 from review_capacity.training.declaration import TrainingDeclaration, load_declaration
 from review_capacity.training.preflight import (
     FILE,
@@ -43,6 +44,7 @@ from review_capacity.training.sampler import Candidate
 from support.neural import LAYOUT, preserved_torch_state
 from support.synthetic import REPO_PATHS
 
+DEFAULT_EPOCHS = preflight_module.PHASE_EPOCHS  # read before the fixture shortens the phases
 TOTAL_MIB = 8_000
 AMPLE_MIB = 3_000  # free memory of an ordinary attempt
 MARGIN = 1_024
@@ -82,6 +84,12 @@ CANDIDATES: dict[str, list[Candidate]] = {
 def restore_torch_state() -> Iterator[None]:
     with preserved_torch_state():
         yield
+
+
+@pytest.fixture(autouse=True)
+def one_epoch_phases(monkeypatch: pytest.MonkeyPatch) -> None:
+    """One measured epoch keeps the CPU tests fast; the epoch count has its own test."""
+    monkeypatch.setattr(preflight_module, "PHASE_EPOCHS", 1)
 
 
 @pytest.fixture(scope="module")
@@ -294,27 +302,88 @@ def test_the_random_states_are_unchanged_also_after_an_error(
     assert _states() == before
 
 
-def test_the_training_phase_runs_two_effective_batches_and_the_evaluation_runs_in_the_loop(
+def test_the_phases_run_two_effective_batches_per_epoch_for_several_epochs_in_one_fit(
     monkeypatch: pytest.MonkeyPatch, declaration: TrainingDeclaration, settings: ModelSettings
 ) -> None:
     original: Callable[..., None] = FTTransformerModel.fit
-    calls: list[tuple[int, bool, dict[str, Any]]] = []
+    calls: list[tuple[int, bool, dict[str, Any], dict[str, Any]]] = []
 
     def watching(
         model: FTTransformerModel, train: Any, valid: Any, hyperparameters: Any, **kwargs: Any
     ) -> None:
-        calls.append((train.inputs.rows, valid is not None, dict(hyperparameters)))
+        calls.append((train.inputs.rows, valid is not None, dict(hyperparameters), kwargs))
         original(model, train, valid, hyperparameters, **kwargs)
 
     monkeypatch.setattr(FTTransformerModel, "fit", watching)
+    monkeypatch.setattr(preflight_module, "PHASE_EPOCHS", 2)
     run(declaration, settings, Scripted(), models=("ft_transformer",))
     effective = declaration.neural.effective_batch
     assert len(calls) == 4  # per candidate: one training fit, one evaluation fit
-    # two effective batches in one fit: the second runs with the optimiser state alive
-    assert {rows for rows, _, _ in calls} == {2 * effective}
-    assert [with_validation for _, with_validation, _ in calls] == [False, True, False, True]
-    assert calls[1][2]["max_epochs"] == 1
+    # two effective batches per epoch, several epochs in one fit: the optimiser state is alive
+    assert {rows for rows, _, _, _ in calls} == {2 * effective}
+    assert [with_validation for _, with_validation, _, _ in calls] == [False, True, False, True]
+    assert calls[0][3]["iterations"] == 2
     assert "max_epochs" not in calls[0][2]
+    assert (calls[1][2]["max_epochs"], calls[1][2]["patience"]) == (2, 2)
+    assert "iterations" not in calls[1][3]
+
+
+def test_the_measured_phase_is_long_enough_to_be_sampled() -> None:
+    assert preflight_module.MIN_SAMPLES >= 3
+    assert preflight_module.SAMPLE_INTERVAL_MS <= 100
+    # a phase of PHASE_EPOCHS epochs of two effective batches lasts several sampling intervals
+    assert DEFAULT_EPOCHS * preflight_module.EFFECTIVE_BATCHES >= 8
+
+
+def test_a_failed_phase_reports_its_actual_reason() -> None:
+    from review_capacity.training.preflight import _outcome
+
+    sampled = _phase(Reading(TOTAL_MIB, 1_000, 2_000, (), samples=1), None, MARGIN)
+    assert "memory samples" in _outcome(sampled)
+    assert "memory margin" not in _outcome(sampled)
+    tight = _phase(Reading(TOTAL_MIB, 1_000, TOTAL_MIB - 10, (), samples=10), None, MARGIN)
+    assert _outcome(tight) == "fails (memory margin)"
+    oom = _phase(Reading(TOTAL_MIB, 1_000, 2_000, (), samples=10), "out of GPU memory", MARGIN)
+    assert _outcome(oom) == "fails (out of GPU memory)"
+    fine = _phase(Reading(TOTAL_MIB, 1_000, 2_000, (), samples=10), None, MARGIN)
+    assert _outcome(fine) == "passes"
+
+
+def test_the_random_states_are_restored_only_after_the_model_is_released(
+    monkeypatch: pytest.MonkeyPatch, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    order: list[str] = []
+    release, restore = preflight_module._release, preflight_module.restore_random_state
+
+    def released(device: Any) -> None:
+        order.append("release")
+        release(device)
+
+    def restored(saved: Any) -> None:
+        order.append("restore")
+        restore(saved)
+
+    monkeypatch.setattr(preflight_module, "_release", released)
+    monkeypatch.setattr(preflight_module, "restore_random_state", restored)
+    run(declaration, settings, Scripted(), models=("resnet",))
+    assert "restore" in order
+    # every restore directly follows a release of the attempt's model and the allocator cache
+    assert all(order[i - 1] == "release" for i, step in enumerate(order) if step == "restore")
+
+
+def test_the_gpu_allocator_is_capped_at_the_device_total_less_the_margin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Properties:
+        total_memory = 8_000 * (1 << 20)
+
+    fractions: list[float] = []
+    monkeypatch.setattr(torch.cuda, "get_device_properties", lambda _device: Properties())
+    monkeypatch.setattr(
+        torch.cuda, "set_per_process_memory_fraction", lambda fraction: fractions.append(fraction)
+    )
+    preflight_module.cap_allocator(1_024)
+    assert fractions == [(8_000 - 1_024) / 8_000]
 
 
 def test_a_phase_with_too_few_memory_samples_fails() -> None:

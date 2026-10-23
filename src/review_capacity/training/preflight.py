@@ -6,13 +6,14 @@ each of a model's ten candidates:
 1. It uses the production implementation (the neural loop of ``models.neural_training``) with
    full-size synthetic inputs and the vocabularies of the shared preprocessing artifact, strict
    determinism and the precision and attention backend of DR-013 §4.
-2. **Training phase:** one epoch of **two** effective batches (2,048 rows) in one fit, so that the
-   second batch's forward and backward passes run with the AdamW state initialised by the first
-   update, as in every batch of a real epoch.
+2. **Training phase:** ``PHASE_EPOCHS`` epochs of **two** effective batches (2,048 rows) in one fit,
+   so that every batch after the first runs its forward and backward passes with the AdamW state
+   initialised by the first update, as in a real epoch. The repetition also makes the phase last
+   long enough for the memory sampler to observe it.
 3. **Evaluation phase:** the same fit with early stopping on a synthetic validation set of one full
    evaluation batch (4,096 or 16 rows) and the shared V1 objective, so that the float32 evaluation
-   runs inside the training loop, with the optimiser state alive, exactly where V1 evaluation runs
-   in a search. Its reading includes the training batches of the epoch and is therefore
+   runs after every epoch inside the training loop, with the optimiser state alive, exactly where
+   V1 evaluation runs in a search. Its reading includes the training batches and is therefore
    conservative.
 4. It tries the declared micro-batches (1,024, 512, 256, 128, 64) in that order and records the
    largest whose training phase completes with at least ``preflight_free_margin_mib`` of device
@@ -25,9 +26,13 @@ each of a model's ten candidates:
 6. A candidate that passes at no listed size, or whose evaluation phase fails, stops the search
    for an issue (``ModelError``); no candidate is dropped or replaced.
 7. The synthetic data come from the preflight's own generator, and the Python, NumPy and PyTorch
-   random states are restored after every attempt, also when it fails.
-8. Every model is released, and the allocator cache cleared, after each attempt returns, so that
-   the next attempt does not start from the previous attempt's allocations.
+   random states are restored after every attempt, also when it fails, once the attempt's model
+   is released (restoring a CUDA generator state needs free device memory).
+8. Every model is released, and the allocator cache cleared, after each attempt, so that the next
+   attempt does not start from the previous attempt's allocations.
+9. On the GPU, PyTorch's allocator is capped at the device total less the margin
+   (``cap_allocator``): under WSL the device otherwise spills into system memory and an attempt
+   that does not fit runs on for minutes instead of failing.
 
 The recorded plan (``preflight.json``) is used for the unweighted and balanced configurations and
 for every refit, and is never changed after V1 results are seen. ``read_preflight`` checks a
@@ -91,8 +96,10 @@ CONFIGURATIONS = {"resnet": "RES-u", "ft_transformer": "FTT-u"}  # weighting pla
 SYNTHETIC_FRAUD_SHARE = 0.2
 SYNTHETIC_SEED = 0
 SYNTHETIC_DAYS = 3  # relative days of the synthetic validation rows
-EFFECTIVE_BATCHES = 2  # effective batches of the measured epoch
+EFFECTIVE_BATCHES = 2  # effective batches of a measured epoch
+PHASE_EPOCHS = 5  # epochs of a measured phase: long enough to be sampled, state alive throughout
 MIN_SAMPLES = 3  # memory samples a phase needs for its reading to count
+SAMPLE_INTERVAL_MS = 100  # nvidia-smi sampling interval of the preflight
 RECORD_KEYS = frozenset(
     {
         "record",
@@ -100,7 +107,8 @@ RECORD_KEYS = frozenset(
         "identity",
         "margin_mib",
         "micro_batch_candidates",
-        "effective_batches_measured",
+        "effective_batches_per_epoch",
+        "epochs_measured",
         "models",
     }
 )
@@ -163,9 +171,9 @@ class GpuMeter:
 
     @contextmanager
     def watch(self) -> Iterator[Watch]:
-        from review_capacity.probe.diagnostics import GpuMemorySampler
+        from review_capacity.probe.diagnostics import NVIDIA_SMI, GpuMemorySampler
 
-        sampler = GpuMemorySampler()
+        sampler = GpuMemorySampler((*NVIDIA_SMI[:-1], f"--loop-ms={SAMPLE_INTERVAL_MS}"))
         sampler.start()
         watch = Watch()
         try:
@@ -230,23 +238,41 @@ def neural_hyperparameters(
     }
 
 
-@contextmanager
-def preserved_random_state(device: Device) -> Iterator[None]:
-    """Restore the Python, NumPy and PyTorch (and CUDA) random states on exit, also after an
-    error: a fit seeds them."""
+RandomState = tuple[Any, Any, Any, Any]
+
+
+def save_random_state(device: Device) -> RandomState:
+    """The Python, NumPy and PyTorch (and CUDA) random states: a fit seeds them."""
     import torch
 
-    python_state, numpy_state = random.getstate(), np.random.get_state()
-    torch_state = torch.get_rng_state()
     cuda_states = torch.cuda.get_rng_state_all() if device == "gpu" else None  # initialises CUDA
-    try:
-        yield
-    finally:
-        random.setstate(python_state)
-        np.random.set_state(numpy_state)
-        torch.set_rng_state(torch_state)
-        if cuda_states is not None:
-            torch.cuda.set_rng_state_all(cuda_states)
+    return random.getstate(), np.random.get_state(), torch.get_rng_state(), cuda_states
+
+
+def restore_random_state(saved: RandomState) -> None:
+    """Put the saved random states back. Called after the attempt's model is released: with the
+    device full, restoring a CUDA generator state fails."""
+    import torch
+
+    python_state, numpy_state, torch_state, cuda_states = saved
+    random.setstate(python_state)
+    np.random.set_state(numpy_state)
+    torch.set_rng_state(torch_state)
+    if cuda_states is not None:
+        torch.cuda.set_rng_state_all(cuda_states)
+
+
+def cap_allocator(margin_mib: int) -> None:
+    """Cap PyTorch's allocator at the device total less the margin. Under WSL the GPU spills into
+    system memory instead of failing, so an attempt that does not fit would run on for minutes
+    (in the observed case up to 52 GiB allocated on an 8 GiB device); with the cap it fails at
+    once with an out-of-memory error, which the preflight records as a failed attempt. The sampled
+    whole-device reading still decides every phase: the cap does not count the CUDA context or
+    other processes."""
+    import torch
+
+    total_mib = torch.cuda.get_device_properties(0).total_memory // (1 << 20)
+    torch.cuda.set_per_process_memory_fraction((total_mib - margin_mib) / total_mib)
 
 
 def _release(device: Device) -> None:
@@ -314,9 +340,11 @@ def _attempt(
     outlive the call."""
     declared = setting.declaration.neural
     error: str | None = None
-    with setting.meter.watch() as watch:
-        try:
-            with preserved_random_state(setting.device):
+    instance: NeuralModel | None = None
+    saved = save_random_state(setting.device)
+    try:
+        with setting.meter.watch() as watch:
+            try:
                 instance = MODELS[model](
                     configuration(CONFIGURATIONS[model]),
                     setting.seed,
@@ -335,16 +363,24 @@ def _attempt(
                     instance.fit(
                         setting.train,
                         valid,
-                        {**hyperparameters, "max_epochs": 1, "patience": 1},
+                        {**hyperparameters, "max_epochs": PHASE_EPOCHS, "patience": PHASE_EPOCHS},
                         objective=objective,
                         plan=plan,
                     )
                 else:
-                    instance.fit(setting.train, None, hyperparameters, iterations=1, plan=plan)
-        except ModelError as failure:
-            if not _out_of_memory(failure):
-                raise
-            error = f"out of GPU memory during {'evaluation' if evaluate else 'training'}"
+                    instance.fit(
+                        setting.train, None, hyperparameters, iterations=PHASE_EPOCHS, plan=plan
+                    )
+            except ModelError as failure:
+                if not _out_of_memory(failure):
+                    raise
+                error = f"out of GPU memory during {'evaluation' if evaluate else 'training'}"
+    finally:
+        # the model and the exception's frames are dropped, the cache is cleared, and only then
+        # are the random states restored (restoring a CUDA generator state needs free memory)
+        instance = None
+        _release(setting.device)
+        restore_random_state(saved)
     assert watch.reading is not None
     return _phase(watch.reading, error, declared.preflight_free_margin_mib)
 
@@ -363,7 +399,12 @@ def micro_batches(model: str, effective: int, declared: Sequence[int]) -> tuple[
 
 
 def _outcome(phase: Mapping[str, Any]) -> str:
-    return "passes" if phase["passes"] else f"fails ({phase['error'] or 'memory margin'})"
+    """Why a phase passed or failed: its error, its sampler problems, or the memory margin."""
+    if phase["passes"]:
+        return "passes"
+    reasons = [phase["error"]] if phase["error"] else []
+    reasons += phase["problems"]
+    return f"fails ({'; '.join(reasons) or 'memory margin'})"
 
 
 def preflight_model(
@@ -451,6 +492,8 @@ def run_preflight(
     """The preflight of ``models``: one entry per model with its candidates' micro-batches."""
     rng = np.random.default_rng(SYNTHETIC_SEED)
     declared = declaration.neural
+    if device == "gpu":
+        cap_allocator(declared.preflight_free_margin_mib)
     setting = Setting(
         declaration,
         settings,
@@ -482,7 +525,8 @@ def build_record(
         "identity": jsonable(dict(identity)),
         "margin_mib": declaration.neural.preflight_free_margin_mib,
         "micro_batch_candidates": list(declaration.neural.micro_batch_candidates),
-        "effective_batches_measured": EFFECTIVE_BATCHES,
+        "effective_batches_per_epoch": EFFECTIVE_BATCHES,
+        "epochs_measured": PHASE_EPOCHS,
         "models": jsonable(dict(models)),
     }
 
@@ -614,7 +658,8 @@ def read_preflight(
     if (
         record["margin_mib"] != declared.preflight_free_margin_mib
         or record["micro_batch_candidates"] != list(declared.micro_batch_candidates)
-        or record["effective_batches_measured"] != EFFECTIVE_BATCHES
+        or record["effective_batches_per_epoch"] != EFFECTIVE_BATCHES
+        or record["epochs_measured"] != PHASE_EPOCHS
     ):
         raise SpecificationError("The preflight used other margin or micro-batch settings")
     entries = _mapping(record["models"], "models")
