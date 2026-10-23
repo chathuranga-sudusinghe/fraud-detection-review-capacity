@@ -33,6 +33,8 @@ from support.preprocessing import MISSING, canonical_frame, fitted_artifact
 from support.synthetic import FEATURES, REPO_PATHS
 
 FIXED = dict(load_declaration(REPO_PATHS)[0].space("logistic_regression").fixed)
+MAX_ITER = FIXED["max_iter"]
+assert isinstance(MAX_ITER, int)
 
 
 def train_data(rows: int = 400, seed: int = 1) -> tuple[Any, ModelData]:
@@ -61,8 +63,8 @@ def test_the_declared_settings_are_the_fixed_ones() -> None:
         "fit_intercept": True,
         "class_weight": None,
         "warm_start": False,
-        "tol": 1e-6,
-        "max_iter": 1000,
+        "tol": 1e-5,
+        "max_iter": 5000,
     }
     reference, _ = fitted(2.5)
     estimator = reference._fitted()
@@ -201,7 +203,7 @@ class Broken:
         ({"intercept_": np.array([np.inf])}, "not finite"),
         ({"classes_": np.array([0, 2])}, "classes"),
         ({"coef_": np.zeros((1, 2))}, "shape"),
-        ({"n_iter_": np.array([5000])}, "iterations"),
+        ({"n_iter_": np.array([MAX_ITER + 1])}, "iterations"),
         ({"n_iter_": np.array([-1])}, "iterations"),
     ],
 )
