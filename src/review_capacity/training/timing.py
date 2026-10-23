@@ -95,6 +95,18 @@ def timed(call: Callable[[], object], clock: Clock) -> float:
     return clock.now() - start
 
 
+def gpu_clock(clock: Clock) -> Clock:
+    """``clock`` with the explicit synchronisation of CUDA device 0 before the clock starts and
+    after the work completes (DR-015 §9); a process without CUDA has nothing to synchronise."""
+    import torch
+
+    def synchronise() -> None:
+        if torch.cuda.is_available():
+            torch.cuda.synchronize(torch.device("cuda", 0))
+
+    return Clock(clock.now, synchronise)
+
+
 def settle(seconds: int, sleep: Callable[[float], None] = time.sleep) -> None:
     """The settling interval before a standalone scoring block (DR-015 §9)."""
     if seconds > 0:

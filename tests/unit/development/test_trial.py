@@ -24,6 +24,7 @@ from review_capacity.hashing import file_sha256
 from review_capacity.models.catboost_model import CatBoostModel
 from review_capacity.models.lightgbm_model import LightGBMModel
 from review_capacity.models.registry import configuration
+from review_capacity.training.timing import Clock
 from support.memory import memory_setup
 from support.search import CANDIDATES, PATIENCE, candidate_file, search_context
 
@@ -176,3 +177,48 @@ def test_a_trial_without_a_memory_setup_has_no_reading(context: SearchContext) -
         context, configuration("LGB-u"), 1, CANDIDATES[0], candidate_file(context.run)
     )
     assert outcome.fit_memory is None
+
+
+def test_a_neural_fit_is_timed_between_two_synchronisations_of_the_device(
+    context: SearchContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The synchronisations and the clock readings are one ordered sequence: device work is
+    complete before the clock starts and before it stops (DR-015 §9)."""
+    events: list[str] = []
+    ticks = iter((10.0, 14.0))
+
+    def now() -> float:
+        events.append("clock")
+        return next(ticks)
+
+    class FakeModel:
+        training_history = SimpleNamespace(
+            best_objective=0.5, best_checkpoint=2, stopped_at=3, stopping_reason="patience"
+        )
+
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def fit(self, *_args: object, **_kwargs: object) -> None:
+            events.append("fit")
+
+    neural = SimpleNamespace(
+        artifact=SimpleNamespace(layout=None),
+        artifact_sha256="a" * 64,
+        plans={"resnet": {1: None}},
+        train={configuration("RES-u").weighting: None},
+        v1=None,
+    )
+    monkeypatch.setattr(trial_module, "_neural", lambda _context: neural)
+    monkeypatch.setattr(trial_module, "NEURAL_MODELS", {"resnet": FakeModel})
+    monkeypatch.setattr(
+        trial_module,
+        "gpu_clock",
+        lambda _clock: Clock(now, lambda: events.append("synchronise")),
+    )
+    assert context.settings.training_device("resnet") == "gpu"
+
+    fitted = trial_module._fit_neural(context, configuration("RES-u"), 1, CANDIDATES[0])
+
+    assert events == ["synchronise", "clock", "fit", "synchronise", "clock"]
+    assert fitted.seconds == 4.0
