@@ -7,6 +7,8 @@ with the identifiers and times that fix the row order.
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -59,3 +61,19 @@ def canonical_frame(
         columns[name] = derived[name].astype("float64")
     frame = pd.DataFrame(columns)[list(FEATURES.model_inputs)]
     return frame, ids, times
+
+
+def fitted_artifact(
+    rows: int = 400,
+    seed: int = 1,
+    *,
+    missing: dict[str, float] | None = None,
+    categorical_missing: bool = True,
+) -> tuple[Any, Rows]:
+    """A shared preprocessing artifact fitted on ``canonical_frame`` (preprocessing seed 0), with
+    the frame, identifiers and times it was fitted on."""
+    from review_capacity.features.neural_preprocessing import fit_neural_preprocessing
+
+    data = canonical_frame(rows, seed, missing=missing, categorical_missing=categorical_missing)
+    frame, ids, times = data
+    return fit_neural_preprocessing(frame, ids, times, FEATURES, 0), data

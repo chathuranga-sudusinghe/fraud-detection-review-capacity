@@ -28,6 +28,9 @@ RECORD_ENTRIES = ("probe.json", "probe.md", "scores")
 ACCEPTANCE_ROOT = Path("outputs") / "catboost_objective_acceptance"  # Section 8
 ACCEPTANCE_LOG_NAME = "acceptance.log"
 ACCEPTANCE_ENTRIES = ("acceptance.json", "acceptance.md")
+BATCHING_ROOT = Path("outputs") / "neural_batching_acceptance"  # Section 9
+BATCHING_LOG_NAME = "batching.log"
+BATCHING_ENTRIES = ("batching.json", "batching.md")
 CHECKS: dict[str, str] = {
     "C1": "Backend identity",
     "C2": "Ignored-option and unsupported-option warnings",
@@ -59,12 +62,15 @@ def check_output(output: Path, previous: Path | None, *, log_opened: bool = Fals
             raise SpecificationError("The output directory must be separate from the first run's")
 
 
-def check_acceptance_output(output: Path, *, log_opened: bool = False) -> None:
-    """The CatBoost tree-objective acceptance (Section 8) writes to a directory of its own: a
-    directory that does not exist or is empty. ``log_opened``: the command has already opened this
-    run's log ``acceptance.log`` in ``output``, which is then the only entry allowed."""
+def check_acceptance_output(
+    output: Path, *, log_name: str = ACCEPTANCE_LOG_NAME, log_opened: bool = False
+) -> None:
+    """An acceptance run (Section 8: the CatBoost tree objective; Section 9: neural batching)
+    writes to a directory of its own: a directory that does not exist or is empty. ``log_opened``:
+    the command has already opened this run's log ``log_name`` in ``output``, which is then the
+    only entry allowed."""
     output = output.resolve()
-    allowed = {ACCEPTANCE_LOG_NAME} if log_opened else set()
+    allowed = {log_name} if log_opened else set()
     try:
         occupied = sorted(entry.name for entry in output.iterdir() if entry.name not in allowed)
     except FileNotFoundError:

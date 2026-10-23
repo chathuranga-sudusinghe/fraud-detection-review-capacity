@@ -1,14 +1,19 @@
-"""The development run: search, selection, scoring, evaluation and timing of the tree-based
-configurations, recorded in one run directory (DR-015; Issue #135).
+"""The development run: search, selection, scoring, evaluation and timing of the eight
+configurations and the logistic-regression reference, recorded in one run directory (DR-015;
+Issues #135 and #151).
 
 ``prepare_development`` turns the command's options into a ``DevelopmentSetup``. Everything that
 can be checked without writing is checked first: it loads the settings and the training
 declaration with their snapshots, verifies the LightGBM build, passes the cost gate
-(``development.cost_gate``), reads the verified Train, V1 and V2 inputs once, collects the code,
-environment and session records and builds the ``run`` record; only then does it create the run
-directory. A failure up to that point leaves at most the run's log. ``run_development`` then
-writes the ``run`` record first, adopts the candidate files of the approved plan, and runs the
-setup: for each configuration in order it
+(``development.cost_gate``), reads the verified Train, V1 and V2 inputs once, loads the shared
+preprocessing artifact and the recorded batch plans when neural models or the reference run
+(``development.neural_run``), collects the code, environment and session records and builds the
+``run`` record, which names the approved plan; only then does it create the run directory. A
+failure up to that point leaves at most the run's log. ``run_development`` then writes the ``run``
+record first, adopts the candidate files of the approved plan, writes the ``preprocessing`` and
+``preflight`` records, caps PyTorch's allocator when a neural model trains on the GPU, and runs the
+setup: for each configuration in order (the reference first, so that a convergence failure shows
+before the long searches; then DR-011 order) it
 
 1. searches the declared candidates and selects a trial (``development.search``);
 2. reloads the selected model, scores V1 and V2, evaluates R3 and the ranking and times the
@@ -56,6 +61,12 @@ from review_capacity.development.inputs import (
     read_partitions,
 )
 from review_capacity.development.memory import MemorySetup
+from review_capacity.development.neural_run import (
+    NeuralRun,
+    build_neural_run,
+    neural_models_of,
+    write_neural_records,
+)
 from review_capacity.development.records import DevelopmentPartitions
 from review_capacity.development.rendering import write_summary
 from review_capacity.development.run_output import (
@@ -68,6 +79,7 @@ from review_capacity.development.run_output import (
 from review_capacity.development.run_start import (
     RUN_TYPE,
     adopt_candidates,
+    project_file,
     run_identity,
     run_record,
 )
@@ -79,6 +91,7 @@ from review_capacity.development.scoring import (
 )
 from review_capacity.development.search import search_configuration
 from review_capacity.development.startup import Startup, measure_startups
+from review_capacity.development.subjects import NEURAL, REFERENCE, kind_of, training_device
 from review_capacity.development.trial import SearchContext
 from review_capacity.errors import SpecificationError
 from review_capacity.logging_setup import log_step
@@ -87,7 +100,13 @@ from review_capacity.models.device import (
     environment_record,
     verify_lightgbm_build,
 )
-from review_capacity.models.registry import TREE_CONFIGURATIONS, Configuration, configuration
+from review_capacity.models.registry import (
+    CONFIGURATIONS,
+    REFERENCE_SUBJECT,
+    RUN_CONFIGURATIONS,
+    Subject,
+    configuration,
+)
 from review_capacity.models.run_record import (
     SettingsSnapshot,
     load_settings_with_snapshot,
@@ -96,21 +115,31 @@ from review_capacity.models.v1_objective import V1Objective
 from review_capacity.paths import ProjectPaths
 from review_capacity.provenance import code_provenance
 from review_capacity.training.declaration import TrainingDeclaration, load_declaration
+from review_capacity.training.plan import COST_NAME
+from review_capacity.training.preflight import cap_allocator
 from review_capacity.training.sampler import CandidateList, generate_candidates
 from review_capacity.training.timing import Clock, session_conditions
 
 logger = logging.getLogger(__name__)
 
 
+REFERENCE_NAME = REFERENCE_SUBJECT.name
+DEFAULT_CONFIGURATIONS = RUN_CONFIGURATIONS
+
+
 @dataclass(frozen=True)
 class DevelopmentOptions:
-    """What the command line chooses."""
+    """What the command line chooses. ``preprocessing`` is the shared preprocessing artifact
+    (needed by the neural models and the reference) and ``preflight`` the micro-batch preflight
+    (needed by the neural models)."""
 
     plan: Path
     approved_cost_sha256: str
-    configurations: tuple[str, ...] = TREE_CONFIGURATIONS
+    configurations: tuple[str, ...] = DEFAULT_CONFIGURATIONS
     output: Path | None = None
     started: str | None = None
+    preprocessing: Path | None = None
+    preflight: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -128,7 +157,7 @@ class DevelopmentSetup:
     scoring_inputs: ScoringInputs
     lists: Mapping[str, CandidateList]
     adopt: Callable[[RunDirectory], Mapping[str, Mapping[str, str]]]
-    configurations: tuple[Configuration, ...]
+    configurations: tuple[Subject, ...]
     environment: Mapping[str, Any]
     code: Mapping[str, Any]
     lightgbm_build: LightGBMIdentity | None
@@ -137,19 +166,26 @@ class DevelopmentSetup:
     sleep: Callable[[float], None] = time.sleep
     memory: MemorySetup | None = None
     startups: Mapping[str, Startup] = field(default_factory=dict)
+    neural: NeuralRun | None = None
+    paths: ProjectPaths | None = None
+    cap_allocator: Callable[[int], None] = cap_allocator
 
 
-def chosen_configurations(names: Sequence[str]) -> tuple[Configuration, ...]:
-    """The tree-based configurations named, in DR-011 order, each once."""
+def chosen_configurations(names: Sequence[str]) -> tuple[Subject, ...]:
+    """The configurations named, each once: the reference (``LR``) first, then the eight in
+    DR-011 order."""
     if not names:
         raise SpecificationError("Name at least one configuration")
-    unknown = sorted(set(names) - set(TREE_CONFIGURATIONS))
+    known = [c.name for c in CONFIGURATIONS]
+    unknown = sorted(set(names) - {*known, REFERENCE_NAME})
     if unknown:
         raise SpecificationError(
-            f"Not tree-based configurations of this run: {unknown}; "
-            f"the choices are {list(TREE_CONFIGURATIONS)}"
+            f"Not configurations of this run: {unknown}; the choices are "
+            f"{list(DEFAULT_CONFIGURATIONS)}"
         )
-    return tuple(configuration(name) for name in TREE_CONFIGURATIONS if name in names)
+    chosen: list[Subject] = [REFERENCE_SUBJECT] if REFERENCE_NAME in names else []
+    chosen += [configuration(name) for name in known if name in names]
+    return tuple(chosen)
 
 
 def run_directory_for(paths: ProjectPaths, options: DevelopmentOptions, started: str) -> Path:
@@ -175,6 +211,15 @@ def prepare_development(
 ) -> DevelopmentSetup:
     """Load, verify and gate everything a run needs; create its directory and read its inputs."""
     chosen = chosen_configurations(options.configurations)
+    neural_models = neural_models_of(chosen)
+    needs_artifact = bool(neural_models) or any(kind_of(c) == REFERENCE for c in chosen)
+    if needs_artifact and options.preprocessing is None:
+        raise SpecificationError(
+            "The neural models and the reference need the shared preprocessing artifact "
+            "(--preprocessing)"
+        )
+    if neural_models and options.preflight is None:
+        raise SpecificationError("The neural models need the micro-batch preflight (--preflight)")
     started = options.started or run_id(now)
     with log_step(logger, f"Preparing the development run {started}"):
         settings, settings_file = load_settings_with_snapshot(paths)
@@ -199,7 +244,7 @@ def prepare_development(
         )
         memory = MemorySetup.detect(
             declaration.timing.host_sample_interval_ms,
-            gpu_monitoring=any(settings.training_device(c.model.name) == "gpu" for c in chosen),
+            gpu_monitoring=any(training_device(settings, c) == "gpu" for c in chosen),
         )
         startups = measure_startups(chosen, settings, lightgbm_seconds=build_seconds)
         directory = run_directory_for(paths, options, started)
@@ -207,6 +252,22 @@ def prepare_development(
         parts = read_partitions(paths, features, dataset, (TRAIN, V1, V2))
         code = code_provenance(paths.root)
         environment = environment_record()
+        neural: NeuralRun | None = None
+        if needs_artifact and options.preprocessing is not None:
+            neural = build_neural_run(
+                features,
+                declaration,
+                SearchInputs(parts[TRAIN], parts[V1]),
+                ScoringInputs(parts[V1], parts[V2]),
+                options.preprocessing,
+                preflight=options.preflight,
+                candidates={model: listed.candidates for model, listed in lists.items()},
+                models=neural_models,
+                declaration_sha256=declaration_file.sha256,
+                settings_sha256=settings_file.sha256,
+                code=code,
+                environment=environment,
+            )
         identity = run_identity(
             started,
             code,
@@ -226,6 +287,7 @@ def prepare_development(
             declaration_file,
             (JOINED, TRAIN, V1, V2),
             [c.name for c in chosen],
+            project_file(paths, options.plan / COST_NAME, approved.cost_sha256),
         )
         session = session_conditions()
         run = RunDirectory.create(
@@ -250,6 +312,8 @@ def prepare_development(
         session=session,
         memory=memory,
         startups=startups,
+        neural=neural,
+        paths=paths,
     )
 
 
@@ -257,7 +321,7 @@ def _run_configuration(
     setup: DevelopmentSetup,
     search: SearchContext,
     scoring: ScoringContext,
-    chosen: Configuration,
+    chosen: Subject,
     candidate_files: Mapping[str, Mapping[str, str]],
 ) -> None:
     name, model_name = chosen.name, chosen.model.name
@@ -288,6 +352,26 @@ def run_development(setup: DevelopmentSetup) -> Path:
     with run.closing(lambda path: write_summary(path, partitions)):
         run.write_record(setup.run_record)
         candidate_files = setup.adopt(run)
+        neural_records = None
+        if setup.neural is not None:
+            if setup.paths is None:
+                raise SpecificationError("A neural run needs the project paths")
+            neural_models = neural_models_of(setup.configurations)
+            neural_records = write_neural_records(
+                run,
+                setup.paths,
+                setup.identity,
+                setup.neural,
+                setup.search_inputs,
+                candidate_files,
+                neural_models,
+            )
+            if any(
+                training_device(setup.settings, c) == "gpu"
+                for c in setup.configurations
+                if kind_of(c) == NEURAL
+            ):
+                setup.cap_allocator(declaration.neural.preflight_free_margin_mib)
         search = SearchContext(
             run=run,
             identity=setup.identity,
@@ -303,6 +387,8 @@ def run_development(setup: DevelopmentSetup) -> Path:
             session=setup.session,
             memory=setup.memory,
             startups=setup.startups,
+            neural=setup.neural,
+            neural_records=neural_records,
         )
         scoring = ScoringContext(
             run=run,
@@ -313,6 +399,7 @@ def run_development(setup: DevelopmentSetup) -> Path:
             inputs=setup.scoring_inputs,
             session=setup.session,
             memory=setup.memory,
+            neural=setup.neural,
         )
         with log_step(logger, f"Development run {run.started}"):
             for chosen in setup.configurations:

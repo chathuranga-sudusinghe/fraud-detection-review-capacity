@@ -1,0 +1,546 @@
+"""The micro-batch preflight of the neural models (DR-015 §7; Issue #151, Part 2), on small
+synthetic tensors on the CPU with a scripted memory meter (no GPU, no project data)."""
+
+from __future__ import annotations
+
+import json
+import random
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from dataclasses import replace
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pytest
+import torch
+
+from review_capacity.config import ModelSettings, load_model_settings
+from review_capacity.errors import (
+    DataValidationError,
+    FileAccessError,
+    ModelError,
+    SpecificationError,
+)
+from review_capacity.models.ft_transformer_model import FTTransformerModel
+from review_capacity.models.neural_training import BatchPlan
+from review_capacity.training import preflight as preflight_module
+from review_capacity.training.declaration import TrainingDeclaration, load_declaration
+from review_capacity.training.preflight import (
+    FILE,
+    Reading,
+    Watch,
+    _phase,
+    build_record,
+    candidate_sha256,
+    micro_batches,
+    neural_hyperparameters,
+    read_preflight,
+    run_preflight,
+    synthetic_data,
+    write_preflight,
+)
+from review_capacity.training.sampler import Candidate
+from support.neural import LAYOUT, preserved_torch_state
+from support.synthetic import REPO_PATHS
+
+DEFAULT_EPOCHS = preflight_module.PHASE_EPOCHS  # read before the fixture shortens the phases
+TOTAL_MIB = 8_000
+AMPLE_MIB = 3_000  # free memory of an ordinary attempt
+MARGIN = 1_024
+ARTIFACT = "a" * 64
+IDENTITY: dict[str, Any] = {
+    "artifact_sha256": ARTIFACT,
+    "declaration_sha256": "d" * 64,
+    "settings_sha256": "e" * 64,
+    "source_sha256": "f" * 64,
+    "gpu_name": "Test GPU",
+}
+RESNET: Candidate = {
+    "n_layers": 1,
+    "d": 16,
+    "d_hidden_factor": 2.0,
+    "hidden_dropout": 0.1,
+    "residual_dropout": 0.05,
+    "d_embedding": 4,
+    "lr": 1e-3,
+    "weight_decay": 0.0,
+}
+FTT: Candidate = {
+    "n_layers": 1,
+    "d_token": 16,
+    "attention_dropout": 0.1,
+    "ffn_dropout": 0.1,
+    "lr": 1e-4,
+    "weight_decay": 1e-5,
+}
+CANDIDATES: dict[str, list[Candidate]] = {
+    "resnet": [RESNET, {**RESNET, "d": 24}],
+    "ft_transformer": [FTT, {**FTT, "n_layers": 2}],
+}
+
+
+@pytest.fixture(autouse=True)
+def restore_torch_state() -> Iterator[None]:
+    with preserved_torch_state():
+        yield
+
+
+@pytest.fixture(autouse=True)
+def one_epoch_phases(monkeypatch: pytest.MonkeyPatch) -> None:
+    """One measured epoch keeps the CPU tests fast; the epoch count has its own test."""
+    monkeypatch.setattr(preflight_module, "PHASE_EPOCHS", 1)
+
+
+@pytest.fixture(scope="module")
+def settings() -> ModelSettings:
+    return load_model_settings(REPO_PATHS)
+
+
+@pytest.fixture(scope="module")
+def declaration() -> TrainingDeclaration:
+    """The real declaration with small batches, so that a CPU run takes seconds."""
+    real, _ = load_declaration(REPO_PATHS)
+    small = replace(
+        real.neural,
+        effective_batch=32,
+        micro_batch_candidates=(32, 16, 8),
+        evaluation_batch={"resnet": 64, "ft_transformer": 8},
+    )
+    return replace(real, neural=small)
+
+
+class Scripted:
+    """A memory meter that reports the next scripted free memory (MiB) for each watched phase and
+    ``AMPLE_MIB`` once the script is used up."""
+
+    def __init__(self, *free: int, problems: tuple[str, ...] = (), samples: int = 10) -> None:
+        self.free = list(free)
+        self.problems = problems
+        self.samples = samples
+        self.phases = 0
+
+    @contextmanager
+    def watch(self) -> Iterator[Watch]:
+        watch = Watch()
+        yield watch
+        free = self.free.pop(0) if self.free else AMPLE_MIB
+        self.phases += 1
+        watch.reading = Reading(TOTAL_MIB, 1_000, TOTAL_MIB - free, self.problems, self.samples)
+
+
+def run(
+    declaration: TrainingDeclaration,
+    settings: ModelSettings,
+    meter: Scripted,
+    models: tuple[str, ...] = ("resnet", "ft_transformer"),
+) -> dict[str, Any]:
+    return run_preflight(
+        declaration,
+        settings,
+        LAYOUT,
+        CANDIDATES,
+        device="cpu",
+        meter=meter,
+        seed=42,
+        models=models,
+    )
+
+
+# --- hyperparameters and micro-batches ---------------------------------------------------------
+
+
+def test_the_hyperparameters_are_the_candidate_the_declared_fixed_values_and_the_batches(
+    declaration: TrainingDeclaration,
+) -> None:
+    resnet = neural_hyperparameters(declaration, "resnet", RESNET)
+    assert resnet == {**RESNET, "batch_size": 32, "eval_batch_size": 64}
+    ftt = neural_hyperparameters(declaration, "ft_transformer", FTT)
+    assert ftt["residual_dropout"] == 0.0  # fixed values the model takes as hyperparameters
+    assert ftt["d_ffn_factor"] == 4 / 3
+    assert (ftt["batch_size"], ftt["eval_batch_size"]) == (32, 8)
+    assert "activation" not in ftt  # built into the model, checked by the declaration tests
+    with pytest.raises(SpecificationError, match="fixed declaration values"):
+        neural_hyperparameters(declaration, "ft_transformer", {**FTT, "d_ffn_factor": 2.0})
+
+
+def test_the_resnet_is_tried_at_the_effective_batch_only() -> None:
+    assert micro_batches("resnet", 1024, (1024, 512, 256, 128, 64)) == (1024,)
+    assert micro_batches("ft_transformer", 1024, (1024, 512, 256, 128, 64)) == (
+        1024,
+        512,
+        256,
+        128,
+        64,
+    )
+    assert micro_batches("ft_transformer", 32, (1024, 32, 16)) == (32, 16)
+
+
+def test_the_synthetic_data_follow_the_layout_and_have_both_classes() -> None:
+    data = synthetic_data(LAYOUT, 40, np.random.default_rng(0))
+    data.inputs.check(LAYOUT)
+    assert data.inputs.rows == 40
+    assert set(data.labels.tolist()) == {0, 1}
+
+
+# --- the procedure --------------------------------------------------------------------------------
+
+
+def test_every_candidate_passes_at_the_largest_micro_batch_when_memory_is_ample(
+    declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    models = run(declaration, settings, Scripted())
+    for model in ("resnet", "ft_transformer"):
+        assert models[model]["effective_batch"] == 32
+        assert [item["trial"] for item in models[model]["candidates"]] == [1, 2]
+        for item in models[model]["candidates"]:
+            assert item["micro_batch"] == 32
+            assert len(item["attempts"]) == 1
+            assert item["attempts"][0]["training"]["passes"]
+            assert item["evaluation"]["passes"]
+    assert models["resnet"]["evaluation_batch"] == 64
+    assert models["ft_transformer"]["evaluation_batch"] == 8
+
+
+def test_a_smaller_micro_batch_is_used_when_the_margin_is_missed(
+    declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    # candidate 1: 32 rows leave 500 MiB (fails), 16 leave 2,000 (passes), then the evaluation
+    meter = Scripted(500, 2_000, AMPLE_MIB)
+    models = run(declaration, settings, meter, models=("ft_transformer",))
+    first = models["ft_transformer"]["candidates"][0]
+    assert first["micro_batch"] == 16
+    assert [a["micro_batch"] for a in first["attempts"]] == [32, 16]
+    failed = first["attempts"][0]["training"]
+    assert failed["completed"]
+    assert failed["free_at_peak_mib"] == 500
+    assert not failed["passes"]
+    assert models["ft_transformer"]["candidates"][1]["micro_batch"] == 32
+
+
+def test_the_resnet_does_not_fall_back_to_a_smaller_micro_batch(
+    declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    with pytest.raises(ModelError, match="resnet candidate 1 passes at no listed micro-batch"):
+        run(declaration, settings, Scripted(500), models=("resnet",))
+
+
+def test_a_candidate_that_passes_nowhere_stops_the_search(
+    declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    with pytest.raises(ModelError, match="passes at no listed micro-batch"):
+        run(declaration, settings, Scripted(1, 1, 1), models=("ft_transformer",))
+
+
+def test_a_failed_evaluation_stops_the_search(
+    declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    # training passes, then the evaluation phase leaves only 100 MiB
+    with pytest.raises(ModelError, match="float32 evaluation"):
+        run(declaration, settings, Scripted(AMPLE_MIB, 100), models=("ft_transformer",))
+
+
+def test_sampler_problems_make_an_attempt_fail() -> None:
+    reading = Reading(TOTAL_MIB, 1_000, 2_000, ("nvidia-smi ended early",))
+    phase = _phase(reading, None, MARGIN)
+    assert phase["completed"]
+    assert not phase["passes"]
+    assert phase["problems"] == ["nvidia-smi ended early"]
+
+
+def test_out_of_memory_is_a_failed_attempt_and_other_errors_propagate(
+    monkeypatch: pytest.MonkeyPatch, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    original: Callable[..., None] = FTTransformerModel.fit
+    calls: list[int] = []
+
+    def fit(self: FTTransformerModel, *args: Any, plan: BatchPlan, **kwargs: Any) -> None:
+        calls.append(plan.micro)
+        if plan.micro == 32:
+            raise ModelError("out of GPU memory during training") from torch.cuda.OutOfMemoryError()
+        original(self, *args, plan=plan, **kwargs)
+
+    monkeypatch.setattr(FTTransformerModel, "fit", fit)
+    models = run(declaration, settings, Scripted(), models=("ft_transformer",))
+    first = models["ft_transformer"]["candidates"][0]
+    assert first["micro_batch"] == 16
+    assert first["attempts"][0]["training"]["error"] == "out of GPU memory during training"
+    assert not first["attempts"][0]["training"]["completed"]
+
+    def broken(_model: FTTransformerModel, *_args: Any, **_kwargs: Any) -> None:
+        raise ModelError("the loss is not finite")
+
+    monkeypatch.setattr(FTTransformerModel, "fit", broken)
+    with pytest.raises(ModelError, match="loss is not finite"):
+        run(declaration, settings, Scripted(), models=("ft_transformer",))
+
+
+def _states() -> tuple[Any, Any, Any]:
+    numpy_state = np.random.get_state()
+    return (
+        random.getstate(),
+        (numpy_state[0], numpy_state[1].tolist(), *numpy_state[2:]),
+        (torch.get_rng_state().tolist()),
+    )
+
+
+def test_the_random_states_are_unchanged_also_after_an_error(
+    monkeypatch: pytest.MonkeyPatch, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    before = _states()
+    run(declaration, settings, Scripted())
+    assert _states() == before
+    original: Callable[..., None] = FTTransformerModel.fit
+
+    def seeds_then_fails(model: FTTransformerModel, *args: Any, **kwargs: Any) -> None:
+        original(model, *args, **kwargs)  # the fit seeds the generators
+        raise ModelError("the loss is not finite")
+
+    monkeypatch.setattr(FTTransformerModel, "fit", seeds_then_fails)
+    with pytest.raises(ModelError, match="loss is not finite"):
+        run(declaration, settings, Scripted(), models=("ft_transformer",))
+    assert _states() == before
+
+
+def test_the_phases_run_two_effective_batches_per_epoch_for_several_epochs_in_one_fit(
+    monkeypatch: pytest.MonkeyPatch, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    original: Callable[..., None] = FTTransformerModel.fit
+    calls: list[tuple[int, bool, dict[str, Any], dict[str, Any]]] = []
+
+    def watching(
+        model: FTTransformerModel, train: Any, valid: Any, hyperparameters: Any, **kwargs: Any
+    ) -> None:
+        calls.append((train.inputs.rows, valid is not None, dict(hyperparameters), kwargs))
+        original(model, train, valid, hyperparameters, **kwargs)
+
+    monkeypatch.setattr(FTTransformerModel, "fit", watching)
+    monkeypatch.setattr(preflight_module, "PHASE_EPOCHS", 2)
+    run(declaration, settings, Scripted(), models=("ft_transformer",))
+    effective = declaration.neural.effective_batch
+    assert len(calls) == 4  # per candidate: one training fit, one evaluation fit
+    # two effective batches per epoch, several epochs in one fit: the optimiser state is alive
+    assert {rows for rows, _, _, _ in calls} == {2 * effective}
+    assert [with_validation for _, with_validation, _, _ in calls] == [False, True, False, True]
+    assert calls[0][3]["iterations"] == 2
+    assert "max_epochs" not in calls[0][2]
+    assert (calls[1][2]["max_epochs"], calls[1][2]["patience"]) == (2, 2)
+    assert "iterations" not in calls[1][3]
+
+
+def test_the_measured_phase_is_long_enough_to_be_sampled() -> None:
+    assert preflight_module.MIN_SAMPLES >= 3
+    assert preflight_module.SAMPLE_INTERVAL_MS <= 100
+    # a phase of PHASE_EPOCHS epochs of two effective batches lasts several sampling intervals
+    assert DEFAULT_EPOCHS * preflight_module.EFFECTIVE_BATCHES >= 8
+
+
+def test_a_failed_phase_reports_its_actual_reason() -> None:
+    from review_capacity.training.preflight import _outcome
+
+    sampled = _phase(Reading(TOTAL_MIB, 1_000, 2_000, (), samples=1), None, MARGIN)
+    assert "memory samples" in _outcome(sampled)
+    assert "memory margin" not in _outcome(sampled)
+    tight = _phase(Reading(TOTAL_MIB, 1_000, TOTAL_MIB - 10, (), samples=10), None, MARGIN)
+    assert _outcome(tight) == "fails (memory margin)"
+    oom = _phase(Reading(TOTAL_MIB, 1_000, 2_000, (), samples=10), "out of GPU memory", MARGIN)
+    assert _outcome(oom) == "fails (out of GPU memory)"
+    fine = _phase(Reading(TOTAL_MIB, 1_000, 2_000, (), samples=10), None, MARGIN)
+    assert _outcome(fine) == "passes"
+
+
+def test_the_random_states_are_restored_only_after_the_model_is_released(
+    monkeypatch: pytest.MonkeyPatch, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    order: list[str] = []
+    release, restore = preflight_module._release, preflight_module.restore_random_state
+
+    def released(device: Any) -> None:
+        order.append("release")
+        release(device)
+
+    def restored(saved: Any) -> None:
+        order.append("restore")
+        restore(saved)
+
+    monkeypatch.setattr(preflight_module, "_release", released)
+    monkeypatch.setattr(preflight_module, "restore_random_state", restored)
+    run(declaration, settings, Scripted(), models=("resnet",))
+    assert "restore" in order
+    # every restore directly follows a release of the attempt's model and the allocator cache
+    assert all(order[i - 1] == "release" for i, step in enumerate(order) if step == "restore")
+
+
+def test_the_gpu_allocator_is_capped_at_the_device_total_less_the_margin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Properties:
+        total_memory = 8_000 * (1 << 20)
+
+    fractions: list[float] = []
+    monkeypatch.setattr(torch.cuda, "get_device_properties", lambda _device: Properties())
+    monkeypatch.setattr(
+        torch.cuda, "set_per_process_memory_fraction", lambda fraction: fractions.append(fraction)
+    )
+    preflight_module.cap_allocator(1_024)
+    assert fractions == [(8_000 - 1_024) / 8_000]
+
+
+def test_a_phase_with_too_few_memory_samples_fails() -> None:
+    reading = Reading(TOTAL_MIB, 1_000, 2_000, (), samples=1)
+    phase = _phase(reading, None, MARGIN)
+    assert phase["completed"]
+    assert not phase["passes"]
+    assert phase["problems"] == ["1 memory samples; at least 3 are required"]
+
+
+def test_every_attempt_failing_for_lack_of_samples_stops_the_search(
+    declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    with pytest.raises(ModelError, match="passes at no listed micro-batch"):
+        run(declaration, settings, Scripted(samples=1), models=("ft_transformer",))
+
+
+def test_the_batch_plan_is_identical_under_identical_readings(
+    declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    first = run(declaration, settings, Scripted())
+    second = run(declaration, settings, Scripted())
+    plan = [[c["micro_batch"] for c in first[m]["candidates"]] for m in first]
+    assert plan == [[c["micro_batch"] for c in second[m]["candidates"]] for m in second]
+
+
+# --- the record and its reading ---------------------------------------------------------------
+
+
+def recorded(
+    tmp_path: Path, declaration: TrainingDeclaration, settings: ModelSettings
+) -> tuple[Path, dict[str, Any]]:
+    # two ResNet candidates (training and evaluation each), then FT-Transformer candidate 1:
+    # 32 rows leave 500 MiB (fails), 16 leave 2,000 (passes)
+    meter = Scripted(*[AMPLE_MIB] * 4, 500, 2_000, AMPLE_MIB)
+    models = run(declaration, settings, meter)
+    record = build_record(declaration, IDENTITY, models)
+    return write_preflight(tmp_path, record), record
+
+
+def read(path: Path, declaration: TrainingDeclaration, **changes: Any) -> Any:
+    return read_preflight(path, declaration, CANDIDATES, identity={**IDENTITY, **changes})
+
+
+def test_a_recorded_plan_is_read_back_as_batch_plans(
+    tmp_path: Path, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    path, _ = recorded(tmp_path, declaration, settings)
+    assert path.name == FILE
+    plans = read(path, declaration)
+    assert plans["resnet"] == {1: BatchPlan(32, 32), 2: BatchPlan(32, 32)}
+    assert plans["ft_transformer"] == {1: BatchPlan(32, 16), 2: BatchPlan(32, 32)}
+    with pytest.raises(FileAccessError, match="never replaced"):
+        write_preflight(tmp_path, json.loads(path.read_text(encoding="utf-8")))
+
+
+def test_a_plan_for_other_inputs_is_refused(
+    tmp_path: Path, declaration: TrainingDeclaration, settings: ModelSettings
+) -> None:
+    path, _ = recorded(tmp_path, declaration, settings)
+    for name in IDENTITY:
+        with pytest.raises(SpecificationError, match=f"another {name}"):
+            read(path, declaration, **{name: "other"})
+    other = replace(declaration, neural=replace(declaration.neural, preflight_free_margin_mib=1))
+    with pytest.raises(SpecificationError, match="margin or micro-batch"):
+        read(path, other)
+    changed = {**CANDIDATES, "resnet": [RESNET, {**RESNET, "d": 25}]}
+    with pytest.raises(SpecificationError, match="another candidate"):
+        read_preflight(path, declaration, changed, identity=IDENTITY)
+    fewer = {**CANDIDATES, "resnet": CANDIDATES["resnet"][:1]}
+    with pytest.raises(SpecificationError, match="other candidates"):
+        read_preflight(path, declaration, fewer, identity=IDENTITY)
+    wider = replace(declaration, neural=replace(declaration.neural, effective_batch=64))
+    with pytest.raises(SpecificationError, match="other batch sizes"):
+        read(path, wider)
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        "unlisted",
+        "resnet_split",
+        "not_passing",
+        "evaluation",
+        "missing_model",
+        "format",
+        "duplicate_trial",
+        "identity_null",
+        "empty_attempts",
+        "free_arithmetic",
+        "short_sampling",
+        "attempt_order",
+        "candidate_payload",
+    ],
+)
+def test_a_tampered_plan_is_refused(
+    tmp_path: Path, declaration: TrainingDeclaration, settings: ModelSettings, tamper: str
+) -> None:
+    path, record = recorded(tmp_path, declaration, settings)
+    ftt = record["models"]["ft_transformer"]["candidates"][0]
+    resnet = record["models"]["resnet"]["candidates"][0]
+    if tamper == "unlisted":
+        ftt["micro_batch"] = 12
+    elif tamper == "resnet_split":
+        resnet["micro_batch"] = 16
+    elif tamper == "not_passing":
+        ftt["attempts"][-1]["training"]["passes"] = False
+    elif tamper == "evaluation":
+        ftt["evaluation"]["passes"] = False
+    elif tamper == "missing_model":
+        del record["models"]["ft_transformer"]
+    elif tamper == "duplicate_trial":
+        record["models"]["ft_transformer"]["candidates"][1]["trial"] = 1
+    elif tamper == "identity_null":
+        record["identity"] = None
+    elif tamper == "empty_attempts":
+        ftt["attempts"] = []
+    elif tamper == "free_arithmetic":
+        ftt["evaluation"]["free_at_peak_mib"] += 1
+    elif tamper == "short_sampling":
+        ftt["evaluation"]["samples"] = 1
+    elif tamper == "attempt_order":
+        ftt["attempts"][0]["micro_batch"] = 16
+    elif tamper == "candidate_payload":
+        ftt["candidate"]["lr"] = 0.5
+    else:
+        record["format_version"] = 99
+    path.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises((SpecificationError, DataValidationError)):
+        read(path, declaration)
+
+
+def test_a_foreign_or_unreadable_file_is_a_project_error(
+    tmp_path: Path, declaration: TrainingDeclaration
+) -> None:
+    with pytest.raises(FileAccessError):
+        read(tmp_path / "absent.json", declaration)
+    bad = tmp_path / "bad.json"
+    bad.write_text("not json", encoding="utf-8")
+    with pytest.raises(DataValidationError, match="JSON"):
+        read(bad, declaration)
+    bad.write_text('{"record": "other"}', encoding="utf-8")
+    with pytest.raises(DataValidationError, match="expected keys"):
+        read(bad, declaration)
+
+
+def test_the_candidate_hash_is_stable_and_distinguishes_candidates() -> None:
+    assert candidate_sha256(RESNET) == candidate_sha256(dict(reversed(list(RESNET.items()))))
+    assert candidate_sha256(RESNET) != candidate_sha256({**RESNET, "d": 24})
+
+
+def test_the_command_line_needs_the_preprocessing_artifact() -> None:
+    from review_capacity.cli import build_parser
+
+    args = build_parser().parse_args(["preflight-neural", "--preprocessing", "outputs/x"])
+    assert args.command == "preflight-neural"
+    assert args.preprocessing == Path("outputs/x")
+    assert args.output is None
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["preflight-neural"])

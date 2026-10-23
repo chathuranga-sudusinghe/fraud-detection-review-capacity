@@ -9,6 +9,7 @@ record covers every Train row.
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -19,16 +20,20 @@ import pandas as pd
 
 from review_capacity.data.processed import ProvenanceRecord
 from review_capacity.development.inputs import PartitionRows, ScoringInputs, SearchInputs
+from review_capacity.development.neural_run import build_neural_run
 from review_capacity.development.records import DevelopmentPartitions
 from review_capacity.development.run_output import RunDirectory
 from review_capacity.development.runner import DevelopmentSetup
 from review_capacity.development.scoring import ScoringContext
 from review_capacity.development.search import search_configuration
 from review_capacity.development.trial import SearchContext, TrialOutcome, run_file
+from review_capacity.features.neural_preprocessing import fit_neural_preprocessing
 from review_capacity.models.device import LightGBMIdentity
-from review_capacity.models.registry import configuration
+from review_capacity.models.neural_training import BatchPlan
+from review_capacity.models.registry import REFERENCE_SUBJECT, configuration
 from review_capacity.models.run_record import load_settings_with_snapshot
 from review_capacity.models.v1_objective import V1Objective
+from review_capacity.paths import ProjectPaths
 from review_capacity.training.declaration import Stopping, TrainingDeclaration, load_declaration
 from review_capacity.training.sampler import Candidate, CandidateList
 from review_capacity.training.timing import session_conditions
@@ -172,9 +177,9 @@ def search_context(root: Path, *, write_run_record: bool = True) -> SearchContex
     )
 
 
-def candidate_file(run: RunDirectory) -> dict[str, str]:
+def candidate_file(run: RunDirectory, model: str = "lightgbm") -> dict[str, str]:
     """A stand-in for the model's recorded candidate list, inside the run directory."""
-    path = run.path / "candidates" / "lightgbm.json"
+    path = run.path / "candidates" / f"{model}.json"
     path.parent.mkdir(exist_ok=True)
     path.write_text("{}\n", encoding="utf-8")
     return run_file(run, path)
@@ -241,4 +246,161 @@ def development_setup(
         lightgbm_build=search.lightgbm_build,
         session=search.session,
         sleep=lambda _seconds: None,
+    )
+
+
+# --- A run of the tree-based, neural and reference models ---------------------------------------
+
+NEURAL_BATCH, NEURAL_MICRO = 32, 16
+RESNET_CANDIDATES: tuple[Candidate, ...] = tuple(
+    {
+        "n_layers": 1,
+        "d": d,
+        "d_hidden_factor": 2.0,
+        "hidden_dropout": 0.1,
+        "residual_dropout": 0.05,
+        "d_embedding": 4,
+        "lr": 1e-2,
+        "weight_decay": 0.0,
+    }
+    for d in (16, 24, 32)
+)
+FTT_CANDIDATES: tuple[Candidate, ...] = tuple(
+    {
+        "n_layers": 1,
+        "d_token": 16,
+        "attention_dropout": 0.1,
+        "ffn_dropout": 0.1,
+        "lr": lr,
+        "weight_decay": 1e-5,
+    }
+    for lr in (1e-3, 3e-3, 1e-2)
+)
+REFERENCE_CANDIDATES: tuple[Candidate, ...] = tuple({"C": c} for c in (1.0, 0.1, 10.0))
+
+
+def _phase(free: int, *, error: str | None = None) -> dict[str, Any]:
+    return {
+        "completed": error is None,
+        "error": error,
+        "baseline_used_mib": 1000,
+        "sampled_max_used_mib": None if error else 8000 - free,
+        "total_mib": 8000,
+        "free_at_peak_mib": None if error else free,
+        "samples": 10,
+        "problems": [],
+        "passes": error is None,
+    }
+
+
+def preflight_file(directory: Path) -> Path:
+    """A preflight.json (the fields ``write_neural_records`` reads) with one passing micro-batch
+    per candidate: the effective batch for the ResNet-style MLP, a smaller one after a failed
+    larger attempt for the FT-Transformer."""
+    resnet_attempts = [{"micro_batch": NEURAL_BATCH, "training": _phase(3000)}]
+    ftt_attempts = [
+        {"micro_batch": NEURAL_BATCH, "training": _phase(0, error="out of GPU memory")},
+        {"micro_batch": NEURAL_MICRO, "training": _phase(3000)},
+    ]
+    models: dict[str, Any] = {}
+    for model, attempts, micro, evaluation in (
+        ("resnet", resnet_attempts, NEURAL_BATCH, 64),
+        ("ft_transformer", ftt_attempts, NEURAL_MICRO, 8),
+    ):
+        models[model] = {
+            "effective_batch": NEURAL_BATCH,
+            "evaluation_batch": evaluation,
+            "candidates": [
+                {
+                    "trial": trial,
+                    "candidate": {},
+                    "candidate_sha256": "c" * 64,
+                    "micro_batch": micro,
+                    "attempts": attempts,
+                    "evaluation": _phase(2500),
+                }
+                for trial in (1, 2, 3)
+            ],
+        }
+    path = directory / "preflight.json"
+    path.write_text(json.dumps({"margin_mib": 1024, "models": models}), encoding="utf-8")
+    return path
+
+
+def neural_declaration(declaration: TrainingDeclaration) -> TrainingDeclaration:
+    """``declaration`` with small neural batches and short neural early stopping."""
+    return replace(
+        declaration,
+        neural=replace(
+            declaration.neural,
+            effective_batch=NEURAL_BATCH,
+            micro_batch_candidates=(NEURAL_BATCH, NEURAL_MICRO),
+            evaluation_batch={"resnet": 64, "ft_transformer": 8},
+        ),
+        neural_stopping=Stopping(1, 3),
+    )
+
+
+def mixed_setup(
+    root: Path, configurations: tuple[str, ...] = ("LR", "LGB-u", "RES-u", "FTT-b")
+) -> DevelopmentSetup:
+    """A development run of tree-based, neural and reference subjects on the synthetic partitions,
+    with the models on the CPU, tiny candidates, the shared artifact fitted on the synthetic Train
+    and the batch plans of ``preflight_file``."""
+    base = development_setup(root, ("LGB-u",))
+    declaration = neural_declaration(base.declaration)
+    train = base.search_inputs.train
+    artifact = fit_neural_preprocessing(train.features, train.ids, train.times, FEATURES, 0)
+    artifact_directory = root / "artifact"
+    artifact.save(artifact_directory)
+    plans = {
+        "resnet": dict.fromkeys((1, 2, 3), BatchPlan(NEURAL_BATCH, NEURAL_BATCH)),
+        "ft_transformer": dict.fromkeys((1, 2, 3), BatchPlan(NEURAL_BATCH, NEURAL_MICRO)),
+    }
+    neural = replace(
+        build_neural_run(
+            FEATURES,
+            declaration,
+            base.search_inputs,
+            base.scoring_inputs,
+            artifact_directory,
+            preflight=None,
+            candidates={},
+            models=(),
+            declaration_sha256="d" * 64,
+            settings_sha256="e" * 64,
+            code={"package": {"source_sha256": "s" * 64}},
+            environment={},
+        ),
+        plans=plans,
+        preflight_path=preflight_file(root),
+    )
+    settings = replace(
+        base.settings,
+        training_devices={
+            **base.settings.training_devices,
+            "resnet": "cpu",
+            "ft_transformer": "cpu",
+        },
+    )
+    lists = {
+        "lightgbm": candidate_list(),
+        "resnet": CandidateList("resnet", 2, (2,), RESNET_CANDIDATES),
+        "ft_transformer": CandidateList("ft_transformer", 3, (3,), FTT_CANDIDATES),
+        "logistic_regression": CandidateList("logistic_regression", 4, (4,), REFERENCE_CANDIDATES),
+    }
+    chosen = tuple(
+        REFERENCE_SUBJECT if name == "LR" else configuration(name) for name in configurations
+    )
+    return replace(
+        base,
+        run_record=example("run") | {"configurations": list(configurations)},
+        declaration=declaration,
+        settings=settings,
+        lists=lists,
+        adopt=lambda run: {model: candidate_file(run, model) for model in lists},
+        configurations=chosen,
+        neural=neural,
+        paths=ProjectPaths(root),
+        cap_allocator=lambda _margin: None,
     )

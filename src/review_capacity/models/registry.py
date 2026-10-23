@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Protocol
 
 
 class Family(StrEnum):
@@ -49,6 +50,48 @@ class Configuration:
         return self.model.family
 
 
+class NamedModel(Protocol):
+    """What a development run reads of a model: its package name."""
+
+    @property
+    def name(self) -> str: ...
+
+
+class Subject(Protocol):
+    """What a development run needs of a thing it fits and scores: one of the eight
+    ``Configuration`` s, or the logistic-regression reference (``REFERENCE_SUBJECT``, which has no
+    family: it is outside the eight configurations, DR-011 §5)."""
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def model(self) -> NamedModel: ...
+
+    @property
+    def family(self) -> Family | None: ...
+
+    @property
+    def weighting(self) -> Weighting: ...
+
+
+@dataclass(frozen=True)
+class _ReferenceModel:
+    name: str = "logistic_regression"
+
+
+@dataclass(frozen=True)
+class ReferenceSubject:
+    """The logistic-regression reference of DR-011 §5: unweighted, descriptive, no family."""
+
+    name: str = "LR"
+    model: _ReferenceModel = _ReferenceModel()
+    family: None = None
+    weighting: Weighting = Weighting.UNWEIGHTED
+
+
+REFERENCE_SUBJECT = ReferenceSubject()
+
 MODELS: tuple[ModelSpec, ...] = (
     ModelSpec("lightgbm", "LGB", Family.TREE),
     ModelSpec("catboost", "Cat", Family.TREE),
@@ -67,6 +110,16 @@ CONFIGURATIONS: tuple[Configuration, ...] = tuple(
 # The tree-based configurations, in DR-011 order: the staged first path of the development run.
 TREE_CONFIGURATIONS: tuple[str, ...] = tuple(
     c.name for c in CONFIGURATIONS if c.family is Family.TREE
+)
+
+
+# The names a development run accepts: the reference first (a convergence failure then shows
+# before the model searches start), then the eight configurations in DR-011 order.
+RUN_CONFIGURATIONS: tuple[str, ...] = (REFERENCE_SUBJECT.name, *(c.name for c in CONFIGURATIONS))
+
+# The neural configurations, in DR-011 order.
+NEURAL_CONFIGURATIONS: tuple[str, ...] = tuple(
+    c.name for c in CONFIGURATIONS if c.family is Family.NEURAL
 )
 
 

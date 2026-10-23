@@ -223,7 +223,7 @@ _BODIES: dict[str, dict[str, Any]] = {
             }
         ],
         "totals": {"search_hours_low": 3.75, "search_hours_high": 8.0, "refit_hours": 10.0},
-        "decision": "pending_owner_decision",
+        "decision": "pending_approval",
     },
     "run": {
         "started": "2026-10-20T09:15:30.123456Z",
@@ -242,6 +242,7 @@ _BODIES: dict[str, dict[str, Any]] = {
         "environment": {"gpu": {"name": "GPU"}, "threads": 24},
         "settings": {"path": "config/models.yaml", "sha256": "d" * 64},
         "declaration": {"path": "config/training.yaml", "sha256": "e" * 64},
+        "plan": file("outputs/search_plan/2026-10-20T080000Z/cost_prediction.json"),
         "dataset": {
             "manifest": {"path": "data/datapackage.json", "sha256": "f" * 64},
             "processed": {"train": file("data/processed/train.parquet")},
@@ -250,7 +251,8 @@ _BODIES: dict[str, dict[str, Any]] = {
         "contracts": contract_versions(),
     },
     "preprocessing": {
-        "artifact": file("outputs/preprocessing/2026-10-20T080000Z/artifact.npz"),
+        "artifact": file("outputs/preprocessing/2026-10-20T080000Z/manifest.json"),
+        "artifact_sha256": DIGEST,
         "seed": 0,
         "train": {"rows": TRAIN_ROWS, "transaction_ids_sha256": DIGEST, "file_sha256": DIGEST},
         "inputs": {

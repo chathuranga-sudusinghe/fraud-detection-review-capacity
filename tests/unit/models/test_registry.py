@@ -7,6 +7,7 @@ import pytest
 from review_capacity.models.registry import (
     CONFIGURATIONS,
     MODELS,
+    REFERENCE_SUBJECT,
     TREE_CONFIGURATIONS,
     Family,
     Weighting,
@@ -46,3 +47,10 @@ def test_configuration_lookup() -> None:
 def test_unknown_configuration_is_rejected() -> None:
     with pytest.raises(ValueError, match="Unknown configuration 'XGB-u'"):
         configuration("XGB-u")
+
+
+def test_the_reference_is_a_familyless_unweighted_subject() -> None:
+    assert REFERENCE_SUBJECT.name == "LR"
+    assert REFERENCE_SUBJECT.model.name == "logistic_regression"
+    assert REFERENCE_SUBJECT.family is None
+    assert REFERENCE_SUBJECT.weighting is Weighting.UNWEIGHTED

@@ -468,7 +468,7 @@ def _cost_rules(record: Mapping[str, Any]) -> list[str]:
 
 COST_PREDICTION = _contract(
     "cost_prediction",
-    1,
+    2,
     "The predicted cost of the actual candidate lists (DR-015 §7), recorded before any fit. An "
     "estimate under the stated basis, not a bound; no list is redrawn and no candidate rejected "
     "for its cost.",
@@ -492,9 +492,9 @@ COST_PREDICTION = _contract(
         ),
         Field(
             "decision",
-            Choice(("pending_owner_decision",)),
-            "Whether the predicted cost is feasible is the owner's explicit decision, taken "
-            "before any run (DR-015 §7)",
+            Choice(("pending_approval",)),
+            "Whether the predicted cost is feasible is decided explicitly before any run "
+            "(DR-015 §7)",
         ),
     ),
     _cost_rules,
@@ -563,7 +563,7 @@ def _run_contracts(record: Mapping[str, Any]) -> list[str]:
 
 RUN = _contract(
     "run",
-    1,
+    2,
     "The run's full provenance, written first; every other record repeats its identity.",
     (
         Field("started", TIMESTAMP, "When the run started"),
@@ -571,6 +571,11 @@ RUN = _contract(
         Field("environment", MapOf(AnyJSON()), "Run environment (models.device)"),
         Field("settings", PROJECT_FILE, "The loaded config/models.yaml"),
         Field("declaration", PROJECT_FILE, "The loaded training declaration"),
+        Field(
+            "plan",
+            PROJECT_FILE,
+            "The approved search plan's cost prediction (its SHA-256 is the approved one)",
+        ),
         Field(
             "dataset",
             Object(
@@ -621,11 +626,16 @@ def _train_rows(kind: str) -> DayCheck:
 
 PREPROCESSING = _contract(
     "preprocessing",
-    1,
+    2,
     "The shared Train-fitted neural preprocessing artifact (DR-012), reused by every neural fit "
     "and by the logistic-regression reference; the artifact itself stays local.",
     (
-        Field("artifact", PROJECT_FILE, "The fitted artifact"),
+        Field("artifact", PROJECT_FILE, "The artifact's manifest file (its bytes' SHA-256)"),
+        Field(
+            "artifact_sha256",
+            SHA256,
+            "The artifact's identity: the SHA-256 every neural model and the reference record",
+        ),
         Field("seed", SEED, "Seed of the quantile-fitting noise"),
         Field(
             "train",

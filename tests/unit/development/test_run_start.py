@@ -53,6 +53,7 @@ def _record(data: Synthetic) -> tuple[dict[str, object], DevelopmentPartitions]:
         declaration_file,
         STEMS,
         ["LGB-u", "LGB-b"],
+        {"path": "outputs/search_plan/x/cost_prediction.json", "sha256": "a" * 64},
     )
     return record, DevelopmentPartitions.from_spec(data.dataset, data.paths)
 

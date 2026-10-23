@@ -117,7 +117,7 @@ def test_the_candidate_lists_do_not_depend_on_the_run(tmp_path: Path) -> None:
 def test_the_cost_is_a_pending_decision(tmp_path: Path) -> None:
     declaration, run = build()
     cost = plan.write_plan(tmp_path / "p", STARTED, run, declaration, PARTITIONS)
-    assert cost["decision"] == "pending_owner_decision"
+    assert cost["decision"] == "pending_approval"
     estimated = {e["model"] for e in cost["estimates"] if e["estimated"]}
     assert estimated == {"resnet", "ft_transformer"}
     assert cost["totals"]["search_hours_high"] > cost["totals"]["search_hours_low"] > 0
@@ -129,7 +129,7 @@ def test_the_markdown_shows_every_candidate_exactly(tmp_path: Path) -> None:
     plan.write_plan(output, STARTED, run, declaration, PARTITIONS)
     text = (output / "search_plan.md").read_text(encoding="utf-8")
     assert "not edited by hand" in text
-    assert "owner's explicit decision" in text
+    assert "decided explicitly before any run" in text
     for model in MODELS_SEARCHED:
         assert f"## {model}" in text
         record = json.loads((output / "candidates" / f"{model}.json").read_text("utf-8"))
@@ -149,7 +149,7 @@ def test_the_markdown_presents_every_field_of_every_record(tmp_path: Path) -> No
     text = (output / "search_plan.md").read_text(encoding="utf-8")
     assert cell("search_plan") in text  # identity.run_type, shown once for the plan
     assert text.count("`identity.run_type`") == 1
-    assert cell("pending_owner_decision") in text  # cost_prediction.decision
+    assert cell("pending_approval") in text  # cost_prediction.decision
     for kind in ("candidates", "cost_prediction"):
         assert cell(kind) in text
     for field in ("`record`", "`schema_version`", "`sampler.numpy`", "`stream.spawn_key`"):

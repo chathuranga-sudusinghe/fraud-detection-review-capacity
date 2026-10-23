@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; **revised and approved on 15 October 2026** (Issue #77) for the training devices of the DR-013 revision of Issue #101. **Acceptance gate passed on 15 October 2026** (Section 7). **Section 8** (CatBoost tree-objective acceptance, Issue #123): approved on 21 October 2026, before implementation and before it runs; **acceptance passed on 21 October 2026** (Section 8, Result) |
+| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; **revised and approved on 15 October 2026** (Issue #77) for the training devices of the DR-013 revision of Issue #101. **Acceptance gate passed on 15 October 2026** (Section 7). **Section 8** (CatBoost tree-objective acceptance, Issue #123): approved on 21 October 2026, before implementation and before it runs; **acceptance passed on 21 October 2026** (Section 8, Result). **Section 9** (neural batching acceptance, Issue #151): specified before implementation and before it runs; **acceptance passed on 23 October 2026** (Section 9, Result) |
 | Governing record | Decision Record (DR) [DR-013](decisions/DR-013-training-device-policy.md) §8: what the probe must confirm. This document owns how: the synthetic inputs, the checks, the acceptance criteria and the tolerances |
-| Command | `review-capacity probe-gpu` (package command); Section 8: `review-capacity probe-catboost-objective` |
+| Command | `review-capacity probe-gpu` (package command); Section 8: `review-capacity probe-catboost-objective`; Section 9: `review-capacity probe-neural-batching` |
 | Evidence | [`evidence/gpu_acceptance_probe/`](../evidence/gpu_acceptance_probe/README.md) |
 
 Statements are tagged by source: **[L]** library documentation or source code, cited with its reference identifier (REF-NNN, [`references.md`](references.md)); **[D]** documented dataset facts; **[I]** an engineering choice of this probe.
@@ -196,6 +196,53 @@ The daily budget of the V1 objective is `K = round(0.02 × V1 rows / V1 days)` (
 
 **Outcome: the CatBoost tree-objective acceptance of Issue #123 is passed.** The values are of synthetic data and carry no information about model performance.
 
+## 9. Neural batching acceptance (Issue #151)
+
+[DR-015](decisions/DR-015-common-training-rules.md) §7 splits each effective batch of 1,024 Train rows into micro-batches whose gradients are accumulated, with one AdamW update per effective batch, and fixes the micro-batch of every candidate by a preflight; its consequences require the synthetic verification of this accumulation before any neural development run. Sections 1 to 7 trained each FT-Transformer at one fixed batch size and never accumulated gradients. This section adds a separate command and a separate record, so the evidence of the accepted probe is neither reopened nor reused. The micro-batch preflight itself (`review-capacity preflight-neural`) is a procedure of the development run, not an acceptance check; this section confirms the machinery it relies on, and the corners of the search spaces it must handle.
+
+- **Synthetic data only**, from the generator of Section 1 with its data seed and the neural layout of Section 1 (757 inputs, 16,846 embedding rows). No IEEE-CIS row is read.
+- **Engineering behaviour only**, as in the purpose above.
+- **No fallback.** Every fit runs on the GPU under the strict determinism and the precision of DR-013 §4. A failure is recorded and resolved on its evidence before any neural development run; the acceptance never moves to the CPU, reduces a model or a batch, or drops a case.
+
+**Probe values [I].** The gradient comparisons use an FT-Transformer with dropout disabled (`attention_dropout`, `ffn_dropout` and the fixed `residual_dropout` equal to 0; the Train category dropout is not applied), the reference values of DR-015 §7 otherwise, and one effective batch of the first `rows` synthetic rows. The unsplit reference must itself fit in 8 GB, so the default and padded widths use 256 rows and the light architecture (one layer, token width 72) uses the 1,016 rows of the final batch of the study's Train partition (368,632 rows = 359 × 1,024 + 1,016). The weights are those of the protocol's class-weight rule (`models.base.class_weights`, balanced) or unit weights.
+
+| Case | Layers; token width (head width, padded) | Rows | Micro-batch sizes | Weights |
+|---|---|---|---|---|
+| default width, equal micro-batches | 3; 192 (24) | 256 | 64, 64, 64, 64 | unit |
+| default width, unequal micro-batches | 3; 192 (24) | 256 | 96, 96, 64 | balanced |
+| padded heads (25 to 32), unequal micro-batches | 2; 200 (25, padded to 32) | 256 | 96, 96, 64 | balanced |
+| final batch of 1,016 rows, padded heads (9 to 16) | 1; 72 (9, padded to 16) | 1,016 | 256, 256, 256, 248 | balanced |
+| final batch of 1,016 rows, unequal micro-batches | 1; 72 (9, padded to 16) | 1,016 | 384, 384, 248 | balanced |
+
+| ID | Method | Criterion |
+|---|---|---|
+| B1 | Gradient accumulation. For each case, the network is built once; the gradient of the unsplit effective batch is computed twice and the gradient of the same batch accumulated over its micro-batches once, through `neural_training.accumulate_gradients`, the function the training loop itself uses. The comparison is over every parameter gradient in float64: the relative L2 norm of the whole difference, the largest relative difference of a single tensor, the cosine, and the losses. Because both gradients come from the same loss function, a defect of that function (ignored weights, a wrong denominator) would not show; a second comparison therefore sets the accumulated gradient, computed with the forward pass in float32, against an independent oracle: one forward pass over all rows of the effective batch, the weighted binary cross-entropy from `torch.nn.functional` summed and divided by the rows of the batch (DR-015 §7), written without `accumulate_gradients` or `weighted_bce` | P/F: the unsplit gradient repeats bit for bit (the comparison is meaningful); every gradient is finite and over the same parameters; the relative L2 norm of the difference is at most T5; the relative L2 norm of the float32 accumulated gradient against the oracle is at most T6. D: the other measures, including the largest relative difference of a single tensor against the oracle |
+| B2 | Repeatability under a plan. The ResNet-style MLP (micro-batch 1,024, its only plan) and the FT-Transformer (micro-batch 256), each at the reference candidate of DR-015 §6 and §7 with balanced weights, are fitted twice with the same seed in one process on 3,064 Train rows (two effective batches and a final batch of 1,016 rows) for two epochs | P/F: the scores of all rows and the per-epoch Train losses are identical, bit for bit (T3) |
+| B3 | Corners of the search spaces, through the preflight of DR-015 §7 (`training.preflight.run_preflight`: full-size synthetic inputs, training phase of two effective batches, float32 evaluation inside the loop, declared free-memory margin): the largest ResNet-style MLP of space (B) (16 layers, width 1,024, hidden factor 4, category embedding 512), tried at 1,024; and FT-Transformers with 6 layers at token widths 72, 200, 456 and 504 (heads of 9, 25, 57 and 63 units, padded to 16, 32, 64 and 64) and at the largest width, 512. These are representative widths, not proven worst cases: each real candidate must still pass the candidate-specific preflight | P/F: each corner passes training and evaluation at some listed micro-batch with at least 1,024 MiB free at the sampled peak. A corner that passes at none is a failure: it shows that the search space contains a candidate the study could not run (DR-015 §7) |
+| B4 | Warnings, as in C2 | P/F: the rule of C2 (an ignored setting, an unsupported capability or a fallback fails; any other warning needs a recorded review). Accepted by exact form, as many times as B3 recorded attempts that ran out of GPU memory: the line `Fit <configuration> on gpu (<n> Train rows): failed after <s> s` that the step logger writes for such an attempt (a micro-batch too large, which the preflight tries and abandons) |
+| B5 | Resources, as in C13: whole-device memory sampled every 0.5 seconds, host peak memory | P/F: valid monitoring; no out-of-memory error outside the cases that record one. D: every measurement |
+
+| ID | Quantity | Tolerance | Basis |
+|---|---|---|---|
+| T6 | Relative L2 norm of the difference between the float32 accumulated gradient and the independent float32 oracle (B1) | At most 1e-4 | A pre-specified engineering budget [I], specified before any acceptance run. With the forward pass in float32 the two gradients differ by the order of float32 sums only (the memory-efficient attention kernel computes float32 products in a fast multiply-add mode, [L] REF-121), far below a defect such as unit weights or a denominator one row too large; a tail denominator of 1,024 for 1,016 rows (an error of 0.78 %) is 78 times the budget. The tolerance is never widened after the results are seen |
+| T5 | Relative L2 norm of the difference between the accumulated and the unsplit gradient (B1) | At most 1e-2 | A pre-specified engineering acceptance budget [I]. In exact arithmetic the two gradients are equal (DR-015 §7: every micro-batch loss divides by the rows of the whole effective batch). In the training precision they differ by rounding: bfloat16 forward products and a different order of float32 sums with each micro-batch plan. A wrong normalisation (for example a mean per micro-batch) differs by a factor of the number of micro-batches, and a lost micro-batch by its share of the rows, both far above the budget. The tolerance is never widened after the results are seen; a failure requires numerical diagnosis |
+
+**Records.** `batching.json` (the environment of DR-013 §6, the run identity of Section 5 with the training declaration's SHA-256, the workload, B1 to B5 with every recorded measure), `batching.md` (generated from it by code, presenting every recorded field) and `batching.log`, written in a new directory (one that does not exist or is empty) `outputs/neural_batching_acceptance/<UTC start time>/` inside the repository (ignored by Git) as in Section 6. One run is the acceptance run. The records are added to `evidence/` in a reviewed pull request, and the result is recorded in this section and in Issue #151.
+
+**Acceptance run.** A run is the acceptance run only on the GPU, with the default workload and the effective batch of 1,024, from a clean committed tree whose code is the code that runs; `batching.json` records `acceptance_evidence` and, when false, the reasons (`evidence_blockers`). Any other run is exploratory and its summary says so.
+
+**Procedure.** This section is approved before the implementation begins; the implementation is reviewed and committed before the run; `review-capacity probe-neural-batching` runs from the clean committed tree. A change of values or paths requires an approved revision and a new run.
+
+**Result, acceptance run of 23 October 2026 (UTC)** (commit `9f49824`, clean tree; records in [`evidence/neural_batching_acceptance/2026-10-23T115013Z/`](../evidence/neural_batching_acceptance/2026-10-23T115013Z/)). Overall result **pass**; the run is the acceptance run (`acceptance_evidence` true, no blockers).
+
+- B1: all five cases pass. The accumulated gradient differs from the unsplit gradient by a relative L2 norm of 1.7e-3 to 1.9e-3 (T5: 1e-2), and the unsplit reference repeats bit for bit. With the forward pass in float32, the accumulated gradient differs from the independent oracle by 1.1e-7 to 2.9e-7 (T6: 1e-4), so the oracle margin is more than 300-fold.
+- B2: the scores of all rows and the per-epoch Train losses repeat bit for bit for the ResNet-style MLP (micro-batch 1,024) and for the FT-Transformer (micro-batch 256).
+- B3: all six corners pass. The largest ResNet-style MLP passes at 1,024 with 4,063 MiB free at the sampled peak of the evaluation phase. The FT-Transformer corners pass at micro-batch 256 (token width 72), 128 (200) and 64 (456, 504 and 512), with 2,347 to 4,011 MiB free; the tightest is token width 504.
+- B4: 17 warnings, all the step-failure line of a preflight attempt that ran out of GPU memory, as many as B3 recorded such attempts (17).
+- B5: sampled whole-device GPU memory at most 7,844 of 8,151 MiB over the whole run (which includes the attempts that ran out of memory by design); peak host memory 2.56 GB; no monitoring problem.
+
+**Outcome: the neural batching acceptance of Issue #151 is passed.** The values are of synthetic data and carry no information about model performance. The candidate-specific micro-batch plans of the study come from `preflight-neural`, which is repeated after the last code change.
+
 ## Symbols and notation
 
 | Symbol / abbreviation | Meaning |
@@ -219,9 +266,12 @@ The daily budget of the V1 objective is `K = round(0.02 × V1 rows / V1 days)` (
 | `max_bin` | LightGBM's maximum number of bins of a numeric feature (DR-013 §2); it does not cap categorical features |
 | `LGB-u`, `Cat-u`, `Cat-b`, `FTT-u` | Configuration names: LightGBM, CatBoost or FT-Transformer, unweighted (u) or with balanced class weighting (b) |
 | K | Number of top-scored rows compared in C9 and C11: 2 % of the scored rows, rounded up (82 neural rows; 2,000 tree-model rows); in Section 8, the daily review budget of the V1 objective |
+| B1–B5 | Checks of the neural batching acceptance (Section 9) |
+| Effective batch, micro-batch | The 1,024 Train rows of one optimiser update (DR-015 §7); the part of it processed at once, whose gradients are added |
 | `boost_from_average`, `v1_objective` | CatBoost: start from the average label (set to `False`); the name of the shared V1 objective (daily Recall@K, unweighted) used as `eval_metric` |
 | MLP | Multilayer perceptron |
 | `n_layers` | Number of layers (residual blocks or Transformer layers) |
+| Relative L2 norm | The Euclidean norm of a difference divided by the Euclidean norm of the reference |
 | Probe parameter names | `num_iterations`, `iterations`, `early_stopping_round`, `od_wait`, `metric`, `eval_metric`, `learning_rate`, `lr`, `num_leaves`, `depth`, `metric_period`, `model_size_reg`, `fold_permutation_block`, `permutation_count`, `random_strength`, `l2_leaf_reg`, `leaf_estimation_iterations`, `bagging_temperature`, the four dropouts, `eval_batch_size`, `weight_decay`, `max_epochs`, `patience`: defined in the parameter table of Section 2 |
 | NaN | Not-a-number: a missing numeric value |
 | REF-NNN | Reference identifier in [`references.md`](references.md) |
@@ -229,6 +279,7 @@ The daily budget of the V1 objective is `K = round(0.02 × V1 rows / V1 days)` (
 | sm_120 | Compute capability of the project GPU |
 | space (B) | The large-dataset hyperparameter search space of REF-087 used by DR-011 |
 | T1–T4 | Tolerances (Section 4) |
+| T5, T6 | Tolerances of the gradient comparisons of B1 (Section 9): accumulated against unsplit gradient; float32 accumulated gradient against the independent oracle |
 | `tod_sin`, `tod_cos` | Sine and cosine of the time of day (DR-008 §4) |
 | Train | The study's model-fitting partition (relative days 1–105); here, the synthetic fitting partition |
 | `TransactionDT`, `TransactionID` | Transaction time and transaction identifier; here, synthetic |

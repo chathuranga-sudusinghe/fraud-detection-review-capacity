@@ -225,3 +225,36 @@ def test_a_component_without_a_reading_in_every_trial_has_no_maximum() -> None:
 def test_no_completed_trial_has_no_maximum() -> None:
     result = trials_maximum([], "maximum over fits")
     assert (result.host, result.gpu, result.problems) == (None, None, [])
+
+
+def test_an_allocator_phase_records_the_peaks_when_cuda_is_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    peaks = {"max_allocated_bytes": 3, "max_reserved_bytes": 5}
+    seen: list[str] = []
+    monkeypatch.setattr(
+        "review_capacity.development.memory._reset_allocator", lambda: seen.append("reset")
+    )
+    monkeypatch.setattr("review_capacity.development.memory._read_allocator", lambda: peaks)
+    result, phase = run_measured(memory_setup(), SCOPE, lambda: 1, allocator=True)
+    assert result == 1
+    assert phase is not None
+    assert seen == ["reset"]
+    assert phase.allocator == peaks
+    assert phase.reading().allocator == peaks
+
+
+def test_a_phase_without_the_allocator_option_reads_no_allocator() -> None:
+    _, phase = run_measured(memory_setup(), SCOPE, lambda: 1)
+    assert phase is not None
+    assert phase.allocator is None
+
+
+def test_the_search_maximum_of_the_allocator_needs_every_trial() -> None:
+    first = PhaseMemory(SCOPE, allocator={"max_allocated_bytes": 3, "max_reserved_bytes": 9})
+    second = PhaseMemory(SCOPE, allocator={"max_allocated_bytes": 7, "max_reserved_bytes": 4})
+    result = trials_maximum([(1, first), (2, second)], SCOPE)
+    assert result.allocator == {"max_allocated_bytes": 7, "max_reserved_bytes": 9}
+    partial = trials_maximum([(1, first), (2, PhaseMemory(SCOPE))], SCOPE)
+    assert partial.allocator is None
+    assert any("allocator maximum not established" in problem for problem in partial.problems)
