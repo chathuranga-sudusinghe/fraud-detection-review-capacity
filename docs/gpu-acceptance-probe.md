@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; **revised and approved on 15 October 2026** (Issue #77) for the training devices of the DR-013 revision of Issue #101. **Acceptance gate passed on 15 October 2026** (Section 7). **Section 8** (CatBoost tree-objective acceptance, Issue #123): approved on 21 October 2026, before implementation and before it runs; **acceptance passed on 21 October 2026** (Section 8, Result). **Section 9** (neural batching acceptance, Issue #151): specified before implementation and before it runs; result pending |
+| Status | **Specification, approved on 14 October 2026 (Issue #77)**, before implementation and before the probe runs; **revised and approved on 15 October 2026** (Issue #77) for the training devices of the DR-013 revision of Issue #101. **Acceptance gate passed on 15 October 2026** (Section 7). **Section 8** (CatBoost tree-objective acceptance, Issue #123): approved on 21 October 2026, before implementation and before it runs; **acceptance passed on 21 October 2026** (Section 8, Result). **Section 9** (neural batching acceptance, Issue #151): specified before implementation and before it runs; **acceptance passed on 23 October 2026** (Section 9, Result) |
 | Governing record | Decision Record (DR) [DR-013](decisions/DR-013-training-device-policy.md) §8: what the probe must confirm. This document owns how: the synthetic inputs, the checks, the acceptance criteria and the tolerances |
 | Command | `review-capacity probe-gpu` (package command); Section 8: `review-capacity probe-catboost-objective`; Section 9: `review-capacity probe-neural-batching` |
 | Evidence | [`evidence/gpu_acceptance_probe/`](../evidence/gpu_acceptance_probe/README.md) |
@@ -233,7 +233,15 @@ The daily budget of the V1 objective is `K = round(0.02 × V1 rows / V1 days)` (
 
 **Procedure.** This section is approved before the implementation begins; the implementation is reviewed and committed before the run; `review-capacity probe-neural-batching` runs from the clean committed tree. A change of values or paths requires an approved revision and a new run.
 
-**Result.** Pending: no acceptance run has been made.
+**Result, acceptance run of 23 October 2026 (UTC)** (commit `9f49824`, clean tree; records in [`evidence/neural_batching_acceptance/2026-10-23T115013Z/`](../evidence/neural_batching_acceptance/2026-10-23T115013Z/)). Overall result **pass**; the run is the acceptance run (`acceptance_evidence` true, no blockers).
+
+- B1: all five cases pass. The accumulated gradient differs from the unsplit gradient by a relative L2 norm of 1.7e-3 to 1.9e-3 (T5: 1e-2), and the unsplit reference repeats bit for bit. With the forward pass in float32, the accumulated gradient differs from the independent oracle by 1.1e-7 to 2.9e-7 (T6: 1e-4), so the oracle margin is more than 300-fold.
+- B2: the scores of all rows and the per-epoch Train losses repeat bit for bit for the ResNet-style MLP (micro-batch 1,024) and for the FT-Transformer (micro-batch 256).
+- B3: all six corners pass. The largest ResNet-style MLP passes at 1,024 with 4,063 MiB free at the sampled peak of the evaluation phase. The FT-Transformer corners pass at micro-batch 256 (token width 72), 128 (200) and 64 (456, 504 and 512), with 2,347 to 4,011 MiB free; the tightest is token width 504.
+- B4: 17 warnings, all the step-failure line of a preflight attempt that ran out of GPU memory, as many as B3 recorded such attempts (17).
+- B5: sampled whole-device GPU memory at most 7,844 of 8,151 MiB over the whole run (which includes the attempts that ran out of memory by design); peak host memory 2.56 GB; no monitoring problem.
+
+**Outcome: the neural batching acceptance of Issue #151 is passed.** The values are of synthetic data and carry no information about model performance. The candidate-specific micro-batch plans of the study come from `preflight-neural`, which is repeated after the last code change.
 
 ## Symbols and notation
 
