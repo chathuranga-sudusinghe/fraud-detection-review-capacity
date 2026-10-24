@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import math
 from typing import Any
 
 from review_capacity.config import load_dataset_spec
@@ -666,6 +667,66 @@ _BODIES: dict[str, dict[str, Any]] = {
         "selected": "Cat-u",
         "tie_break_steps": [],
         "rule_version": "1",
+    },
+}
+
+_ROLLING_DAILY = [
+    {
+        "day": day,
+        "transactions": 2500,
+        "selected": selected,
+        "overflow": max(selected - 50, 0),
+        "unused": max(50 - selected, 0),
+        "load_ratio": selected / 50,
+    }
+    for day, selected in zip(range(99, 127), [48, 52] * 14, strict=True)
+]
+_ROLLING_COMPONENT = (math.log(0.96) + math.log(1.04)) / 2  # the rate and total components
+_BODIES["rolling_origin"] = {
+    "configuration": "Cat-u",
+    "seed": 42,
+    "origin": 71,
+    "training": {
+        "first_day": 1,
+        "last_day": 49,
+        "rows": 170_000,
+        "frauds": 6_000,
+        "preprocessing_sha256": None,
+    },
+    "fit": {
+        "selected_trial": 3,
+        "length": 410,
+        "device": "gpu",
+        "seconds": 95.5,
+        "model": file("models/Cat-u/rolling-s71/model.cbm"),
+        "source_fit": file("source/records/fit-Cat-u-trial03.json"),
+    },
+    "scores": file("scores/Cat-u-rolling-s71.parquet"),
+    "window": {
+        "first_day": 71,
+        "last_day": 98,
+        "transactions": 70_000,
+        "alerts": 1_400,
+        "rate": 0.02,
+    },
+    "threshold": {"capacity": 0.02, "rank": 1_400, "value": 0.31, "k": 50},
+    "transfer": {
+        "first_day": 99,
+        "last_day": 126,
+        "transactions": 70_000,
+        "alerts": 1_400,
+        "rate": 0.02,
+        "relative_deviation": 0.0,
+        "total_overflow": 28,
+        "total_unused": 28,
+        "days_above_budget": 14,
+        "days_below_budget": 14,
+        "zero_alert_days": 0,
+        "inside_band": True,
+        "rate_component": _ROLLING_COMPONENT,
+        "volume_component": 0.0,
+        "total_component": _ROLLING_COMPONENT,
+        "daily": _ROLLING_DAILY,
     },
 }
 

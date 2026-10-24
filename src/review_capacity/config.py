@@ -253,6 +253,35 @@ class RawFileSpec:
 
 
 @dataclass(frozen=True)
+class RollingOriginSpec:
+    """The window design of the rolling-origin supplement (protocol, Experimental Split
+    Structure; Issue #159).
+
+    At origin ``s`` the primary configuration is refitted on relative days ``1`` to
+    ``s - gap_days - 1``; the R2 threshold is set on the scores of the window days ``s`` to
+    ``s + window_days - 1`` and applied to the next ``transfer_days`` days.
+    """
+
+    origins: tuple[int, ...]
+    gap_days: int
+    window_days: int
+    transfer_days: int
+    minimum_training_days: int
+
+    def training_last_day(self, origin: int) -> int:
+        return origin - self.gap_days - 1
+
+    def window_last_day(self, origin: int) -> int:
+        return origin + self.window_days - 1
+
+    def transfer_first_day(self, origin: int) -> int:
+        return origin + self.window_days
+
+    def transfer_last_day(self, origin: int) -> int:
+        return origin + self.window_days + self.transfer_days - 1
+
+
+@dataclass(frozen=True)
 class DatasetSpec:
     """Raw files and temporal partitions (DR-001)."""
 
@@ -268,6 +297,9 @@ class DatasetSpec:
     # V2 days 127-147 fit, days 148-154 are held out). None only for a synthetic declaration
     # without a latency range.
     label_latency_fitting_last_day: int | None = None
+    # The window design of the rolling-origin supplement; None only for a synthetic declaration
+    # without a supplement.
+    rolling_origin: RollingOriginSpec | None = None
 
     def source_table(self, column: str) -> str:
         """Raw file a joined column comes from: ``identity`` if declared there, else
@@ -355,11 +387,46 @@ class DatasetSpec:
                     f"label_latency.fitting_last_day {latency} must lie in "
                     f"{v2.first_day}..{v2.last_day - 1} (a held-out part must remain)"
                 )
+        rolling = self.rolling_origin
+        if rolling is not None:
+            train, v2 = self.partition("train"), self.partition("v2")
+            if not rolling.origins or list(rolling.origins) != sorted(set(rolling.origins)):
+                raise SpecificationError("rolling_origin.origins must be increasing and distinct")
+            if min(rolling.gap_days, rolling.window_days, rolling.transfer_days) < 1:
+                raise SpecificationError("rolling_origin: the gap and the windows are positive")
+            for origin in rolling.origins:
+                last = rolling.training_last_day(origin)
+                if last < train.first_day - 1 + rolling.minimum_training_days:
+                    raise SpecificationError(
+                        f"rolling_origin: origin {origin} trains on fewer than "
+                        f"{rolling.minimum_training_days} days"
+                    )
+                if last > train.last_day:
+                    raise SpecificationError(
+                        f"rolling_origin: origin {origin} trains beyond {train.name}"
+                    )
+                if rolling.transfer_last_day(origin) > v2.last_day:
+                    raise SpecificationError(
+                        f"rolling_origin: the transfer window of origin {origin} ends after "
+                        f"day {v2.last_day}"
+                    )
         if sum(p.rows for p in self.partitions) != self.total_rows:
             raise SpecificationError("Partition rows do not sum to total_rows")
         sealed = [p for p in self.partitions if p.sealed]
         if sealed and any(p.last_day > sealed[0].first_day for p in self.development):
             raise SpecificationError("A development partition lies after the sealed period")
+
+
+def _rolling_origin(raw: Mapping[str, Any]) -> RollingOriginSpec:
+    return RollingOriginSpec(
+        origins=tuple(_integer(day, "rolling_origin origin") for day in raw["origins"]),
+        gap_days=_integer(raw["gap_days"], "rolling_origin gap_days"),
+        window_days=_integer(raw["window_days"], "rolling_origin window_days"),
+        transfer_days=_integer(raw["transfer_days"], "rolling_origin transfer_days"),
+        minimum_training_days=_integer(
+            raw["minimum_training_days"], "rolling_origin minimum_training_days"
+        ),
+    )
 
 
 def _raw_file(entry: Mapping[str, Any], paths: ProjectPaths, name: str) -> RawFileSpec:
@@ -409,6 +476,7 @@ def load_dataset_spec(paths: ProjectPaths) -> DatasetSpec:
             label_latency_fitting_last_day=_integer(
                 raw["label_latency"]["fitting_last_day"], "label_latency fitting_last_day"
             ),
+            rolling_origin=_rolling_origin(raw["rolling_origin"]),
         )
         spec.validate()
         return spec

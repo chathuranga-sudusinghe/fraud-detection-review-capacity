@@ -80,6 +80,7 @@ def test_every_kind_has_a_valid_example_in_production_order() -> None:
         "cost_analysis",
         "r1_selection",
         "h3_selection",
+        "rolling_origin",
         "run_end",
     ]
     for kind in KINDS:
@@ -1391,3 +1392,72 @@ def test_the_startup_status_is_known_and_consistent() -> None:
     assert_rejected(fit | {"settings": measured}, "required when measured")
     unmeasured = {**settings, "startup_seconds": None, "startup_status": "not_measured"}
     validate(fit | {"settings": unmeasured})
+
+
+def test_a_rolling_origin_follows_the_declared_window_design() -> None:
+    record = example("rolling_origin")
+    assert problems(record) == []
+    assert_rejected(record | {"origin": 72}, "it starts on the origin")
+    training = record["training"]
+    assert_rejected(record | {"training": training | {"last_day": 50}}, "must be 49 for origin 71")
+    assert_rejected(record | {"training": training | {"first_day": 2}}, "training.first_day")
+    assert_rejected(record | {"seed": 43}, "must be the main seed")
+    shifted = example("rolling_origin")
+    shifted["origin"] = 72
+    shifted["window"] = shifted["window"] | {"first_day": 72, "last_day": 99}
+    shifted["transfer"] = shifted["transfer"] | {"first_day": 100, "last_day": 127}
+    shifted["transfer"]["daily"] = [
+        row | {"day": row["day"] + 1} for row in shifted["transfer"]["daily"]
+    ]
+    assert_rejected(shifted, "is not one of")
+    window = record["window"]
+    assert_rejected(
+        record | {"window": window | {"last_day": 97}}, "starts the day after the window"
+    )
+
+
+def test_a_rolling_origin_transfer_is_consistent_with_its_daily_rows() -> None:
+    record = example("rolling_origin")
+    transfer = record["transfer"]
+    daily = transfer["daily"]
+    assert_rejected(
+        record | {"transfer": transfer | {"alerts": 1_399}}, "differs from the daily sum"
+    )
+    assert_rejected(record | {"transfer": transfer | {"total_unused": 167}}, "total_unused")
+    assert_rejected(record | {"transfer": transfer | {"days_above_budget": 1}}, "days_above_budget")
+    assert_rejected(record | {"transfer": transfer | {"zero_alert_days": 1}}, "zero_alert_days")
+    assert_rejected(record | {"transfer": transfer | {"rate": 0.03}}, "alerts over transactions")
+    assert_rejected(
+        record | {"transfer": transfer | {"daily": daily[1:]}}, "every transfer day, once"
+    )
+    no_components = transfer | {
+        "rate_component": None,
+        "volume_component": None,
+        "total_component": None,
+    }
+    assert_rejected(record | {"transfer": no_components}, "required when a day has alerts")
+    assert_rejected(
+        record | {"window": record["window"] | {"first_day": 70}}, "starts on the origin"
+    )
+
+
+def test_a_rolling_origin_values_follow_from_its_counts() -> None:
+    record = example("rolling_origin")
+    threshold, window, transfer = record["threshold"], record["window"], record["transfer"]
+    assert_rejected(record | {"threshold": threshold | {"k": 56}}, "round(c x mean daily volume")
+    assert_rejected(record | {"threshold": threshold | {"capacity": 0.05}}, "primary capacity")
+    assert_rejected(record | {"threshold": threshold | {"rank": 1_399}}, "ceil(c N)")
+    assert_rejected(record | {"window": window | {"rate": 0.03}}, "window.rate")
+    assert_rejected(record | {"transfer": transfer | {"relative_deviation": 0.5}}, "r / c − 1")
+    assert_rejected(record | {"transfer": transfer | {"inside_band": False}}, "inside_band")
+    assert_rejected(
+        record | {"transfer": transfer | {"rate_component": 0.2}}, "rate_component: differs"
+    )
+    assert_rejected(
+        record | {"transfer": transfer | {"volume_component": 0.2}}, "volume_component: differs"
+    )
+    daily = transfer["daily"]
+    shifted = [daily[0] | {"load_ratio": 0.5}, *daily[1:]]
+    assert_rejected(record | {"transfer": transfer | {"daily": shifted}}, "load_ratio")
+    partial = transfer | {"volume_component": None}
+    assert_rejected(record | {"transfer": partial}, "volume_component required when a day has")

@@ -48,6 +48,19 @@ def test_dataset_declaration_matches_dr001() -> None:
     assert spec.partition("test").sealed
     assert spec.last_development_day == 154
     assert spec.label_latency_fitting_last_day == 147  # fit on V2 days 127–147, hold out 148–154
+    rolling = spec.rolling_origin
+    assert rolling is not None
+    assert (rolling.origins, rolling.gap_days, rolling.window_days, rolling.transfer_days) == (
+        (71, 85, 99),
+        21,
+        28,
+        28,
+    )
+    # training days 1–49, 1–63, 1–77; windows s..s+27; transfers s+28..s+55 (the last is V2)
+    assert [rolling.training_last_day(o) for o in rolling.origins] == [49, 63, 77]
+    assert [rolling.window_last_day(o) for o in rolling.origins] == [98, 112, 126]
+    assert [rolling.transfer_first_day(o) for o in rolling.origins] == [99, 113, 127]
+    assert [rolling.transfer_last_day(o) for o in rolling.origins] == [126, 140, 154]
 
 
 def test_repeated_input_rejected() -> None:
@@ -96,6 +109,14 @@ def _test_partition(content: dict[str, Any]) -> dict[str, Any]:
         (lambda c: c.pop("label_latency"), "malformed declaration"),
         (lambda c: c["label_latency"].update(fitting_last_day=154), "held-out part"),
         (lambda c: c["label_latency"].update(fitting_last_day=126), "held-out part"),
+        (lambda c: c.pop("rolling_origin"), "malformed declaration"),
+        (lambda c: c["rolling_origin"].update(origins=[85, 71]), "increasing and distinct"),
+        (lambda c: c["rolling_origin"].update(origins=[]), "increasing and distinct"),
+        (lambda c: c["rolling_origin"].update(gap_days=0), "are positive"),
+        (lambda c: c["rolling_origin"].update(origins=[71, 100]), "ends after day 154"),
+        (lambda c: c["rolling_origin"].update(origins=[60]), "fewer than 42 days"),
+        (lambda c: c["rolling_origin"].update(gap_days=-5, origins=[71]), "are positive"),
+        (lambda c: c["rolling_origin"].update(window_days="28"), "must be an integer"),
     ],
 )
 def test_malformed_dataset_declaration_rejected(

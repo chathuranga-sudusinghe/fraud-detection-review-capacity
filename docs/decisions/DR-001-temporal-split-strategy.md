@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-23; revised 2026-10-09 (Issue #54) and 2026-10-10 (Issue #62: link to the machine-readable declaration) |
+| Date | 2026-09-23; revised 2026-10-09 (Issue #54), 2026-10-10 (Issue #62: link to the machine-readable declaration) and Issue #159 (rolling-origin supplement design) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3–4, 5.1, 14, 15 |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
@@ -36,13 +36,18 @@ The partitions are:
 
 | Partition | Relative days | Days | Rows | % rows | Role |
 |---|---|---|---|---|---|
-| **Train** | 1–105 | 105 | 368,632 | 62.4 | Model fitting. **Models are not refit** on later partitions. |
+| **Train** | 1–105 | 105 | 368,632 | 62.4 | Model fitting. **Models are not refit** on later partitions in the primary design. |
 | **V1** (Validation 1) | 106–126 | 21 | 65,544 | 11.1 | Hyperparameter selection and early stopping **only** |
 | **V2** (Validation 2) | 127–154 | 28 | 77,822 | 13.2 | Probability calibration (for policy R4, the calibrated cost-aware capped policy); threshold selection (R1, the threshold that maximises F1, the harmonic mean of precision and recall; R2, the capacity-rate threshold); fixed daily review budget K ([DR-002](DR-002-review-capacity-definition.md)); selection of the H3 configuration ([DR-010](DR-010-h3-confirmatory-configuration.md)) |
 | **Test** | 155–182 | 28 | 78,542 | 13.3 | **Sealed.** One confirmatory evaluation after the protocol freeze |
 | **Total (full joined dataset)** | 1–182 | 182 | 590,540 | 100.0 | Train + V1 + V2 + Test; mutually exclusive and exhaustive |
 
 - **No temporal gap in the primary design.**
+- **Rolling-origin supplement for RQ2 (exploratory).** An exploratory, descriptive look at how variable the transfer of an R2 threshold is across several origins inside days 1–154, on the primary configuration only [REF-024, REF-025, REF-046]. The primary configuration is the H3 configuration's model and weighting ([DR-010](DR-010-h3-confirmatory-configuration.md)); the supplement runs after the H3 selection and never changes it, any threshold or the confirmatory plan. It is a **retrospective sensitivity analysis conditional on the final development-selected specification**: that configuration and its hyperparameters were selected on V1 and V2, which lie after the early origins, so it is not a prospective deployment simulation [I]. The design is declared machine-readably in [`config/dataset.yaml`](../../config/dataset.yaml) (`rolling_origin`):
+  - **Origins.** The origin day d_o (the first day of the threshold window) is 71, 85 or 99, 14 days apart. At d_o, the primary configuration is refitted on relative days 1 to d_o − 22 (days 1–49, 1–63 and 1–77), leaving a gap of 21 days, as between the end of Train and V2 in the main design; the threshold window is days d_o to d_o + 27 and the transfer window the next 28 days, d_o + 28 to d_o + 55 (the last origin's transfer window is days 127–154).
+  - **Refit.** The hyperparameters and the fixed length (the retained rounds or epochs) of the selected trial, the main seed, no search and no early stopping; the training procedure, devices and numerical settings are those of [DR-015](DR-015-common-training-rules.md) and [DR-013](DR-013-training-device-policy.md). Everything learned from data is fitted on the origin's training days only: the balanced class weights and, for a neural model, the shared preprocessing of [DR-012](DR-012-neural-network-input-representation.md) with its declared seed; the main-run artifact is not reused. The batch plan of the selected trial is reused, and a plan that would leave a last micro-batch below the architecture's minimum batch size on an origin's training rows (two rows for the ResNet-style MLP) stops the supplement before any fit. A fixed length chosen on the 105 training days is applied to shorter training sets, and the origins differ in calendar position, training history and refit; the results combine these.
+  - **Threshold and budget.** R2 at 2 % capacity on the scores of the threshold window (no labels): the threshold is the score ranked ⌈0.02 N_window⌉ among the N_window transactions of that window, and a transaction is flagged when its score is at least the threshold. The origin's fixed daily budget is K = round(0.02 × the mean daily volume of the threshold window), rounded half up ([DR-002](DR-002-review-capacity-definition.md) §3), and is never recomputed from the transfer window.
+  - **Reported.** For each origin: the training days and rows, the threshold, K, the realised rate of the threshold window, the pooled transfer rate r (alerts over transactions of the transfer window), r / 0.02 − 1, the days above and below K, the total overflow and unused capacity, and the rate and volume components of [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) (with the window's mean daily volume). Across origins: the origins in chronological order and the number of origins whose r lies strictly inside the H3 band (0.016, 0.024), written "x of 3". No interval or test is given and no claim of equivalence or reliability is made: the origins share training days and their transfer windows overlap.
 - **The Test period remains sealed.** Its labels have not been used for any analysis, and must not be until the protocol is frozen and tagged in Git.
 
 Reproducibility anchors, from the notebook (§4.3):
@@ -104,7 +109,7 @@ Reproducibility anchors, from the notebook (§4.3):
 - Development data total 511,998 rows and 17,889 frauds. Test has 78,542 rows (sealed).
 - Projected Test frauds, assuming V2 prevalence, are about 2,660. This is a projection, not an observation, and it drives the power discussion in the protocol.
 - Daily-level Test statistics rest on **n = 28 days** (n = number of Test relative days).
-- **RQ2 observes only one V2 → Test transfer event.** A development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only) shows whether transfer failure is systematic. It does not replace the single confirmatory Test evaluation. The primary configuration is the H3 configuration selected on V2 ([DR-010](DR-010-h3-confirmatory-configuration.md)).
+- **RQ2 observes only one V2 → Test transfer event.** A development-only **rolling-origin supplement** (exploratory; inside days 1–154; primary configuration only; retrospective, as specified in the Decision) shows how variable the transfer is across three origins; it describes recurrence across these dependent historical episodes, not a general failure probability. It does not replace the single confirmatory Test evaluation. The primary configuration is the H3 configuration selected on V2 ([DR-010](DR-010-h3-confirmatory-configuration.md)).
 - **Label-latency sensitivity.** Label-dependent policy choices (R1 threshold; R4 calibrator) are repeated using only V2 days 127–147. This costs no Test access.
 - If the protocol is ever changed to **refit** on Train+V1(+V2), this decision must be revisited and a gap reconsidered.
 - The partitions and their reproducibility anchors are declared machine-readably in [`config/dataset.yaml`](../../config/dataset.yaml). The data-preparation code (Issue #62) reproduces the row counts, `TransactionDT` bounds and hash prefixes above, and stops if any of them differs ([dataset manifest](../dataset.md#dataset-manifest)).
@@ -129,9 +134,12 @@ REF-004, REF-005, REF-015, REF-016, REF-017, REF-023, REF-024, REF-025, REF-026,
 | CV | Cross-validation (in "k-fold CV"); k is the number of folds |
 | DR | Decision Record |
 | `isFraud` | Binary fraud label (1 = fraud, 0 = legitimate) |
+| d_o | Origin day of the rolling-origin supplement: the first day of its threshold window (71, 85 or 99) |
 | K | Fixed daily review budget (reviews per relative day), defined in DR-002 |
 | n | Number of Test relative days (28) |
+| N_window | Number of transactions of a threshold window (rolling-origin supplement) |
 | PSI | Population Stability Index (a measure of distribution shift) |
+| r | Pooled alert rate of a transfer window: its alerts over its transactions |
 | R0 | Decision policy: default threshold 0.5 on the raw model score (descriptive only) |
 | F1 | Harmonic mean of precision and recall |
 | R1 | Decision policy: F1-optimal threshold chosen on V2 |

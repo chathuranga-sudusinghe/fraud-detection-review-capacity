@@ -3,10 +3,12 @@ synthetic source run (no model is trained, no project data is read)."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
 
+from review_capacity.config import RollingOriginSpec
 from review_capacity.development.analysis import (
     DEFAULT_STAGES,
     STAGES,
@@ -18,6 +20,7 @@ from review_capacity.development.run_output import SOURCE_LINK, load_run
 from review_capacity.development.summary import cell
 from review_capacity.errors import RecordContractError, SpecificationError
 from review_capacity.hashing import file_sha256
+from review_capacity.models.registry import Subject
 from support.analysis import PARTITIONS, build_setup
 from support.development import PARTITIONS as REAL_PARTITIONS
 
@@ -26,10 +29,57 @@ def test_the_stages_are_checked_and_ordered() -> None:
     assert check_stages(["h3", "thresholds"]) == ("thresholds", "h3")
     assert check_stages(list(STAGES)) == STAGES
     assert "refits" not in DEFAULT_STAGES  # it trains models: named explicitly
+    assert "rolling" not in DEFAULT_STAGES  # so does the rolling-origin supplement
     with pytest.raises(SpecificationError, match="Name at least one"):
         check_stages([])
     with pytest.raises(SpecificationError, match="Not stages"):
         check_stages(["thresholds", "bogus"])
+
+
+def test_the_rolling_stage_needs_the_h3_stage_in_the_same_run() -> None:
+    assert check_stages(["rolling", "h3"]) == ("h3", "rolling")  # h3 runs first
+    with pytest.raises(SpecificationError, match="name the h3 stage"):
+        check_stages(["rolling"])
+
+
+def test_the_rolling_stage_runs_for_the_binding_h3_configuration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dataclasses import replace
+
+    from review_capacity.development import analysis
+    from review_capacity.models.run_record import load_settings_with_snapshot
+    from support.search import search_inputs
+    from support.synthetic import REPO_PATHS
+
+    calls: list[tuple[str, RollingOriginSpec, int]] = []
+
+    def fake(
+        _search: object,
+        _scoring: object,
+        subject: Subject,
+        _selected: object,
+        spec: RollingOriginSpec,
+        parts: Sequence[object],
+    ) -> list[Path]:
+        calls.append((subject.name, spec, len(parts)))
+        return []
+
+    monkeypatch.setattr(analysis, "run_rolling", fake)
+    monkeypatch.setattr(analysis, "selected_outcome", lambda _source, name: name)
+    setup = build_setup(tmp_path, ["h3", "rolling"], winner="Cat-b")
+    _, snapshot = load_settings_with_snapshot(REPO_PATHS)
+    spec = RollingOriginSpec((71, 85, 99), 21, 28, 28, 42)
+    setup = replace(setup, search_inputs=search_inputs(), settings_snapshot=snapshot, rolling=spec)
+    run_analysis(setup)
+    assert calls == [("Cat-b", spec, 3)]  # the configuration the binding selection chose
+    assert load_run(setup.run.path, PARTITIONS).end["outcome"] == "completed"  # type: ignore[index]
+
+
+def test_the_rolling_stage_needs_the_window_design(tmp_path: Path) -> None:
+    setup = build_setup(tmp_path, ["h3", "rolling"])
+    with pytest.raises(SpecificationError, match="window design"):
+        run_analysis(setup)
 
 
 def test_the_threshold_stage_writes_its_records_and_the_run_closes(tmp_path: Path) -> None:

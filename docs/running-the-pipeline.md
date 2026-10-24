@@ -66,7 +66,8 @@ The results that follow from a completed run are produced in a new **analysis ru
 - `thresholds`: the threshold policies R0–R2 and their workload;
 - `calibration`: the calibrators, R4 and the RQ3 cost analysis;
 - `h3`: the selection of the H3 configuration and its label-latency check;
-- `refits`: the fixed-length refits and the CatBoost CPU–GPU comparison. They train models, using the preprocessing artifact and the batch plans that the development run recorded, and are named explicitly.
+- `refits`: the fixed-length refits and the CatBoost CPU–GPU comparison. They train models, using the preprocessing artifact and the batch plans that the development run recorded, and are named explicitly;
+- `rolling`: the rolling-origin supplement for RQ2, for the H3 configuration selected by the `h3` stage of the same run ([protocol](protocol.md#experimental-split-structure); [DR-001](decisions/DR-001-temporal-split-strategy.md)). At each of three origins it refits that configuration on the days before the origin's gap, with preprocessing and class weights fitted on those days, scores the origin's windows and applies the R2 threshold to the transfer window. It trains models, uses the batch plans that the development run recorded, and is named explicitly together with `h3`.
 
 Each stage can be repeated in a new analysis run. The `thresholds`, `calibration` and `h3` stages read the saved scores only and fit no model; the `h3` record is the binding selection of the H3 configuration, committed before the Test period is unsealed:
 
@@ -76,6 +77,10 @@ Each stage can be repeated in a new analysis run. The `thresholds`, `calibration
 
 ```bash
 .venv/bin/review-capacity analyse-development --source outputs/development/<UTC start time> --stages refits
+```
+
+```bash
+.venv/bin/review-capacity analyse-development --source outputs/development/<UTC start time> --stages h3 rolling
 ```
 
 ## 6. Summarise and promote
@@ -91,6 +96,6 @@ Each stage can be repeated in a new analysis run. The `thresholds`, `calibration
 | H3 | Hypothesis 3 of the [protocol](protocol.md): alert-rate transfer fidelity |
 | LR | Logistic-regression reference |
 | R0–R4 | Decision policies of the protocol: default 0.5 threshold; F1-optimal threshold; capacity-rate threshold; daily top-K; calibrated cost-aware capped policy |
-| RQ3 | Research question 3 of the protocol: cost-aware capacity use |
+| RQ2, RQ3 | Research questions 2 and 3 of the protocol: policy transfer fidelity; cost-aware capacity use |
 | SHA-256 | Secure Hash Algorithm, 256-bit digest |
 | Train, V1, V2, Test | Model-fitting partition (relative days 1–105); Validation 1 (106–126); Validation 2 (127–154); sealed confirmatory partition (155–182) |

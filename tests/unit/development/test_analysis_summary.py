@@ -10,6 +10,7 @@ from review_capacity.development.analysis_summary import (
     SECTIONS,
     analysis_markdown,
     rate_volume_components,
+    rolling_origin,
 )
 from review_capacity.development.run_output import LoadedRun
 from support.development import example
@@ -62,4 +63,27 @@ def test_a_run_without_analysis_records_has_no_analysis_sections() -> None:
         "rate_volume",
         "calibration",
         "h3_selection",
+        "rolling_origin",
     ]
+
+
+def test_the_rolling_table_lists_the_origins_in_order_with_threshold_and_silent_days() -> None:
+    first = example("rolling_origin")
+    second = example("rolling_origin")
+    second["origin"] = 85
+    second["threshold"] = second["threshold"] | {"value": 0.42}
+    second["transfer"] = second["transfer"] | {"inside_band": False, "zero_alert_days": 2}
+    run = LoadedRun(
+        path=None,  # type: ignore[arg-type]
+        records=[("b.json", second), ("a.json", first)],
+        end=None,
+    )
+    text = "\n".join(rolling_origin(run))
+    lines = [line for line in text.splitlines() if line.startswith(("| `71`", "| `85`"))]
+    assert [line.split("|")[1].strip() for line in lines] == ["`71`", "`85`"]  # chronological
+    header = text.splitlines()[2]
+    assert "R2 threshold" in header
+    assert "Zero-alert days" in header
+    assert "`0.31`" in lines[0]
+    assert "`0.42`" in lines[1]
+    assert text.endswith("Origins inside the band: 1 of 2.")
