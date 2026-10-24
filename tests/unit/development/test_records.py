@@ -155,6 +155,17 @@ def test_a_cost_analysis_keeps_its_arithmetic_and_cases_consistent() -> None:
     )
 
 
+@pytest.mark.parametrize("kind", ["h3_selection", "r1_selection"])
+def test_a_label_latency_selection_uses_the_declared_fitting_days(kind: str) -> None:
+    record = example(kind)
+    latency = record | {"period": "latency", "selection_days": {"first": 127, "last": 147}}
+    if kind == "h3_selection":
+        latency |= {"binding": False}
+    assert problems(latency) == []
+    wrong = latency | {"selection_days": {"first": 127, "last": 148}}
+    assert_rejected(wrong, "label-latency fitting days are 127–147")
+
+
 def test_a_device_comparison_is_a_catboost_pair_over_all_of_v2() -> None:
     record = example("device_comparison")
     assert problems(record) == []

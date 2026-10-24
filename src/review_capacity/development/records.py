@@ -137,6 +137,19 @@ def _period_role(period: str) -> str:
     return "full" if period == "primary" else "fitting"
 
 
+def _latency_fit_problems(
+    where: str, days: Mapping[str, int], partitions: DevelopmentPartitions
+) -> list[str]:
+    """The label-latency fitting days are exactly those of the dataset declaration (V2 days
+    127–147), when it declares them."""
+    if partitions.latency_fitting_last_day is None:
+        return []
+    fitting, _ = partitions.latency_ranges()
+    if (days["first"], days["last"]) != fitting:
+        return [f"{where}: the label-latency fitting days are {fitting[0]}–{fitting[1]}"]
+    return []
+
+
 # The logistic-regression reference of DR-011 §5: outside the eight configurations, reported
 # descriptively under the ranking measures and R3 only.
 REFERENCE = "LR"
@@ -1953,6 +1966,10 @@ def _calibration_days(record: Mapping[str, Any], partitions: DevelopmentPartitio
     problems = _range_problems(
         "calibration.fitting_days", record["fitting_days"], v2, _period_role(record["period"])
     )
+    if record["period"] == "latency" and not problems:
+        problems += _latency_fit_problems(
+            "calibration.fitting_days", record["fitting_days"], partitions
+        )
     if record["period"] == "primary" and record["rows"] != v2.rows:
         problems.append(f"calibration.rows: a full-V2 calibrator fits all {v2.rows} V2 rows")
     diagnostics = record["diagnostics"]
@@ -2277,7 +2294,10 @@ def _selection_days(kind: str) -> DayCheck:
     def check(record: Mapping[str, Any], partitions: DevelopmentPartitions) -> list[str]:
         role = _period_role(record["period"])
         days = record["selection_days"]
-        return _range_problems(f"{kind}.selection_days", days, partitions.v2, role)
+        problems = _range_problems(f"{kind}.selection_days", days, partitions.v2, role)
+        if role == "fitting" and not problems:
+            problems += _latency_fit_problems(f"{kind}.selection_days", days, partitions)
+        return problems
 
     return check
 
