@@ -87,7 +87,7 @@ constraint-dependencies = [
 ]
 # LightGBM's CUDA implementation is not in the standard wheel (REF-116): it is built from source
 # for the project GPU (compute capability sm_120) with the CUDA 12.8 Toolkit and NCCL 2.26.2,
-# both installed on the system as described in README.md (DR-013 §2).
+# both installed on the system as described in docs/environment-setup.md (DR-013 §2).
 no-binary-package = ["lightgbm"]
 
 [tool.uv.config-settings-package.lightgbm]

@@ -5,11 +5,11 @@
 | Status | Accepted (pre-freeze), Issue #85, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)) |
 | Date | 2026-10-13 (Issue #85; resolves protocol design item 7) |
 | Evidence source | The Foundational Methodology for Data Science published by International Business Machines Corporation (IBM) [REF-085], read in full (reference identifiers REF-NNN are listed in [`docs/references.md`](../references.md)); two peer-reviewed reviews of data-science process methodologies [REF-125, REF-126], read in the parts cited; University of Greenwich guidance [REF-054, REF-112, REF-113]. No dataset values, labels or model results were used. |
-| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-004](DR-004-github-issue-driven-workflow.md), [protocol](../protocol.md), [README research path](../../README.md#research-path) |
+| Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-004](DR-004-github-issue-driven-workflow.md), [protocol](../protocol.md), [research lifecycle](../research-lifecycle.md) |
 
 ## Context
 
-A data-science study is easier to follow and to assess when its work is organised along a recognised process model. Such models describe the stages of a project, from understanding the problem to using the results, and the loops between them. The research path in the [README](../../README.md#research-path) already followed the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085], but the framing was marked as proposed and awaiting a decision (protocol design item 7).
+A data-science study is easier to follow and to assess when its work is organised along a recognised process model. Such models describe the stages of a project, from understanding the problem to using the results, and the loops between them. The research path in the README already followed the ten stages of the Foundational Methodology for Data Science published by IBM [REF-085], but the framing was marked as proposed and awaiting a decision (protocol design item 7).
 
 Two facts shape the decision:
 
@@ -33,7 +33,7 @@ The study is organised along the ten stages of the IBM Foundational Methodology 
 9. deployment;
 10. feedback.
 
-The [README research path](../../README.md#research-path) maps each stage to the study's work, status and evidence. The framework organises the work and its documentation; the research design itself is specified in the [protocol](../protocol.md) and the Decision Records.
+The [research lifecycle](../research-lifecycle.md) maps each stage to the study's work, status and evidence. The framework organises the work and its documentation; the research design itself is specified in the [protocol](../protocol.md) and the Decision Records.
 
 ### 2. Adaptation to a confirmatory design
 
@@ -73,7 +73,7 @@ A peer-reviewed review of the methodology reports that it lacks team roles and g
 
 ## Consequences
 
-- Protocol design item 7 is resolved, and the README research path states the framing as decided.
+- Protocol design item 7 is resolved, and the research lifecycle states the framing as decided.
 - Stage-level documents may be added to give readers one entry point per stage; they link to the protocol and the Decision Records and do not restate them.
 - The dissertation's methodology chapter follows the ten stages, citing REF-085 for the framework and REF-125 and REF-126 for its peer-reviewed description and assessment.
 

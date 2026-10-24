@@ -161,7 +161,7 @@ Training six configurations on one GPU standardises the training hardware for Ca
 ## Consequences
 
 - The protocol's training procedure and [DR-011](DR-011-model-set-tree-based-and-neural-families.md) §3 state the training devices of §1.
-- The recorded LightGBM build stays in the project environment: the CUDA Toolkit 12.8 and NCCL 2.26.2 remain installed on the system, and the build settings and build tools stay pinned in `pyproject.toml` ([README](../../README.md#environment-setup)). Its CUDA learner is not used.
+- The recorded LightGBM build stays in the project environment: the CUDA Toolkit 12.8 and NCCL 2.26.2 remain installed on the system, and the build settings and build tools stay pinned in `pyproject.toml` ([environment setup](../environment-setup.md)). Its CUDA learner is not used.
 - Without feature bundling, LightGBM training uses more memory and time; both are measured in the probe and in the computational-cost outcome of the protocol.
 - LightGBM's hyperparameter search runs on the CPU; the search budget of the training rules is set from CPU fit times.
 - The training rules fix hyperparameter values and shared device-sensitive controls explicitly and identically across each CatBoost CPU–GPU pair; backend-specific categorical statistics and controls remain as specified in §3.

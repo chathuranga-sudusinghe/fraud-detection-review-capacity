@@ -116,6 +116,8 @@ Important files:
 - [`docs/research-foundation.md`](docs/research-foundation.md)
 - [`docs/protocol.md`](docs/protocol.md)
 - [`docs/dataset.md`](docs/dataset.md)
+- [`docs/research-lifecycle.md`](docs/research-lifecycle.md) — the ten IBM stages mapped to the study: work, status, evidence and gates
+- [`docs/environment-setup.md`](docs/environment-setup.md) and [`docs/running-the-pipeline.md`](docs/running-the-pipeline.md) — environment creation and the development-pipeline command sequence
 - [`docs/data-preparation.md`](docs/data-preparation.md) — data-preparation implementation and evidence record (methodology stage 6)
 - [`docs/gpu-acceptance-probe.md`](docs/gpu-acceptance-probe.md) — graphics processing unit (GPU) acceptance probe of DR-013 §8: synthetic inputs, checks, criteria and tolerances, and its results
 - [`docs/feature-catalog.md`](docs/feature-catalog.md) — column-by-column data dictionary; model-input roles are machine-readable in [`config/features.yaml`](config/features.yaml)
@@ -152,7 +154,10 @@ Saved research evidence (executed notebooks) is exempt: it is never edited to ma
 | Model device and numerical settings and the recorded LightGBM build, for the code | [`config/models.yaml`](config/models.yaml): the machine-readable form of [DR-013](docs/decisions/DR-013-training-device-policy.md) that the code reads. It must match DR-013 and the protocol; a difference is a defect, resolved through an issue |
 | Search budget, sampler and training seeds, search spaces, reference configurations, fixed settings and early-stopping values of the training rules, for the code | [`config/training.yaml`](config/training.yaml): the machine-readable form of [DR-015](docs/decisions/DR-015-common-training-rules.md) that the code reads (the main seed and the device settings stay in `config/models.yaml`). It must match DR-015; a unit test compares the two, and a difference is a defect, resolved through an issue |
 | Contracts of the development pipeline's outputs: JavaScript Object Notation (JSON) record kinds (machine-readable) and the generated Markdown summary (human-readable), including its comparison tables | [`src/review_capacity/development/`](src/review_capacity/development/) (`records.py`, `summary.py`): versioned contracts that validate every record and specify its Markdown presentation; their reference documentation is generated from them (`reference_markdown`), never written by hand. Where and how a run writes them (dated directory, atomic records, closing `run_end` record), how the summary is generated and which files may be promoted to `evidence/`: `run_output.py`, `rendering.py`, `promotion.py`; how an analysis run reads a closed development run and what its summary adds: `analysis.py`, `analysis_summary.py` |
-| Orientation, status, research path and repository map | [`README.md`](README.md) |
+| Orientation, status, repository layout and reading order | [`README.md`](README.md) |
+| Research lifecycle: the mapping of the ten IBM stages to the study's work, status and evidence, and the gates between development and confirmation | [`docs/research-lifecycle.md`](docs/research-lifecycle.md) |
+| Environment creation (platform, uv, CUDA and NCCL prerequisites, LightGBM build, data preparation) | [`docs/environment-setup.md`](docs/environment-setup.md) |
+| The development pipeline's command sequence and what each step reads and writes | [`docs/running-the-pipeline.md`](docs/running-the-pipeline.md) |
 | Working rules | This file |
 
 A Decision Record states its decision in full, because the record is the dated evidence of that decision; the protocol carries the same design as the current specification. A difference between them is a defect, not a choice:
@@ -272,7 +277,7 @@ first use with short meaning
 
 ## Coding and notebook rules
 
-- Use the project environment (`.venv`), created by the project owner with `uv sync --locked` as described in [`README.md`](README.md#environment-setup).
+- Use the project environment (`.venv`), created by the project owner with `uv sync --locked` as described in [`docs/environment-setup.md`](docs/environment-setup.md).
 - Follow [`pyproject.toml`](pyproject.toml) for dependencies. Add a dependency only when the active issue requires it, pinned to an exact version; the project owner then updates [`uv.lock`](uv.lock).
 - Put reusable logic in reusable code rather than copying it between notebooks.
 - Notebooks are research evidence and analysis tools, not the whole project architecture. Save executed notebooks with their outputs when they serve as evidence.
