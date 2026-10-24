@@ -33,6 +33,7 @@ def test_comparison_tables_match_the_record_contracts() -> None:
         ("development_metrics", "configuration"),
         ("seed_variation", "configuration"),
         ("device_comparison", "configuration"),
+        ("break_even", "configuration"),
         ("family_contrasts", "contrast"),
         ("computational_cost", "configuration"),
     ]

@@ -77,12 +77,82 @@ def test_every_kind_has_a_valid_example_in_production_order() -> None:
         "timing",
         "device_comparison",
         "calibration",
+        "cost_analysis",
         "r1_selection",
         "h3_selection",
         "run_end",
     ]
     for kind in KINDS:
         validate(example(kind), kind)
+
+
+def test_a_cost_analysis_keeps_its_arithmetic_and_cases_consistent() -> None:
+    record = example("cost_analysis")
+    assert problems(record) == []
+    grid = record["grid"]
+
+    def with_row(index: int, **changes: Any) -> dict[str, Any]:
+        return record | {"grid": [*grid[:index], grid[index] | changes, *grid[index + 1 :]]}
+
+    assert_rejected(with_row(0, unused=69), "reviews + unused")
+    assert_rejected(with_row(0, cost_difference=-57.0), "cost_difference")
+    assert_rejected(with_row(0, fixed_status="identical"), "fixed_status")
+    assert_rejected(with_row(0, declined_fraud_rate=None), "null exactly when")
+    assert_rejected(with_row(0, declined_fraud_rate=0.9), "frauds_forgone / unused")
+    assert_rejected(with_row(0, utilisation=0.0), "reviews / (k × days)")
+    assert_rejected(with_row(0, declined_mean_probability=0.6), "lie below p*")
+    assert_rejected(with_row(0, fraud_value_exposed_r4=1.0), "plus the value forgone")
+    assert_rejected(with_row(0, amount_weighted_recall_r4=0.9), "above R3's")
+    assert_rejected(record | {"grid": grid[1:]}, "the ratios must be")
+    assert_rejected(record | {"grid": [grid[1], grid[0], *grid[2:]]}, "the ratios must be")
+    case = record["break_even"]
+    assert_rejected(record | {"break_even": case | {"classification": "none"}}, "none exactly")
+    assert_rejected(record | {"break_even": case | {"ratio": 9.0}}, "end of the last interval")
+    assert_rejected(record | {"break_even": case | {"single_interval": False}}, "single_interval")
+    assert_rejected(
+        record | {"break_even": case | {"classification": "crossing"}}, "crossing needs ratio <"
+    )
+    assert_rejected(record | {"friction": record["friction"][:1]}, "the values phi must be")
+    assert_rejected(
+        record | {"friction": [{"phi": 1.0, "ratio": 20.0}, record["friction"][1]]}, "(1 + phi)"
+    )
+    assert_rejected(record | {"saturation": {"ratio": 10.0, "infinite": True}}, "null exactly")
+    assert_rejected(record | {"period": "latency"}, "held-out range")
+    no_ratio = [{"phi": 1.0, "ratio": None}, {"phi": 5.0, "ratio": None}]
+    reach = {"start": 1.0, "end": 1000.0, "end_closed": True}
+    censored = case | {"classification": "right_censored", "ratio": None, "intervals": [reach]}
+    infinite = {"ratio": None, "infinite": True}
+    censored_record = record | {
+        "break_even": censored,
+        "saturation": infinite,
+        "friction": no_ratio,
+    }
+    assert problems(censored_record) == []
+    # right-censoring needs ΔJ(1000) < 0 and a saturation ratio above 1000 (or infinite)
+    assert_rejected(
+        censored_record | {"saturation": {"ratio": 10.0, "infinite": False}},
+        "saturation above 1000",
+    )
+    short = case | {
+        "classification": "right_censored",
+        "ratio": None,
+        "intervals": [{"start": 1.0, "end": 5.0, "end_closed": True}],
+    }
+    assert_rejected(
+        record | {"break_even": short, "saturation": infinite, "friction": no_ratio},
+        "only the range end 1000 is closed",
+    )
+    # a single negative ratio, exactly 1000, is a closed point interval
+    point = {"start": 1000.0, "end": 1000.0, "end_closed": True}
+    single = case | {"classification": "right_censored", "ratio": None, "intervals": [point]}
+    assert (
+        problems(record | {"break_even": single, "saturation": infinite, "friction": no_ratio})
+        == []
+    )
+    open_point = {"start": 5.0, "end": 5.0, "end_closed": False}
+    assert_rejected(
+        record | {"break_even": case | {"intervals": [open_point], "ratio": 5.0}}, "start < end"
+    )
 
 
 def test_a_device_comparison_is_a_catboost_pair_over_all_of_v2() -> None:
