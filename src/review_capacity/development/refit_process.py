@@ -114,7 +114,10 @@ class FreshProcess:
     def __call__(self, job: RefitJob, directory: Path) -> float:
         name, tag = job.configuration, job.spec.tag
         folder = self.run.path / JOBS_DIR
-        folder.mkdir(exist_ok=True)
+        try:
+            folder.mkdir(exist_ok=True)
+        except OSError as error:
+            raise FileAccessError(f"{folder}: cannot be created ({error.strerror})") from error
         job_file, result = folder / f"{name}-{tag}.json", folder / f"{name}-{tag}.result.json"
         log = self.run.path / f"refit-{name}-{tag}.log"
         document = job_document(

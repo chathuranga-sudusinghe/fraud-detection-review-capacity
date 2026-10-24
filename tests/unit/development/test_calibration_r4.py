@@ -25,7 +25,7 @@ from review_capacity.development.scoring import (
     read_scores,
     score_partition,
 )
-from review_capacity.errors import DataValidationError, ModelError
+from review_capacity.errors import DataValidationError, FileAccessError, ModelError
 from review_capacity.evaluation.calibration import load_calibrator
 from review_capacity.evaluation.cost import RATIO_GRID
 from review_capacity.models.registry import configuration
@@ -219,3 +219,17 @@ def test_the_scores_must_be_those_of_v2(scored: tuple[ScoringContext, ScoredPart
     context, v2 = scored
     with pytest.raises(ModelError, match="V2"):
         calibrate(context, replace(v2, label="V1"))
+
+
+def test_a_calibrator_directory_that_cannot_be_created_is_a_file_access_error(
+    scored: tuple[ScoringContext, ScoredPartition],
+) -> None:
+    context, v2 = scored
+    blocker = context.run.path / "calibrators"
+    blocker.write_text("not a directory", encoding="utf-8")  # mkdir then fails with an OSError
+    with pytest.raises(FileAccessError, match="cannot be created"):
+        calibrate(context, v2)
+    loaded = load_run(context.run.path, context.run.partitions)
+    (record,) = loaded.of_kind("calibration")
+    assert record["status"] == "failed"
+    assert "FileAccessError" in record["error"]

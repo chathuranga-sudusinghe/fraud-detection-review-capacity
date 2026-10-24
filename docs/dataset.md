@@ -25,7 +25,7 @@ The IEEE-CIS data are **real-world e-commerce transactions** provided by Vesta C
 - the research questions and hypotheses were designed around the fields the dataset actually provides, and its gaps (no real review capacity, costs or label-report dates) are stated as limitations rather than filled with invented data;
 - the temporal split was chosen from transaction volume alone, without using fraud prevalence or feature–target relationships. Before the split was fixed, a one-off full-data check confirmed that `isFraud` existed, contained only binary values and had no missing values, as disclosed in [DR-001](decisions/DR-001-temporal-split-strategy.md).
 
-In this repository, **"simulated"** refers only to the review-capacity and cost **scenarios** (DR-002, DR-007), and **"synthetic"** only to SMOTE (the Synthetic Minority Over-sampling Technique, excluded from the design), small test fixtures, and example inputs for the demonstration interface.
+In this repository, **"simulated"** refers only to the review-capacity and cost **scenarios** (DR-002, DR-007), and **"synthetic"** only to SMOTE (the Synthetic Minority Over-sampling Technique, excluded from the design), small test fixtures, the data-free inputs of the graphics processing unit (GPU) memory feasibility and acceptance probes and of the micro-batch preflight, and example inputs for the demonstration interface.
 
 ## Data Structure
 
@@ -74,14 +74,7 @@ train_transaction.csv
 train_identity.csv
 ```
 
-Local Parquet copies may be produced for efficient experimental processing:
-
-```text
-train_transaction.parquet
-train_identity.parquet
-```
-
-Parquet files are derivative storage formats only; they are not a separate dataset source.
+The data-preparation stage writes the development rows (Train, Validation 1 and Validation 2) to local Parquet files in `data/processed/` for efficient processing ([Processed files](#dataset-manifest); [Data Access After the Parquet Build](#data-access-after-the-parquet-build)). No Parquet copy of the full transaction or identity file is made, and none holds a Test row. Parquet files are derivative storage formats only; they are not a separate dataset source.
 
 ## Data-Use Terms
 
@@ -201,6 +194,7 @@ Computation findings in the data-understanding notebooks are corrected in develo
 | Frictionless Data Package | Open standard for describing a dataset in a `datapackage.json` descriptor [REF-106] |
 | Parquet | Column-oriented file format used for the local processed files |
 | Provenance record | `*.provenance.json` file describing how a processed file was produced |
+| GPU | Graphics processing unit |
 | IEEE-CIS | IEEE Computational Intelligence Society |
 | [D] | Evidence tag: observed dataset evidence |
 | [I] | Evidence tag: inference or recommendation |

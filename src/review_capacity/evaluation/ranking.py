@@ -251,6 +251,10 @@ def _r3_metrics(
     }
 
 
+def _unit(value: float) -> float:
+    return min(max(float(value), 0.0), 1.0)
+
+
 def ranking_outcome(truth: Truth, scores: npt.NDArray[Any]) -> dict[str, float | None]:
     """Average Precision and ROC-AUC of the whole ranking, with equal scores kept as one group
     (scikit-learn merges equal thresholds): no tie-break enters either measure."""
@@ -263,9 +267,11 @@ def ranking_outcome(truth: Truth, scores: npt.NDArray[Any]) -> dict[str, float |
     if truth.labels.min() == 1:
         raise DataValidationError("ROC-AUC is undefined: the partition has no legitimate row")
     with log_step(logger, "Average Precision and ROC-AUC"):
+        # Both measures lie in [0, 1]; the sums that compute them can leave it by rounding
+        # (a perfect ranking gives an Average Precision of 1.0000000000000002).
         return {
-            "average_precision": float(average_precision_score(truth.labels, exact)),
-            "roc_auc": float(roc_auc_score(truth.labels, exact)),
+            "average_precision": _unit(average_precision_score(truth.labels, exact)),
+            "roc_auc": _unit(roc_auc_score(truth.labels, exact)),
         }
 
 

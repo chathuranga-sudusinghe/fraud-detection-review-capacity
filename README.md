@@ -46,7 +46,7 @@ The study is organised along the ten stages of the Foundational Methodology for 
 | 4 | Data collection | Secondary data: source, use terms, checksums, manifest | Use terms verified; checksums recorded; dataset manifest generated and committed (Issue #62) | [Dataset](docs/dataset.md#dataset-manifest), [`data/datapackage.json`](data/datapackage.json), notebooks 01–02 |
 | 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](notebooks/README.md), [feature catalog](docs/feature-catalog.md) |
 | 6 | Data preparation | Chronological split; feature policy; validation contract; data pipeline | Split, feature policy (433 inputs) and tree-based and neural-network input representations fixed; validation contract and data-preparation pipeline implemented and verified on the raw data (Issue #62) | [Data-preparation record](docs/data-preparation.md), [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), [DR-008](docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](docs/decisions/DR-012-neural-network-input-representation.md), [`src/review_capacity/`](src/review_capacity/) |
-| 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; neural graphics processing unit (GPU) memory probe completed (Issue #50); training-device policy fixed in Issue #66, with the LightGBM central processing unit (CPU) revision pending review ([DR-013](docs/decisions/DR-013-training-device-policy.md), Issue #101), and its synthetic acceptance probe pending; training rules pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
+| 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style MLP, FT-Transformer) × unweighted/balanced; common training procedure; development runs | Model set defined; neural graphics processing unit (GPU) memory probe completed (Issue #50); training-device policy fixed ([DR-013](docs/decisions/DR-013-training-device-policy.md); LightGBM on the central processing unit, CPU) with its synthetic acceptance probe passed ([results](docs/gpu-acceptance-probe.md)); common training rules fixed ([DR-015](docs/decisions/DR-015-common-training-rules.md)); development pipeline implemented and reviewed; development runs pending | [Protocol](docs/protocol.md), [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md) |
 | 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after freeze | Design defined; runs after freeze | [Protocol: Statistical Plan](docs/protocol.md#statistical-plan) |
 | 9 | Deployment (demonstration) | Research report; local demonstration application programming interface (API) on synthetic example requests (not IEEE-CIS rows) | Planned | — |
 | 10 | Feedback (review) | Supervisor review; limitations; future work | Ongoing | — |
@@ -140,6 +140,16 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
    `run-development` runs, in one run, the logistic-regression reference (`LR`, first, so that a convergence failure shows before the model searches start) and the eight configurations in DR-011 order (`--configurations` chooses a subset). For each it runs the declared search, selects on V1, scores V1 and V2, evaluates R3 and the ranking, and times scoring, writing dated, ignored records, `summary.md` and `run.log` to `outputs/development/<UTC start time>/` (`--output` must name a new directory inside `outputs/`). The neural models and the reference need the shared preprocessing artifact (`--preprocessing`), and the neural models the micro-batch preflight (`--preflight`), which must have been made for the same artifact, training declaration, model settings, package source and GPU. A neural model is reloaded only after its saved hyperparameters and batching are checked against the declaration and the recorded batch plan. The run record names the approved cost prediction. It refuses to start if the plan differs from the approved cost or from the training declaration. The conditions of the timing session are recorded with each timing as context; no condition is required ([DR-015](docs/decisions/DR-015-common-training-rules.md) §9). `review-capacity --help` lists every option.
 
+   The results that follow from a completed run are produced in a new **analysis run** that reads the closed development run and never changes it (`outputs/analysis/<UTC start time>/`, with a `source/` link to the development run so that every reference resolves). Its stages are `thresholds` (R0–R2 and their workload), `calibration` (calibrators, R4 and the RQ3 cost analysis), `h3` (the H3 configuration selection and its label-latency check) and `refits` (the fixed-length refits and the CatBoost CPU–GPU comparison; they train models, use the preprocessing artifact and the batch plans that the development run recorded, and are named explicitly). Each stage can be repeated in a new analysis run. The `thresholds`, `calibration` and `h3` stages read the saved scores only (no model is fitted); the `h3` record is the binding selection of the H3 configuration, committed before the Test period is unsealed:
+
+   ```bash
+   .venv/bin/review-capacity analyse-development --source outputs/development/<UTC start time>
+   ```
+
+   ```bash
+   .venv/bin/review-capacity analyse-development --source outputs/development/<UTC start time> --stages refits
+   ```
+
    Before any neural run or run of the reference, the shared Train-only preprocessing of the two neural models ([DR-012](docs/decisions/DR-012-neural-network-input-representation.md)) is fitted once (a consequential step under the same execution rules; it reads the processed development files only):
 
    ```bash
@@ -155,7 +165,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | Path | Contents |
 |---|---|
 | [`docs/protocol.md`](docs/protocol.md) | Research protocol: questions, hypotheses, analytic approach, data requirements, methods, statistical plan, design items, freeze conditions |
-| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-014: the reason for each design choice |
+| [`docs/decisions/`](docs/decisions/README.md) | Decision Records DR-001–DR-015: the reason for each design choice |
 | [`docs/research-foundation.md`](docs/research-foundation.md) | Research problem, aim, objectives, contribution |
 | [`docs/literature-review.md`](docs/literature-review.md) | Literature review and research gap |
 | [`docs/literature-evidence-matrix.md`](docs/literature-evidence-matrix.md) | Field-by-field comparison of the selected studies |
@@ -169,6 +179,7 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 | [`config/features.yaml`](config/features.yaml) | Machine-readable model-input roles (433 inputs: 431 declared columns and 2 time-of-day inputs) |
 | [`config/dataset.yaml`](config/dataset.yaml) | Machine-readable raw files, DR-001 partitions and their integrity anchors |
 | [`config/models.yaml`](config/models.yaml) | Machine-readable DR-013 device and numerical settings and the recorded LightGBM build |
+| [`config/training.yaml`](config/training.yaml) | Machine-readable DR-015 training rules: search budget, seeds, search spaces, reference configurations, fixed settings and early stopping |
 | [`src/review_capacity/`](src/review_capacity/) | Research code: data loading, validation and preparation (`data/`), model inputs and the shared neural preprocessing (`features/`), model interface, configurations and device controls (`models/`), development record contracts and Markdown summary specification, fixed-length refits and the fresh process of the same-seed repeat, the fitting of the calibrators with the R4 and RQ3 records, and the binding and label-latency H3 selection records (`development/`), the shared daily review queue and V1 objective, R3 and ranking outcomes, the threshold policies R0–R2 with their workload, the pseudo-entity key and paired bootstrap of the CPU–GPU comparison, the calibrators, R4 and the exact RQ3 cost analysis, and the H3 configuration rule (`evaluation/`), the training declaration, candidate sampler and search-cost prediction (`training/`); command `review-capacity` |
 | [`pyproject.toml`](pyproject.toml), [`uv.lock`](uv.lock), [`.python-version`](.python-version) | Pinned dependencies, locked environment (uv) and Python version |
 | `evidence/` | Engineering evidence: [GPU memory probe results](evidence/gpu_probe/README.md) (Issue #50); [GPU acceptance probe records](evidence/gpu_acceptance_probe/README.md) (Issue #77) |
@@ -187,6 +198,6 @@ The ethics and governance status is documented in the [protocol](docs/protocol.m
 
 Next steps:
 
-1. Resolution of the protocol's remaining design items, in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); supervisor feedback welcome throughout.
-2. Training rules: search procedure, early stopping, tie handling, seeds, neural-network representation, calibration details.
+1. Resolution of the protocol's remaining design items, in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)), among them the window design of the rolling-origin supplement (Issue #159); supervisor feedback welcome throughout.
+2. Final pre-training sweep of the repository and the analysis command that runs the post-selection stage on a completed development run (Issue #166).
 3. Development runs on Train, Validation 1 (V1) and Validation 2 (V2); protocol freeze; single Test evaluation; statistical analysis and reporting.

@@ -340,3 +340,21 @@ def test_r3_refuses_scores_other_than_float32_or_float64() -> None:
     queue, truth, scores = small()
     with pytest.raises(DataValidationError, match="floating point"):
         r3_outcome(queue, truth, scores.astype(np.float16), CAPACITY)
+
+
+def test_a_perfect_ranking_has_measures_of_exactly_one_even_when_the_sums_round_up() -> None:
+    days = keys(1, 1, 1, 1, 2, 2, 2, 2)
+    labels = np.array([1, 1, 0, 0, 1, 1, 0, 0], dtype=np.int8)
+    truth = Truth.build(days, labels, np.ones(8))
+    scores = np.array([0.9, 0.8, 0.3, 0.2, 0.95, 0.85, 0.3, 0.1])
+    measures = ranking_outcome(truth, scores)
+    assert measures["average_precision"] == 1.0
+    assert measures["roc_auc"] == 1.0
+    rng = np.random.default_rng(3)
+    wide = rng.random(400) < 0.3
+    labels = wide.astype(np.int8)
+    truth = Truth.build(np.repeat(np.arange(1, 5, dtype=np.int64), 100), labels, np.ones(400))
+    perfect = ranking_outcome(truth, labels * 0.5 + rng.random(400) * 0.01 + 0.4 * labels)
+    average_precision = perfect["average_precision"]
+    assert average_precision is not None
+    assert 0.0 <= average_precision <= 1.0  # the contract's SHARE bound

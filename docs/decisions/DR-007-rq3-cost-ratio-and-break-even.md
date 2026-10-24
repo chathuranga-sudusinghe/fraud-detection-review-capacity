@@ -322,7 +322,7 @@ Uncertainty reporting (descriptive):
 ### 8. Calibration
 
 **Calibration is required for R4** and is fitted on V2.
-- **Why calibration matters for R4.** R4 compares p̂ with an absolute threshold. R3 and every rate-based policy use only the ranking [REF-038, REF-073]. Miscalibration always lowers decision value and can make the cost-aware rule worse than its default alternative [REF-074].
+- **Why calibration matters for R4.** R4 compares p̂ with an absolute threshold. R3 and every rate-based policy use only the ranking [REF-038, REF-073]. In simulations, miscalibration reduced decision value (net benefit), and it can make the cost-aware rule worse than its default alternative [REF-074]; it does not change the realised cost when it leaves every review decision unchanged.
 - **Primary: Platt scaling fitted on V2**, as in the protocol.
   - **Input and map:** the float64 log-odds z of the raw score s_i, clipped to [10⁻¹⁵, 1 − 10⁻¹⁵], mapped to p̂ by a sigmoid with intercept κ_0 and slope κ_1 > 0 (displayed with its definitions in the [protocol](../protocol.md#calibration)). On log-odds the family contains the identity on the unclipped interior, which logistic calibration on the score itself does not [REF-132]. For a model fitted on the class-weighted likelihood, the unrestricted population optimum of the weighted log-loss satisfies
 
@@ -429,7 +429,7 @@ The cost-difference plot follows the cost-curve idea of plotting performance acr
 - **[L]** Zhang et al. [REF-078] show, on IEEE-CIS with a separate policy-selection period, the binding-versus-slack pattern this record anticipates: at a tight capacity ceiling their calibrated cost-threshold queue was clipped to the ceiling in almost every run, while at a slack ceiling full-capacity review cost markedly more than the calibrated threshold.
   - Their calibrated rule overlaps strongly with R4: a Platt-calibrated probability compared with a cost-derived threshold of the same form as p\* = (C_R + C_FP) / (C_miss + C_FP), capped at the review ceiling. Their ceiling applies per evaluation period rather than per day, and they report regret against a retrospective oracle rather than break-even ratios.
   - ρ_BE and ρ_sat are therefore an extension and alternative operationalisation of that pattern under a fixed daily cap, not a primary novelty claim.
-- **[L]** The protocol cites REF-007 for amount-dependent costs. Its author copy could not be read in this pass (access restricted), so the amount-dependent cost structure is supported here by REF-073, which was read in full (arXiv version).
+- **[L]** The protocol cites REF-007 for amount-dependent costs. Its published version was read in full on 10 October 2026 (Issue #64), but the amount-dependent cost structure is supported here by REF-073, which was read in full (arXiv version).
 
 
 ### Calibration methods

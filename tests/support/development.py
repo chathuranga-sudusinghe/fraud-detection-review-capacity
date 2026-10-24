@@ -292,6 +292,7 @@ _BODIES: dict[str, dict[str, Any]] = {
         },
         "configurations": [*CONFIGURATION_NAMES, REFERENCE],
         "contracts": contract_versions(),
+        "source": None,
     },
     "preprocessing": {
         "artifact": file("outputs/preprocessing/2026-10-20T080000Z/manifest.json"),

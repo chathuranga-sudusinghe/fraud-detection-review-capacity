@@ -37,7 +37,7 @@ from review_capacity.development.scoring import (
     read_scores,
 )
 from review_capacity.development.trial import run_file
-from review_capacity.errors import ModelError, ReviewCapacityError
+from review_capacity.errors import FileAccessError, ModelError, ReviewCapacityError
 from review_capacity.evaluation.calibration import (
     EPSILON,
     GRADIENT_TOLERANCE,
@@ -72,6 +72,13 @@ class FittedCalibrator:
     calibrator: Calibrator
     record: dict[str, str]
     fitting_days: dict[str, int]
+
+
+def _make_directory(directory: Path) -> None:
+    try:
+        directory.mkdir(exist_ok=True)
+    except OSError as error:
+        raise FileAccessError(f"{directory}: cannot be created ({error.strerror})") from error
 
 
 def artifact_path(run: RunDirectory, configuration: str, method: str, period: str) -> Path:
@@ -212,7 +219,7 @@ def _calibrate_one(
         try:
             calibrator, fields = _fit(method, fit_scores, fit_labels)
             path = artifact_path(output, name, method, period)
-            path.parent.mkdir(exist_ok=True)
+            _make_directory(path.parent)
             calibrator.save(path)
             again = load_calibrator(method, path)
             if not np.array_equal(again.predict(fit_scores), calibrator.predict(fit_scores)):

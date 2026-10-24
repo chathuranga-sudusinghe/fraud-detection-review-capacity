@@ -26,8 +26,18 @@ from review_capacity.config import SECONDS_PER_DAY
 from review_capacity.development.evaluation import truth_of
 from review_capacity.development.inputs import ScoringInputs
 from review_capacity.development.records import DevelopmentPartitions
-from review_capacity.development.run_output import RECORDS_DIR, LoadedRun, RunDirectory
-from review_capacity.development.scoring import MODEL_ROLE, ScoredPartition, read_scores
+from review_capacity.development.run_output import (
+    RECORDS_DIR,
+    LoadedRun,
+    RunDirectory,
+    source_file,
+)
+from review_capacity.development.scoring import (
+    MODEL_ROLE,
+    ScoredPartition,
+    check_selected,
+    read_scores,
+)
 from review_capacity.errors import DataValidationError, RecordContractError
 from review_capacity.evaluation.ranking import Capacity, Subject, Truth, capacity_budgets
 from review_capacity.evaluation.thresholds import (
@@ -50,10 +60,16 @@ logger = logging.getLogger(__name__)
 
 
 def saved_partition(
-    source: LoadedRun, inputs: ScoringInputs, configuration: str, label: str
+    source: LoadedRun,
+    inputs: ScoringInputs,
+    configuration: str,
+    label: str,
+    *,
+    rebase: bool = False,
 ) -> ScoredPartition:
     """The selected ``configuration``'s saved scoring of partition ``label``, from the records of
-    a loaded run: its rows, the references of its score file and score record, and its time."""
+    a loaded run: its rows, the references of its score file and score record, and its time.
+    With ``rebase``, the references are written under the ``source/`` link of an analysis run."""
     matches = [
         (name, record)
         for name, record in source.records
@@ -70,13 +86,11 @@ def saved_partition(
     name, record = matches[0]
     path = source.path / RECORDS_DIR / name
     reference = {"path": f"{RECORDS_DIR}/{name}", "sha256": file_sha256(path)}
+    file = dict(record["file"])
+    if rebase:
+        file, reference = source_file(file), source_file(reference)
     return ScoredPartition(
-        configuration,
-        label,
-        inputs.partition(label),
-        dict(record["file"]),
-        reference,
-        record["seconds"],
+        configuration, label, inputs.partition(label), file, reference, record["seconds"]
     )
 
 
@@ -108,6 +122,8 @@ def evaluate_thresholds(
     if (v1.label, v2.label) != ("V1", "V2") or v1.configuration != v2.configuration:
         raise DataValidationError("The threshold policies need the V1 and V2 scores of one model")
     name = v2.configuration
+    check_selected(v1, seed)
+    check_selected(v2, seed)
     written: dict[str, Path] = {}
     with log_step(logger, f"Evaluating the threshold policies of the selected {name}"):
         v2_scores = read_scores(source, v2.file, v2.rows)

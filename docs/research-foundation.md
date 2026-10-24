@@ -81,7 +81,7 @@ The structured literature review ([`literature-review.md`](literature-review.md)
 **No novelty is claimed for any single element**, each of which has established prior work:
 - fraud-detection algorithms, and the tree-vs-neural comparison on general tabular benchmarks [REF-087, REF-089, REF-090];
 - temporal evaluation, including chronological evaluation on this dataset [REF-023, REF-041, REF-058];
-- capacity-constrained evaluation and top-K review, including daily alert budgets [REF-006, REF-004, REF-005, REF-046, REF-084, REF-086], and capacity-motivated ranking metrics on IEEE-CIS [REF-099];
+- capacity-constrained evaluation and top-K review (K: the fixed number of reviews per relative day), including daily alert budgets [REF-006, REF-004, REF-005, REF-046, REF-084, REF-086], and capacity-motivated ranking metrics on IEEE-CIS [REF-099];
 - validation-selected thresholds applied unchanged to later data [REF-058, REF-079, REF-080];
 - temporal transfer of review policies under capacity, including a separate policy-selection period [REF-078];
 - cost-sensitive thresholding and calibrated cost-threshold policies [REF-008, REF-039, REF-078];
@@ -93,7 +93,7 @@ The structured literature review ([`literature-review.md`](literature-review.md)
 The contribution therefore has these components, in order of distinctiveness:
 
 1. **RQ2 / H3 (confirmatory).** A pre-specified equivalence test of whether the alert rate of a validation-selected score threshold stays within a pre-specified margin of its target on later data ([protocol: H3](protocol.md#h3--alert-rate-transfer-fidelity)), with a descriptive tree-vs-neural comparison of threshold transfer.
-2. **Daily-budget fidelity (descriptive, separate from H3).** Threshold-generated demand compared with the fixed daily budget K (overflow, unused capacity, load ratio), with the workload deviation separated into an alert-rate component and a volume-driven component ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)).
+2. **Daily-budget fidelity (descriptive, separate from H3).** Threshold-generated demand compared with the fixed daily review budget K (overflow, unused capacity, load ratio), with the workload deviation separated into an alert-rate component and a volume-driven component ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)).
 3. **RQ1 / H1, H2 (confirmatory).** A pre-specified, dependence-aware comparison of tree-based and neural model families, and of class weighting, at fixed daily capacity on chronological data, under one common training procedure ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md), [DR-006](decisions/DR-006-bootstrap-inference-strategy.md), [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md)). Fraud-specific evidence on this family question is limited and mostly non-temporal [REF-098, REF-099, REF-100, REF-101]; the study contributes a capacity-based, temporally validated answer for these pipelines.
 4. **RQ3 as a replication-plus-extension.** Zhang et al. [REF-078] show that a calibrated cost threshold and full-capacity review are largely compressed toward the same capacity ceiling when capacity is tight and diverge when capacity is slack. RQ3 re-examines this pattern under this study's fixed daily cap and summarises it as break-even and saturation cost ratios (ρ_BE, ρ_sat; [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md)).
 

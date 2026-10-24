@@ -96,8 +96,24 @@ Commands:
                    development files only; the Test period is never read. Consequential: run
                    only after its scope is approved
 
+    analyse-development
+                   the post-selection analyses of a completed development run (--source), in a
+                   new analysis run that never changes the source run: stages thresholds
+                   (R0–R2 and their workload, R1 selections), calibration (Platt and isotonic
+                   calibrators, R4 and the RQ3 cost analysis), h3 (the H3 configuration selection
+                   and its label-latency check) and refits (the fixed-length refits and the
+                   CatBoost CPU–GPU comparison; they train models, using the preprocessing
+                   artifact and the batch plans that the source run recorded). --stages chooses
+                   the stages (default: thresholds, calibration, h3); each stage can be repeated
+                   in a new analysis run. Writes records, a generated summary.md and its log,
+                   always run.log (--log-file is refused), to a new directory inside outputs/:
+                   --output, or by
+                   default outputs/analysis/<UTC start time, YYYY-MM-DDTHHMMSSZ>/. Reads the
+                   verified processed development files only; the Test period is never read
+
     refit-fresh    one fixed-length refit of a selected setting, fitted and saved in a fresh
-                   process (DR-013 §6; DR-015 §4); started by the development run, not by hand
+                   process (DR-013 §6; DR-015 §4); an internal step of the refit stage, not run
+                   by hand
 
     summarise-run  regenerate summary.md of a development run directory from its records alone
                    (also after an interrupted run); reads no data and fits no model
@@ -165,6 +181,7 @@ from review_capacity.probe.records import (
 from review_capacity.provenance import code_provenance, write_record
 
 if TYPE_CHECKING:
+    from review_capacity.development.analysis import AnalysisOptions
     from review_capacity.development.runner import DevelopmentOptions
 
 logger = logging.getLogger(__name__)
@@ -532,13 +549,49 @@ def _refit_fresh(args: argparse.Namespace) -> int:
     return 0
 
 
+def _analysis_options(args: argparse.Namespace) -> AnalysisOptions:
+    """The options of ``analyse-development``; the start time is fixed on ``args`` at the first
+    call, so that the log file, the records and the directory agree."""
+    from review_capacity.development.analysis import DEFAULT_STAGES, AnalysisOptions
+    from review_capacity.development.run_output import run_id
+
+    if getattr(args, "started", None) is None:
+        args.started = run_id()
+    return AnalysisOptions(
+        source=args.source.resolve(),
+        stages=tuple(args.stages or DEFAULT_STAGES),
+        output=args.output,
+        started=args.started,
+    )
+
+
+def _analysis_directory(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The new run directory of ``analyse-development``, shown to be free for a new run."""
+    from review_capacity.development.analysis import analysis_directory
+    from review_capacity.development.run_output import check_new_directory
+
+    options = _analysis_options(args)
+    return check_new_directory(analysis_directory(paths, options, args.started), paths.root)
+
+
+def _analyse_development(args: argparse.Namespace) -> int:
+    from review_capacity.development.analysis import prepare_analysis, run_analysis
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    setup = prepare_analysis(paths, _analysis_options(args))
+    directory = run_analysis(setup)
+    logger.info("Analysis run written to %s", directory)
+    return 0
+
+
 def _summarise_run(args: argparse.Namespace) -> int:
     from review_capacity.development.records import DevelopmentPartitions
     from review_capacity.development.rendering import write_summary
 
     paths = ProjectPaths.discover(args.root)
     partitions = DevelopmentPartitions.from_spec(load_dataset_spec(paths), paths)
-    write_summary(args.run_directory.resolve(), partitions)
+    write_summary(args.run_directory.resolve(), partitions, paths.root)
     return 0
 
 
@@ -599,6 +652,15 @@ def _log_file(args: argparse.Namespace) -> Path | None:
                 "omit --log-file"
             )
         return _development_directory(args, ProjectPaths.discover(args.root)) / RUN_LOG_NAME
+    if args.command == "analyse-development":
+        from review_capacity.development.run_output import LOG_NAME as ANALYSIS_LOG_NAME
+
+        if args.log_file is not None:
+            raise SpecificationError(
+                f"analyse-development writes its log to {ANALYSIS_LOG_NAME} in its output "
+                "directory; omit --log-file"
+            )
+        return _analysis_directory(args, ProjectPaths.discover(args.root)) / ANALYSIS_LOG_NAME
     if args.command == "probe-catboost-objective":
         if args.log_file is not None:
             raise SpecificationError(
@@ -809,9 +871,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="new directory for this run (default: outputs/development/<UTC time>)",
     )
     development.set_defaults(handler=_run_development)
+    analysis = commands.add_parser(
+        "analyse-development",
+        help="the post-selection analyses of a completed development run, in a new run",
+    )
+    analysis.add_argument("--root", type=Path, default=None, help="project root directory")
+    analysis.add_argument(
+        "--source",
+        type=Path,
+        required=True,
+        help="the completed development run to analyse (a directory under outputs/development/)",
+    )
+    analysis.add_argument(
+        "--stages",
+        nargs="+",
+        default=None,
+        metavar="STAGE",
+        help="thresholds, calibration, h3 and refits (default: thresholds, calibration, h3; "
+        "refits train models and are named explicitly; the neural refits use the "
+        "preprocessing artifact and the batch plans recorded in the source run)",
+    )
+    analysis.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="new directory for this run (default: outputs/analysis/<UTC time>)",
+    )
+    analysis.set_defaults(handler=_analyse_development)
     refit_fresh = commands.add_parser(
         "refit-fresh",
-        help="fit one fixed-length refit in a fresh process (started by the development run)",
+        help="one fixed-length refit in a fresh process (internal step of the refit stage)",
     )
     refit_fresh.add_argument("--root", type=Path, default=None, help="project root directory")
     refit_fresh.add_argument("--job", type=Path, required=True, help="the job file of the refit")
@@ -858,6 +947,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "fit-neural-preprocessing",
         "preflight-neural",
         "run-development",
+        "analyse-development",
     )
     try:
         configure_logging(level, terminal_tracebacks=args.debug)  # until the log file is known

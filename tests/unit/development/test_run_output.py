@@ -12,11 +12,13 @@ import pytest
 from review_capacity.development.records import dump_record, validate_record
 from review_capacity.development.run_output import (
     END_KIND,
+    SOURCE_LINK,
     RunDirectory,
     check_new_directory,
     default_directory,
     load_run,
     run_id,
+    source_file,
 )
 from review_capacity.errors import FileAccessError, RecordContractError, SpecificationError
 from review_capacity.files import write_new_atomically
@@ -449,3 +451,26 @@ def test_an_interrupt_in_the_summary_does_not_replace_the_original_exception(
     end = load_run(run.path, PARTITIONS).end
     assert end is not None
     assert end["outcome"] == "failed"
+
+
+def test_an_analysis_run_links_the_source_run_so_that_source_paths_resolve(
+    tmp_path: Path,
+) -> None:
+    source = new_run(tmp_path)
+    (source.path / "scores").mkdir()
+    (source.path / "scores" / "a.txt").write_text("saved scores", encoding="utf-8")
+    analysis = RunDirectory.create(
+        tmp_path, PARTITIONS, "analysis", "2026-10-21T091530Z", source=source.path
+    )
+    link = analysis.path / SOURCE_LINK
+    assert link.is_symlink()
+    assert not Path(str(link.readlink())).is_absolute()  # relative: the outputs tree can move
+    reference = {"path": "scores/a.txt", "sha256": "a" * 64}
+    rebased = source_file(reference)
+    assert rebased == {"path": "source/scores/a.txt", "sha256": "a" * 64}
+    assert (analysis.path / rebased["path"]).read_text(encoding="utf-8") == "saved scores"
+    assert analysis.path == tmp_path / "outputs" / "analysis" / "2026-10-21T091530Z"
+
+
+def test_a_run_without_a_source_has_no_link(tmp_path: Path) -> None:
+    assert not (new_run(tmp_path).path / SOURCE_LINK).exists()

@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any
 
 from review_capacity.development.records import DevelopmentPartitions
-from review_capacity.development.rendering import render_summary
+from review_capacity.development.rendering import load_source_of, render_summary
 from review_capacity.development.run_output import (
     END_KIND,
     LOG_NAME,
@@ -85,11 +85,12 @@ def _check_completed(directory: Path, run: LoadedRun) -> None:
         raise SpecificationError(f"{directory}: the run {run.end['outcome']}; only completed runs")
 
 
-def _check_summary(directory: Path, run: LoadedRun) -> bytes:
+def _check_summary(directory: Path, run: LoadedRun, source: LoadedRun | None) -> bytes:
     """The summary file must be, byte for byte, the one generated from the records (read only
-    after ``_files`` has shown it to be a regular file); returns those bytes."""
+    after ``_files`` has shown it to be a regular file; those of the source run too, for an
+    analysis run); returns those bytes."""
     summary = directory / SUMMARY_NAME
-    generated = render_summary(run).encode("utf-8")
+    generated = render_summary(run, source).encode("utf-8")
     try:
         current = summary.read_bytes() == generated
     except OSError as error:
@@ -174,7 +175,7 @@ def promote(
         run = load_run(source, partitions)
         _check_completed(source, run)
         names = _files(source, run)
-        summary = _check_summary(source, run)
+        summary = _check_summary(source, run, load_source_of(run, source, partitions, root))
         type_directory = base / run.identity["run_type"]
         if type_directory.is_symlink():
             raise SpecificationError(f"{type_directory} must be a directory, not a link")

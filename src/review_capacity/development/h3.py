@@ -33,6 +33,7 @@ from review_capacity.development.run_output import (
     LoadedRun,
     RunDirectory,
     load_run,
+    source_file,
 )
 from review_capacity.development.scoring import (
     MODEL_ROLE,
@@ -134,20 +135,26 @@ def _only(
 
 
 def select_primary(
-    run: RunDirectory, partitions: DevelopmentPartitions, identity: Mapping[str, Any]
+    run: RunDirectory,
+    partitions: DevelopmentPartitions,
+    identity: Mapping[str, Any],
+    *,
+    source: LoadedRun | None = None,
 ) -> Path:
     """Select the H3 configuration on all of V2 from the evaluation records already in ``run``
-    (the open development run) and write the binding ``h3_selection`` record into it; returns its
-    path. The candidates link the records they were taken from, which are in the same run."""
+    (the open development run), or in ``source``, the closed development run that an analysis
+    run reads, and write the binding ``h3_selection`` record into ``run``; returns its path. The
+    candidates link the records they were taken from: in the same run, or under its ``source/``
+    link."""
     v2 = partitions.v2
-    source = load_run(run.path, partitions)
+    records = load_run(run.path, partitions) if source is None else source
     capacity = _primary_capacity(partitions)
     with log_step(logger, "Selecting the H3 configuration on V2"):
         candidates = []
         for name in CONFIGURATION_NAMES:
             base = {"partition": "V2", "period": "primary", "model_role": MODEL_ROLE}
-            r3_name, r3 = _only(source, name, "R3", capacity=PRIMARY_CAPACITY, **base)
-            _, ranking = _only(source, name, "ranking", **base)
+            r3_name, r3 = _only(records, name, "R3", capacity=PRIMARY_CAPACITY, **base)
+            _, ranking = _only(records, name, "ranking", **base)
             average_precision = ranking["metrics"]["average_precision"]
             if average_precision is None:
                 raise RecordContractError(f"{name}: the V2 ranking record has no Average Precision")
@@ -160,8 +167,10 @@ def select_primary(
                 raise RecordContractError(f"{name}: V2 has no fraud in its R3 evaluation record")
             reference = {
                 "path": f"{RECORDS_DIR}/{r3_name}",
-                "sha256": file_sha256(source.path / RECORDS_DIR / r3_name),
+                "sha256": file_sha256(records.path / RECORDS_DIR / r3_name),
             }
+            if source is not None:
+                reference = source_file(reference)
             candidates.append(_candidate(name, r3, average_precision, reference))
         record = _selection_record(
             identity,
