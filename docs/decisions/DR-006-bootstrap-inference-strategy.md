@@ -59,8 +59,8 @@ This record fixes that choice using development-period evidence only.
 ### Exact paired resampling procedure (primary)
 
 Inputs from the one confirmatory Test evaluation, computed **once**:
-- For each of the eight configurations m ∈ {LGB-u, Cat-u, RES-u, FTT-u, LGB-b, Cat-b, RES-b, FTT-b} (LightGBM, CatBoost, ResNet-style MLP or FT-Transformer, unweighted or balanced weighting; [DR-011](DR-011-model-set-tree-based-and-neural-families.md)) and each Test relative day d, rank that day's transactions by m's score. Set c_{m,i} = 1 if fraud i is among day(i)'s top K = 56 under m, else 0. Ties are handled as pre-declared in the implementation.
-- For each Test fraud i: its day d(i), and its fine pseudo-entity e(i), built from Test-period features only (card1, addr1, P_emaildomain, relative day − D1).
+- For each of the eight configurations m ∈ {LGB-u, Cat-u, RES-u, FTT-u, LGB-b, Cat-b, RES-b, FTT-b} (LightGBM, CatBoost, ResNet-style multilayer perceptron (MLP) or Feature Tokenizer + Transformer (FT-Transformer), unweighted or balanced weighting; [DR-011](DR-011-model-set-tree-based-and-neural-families.md)) and each Test relative day d, rank that day's transactions by m's score. Set c_{m,i} = 1 if fraud i is among day(i)'s top K = 56 under m, else 0. Ties are handled as pre-declared in the implementation.
+- For each Test fraud i: its day d(i), and its fine pseudo-entity e(i), built from Test-period features only (card1, addr1, P_emaildomain, relative day − D1, where D1 is the dataset's anonymised time-delta input).
 
 For each bootstrap replicate b = 1, …, B (B = number of replicates):
 
@@ -304,6 +304,8 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | ℓ | Block length of a moving-block bootstrap, in days |
 | m | A model × weighting configuration (in the H2 formulas: a model) |
 | MLP | Multilayer perceptron |
+| D1 | The dataset's anonymised time-delta input, used in the fine pseudo-entity key |
+| FT-Transformer | Feature Tokenizer + Transformer |
 | N, T | Neural family {RES, FTT}; tree-based family {LGB, Cat} |
 | #{ · } | Number of bootstrap replicates satisfying a condition |
 | n_obs | Number of observations (in the variance approximation of Owen, REF-068) |

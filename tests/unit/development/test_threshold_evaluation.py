@@ -23,7 +23,7 @@ from review_capacity.development.scoring import (
 )
 from review_capacity.development.thresholds import evaluate_thresholds, saved_partition
 from review_capacity.development.trial import TrialOutcome, run_file
-from review_capacity.errors import DataValidationError, RecordContractError
+from review_capacity.errors import DataValidationError, ModelError, RecordContractError
 from review_capacity.evaluation.ranking import capacity_budgets
 from review_capacity.evaluation.thresholds import select_r1
 from review_capacity.models.registry import configuration
@@ -225,3 +225,17 @@ def test_the_saved_scoring_is_found_from_a_loaded_run(
         saved_partition(loaded, context.inputs, "LGB-u", "V1"),
         again,
     )
+
+
+def test_only_the_selected_main_seed_model_gets_threshold_policies(
+    scored: tuple[ScoringContext, TrialOutcome],
+) -> None:
+    context, selected = scored
+    v1, v2 = score_both(context, selected)
+    refit = replace(v2, role="seed_refit", seed=43, tag="seed_refit-s43")
+    with pytest.raises(ModelError, match="not those of the selected main-seed model"):
+        evaluate(context, v1, refit)
+    with pytest.raises(ModelError, match="not those of the selected main-seed model"):
+        evaluate(context, replace(v1, role="cpu_refit"), v2)
+    loaded = load_run(context.run.path, context.run.partitions)
+    assert [r for r in loaded.of_kind("evaluation") if r["policy"] in ("R0", "R1", "R2")] == []

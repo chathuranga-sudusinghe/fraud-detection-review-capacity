@@ -171,7 +171,7 @@ def test_the_run_reaches_the_repeat_through_the_fresh_process(
     assert scored.tag == "same_seed_repeat"
 
 
-def test_the_hidden_command_takes_a_job_file() -> None:
+def test_the_refit_fresh_command_takes_a_job_file() -> None:
     args = build_parser().parse_args(["refit-fresh", "--job", "j.json"])
     assert args.command == COMMAND
     assert args.job == Path("j.json")

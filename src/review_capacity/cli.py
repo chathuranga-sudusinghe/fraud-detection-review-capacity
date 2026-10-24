@@ -97,7 +97,8 @@ Commands:
                    only after its scope is approved
 
     refit-fresh    one fixed-length refit of a selected setting, fitted and saved in a fresh
-                   process (DR-013 §6; DR-015 §4); started by the development run, not by hand
+                   process (DR-013 §6; DR-015 §4); an internal step of the refit stage, not run
+                   by hand
 
     summarise-run  regenerate summary.md of a development run directory from its records alone
                    (also after an interrupted run); reads no data and fits no model
@@ -811,7 +812,7 @@ def build_parser() -> argparse.ArgumentParser:
     development.set_defaults(handler=_run_development)
     refit_fresh = commands.add_parser(
         "refit-fresh",
-        help="fit one fixed-length refit in a fresh process (started by the development run)",
+        help="one fixed-length refit in a fresh process (internal step of the refit stage)",
     )
     refit_fresh.add_argument("--root", type=Path, default=None, help="project root directory")
     refit_fresh.add_argument("--job", type=Path, required=True, help="the job file of the refit")

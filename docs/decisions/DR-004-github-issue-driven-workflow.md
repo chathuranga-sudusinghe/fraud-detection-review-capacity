@@ -9,9 +9,9 @@
 
 ## Context
 
-This is an MSc research project. Its credibility depends on being able to show *when* and *why* each methodological choice was made, and that no choice was influenced by the sealed Test period (relative days 155–182; [DR-001](DR-001-temporal-split-strategy.md)).
+This is a Master of Science (MSc) research project. Its credibility depends on being able to show *when* and *why* each methodological choice was made, and that no choice was influenced by the sealed Test period (relative days 155–182; [DR-001](DR-001-temporal-split-strategy.md)).
 
-Work is carried out with the help of artificial intelligence (AI) assistants: **Claude**, **Codex** and **ChatGPT**. They are used for:
+Work is carried out with the help of artificial intelligence (AI) assistants, which [`AGENTS.md`](../../AGENTS.md) lists. They are used for:
 - research planning;
 - methodological review;
 - literature discovery and verification;
@@ -38,7 +38,7 @@ The working rules that put this into practice, for every AI assistant, are recor
 
 **Every decision reached with an AI assistant is recorded in the repository or its GitHub issues, never only in a chat session or an assistant's memory.** A finalized decision enters its owner file through the active issue the same day, or an issue comment where no issue covers it yet; open items are listed in the issue that will decide them; assistants read the owner files and open issues before asking about a design item; and each working session ends with a "current state / next step" comment on the active issue. The operational rule is the "Decision capture" section of [`AGENTS.md`](../../AGENTS.md#decision-capture).
 
-**Claude, Codex and ChatGPT are recorded as the AI-assisted research and implementation tools used in this project.** Their output is never accepted automatically. It is reviewed, checked and corrected, and AI use is disclosed according to University of Greenwich requirements (AI Reflection, AIR; `REF-053` in [`../references.md`](../references.md)).
+**The AI assistants listed in [`AGENTS.md`](../../AGENTS.md) are recorded as the AI-assisted research and implementation tools used in this project.** Their output is never accepted automatically. It is reviewed, checked and corrected, and AI use is disclosed according to University of Greenwich requirements (AI Reflection, AIR; REF-109 to REF-111 in [`../references.md`](../references.md)).
 
 ## Workflow
 
@@ -105,14 +105,13 @@ Tiny **typo-only** fixes may be made without an issue: spelling, punctuation or 
 - **Traceability.** Every change links to a stated objective (issue), a reviewed diff (PR) and, for methodology, a Decision Record. Together these form an auditable timeline of what was decided before the Test period is unsealed. That timeline supports the protocol freeze and its Git tag.
 - **Continuity across sessions and assistants.** Several assistants and many chat sessions work on the same design. Recording each decision where every assistant reads (owner files and issues) keeps settled items settled and makes the decision date part of the record.
 - **Scope control for AI assistance.** An issue gives an AI assistant a bounded task and gives the review a checklist (the acceptance criteria). This reduces unrelated or unreviewed edits.
-- **Research integrity.** A dated issue and PR history is concrete evidence that model, policy and threshold choices were not informed by Test results. This is consistent with the University's commitment to the Concordat to Support Research Integrity (`REF-052`) and with the requirement to disclose AI use (`REF-053`).
+- **Research integrity.** A dated issue and PR history is concrete evidence that model, policy and threshold choices were not informed by Test results. This is consistent with the University's commitment to the Concordat to Support Research Integrity (`REF-052`) and with the requirement to disclose AI use (REF-109 to REF-111).
 
 ## Consequences
 
 - Small changes carry some overhead: an issue, a branch and a PR. This is accepted as the cost of traceability.
 - The GitHub issue and PR history becomes part of the project's research record and can be cited in the dissertation's methodology and reflection sections.
 - `AGENTS.md` must be kept consistent with `docs/protocol.md`. If they conflict on a methodological point, the protocol takes precedence until the conflict is resolved through an issue.
-- Commits made before this decision (up to and including the methodology-baseline merge) did not all follow this workflow. The rule applies from this decision onwards.
 
 ## Limitations
 
@@ -129,5 +128,17 @@ Tiny **typo-only** fixes may be made without an issue: spelling, punctuation or 
 
 ## References
 
-- `REF-052` (University of Greenwich, *Research Integrity*) and `REF-053` (University of Greenwich, *AI for students*); see [`../references.md`](../references.md).
+- `REF-052` (University of Greenwich, *Research Integrity*) and `REF-109` to `REF-111` (University of Greenwich guidance on AI use and the AI Reflection); see [`../references.md`](../references.md).
 - GitHub Docs, *Linking a pull request to an issue* (operational documentation; cited inline above).
+
+## Symbols and notation
+
+| Symbol / abbreviation | Meaning |
+|---|---|
+| AI | Artificial intelligence |
+| AIR | AI Reflection: the University of Greenwich statement of how AI was used, replacing the Declaration of AI use from 2026/27 |
+| DR | Decision Record |
+| MSc | Master of Science |
+| PR | Pull request |
+| REF-NNN | Reference identifier in `docs/references.md` |
+| Test | The sealed confirmatory partition (relative days 155–182, [DR-001](DR-001-temporal-split-strategy.md)) |

@@ -1,4 +1,6 @@
-# Code checks for every push and pull request to main that changes code (Issue #79).
+# Code checks for every push and pull request to main that changes code (Issue #79) or a document
+# that the unit tests read as specification (the DR-015 text, the feature catalog and the GPU
+# acceptance specification; Issue #166).
 # CI runs only the checks the project owner runs locally: ruff, strict mypy and the unit tests.
 # It never trains or scores a model on research data and never reads research data; unit tests fit
 # only small models on synthetic data. Only the synthetic unit tests are collected; the
@@ -13,6 +15,9 @@ on:
       - "src/**"
       - "tests/**"
       - "config/**"
+      - "docs/decisions/DR-015-common-training-rules.md"
+      - "docs/feature-catalog.md"
+      - "docs/gpu-acceptance-probe.md"
       - "pyproject.toml"
       - "uv.lock"
       - ".python-version"
@@ -23,6 +28,9 @@ on:
       - "src/**"
       - "tests/**"
       - "config/**"
+      - "docs/decisions/DR-015-common-training-rules.md"
+      - "docs/feature-catalog.md"
+      - "docs/gpu-acceptance-probe.md"
       - "pyproject.toml"
       - "uv.lock"
       - ".python-version"

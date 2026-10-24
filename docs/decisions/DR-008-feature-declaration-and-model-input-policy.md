@@ -9,7 +9,7 @@
 
 ## Context
 
-The study compares four models in two families, as research question 1 (RQ1) and hypothesis H1 (model-family effect) require ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)): the gradient-boosting libraries LightGBM and CatBoost, and the neural networks ResNet-style MLP and FT-Transformer. The protocol requires all four to receive **the same declared model inputs** under one common training procedure, so that a difference between the families can be attributed to the model-and-representation pipelines compared, not to unequal data or effort. Each family keeps the representation its models require: §5 for the tree-based models, [DR-012](DR-012-neural-network-input-representation.md) for the neural networks.
+The study compares four models in two families, as research question 1 (RQ1) and hypothesis H1 (model-family effect) require ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)): the gradient-boosting libraries LightGBM and CatBoost, and the neural networks ResNet-style multilayer perceptron (MLP) and Feature Tokenizer + Transformer (FT-Transformer). The protocol requires all four to receive **the same declared model inputs** under one common training procedure, so that a difference between the families can be attributed to the model-and-representation pipelines compared, not to unequal data or effort. Each family keeps the representation its models require: §5 for the tree-based models, [DR-012](DR-012-neural-network-input-representation.md) for the neural networks.
 
 The declaration is not trivial:
 - many nominal (unordered, label-like) fields are stored as numbers (`card1`, `addr1`, several `id_*` fields);

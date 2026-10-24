@@ -9,7 +9,7 @@
 
 ## Context
 
-Confirmatory hypothesis H1 compares the two model families, tree-based and neural, and hypothesis H2 compares class weighting (balanced vs unweighted), across the eight configurations of [DR-011](DR-011-model-set-tree-based-and-neural-families.md): LightGBM (LGB) and CatBoost (Cat) in the tree-based family, ResNet-style MLP (RES) and FT-Transformer (FTT) in the neural family, each unweighted (u) and balanced (b). Both hypotheses use the primary outcome: **Recall@2% (the share of frauds reviewed at 2 % review capacity) under the daily top-K policy R3 (review the K highest-scoring transactions each relative day), with K (fixed daily review budget) = 56 reviews per relative day** ([DR-002](DR-002-review-capacity-definition.md)).
+Confirmatory hypothesis H1 compares the two model families, tree-based and neural, and hypothesis H2 compares class weighting (balanced vs unweighted), across the eight configurations of [DR-011](DR-011-model-set-tree-based-and-neural-families.md): LightGBM (LGB) and CatBoost (Cat) in the tree-based family, ResNet-style multilayer perceptron (MLP) (RES) and Feature Tokenizer + Transformer (FT-Transformer) (FTT) in the neural family, each unweighted (u) and balanced (b). Both hypotheses use the primary outcome: **Recall@2% (the share of frauds reviewed at 2 % review capacity) under the daily top-K policy R3 (review the K highest-scoring transactions each relative day), with K (fixed daily review budget) = 56 reviews per relative day** ([DR-002](DR-002-review-capacity-definition.md)).
 
 The feasibility audit found four things:
 - **[D]** At 2 % capacity the oracle recall ceiling is ≈ 0.595 (V2).
@@ -275,6 +275,7 @@ REF-004, REF-005, REF-006, REF-019, REF-020, REF-028, REF-029, REF-030, REF-035,
 | m, w | Model (LGB, Cat, RES or FTT); weighting (u or b) |
 | ML | Machine learning |
 | MLP | Multilayer perceptron |
+| FT-Transformer | Feature Tokenizer + Transformer |
 | N, T | Neural family {RES, FTT}; tree-based family {LGB, Cat} |
 | N_w, T_w | Mean Recall@2% of the neural and tree-based family at weighting w |
 | p_disc | Share of frauds captured by exactly one of two configurations |

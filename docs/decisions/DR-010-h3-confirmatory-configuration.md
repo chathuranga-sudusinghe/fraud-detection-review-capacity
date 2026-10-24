@@ -9,7 +9,7 @@
 
 ## Context
 
-The study trains eight model × class-weighting configurations ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)): two tree-based models (LightGBM, CatBoost) and two neural models (ResNet-style MLP, FT-Transformer), each unweighted and with balanced class weighting (each fraud row weighted by the Train ratio of legitimate to fraud transactions).
+The study trains eight model × class-weighting configurations ([DR-011](DR-011-model-set-tree-based-and-neural-families.md)): two tree-based models (LightGBM, CatBoost) and two neural models (ResNet-style multilayer perceptron (MLP), Feature Tokenizer + Transformer (FT-Transformer)), each unweighted and with balanced class weighting (each fraud row weighted by the Train ratio of legitimate to fraud transactions).
 
 Hypothesis H3 (alert-rate transfer fidelity, [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)) concerns the score threshold τ₂ that policy R2 (the capacity-rate threshold) selects on Validation 2 (V2, relative days 127–154) so that 2 % of V2 transactions are flagged. H3 asks whether τ₂, applied unchanged to the Test period (relative days 155–182), still flags about 2 % of transactions. The realised Test alert rate is:
 
@@ -188,6 +188,7 @@ No new external references. REF-010, REF-029 and REF-038 are existing, verified 
 | (f*, w*) | The H3 configuration selected by the rule |
 | LGB-u, Cat-u, RES-u, FTT-u, LGB-b, Cat-b, RES-b, FTT-b | The eight model × weighting configurations (model-weighting), in tie-break order |
 | MLP | Multilayer perceptron |
+| FT-Transformer | Feature Tokenizer + Transformer |
 | F1 | Harmonic mean of precision and recall |
 | H1, H2, H3 | Confirmatory hypotheses: model family; class weighting; alert-rate transfer fidelity. H3₁ = alternative |
 | K | Fixed daily review budget (56 at 2 % capacity) |

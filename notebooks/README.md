@@ -23,7 +23,7 @@ Notebook 01 is retained unchanged as the timestamped pre-freeze record. Document
 
 | Section | Topic | Cited by |
 |---|---|---|
-| §2.1 | Files, sizes and SHA-256 checksums | [`references.md`](../docs/references.md) (REF-047); notebook 02 |
+| §2.1 | Files, sizes and Secure Hash Algorithm, 256-bit (SHA-256) checksums | [`references.md`](../docs/references.md) (REF-047); notebook 02 |
 | §2.3 | Column types | [DR-008](../docs/decisions/DR-008-feature-declaration-and-model-input-policy.md), [feature catalog](../docs/feature-catalog.md) |
 | §2.7 | Obvious data-quality checks | [Feature catalog](../docs/feature-catalog.md) |
 | §3 | Temporal structure (volume only) | [DR-001](../docs/decisions/DR-001-temporal-split-strategy.md), [DR-003](../docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-009](../docs/decisions/DR-009-overflow-handling-for-threshold-policies.md), [protocol](../docs/protocol.md) |
@@ -37,7 +37,7 @@ Notebook 01 is retained unchanged as the timestamped pre-freeze record. Document
 | §12 | Cost-sensitive and calibration feasibility | DR-007 |
 | §14 | Temporal drift between partitions | DR-001, DR-003 |
 | §15 | Entity recurrence and label dependence | DR-001, DR-005, [DR-006](../docs/decisions/DR-006-bootstrap-inference-strategy.md) |
-| §17 | MSc research suitability | DR-003 |
+| §17 | Master of Science (MSc) research suitability | DR-003 |
 
 Sections not listed (e.g. §10 class weighting, §13 false-negative feasibility, §16 leakage audit, §18–19 practice and University alignment) inform the protocol without section-number citations.
 
@@ -65,9 +65,9 @@ Notebook 01 is the pre-freeze feasibility record and is kept unchanged. Where it
 
 ## Running and committing
 
-- Use the project kernel **Python (fraud-detection-review-capacity)** from the repository root's `.venv`; raw files are expected in `data/raw/`.
-- **Notebook 01 is a historical evidence record and must not be rerun** while the Test period is sealed: its loader reads the complete target column before restricting analysis to development rows. Its saved outputs are the evidence; corrections are made in new notebooks through the issue workflow, not by re-executing it.
-- **Notebook 02** reads headers, key columns and (locally) a raw-row preview with `isFraud` excluded for Test-period rows. **Notebook 03** reads keys for all rows and full columns for development rows only. Neither trains a model.
+- Use the project kernel **Python (fraud-detection-review-capacity)** from the repository root's `.venv`.
+- **The raw files are read only by the one-time build of the processed development files** ([Data Access After the Parquet Build](../docs/dataset.md#data-access-after-the-parquet-build)). Notebooks 01–03 are historical evidence records that read the raw files as they ran: **none of them is rerun** while the Test period is sealed. Their saved outputs are the evidence; corrections and any new analysis are made in new notebooks that read the verified processed development files, through the issue workflow.
+- Notebook 01's loader reads the complete target column before restricting analysis to development rows, which is a further reason not to rerun it. **Notebook 02** read headers, key columns and (locally) a raw-row preview with `isFraud` excluded for Test-period rows. **Notebook 03** read keys for all rows and full columns for development rows only. Neither trains a model.
 - Before committing notebook 02, remove the outputs of cells tagged `local-only`:
 
   ```bash
@@ -79,6 +79,7 @@ Notebook 01 is the pre-freeze feasibility record and is kept unchanged. Where it
 | Symbol / abbreviation | Meaning |
 |---|---|
 | DR-NNN | Decision Record NNN in `docs/decisions/` |
+| MSc | Master of Science |
 | FT-Transformer | Feature Tokenizer + Transformer (a neural model for tabular data) |
 | H1, H2, H3; H3₀ | Confirmatory hypotheses: model-family effect; class-weighting effect; alert-rate transfer fidelity. H3₀ is the null hypothesis of H3 |
 | MLP | Multilayer perceptron |

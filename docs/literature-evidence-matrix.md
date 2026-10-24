@@ -27,7 +27,7 @@ Data type: *real* = real transactions; *synthetic* = simulated data. ULB = the U
 | REF-091 | Makki et al. (2019) | 10 million labelled card records from the Revolution Analytics dataset repository (whether real or simulated is not stated) | Random 70/30; 2 % subsample | Eight classifiers (e.g. C5.0, SVM, ANN, LR) | Resampling, cost-sensitive learning, one-class methods | No | Cost-sensitive learning | None | Random split | Imbalance methods raise sensitivity but produce more false alarms than detected frauds | Resampling cost in false alerts; supports exclusion of resampling | Full |
 | REF-093 | Zhao et al. (2024) | ULB, a Sparkov-simulated dataset and a 2020 Kaggle dataset | Stratified 2-fold cross-validation, repeated 5 times | LightGBM variants vs XGBoost, CatBoost, random forest | Class balancing, oversampling, cost-harmonisation loss | No | Cost savings | Repeated folds | Random folds | Combined methods raise F2; class balancing alone may not improve results | Class weighting alone is not reliably beneficial (H2 context) | Full |
 | REF-095 | Hayat & Magnier (2025) | Real; ULB | Deliberately flawed: SMOTE before the split | Minimal neural network | SMOTE (as the flaw studied) | No | No | n.r. | Purpose is to expose leakage | Leakage yields 99.9 % recall; four issues: preprocessing leakage, vague reporting, inadequate temporal validation, recall-only metrics | Justifies excluding resampling and using temporal splits | Full (arXiv version) |
-| REF-021 | Dal Pozzolo et al. (2015) | Synthetic data and real imbalanced datasets incl. ULB | 10-fold cross-validation | Several | Undersampling | No | Posterior correction for the changed prior; adjusted threshold | Cross-validation | — | Undersampling preserves ranking but distorts probabilities; correcting the posterior restores calibration | Ranking-based policies (R3) unaffected by rebalancing; R4 needs calibration | Full |
+| REF-021 | Dal Pozzolo et al. (2015) | Synthetic data and real imbalanced datasets incl. ULB | 10-fold cross-validation | Several | Undersampling | No | Posterior correction for the changed prior; adjusted threshold | Cross-validation | — | Undersampling distorts probabilities; the posterior correction is monotone and restores them without changing the fitted model's ranking (retraining on rebalanced data can change the ranking) | The posterior correction leaves R3's ranking unchanged; R4 needs calibration | Full |
 
 ---
 
@@ -52,7 +52,7 @@ Data type: *real* = real transactions; *synthetic* = simulated data. ULB = the U
 
 ## 3. Coverage of this study's design elements by the closest studies
 
-"Yes" = the element is present; "Partly" = a related but weaker form; "No" = absent. Proposed elements that are not yet part of the accepted design are marked †.
+"Yes" = the element is present; "Partly" = a related but weaker form; "No" = absent.
 
 | Design element | REF-078 | REF-080 | REF-079 | REF-058 | REF-098 | REF-099 | REF-005 / REF-086 |
 |---|---|---|---|---|---|---|---|
@@ -63,7 +63,7 @@ Data type: *real* = real transactions; *synthetic* = simulated data. ULB = the U
 | Static threshold transferred to later data | Partly (rate, not score) | Yes | Yes | Yes | n.r. | No | No |
 | Formal test of the transferred threshold's alert rate (H3) | No | No | No | No | No | No | No |
 | Class weighting compared, with an equivalence test (H2) | No | Partly (descriptive) | No | No | No | No | No |
-| Tree vs neural families under one tuning procedure † | Partly (LR, LightGBM, TabNet) | No | No | n.r. | Claimed, procedure not reported | Partly | No |
+| Tree vs neural families under one tuning procedure | Partly (LR, LightGBM, TabNet) | No | No | n.r. | Claimed, procedure not reported | Partly | No |
 | Cost-ratio sweep with break-even ratios (RQ3) | Partly (sweep) | Partly (sweep) | No | No | No | No | No |
 | Dependence-aware inference (day-level bootstrap, multiplicity control) | No (seeds) | No | No | n.r. | No | No | Partly (rank tests over days) |
 
@@ -76,7 +76,6 @@ Data type: *real* = real transactions; *synthetic* = simulated data. ULB = the U
 | Symbol / abbreviation | Meaning |
 |---|---|
 | [I] | Evidence tag: inference (not a statement from the source) |
-| † | Proposed design element, not yet adopted in the protocol |
 | ANN | Artificial neural network |
 | AUC, AUROC | Area under the receiver operating characteristic curve |
 | AUC-PR, PR-AUC | Area under the precision–recall curve |

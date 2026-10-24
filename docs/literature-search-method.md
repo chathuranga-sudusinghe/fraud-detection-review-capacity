@@ -2,7 +2,7 @@
 
 This document records how the literature for this study was searched, screened and selected, so that the evidence base can be reproduced and audited. The selected evidence is summarised in [`literature-evidence-matrix.md`](literature-evidence-matrix.md), discussed in [`literature-review.md`](literature-review.md) and listed with verification status in [`references.md`](references.md). It was produced under GitHub Issue #52.
 
-The search is a **structured literature search** with documented screening, not a full systematic review: it uses one bibliographic database plus targeted searches, and screening was carried out by one reviewer with AI assistance (Section 6).
+The search is a **structured literature search** with documented screening, not a full systematic review: it uses one bibliographic database plus targeted searches, and screening was a single pass with AI assistance (Section 6).
 
 ---
 
@@ -104,9 +104,9 @@ Targeted searches covered theme T2 and specific claims: the primary sources for 
 
 ---
 
-## 6. Reviewer and AI assistance
+## 6. Screening method and AI assistance
 
-Searching in IEEE Xplore and downloading paywalled full texts were done manually. Title and abstract screening, full-text reading, evidence extraction and bibliographic verification were carried out with an AI assistant (Claude), under the rules in [`AGENTS.md`](../AGENTS.md). All selection decisions are reviewed before they are used in the dissertation, and the use of AI is disclosed in the AI Reflection (AIR) required by the University of Greenwich [REF-053].
+Searching in IEEE Xplore and downloading paywalled full texts were done manually. Title and abstract screening, full-text reading, evidence extraction and bibliographic verification were carried out with AI assistance, under the rules in [`AGENTS.md`](../AGENTS.md). All selection decisions are reviewed before they are used in the dissertation, and the use of AI is disclosed in the AI Reflection (AIR) required by the University of Greenwich [REF-109, REF-111].
 
 Bibliographic details of every new source were checked against Crossref or the official proceedings record; verification status is recorded in [`references.md`](references.md).
 
@@ -116,7 +116,7 @@ Bibliographic details of every new source were checked against Crossref or the o
 
 - **One database.** Only IEEE Xplore was searched in a structured way. Journals indexed elsewhere (e.g. ScienceDirect, SpringerLink, ACM Digital Library) were reached only through targeted searches and citation follow-up, so relevant studies may have been missed. A cross-publisher database search (Scopus or Web of Science) would strengthen the gap statement.
 - **T1 export limit.** Only the first 1,000 of the T1 results were exported.
-- **Single reviewer.** Screening was not duplicated by an independent second reviewer.
+- **Single screening.** Screening was carried out once and was not duplicated independently.
 - **Keyword ordering.** The priority score is a heuristic; its known misses were addressed by title-screening every record.
 - **Access.** Some full texts (e.g. MDPI and Elsevier articles) could not be read from the verification environment; those sources are used only for what their abstracts state.
 
