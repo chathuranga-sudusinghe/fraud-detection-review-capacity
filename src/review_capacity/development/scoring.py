@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 import numpy as np
 import pandas as pd
 
-from review_capacity.config import SECONDS_PER_DAY, FeatureSpec, ModelSettings
+from review_capacity.config import SECONDS_PER_DAY, Device, FeatureSpec, ModelSettings
 from review_capacity.development.inputs import PartitionRows, ScoringInputs
 from review_capacity.development.memory import MemorySetup
 from review_capacity.development.run_output import RunDirectory
@@ -104,6 +104,9 @@ class ScoredPartition:
     file: dict[str, str]
     record: dict[str, str]
     seconds: float
+    role: str = MODEL_ROLE  # which model: the selected one, or a refit (DR-015 §4)
+    seed: int | None = None  # its training seed; None: the run's main seed
+    tag: str = MODEL_ROLE  # names its files: "selected", or e.g. "seed_refit-s43"
 
 
 def _neural(context: ScoringContext) -> NeuralRun:
@@ -136,38 +139,45 @@ def verify_neural_model(
 
 
 def load_selected(
-    context: ScoringContext, configuration: Subject, selected: TrialOutcome
+    context: ScoringContext,
+    configuration: Subject,
+    selected: TrialOutcome,
+    *,
+    directory: Path | None = None,
+    seed: int | None = None,
+    device: Device | None = None,
 ) -> ScoredModel:
-    """The selected trial's saved model, reloaded on its training device."""
+    """The selected trial's saved model, reloaded on its training device. A refit of the selected
+    setting (``directory``, its ``seed`` and ``device``) is reloaded in the same way."""
     kind, name = kind_of(configuration), configuration.name
-    with log_step(logger, f"Loading the selected {name} (trial {selected.trial})"):
+    where = selected.model_directory if directory is None else directory
+    with log_step(logger, f"Loading the {name} saved in {where.name} (trial {selected.trial})"):
         if kind == REFERENCE:
             fixed = dict(context.declaration.space(REFERENCE_MODEL).fixed)
-            return LogisticRegressionReference.load(
-                selected.model_directory, _neural(context).artifact, fixed
-            )
+            return LogisticRegressionReference.load(where, _neural(context).artifact, fixed)
         assert isinstance(configuration, Configuration)
-        device = context.settings.training_device(configuration.model.name)
+        training = device or context.settings.training_device(configuration.model.name)
+        trained_with = context.seed if seed is None else seed
         if kind == NEURAL:
             neural_model = NEURAL_MODELS[configuration.model.name].load(
-                selected.model_directory,
+                where,
                 configuration,
-                context.seed,
+                trained_with,
                 settings=context.settings,
                 layout=_neural(context).artifact.layout,
-                device=device,
+                device=training,
                 artifact_sha256=_neural(context).artifact_sha256,
             )
             verify_neural_model(context, configuration, selected, neural_model)
             return neural_model
         model_class, _ = TREE_MODELS[configuration.model.name]
         return model_class.load(
-            selected.model_directory,
+            where,
             configuration,
-            context.seed,
+            trained_with,
             settings=context.settings,
             features=context.features,
-            device=device,
+            device=training,
         )
 
 
@@ -186,8 +196,8 @@ def check_sequence(expected: Keys, actual: Keys, what: str) -> None:
         )
 
 
-def score_path(run: RunDirectory, configuration: str, label: str) -> Path:
-    return run.path / SCORES_DIR / f"{configuration}-{MODEL_ROLE}-{label}.parquet"
+def score_path(run: RunDirectory, configuration: str, label: str, tag: str = MODEL_ROLE) -> Path:
+    return run.path / SCORES_DIR / f"{configuration}-{tag}-{label}.parquet"
 
 
 class HoldsRunFiles(Protocol):
@@ -213,13 +223,16 @@ def read_scores(run: HoldsRunFiles, file: Mapping[str, str], rows: PartitionRows
 def score_record(
     context: ScoringContext,
     configuration: Subject,
-    selected: TrialOutcome,
+    fit: Mapping[str, str],
     label: str,
     rows: PartitionRows,
     scores: Scores,
     file: Mapping[str, str],
     seconds: float,
     batch_rows: int | None = None,
+    *,
+    role: str = MODEL_ROLE,
+    seed: int | None = None,
 ) -> dict[str, Any]:
     days = rows.times // SECONDS_PER_DAY
     return {
@@ -227,9 +240,9 @@ def score_record(
         "schema_version": 1,
         "identity": dict(context.identity),
         "configuration": configuration.name,
-        "model_role": MODEL_ROLE,
-        "seed": context.seed,
-        "fit": dict(selected.fit),
+        "model_role": role,
+        "seed": context.seed if seed is None else seed,
+        "fit": dict(fit),
         "partition": label,
         "first_day": int(days.min()),
         "last_day": int(days.max()),
@@ -254,12 +267,29 @@ def score_partition(
     model: ScoredModel,
     label: str,
 ) -> ScoredPartition:
-    """Score the whole partition ``label`` (``"V1"`` or ``"V2"``) in one call, write the local
-    score file and the ``score`` record. ``seconds`` is this call's wall-clock time; the
-    benchmarked scoring time is measured separately (``development.cost_timing``)."""
+    """Score the whole partition ``label`` (``"V1"`` or ``"V2"``) with the selected model in one
+    call, write the local score file and the ``score`` record. ``seconds`` is this call's
+    wall-clock time; the benchmarked scoring time is measured separately
+    (``development.cost_timing``)."""
+    return score_model(context, configuration, selected.fit, model, label)
+
+
+def score_model(
+    context: ScoringContext,
+    configuration: Subject,
+    fit: Mapping[str, str],
+    model: ScoredModel,
+    label: str,
+    *,
+    role: str = MODEL_ROLE,
+    seed: int | None = None,
+    tag: str = MODEL_ROLE,
+) -> ScoredPartition:
+    """Score ``label`` with a model fitted by the fit record ``fit``: the selected model, or a
+    refit (``role``, ``seed``; ``tag`` names its score file and record)."""
     run, name = context.run, configuration.name
     rows = context.inputs.partition(label)
-    with log_step(logger, f"Scoring {label} with the selected {name} ({rows.rows} rows)"):
+    with log_step(logger, f"Scoring {label} with the {tag} {name} ({rows.rows} rows)"):
         batch_rows: int | None = None
         started = time.perf_counter()
         if isinstance(model, NeuralModel):
@@ -269,13 +299,18 @@ def score_partition(
             scores = model.predict(rows.features)
         seconds = time.perf_counter() - started
     frame = pd.DataFrame({SCORE_COLUMNS[0]: rows.ids, SCORE_COLUMNS[1]: scores})
-    path = score_path(run, name, label)
+    path = score_path(run, name, label, tag)
     write_atomically(path, lambda target: frame.to_parquet(target, index=False))
     file = run_file(run, path)
     read_scores(run, file, rows)  # the file as written pairs with the partition's rows
     record = score_record(
-        context, configuration, selected, label, rows, scores, file, seconds, batch_rows
+        context, configuration, fit, label, rows, scores, file, seconds, batch_rows,
+        role=role, seed=seed,
+    )  # fmt: skip
+    record_path = run.write_record(record, name, tag, label)
+    logger.info(
+        "%s (%s) scored on %s: %d distinct scores", name, tag, label, record["distinct_scores"]
     )
-    record_path = run.write_record(record, name, MODEL_ROLE, label)
-    logger.info("%s scored on %s: %d distinct scores", name, label, record["distinct_scores"])
-    return ScoredPartition(name, label, rows, file, run_file(run, record_path), seconds)
+    return ScoredPartition(
+        name, label, rows, file, run_file(run, record_path), seconds, role, seed, tag
+    )

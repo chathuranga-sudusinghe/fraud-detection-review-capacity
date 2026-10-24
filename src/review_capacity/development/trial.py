@@ -161,7 +161,7 @@ class TrialOutcome:
 
 
 @dataclass
-class _Fit:
+class Fitted:
     """A fitted trial before it is saved: the model, the hyperparameters it was fitted with and
     the V1 result."""
 
@@ -214,13 +214,13 @@ def tree_model(context: SearchContext, configuration: Subject) -> LightGBMModel 
     )
 
 
-def _neural(context: SearchContext) -> NeuralRun:
+def neural_of(context: SearchContext) -> NeuralRun:
     if context.neural is None:
         raise SpecificationError("The neural models and the reference need the neural inputs")
     return context.neural
 
 
-def _train_summary(context: SearchContext) -> dict[str, Any]:
+def train_summary(context: SearchContext) -> dict[str, Any]:
     train = context.inputs.train
     return {
         "rows": train.rows,
@@ -232,7 +232,7 @@ def _train_summary(context: SearchContext) -> dict[str, Any]:
 
 def _fit_tree(
     context: SearchContext, configuration: Subject, trial: int, candidate: Candidate
-) -> _Fit:
+) -> Fitted:
     del trial
     assert isinstance(configuration, Configuration)
     name = configuration.name
@@ -255,7 +255,7 @@ def _fit_tree(
     history = model.training_history
     if history is None:
         raise ModelError(f"{name}: the fit returned no V1 history")
-    return _Fit(
+    return Fitted(
         model,
         settings,
         seconds,
@@ -270,10 +270,10 @@ def _fit_tree(
 
 def _fit_neural(
     context: SearchContext, configuration: Subject, trial: int, candidate: Candidate
-) -> _Fit:
+) -> Fitted:
     assert isinstance(configuration, Configuration)
     name, model_name = configuration.name, configuration.model.name
-    neural = _neural(context)
+    neural = neural_of(context)
     device = context.settings.training_device(model_name)
     model = NEURAL_MODELS[model_name](
         configuration,
@@ -306,7 +306,7 @@ def _fit_neural(
     history = model.training_history
     if history is None:
         raise ModelError(f"{name}: the fit returned no V1 history")
-    return _Fit(
+    return Fitted(
         model,
         settings,
         seconds,
@@ -321,9 +321,9 @@ def _fit_neural(
 
 def _fit_reference(
     context: SearchContext, configuration: Subject, trial: int, candidate: Candidate
-) -> _Fit:
+) -> Fitted:
     del trial
-    neural = _neural(context)
+    neural = neural_of(context)
     fixed = dict(context.declaration.space(REFERENCE_MODEL).fixed)
     model = LogisticRegressionReference(neural.artifact, fixed)
     train = context.inputs.train_data(Weighting.UNWEIGHTED)
@@ -344,7 +344,7 @@ def _fit_reference(
         )
     objective = context.objective
     recall = objective.queue.recall(model.predict(valid.features), valid.labels, objective.k)
-    return _Fit(
+    return Fitted(
         model, settings, seconds, memory, None, recall.value, iterations, iterations, "converged"
     )
 
@@ -356,7 +356,7 @@ def _device(context: SearchContext, configuration: Subject) -> str:
     return training_device(context.settings, configuration)
 
 
-def _fit_record(
+def fit_record(
     context: SearchContext,
     configuration: Subject,
     trial: int,
@@ -365,7 +365,14 @@ def _fit_record(
     files: tuple[dict[str, str], dict[str, str]] | None,
     seconds: float | None,
     error: str | None,
+    purpose: str = "search_trial",
+    seed: int | None = None,
+    device: str | None = None,
+    length: int | None = None,
+    fresh_process: bool = False,
 ) -> dict[str, Any]:
+    """The ``fit`` record of a search trial or, with ``purpose`` (and the ``seed``, ``device``,
+    fixed ``length`` and whether the process was fresh), of a fixed-length refit (DR-015 §4)."""
     kind = kind_of(configuration)
     weights = context.inputs.weights(configuration.weighting)
     records = context.neural_records
@@ -382,15 +389,15 @@ def _fit_record(
         "schema_version": 1,
         "identity": dict(context.identity),
         "configuration": configuration.name,
-        "purpose": "search_trial",
+        "purpose": purpose,
         "trial": trial,
-        "seed": context.seed,
-        "device": _device(context, configuration),
-        "fresh_process": False,
-        "early_stopping": kind != REFERENCE,
-        "length": None,
+        "seed": context.seed if seed is None else seed,
+        "device": _device(context, configuration) if device is None else device,
+        "fresh_process": fresh_process,
+        "early_stopping": kind != REFERENCE and purpose == "search_trial",
+        "length": length,
         "fitted_iterations": None if model is None else model.fitted_iterations,
-        "train": _train_summary(context),
+        "train": train_summary(context),
         "positive_weight": weights.positive,
         "preprocessing": preprocessing,
         "preflight": preflight,
@@ -430,7 +437,7 @@ def _trial_record(
     candidate: Candidate,
     candidate_file: Mapping[str, str],
     *,
-    fitted: _Fit | None,
+    fitted: Fitted | None,
     fit: dict[str, str],
     checkpoint: dict[str, str] | None,
     error: str | None,
@@ -491,7 +498,7 @@ def _record_failure(
     """Write the failed ``fit`` and ``trial`` records of a trial that raised ``error``."""
     run, name = context.run, configuration.name
     message = f"{type(error).__name__}: {error}"
-    failed = _fit_record(
+    failed = fit_record(
         context, configuration, trial, model=None, files=None, seconds=None, error=message
     )
     fit_path = run.write_record(failed, name, f"trial{trial}")
@@ -512,7 +519,7 @@ def _record_failure(
     )
 
 
-def _reference_record(context: SearchContext, fitted: _Fit) -> dict[str, Any]:
+def _reference_record(context: SearchContext, fitted: Fitted) -> dict[str, Any]:
     """The model-run record of the reference (it has no ``Configuration``)."""
     settings = context.settings_snapshot
     return {
@@ -526,15 +533,15 @@ def _reference_record(context: SearchContext, fitted: _Fit) -> dict[str, Any]:
         "hyperparameters": jsonable(fitted.settings),
         "parameters": jsonable(fitted.model.parameters),
         "fitted_iterations": fitted.model.fitted_iterations,
-        "artifact_sha256": _neural(context).artifact_sha256,
+        "artifact_sha256": neural_of(context).artifact_sha256,
         "settings": {"path": settings.path, "sha256": settings.sha256, "content": settings.content},
         "environment": jsonable(context.environment),
         "code": jsonable(context.code),
     }
 
 
-def _save(
-    context: SearchContext, configuration: Subject, fitted: _Fit, directory: Path
+def save_fitted(
+    context: SearchContext, configuration: Subject, fitted: Fitted, directory: Path
 ) -> tuple[float, tuple[dict[str, str], dict[str, str]]]:
     """Save the model and its model-run record; return the seconds taken and their references."""
     run, kind = context.run, kind_of(configuration)
@@ -580,15 +587,15 @@ def run_trial(
     kind = kind_of(configuration)
     directory = trial_directory(run, name, trial)
     if kind != TREE:
-        _neural(context)  # a missing input is a set-up error, not a failed trial
+        neural_of(context)  # a missing input is a set-up error, not a failed trial
     with log_step(logger, f"Trial {trial} of {name}"):
         try:
             fitted = _FITTERS[kind](context, configuration, trial, candidate)
-            persistence, files = _save(context, configuration, fitted, directory)
+            persistence, files = save_fitted(context, configuration, fitted, directory)
         except ReviewCapacityError as error:
             _record_failure(context, configuration, trial, candidate, candidate_file, error)
             raise
-        completed = _fit_record(
+        completed = fit_record(
             context,
             configuration,
             trial,

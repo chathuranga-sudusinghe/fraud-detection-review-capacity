@@ -96,6 +96,9 @@ Commands:
                    development files only; the Test period is never read. Consequential: run
                    only after its scope is approved
 
+    refit-fresh    one fixed-length refit of a selected setting, fitted and saved in a fresh
+                   process (DR-013 §6; DR-015 §4); started by the development run, not by hand
+
     summarise-run  regenerate summary.md of a development run directory from its records alone
                    (also after an interrupted run); reads no data and fits no model
 
@@ -521,6 +524,14 @@ def _run_development(args: argparse.Namespace) -> int:
     return 0
 
 
+def _refit_fresh(args: argparse.Namespace) -> int:
+    from review_capacity.development.refit_process import run_job_file
+
+    seconds = run_job_file(args.job)
+    logger.info("Refit fitted and saved in %.1f s", seconds)
+    return 0
+
+
 def _summarise_run(args: argparse.Namespace) -> int:
     from review_capacity.development.records import DevelopmentPartitions
     from review_capacity.development.rendering import write_summary
@@ -798,6 +809,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="new directory for this run (default: outputs/development/<UTC time>)",
     )
     development.set_defaults(handler=_run_development)
+    refit_fresh = commands.add_parser(
+        "refit-fresh",
+        help="fit one fixed-length refit in a fresh process (started by the development run)",
+    )
+    refit_fresh.add_argument("--root", type=Path, default=None, help="project root directory")
+    refit_fresh.add_argument("--job", type=Path, required=True, help="the job file of the refit")
+    refit_fresh.set_defaults(handler=_refit_fresh)
     summarise = commands.add_parser(
         "summarise-run",
         help="regenerate summary.md of a development run directory from its records",

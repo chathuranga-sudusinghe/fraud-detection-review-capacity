@@ -75,6 +75,7 @@ def test_every_kind_has_a_valid_example_in_production_order() -> None:
         "score",
         "evaluation",
         "timing",
+        "device_comparison",
         "calibration",
         "r1_selection",
         "h3_selection",
@@ -82,6 +83,23 @@ def test_every_kind_has_a_valid_example_in_production_order() -> None:
     ]
     for kind in KINDS:
         validate(example(kind), kind)
+
+
+def test_a_device_comparison_is_a_catboost_pair_over_all_of_v2() -> None:
+    record = example("device_comparison")
+    assert problems(record) == []
+    assert_rejected(record | {"configuration": "LGB-u"}, "only CatBoost")
+    bootstrap = record["bootstrap"]
+    assert_rejected(record | {"bootstrap": bootstrap | {"lower": 0.5}}, "lower is above upper")
+    assert_rejected(record | {"bootstrap": bootstrap | {"days": 27}}, "V2 has 28 relative days")
+    assert_rejected(
+        record | {"bootstrap": bootstrap | {"undefined_replicates": 10_000}}, "no replicate"
+    )
+    assert_rejected(record | {"bootstrap": bootstrap | {"k": 57}}, "one of the capacities")
+    assert_rejected(record | {"capacities": record["capacities"] * 2}, "listed once")
+    assert_rejected(record | {"seed": 43}, "device_comparison.seed: 43 must be the main seed 42")
+    first = record["capacities"][0] | {"differences": {"bogus": 1.0}}
+    assert_rejected(record | {"capacities": [first]}, "bogus")
 
 
 @pytest.mark.parametrize("kind", KINDS)

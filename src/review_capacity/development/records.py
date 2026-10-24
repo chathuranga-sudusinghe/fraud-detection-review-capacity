@@ -10,8 +10,8 @@ Every record is one JSON object with an envelope and kind-specific fields:
 The kinds, in the order a run produces them: ``candidates`` and ``cost_prediction`` (the search
 plan, written before any fit), ``run``, ``preprocessing``, ``preflight``, ``fit``,
 ``checkpoint``, ``trial``, ``configuration``, ``refit``, ``score``, ``evaluation``, ``timing``,
-``calibration``, ``r1_selection`` and ``h3_selection``; ``run_end`` closes the run (Issue #120).
-Records link to one another and to the
+``device_comparison``, ``calibration``, ``r1_selection`` and ``h3_selection``; ``run_end`` closes
+the run (Issue #120). Records link to one another and to the
 model-run records of ``models.run_record`` by path (relative to the run directory) and SHA-256.
 JSON is the pipeline's machine-readable output and has no CSV companion: long tables live inside
 the record they belong to (a trial's checkpoint history, an evaluation's per-day values, a
@@ -1107,6 +1107,82 @@ REFIT = _contract(
     _cpu_refit("refit", "kind"),
 )
 
+# --- device comparison ---------------------------------------------------------------------------
+
+BOOTSTRAP = Object(
+    (
+        Field("capacity", Number(0, 1, exclusive_minimum=True), "Capacity share c of the recall"),
+        Field("k", POSITIVE, "Fixed daily review budget K"),
+        Field("entity_key", Choice(("fine",)), "Pseudo-entity key of the frauds (DR-006)"),
+        Field("estimate", Number(-1, 1), "Recall(CPU) − recall(GPU) on V2"),
+        Field("lower", Number(-1, 1), "Lower end of the percentile interval"),
+        Field("upper", Number(-1, 1), "Upper end of the percentile interval"),
+        Field("level", Number(0, 1, exclusive_minimum=True), "Interval level"),
+        Field("replicates", POSITIVE, "Bootstrap replicates B"),
+        Field("undefined_replicates", COUNT, "Replicates with zero total weight (left out)"),
+        Field("seed", SEED, "Seed of the bootstrap generator"),
+        Field("days", POSITIVE, "Relative days drawn"),
+        Field("entities", POSITIVE, "Distinct fraud pseudo-entities drawn"),
+        Field("frauds", POSITIVE, "Frauds in the partition"),
+    )
+)
+DEVICE_CAPACITY = Object(
+    (
+        Field("capacity", Number(0, 1, exclusive_minimum=True), "Capacity share c"),
+        Field("k", POSITIVE, "Fixed daily review budget K"),
+        Field(
+            "differences",
+            MapOf(Number(), keys=Choice(tuple(METRICS))),
+            "CPU − GPU point differences of the R3 measures",
+        ),
+    )
+)
+
+
+def _device_rules(record: Mapping[str, Any]) -> list[str]:
+    problems: list[str] = []
+    if MODEL_OF[record["configuration"]] != "catboost":
+        problems.append("device_comparison.configuration: only CatBoost has a CPU–GPU pair")
+    bootstrap = record["bootstrap"]
+    if bootstrap["lower"] > bootstrap["upper"]:
+        problems.append("device_comparison.bootstrap: lower is above upper")
+    if bootstrap["undefined_replicates"] >= bootstrap["replicates"]:
+        problems.append("device_comparison.bootstrap: no replicate is defined")
+    capacities = [(c["capacity"], c["k"]) for c in record["capacities"]]
+    if len(set(capacities)) != len(capacities):
+        problems.append("device_comparison.capacities: a capacity is listed once")
+    if (bootstrap["capacity"], bootstrap["k"]) not in capacities:
+        problems.append("device_comparison.bootstrap: its capacity is one of the capacities")
+    return problems
+
+
+def _device_days(record: Mapping[str, Any], partitions: DevelopmentPartitions) -> list[str]:
+    v2 = partitions.v2
+    days = v2.last_day - v2.first_day + 1
+    if record["bootstrap"]["days"] != days:
+        return [f"device_comparison.bootstrap.days: V2 has {days} relative days"]
+    return []
+
+
+DEVICE_COMPARISON = _contract(
+    "device_comparison",
+    1,
+    "The supportive CPU–GPU comparison of one CatBoost configuration on V2: R3 point differences "
+    "(CPU − GPU) at each capacity and the paired two-way bootstrap interval of the Recall@K "
+    "difference (DR-013 §7; DR-006). Descriptive only.",
+    (
+        Field("configuration", STUDY_CONFIGURATION, "Configuration (CatBoost)"),
+        Field("seed", SEED, "Training seed of both models (the main seed)"),
+        Field("gpu_score", RUN_FILE, "V2 score record of the selected GPU model"),
+        Field("cpu_score", RUN_FILE, "V2 score record of the CPU refit"),
+        Field("refit", RUN_FILE, "Refit record of the CPU refit"),
+        Field("capacities", ListOf(DEVICE_CAPACITY, min_items=1), "R3 differences by capacity"),
+        Field("bootstrap", BOOTSTRAP, "Paired bootstrap of the Recall@K difference"),
+    ),
+    _device_rules,
+    _seed_rule("device_comparison"),
+)
+
 # --- score ---------------------------------------------------------------------------------------
 
 
@@ -2117,6 +2193,7 @@ RECORD_CONTRACTS: dict[str, RecordContract] = {
         SCORE,
         EVALUATION,
         TIMING,
+        DEVICE_COMPARISON,
         CALIBRATION,
         R1_SELECTION,
         H3_SELECTION,
@@ -2133,6 +2210,7 @@ DAY_CHECKS: dict[str, tuple[DayCheck, ...]] = {
     "score": (_score_days,),
     "evaluation": (_evaluation_days,),
     "timing": (_timing_rows,),
+    "device_comparison": (_device_days,),
     "calibration": (_calibration_days,),
     "r1_selection": (_selection_days("r1_selection"), _r1_rows),
     "h3_selection": (_selection_days("h3_selection"),),

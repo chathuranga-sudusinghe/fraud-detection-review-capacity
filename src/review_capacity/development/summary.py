@@ -325,6 +325,56 @@ COMPARISON_TABLES: tuple[ComparisonTable, ...] = (
         ),
     ),
     ComparisonTable(
+        "device_comparison",
+        "CatBoost CPU–GPU comparison",
+        "The V2 Recall@2% under R3 of the CatBoost CPU refit minus that of the selected GPU "
+        "model (the same seed, the GPU-selected settings and tree count), with the percentile "
+        "interval of the paired two-way bootstrap over relative days and fraud pseudo-entities "
+        "(DR-013 §7; DR-006). It estimates the difference between the two training procedures, "
+        "not a hardware effect alone; descriptive only, an interval containing zero is not read "
+        "as equivalence, and no decision depends on it. The point differences of the other "
+        "measures are in each record.",
+        "configuration",
+        (
+            _column(
+                "CPU − GPU Recall@2%",
+                "Point difference of the V2 Recall@2% under R3",
+                "decimal",
+                Source("device_comparison", "bootstrap.estimate"),
+            ),
+            _column(
+                "Interval lower",
+                "Lower end of the percentile interval",
+                "decimal",
+                Source("device_comparison", "bootstrap.lower"),
+            ),
+            _column(
+                "Interval upper",
+                "Upper end of the percentile interval",
+                "decimal",
+                Source("device_comparison", "bootstrap.upper"),
+            ),
+            _column(
+                "Interval level",
+                "Level of the percentile interval",
+                "decimal",
+                Source("device_comparison", "bootstrap.level"),
+            ),
+            _column(
+                "Replicates",
+                "Bootstrap replicates B",
+                "integer",
+                Source("device_comparison", "bootstrap.replicates"),
+            ),
+            _column(
+                "Fraud pseudo-entities",
+                "Distinct fraud pseudo-entities drawn",
+                "integer",
+                Source("device_comparison", "bootstrap.entities"),
+            ),
+        ),
+    ),
+    ComparisonTable(
         "family_contrasts",
         "Descriptive contrasts of V2 Recall@2%",
         "Differences of the V2 Recall@2% under R3 of the selected main-seed models: within a "
