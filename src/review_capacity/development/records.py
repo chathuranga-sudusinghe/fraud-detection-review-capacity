@@ -10,8 +10,8 @@ Every record is one JSON object with an envelope and kind-specific fields:
 The kinds, in the order a run produces them: ``candidates`` and ``cost_prediction`` (the search
 plan, written before any fit), ``run``, ``preprocessing``, ``preflight``, ``fit``,
 ``checkpoint``, ``trial``, ``configuration``, ``refit``, ``score``, ``evaluation``, ``timing``,
-``device_comparison``, ``calibration``, ``r1_selection`` and ``h3_selection``; ``run_end`` closes
-the run (Issue #120). Records link to one another and to the
+``device_comparison``, ``calibration``, ``cost_analysis``, ``r1_selection`` and ``h3_selection``;
+``run_end`` closes the run (Issue #120). Records link to one another and to the
 model-run records of ``models.run_record`` by path (relative to the run directory) and SHA-256.
 JSON is the pipeline's machine-readable output and has no CSV companion: long tables live inside
 the record they belong to (a trial's checkpoint history, an evaluation's per-day values, a
@@ -1966,6 +1966,264 @@ def _calibration_days(record: Mapping[str, Any], partitions: DevelopmentPartitio
     return problems
 
 
+# --- cost analysis -------------------------------------------------------------------------------
+
+GRID_ROW = Object(
+    (
+        Field("ratio", Number(1, exclusive_minimum=True), "Miss-to-review cost ratio rho"),
+        Field("threshold", Number(0, 1, exclusive_minimum=True), "R4's threshold p* = 1/rho"),
+        Field("reviews", COUNT, "R4 reviews N_R4"),
+        Field("unused", COUNT, "Unused reviews u: R3's reviews that R4 declines"),
+        Field("frauds_forgone", COUNT, "Frauds forgone f: frauds among the unused reviews"),
+        Field("days_with_unused", COUNT, "Days on which R4 reviews fewer than K"),
+        Field("utilisation", SHARE, "N_R4 / (K × days)"),
+        Field("declined_fraud_rate", SHARE, "f / u (null: u = 0)", nullable=True),
+        Field(
+            "declined_mean_probability",
+            SHARE,
+            "Mean calibrated probability of the unused reviews (null: u = 0)",
+            nullable=True,
+        ),
+        Field("cost_r3", Number(minimum=0), "J_R3 = N_R3 + rho FN_R3"),
+        Field("cost_r4", Number(minimum=0), "J_R4 = N_R4 + rho FN_R4"),
+        Field("cost_difference", Number(), "ΔJ = J_R4 − J_R3 = rho f − u"),
+        Field("relative_difference", Number(), "ΔJ / J_R3"),
+        Field("cost_no_review", Number(minimum=0), "No-review reference J = rho F"),
+        Field(
+            "fixed_status",
+            Choice(("finite", "infinite", "identical")),
+            "Fixed-policy break-even: finite, infinite (f = 0 < u) or identical (u = 0)",
+        ),
+        Field("fixed_ratio", Number(minimum=0), "rho_fixed = u / f", nullable=True),
+        Field("fraud_value_exposed_r3", Number(minimum=0), "Amount of frauds R3 does not review"),
+        Field("fraud_value_exposed_r4", Number(minimum=0), "Amount of frauds R4 does not review"),
+        Field(
+            "fraud_value_forgone", Number(minimum=0), "Amount of frauds among the unused reviews"
+        ),
+        Field("forgone_per_unused", Number(minimum=0), "Forgone amount per unused review", True),
+        Field("amount_weighted_recall_r3", SHARE, "Amount-weighted recall of R3", nullable=True),
+        Field("amount_weighted_recall_r4", SHARE, "Amount-weighted recall of R4", nullable=True),
+    )
+)
+BREAK_EVEN_INTERVAL = Object(
+    (
+        Field("start", Number(1), "Start of an interval of ratios with ΔJ < 0 (closed; open at 1)"),
+        Field("end", Number(1, 1000), "End of the interval"),
+        Field("end_closed", Boolean(), "True when the end is the range end 1000 (included)"),
+    )
+)
+CASES = ("coincidence", "crossing", "none", "right_censored")
+# DR-007 §2 and §1: the ratio grid of the tabulated RQ3 results and the C_FP sensitivities
+# phi = C_FP / C_R; the continuous range is (1, RQ3_RATIO_MAX].
+RQ3_RATIO_GRID: tuple[int, ...] = (2, 5, 10, 20, 50, 100, 200, 500, 1000)
+RQ3_FRICTION: tuple[int, ...] = (1, 5)
+RQ3_RATIO_MAX = 1000
+
+
+def _grid_problems(record: Mapping[str, Any]) -> list[str]:
+    queue, grid = record["queue"], record["grid"]
+    problems: list[str] = []
+    ratios = [row["ratio"] for row in grid]
+    if ratios != [float(r) for r in RQ3_RATIO_GRID]:
+        problems.append(f"cost_analysis.grid: the ratios must be {list(RQ3_RATIO_GRID)}, in order")
+    if queue["captured"] > queue["frauds"]:
+        problems.append("cost_analysis.queue: captured frauds exceed the frauds")
+    misses = queue["frauds"] - queue["captured"]
+    for i, row in enumerate(grid):
+        where = f"cost_analysis.grid[{i}]"
+        if row["reviews"] + row["unused"] != queue["reviews"]:
+            problems.append(f"{where}: reviews + unused ≠ the R3 reviews")
+        if row["frauds_forgone"] > min(row["unused"], queue["captured"]):
+            problems.append(f"{where}.frauds_forgone: exceeds the unused reviews or R3's frauds")
+        if abs(row["threshold"] - 1 / row["ratio"]) > 1e-15:
+            problems.append(f"{where}.threshold: must be 1/ratio")
+        none = row["unused"] == 0
+        evaluated_days = record["days"]["last"] - record["days"]["first"] + 1
+        if abs(row["utilisation"] - row["reviews"] / (record["k"] * evaluated_days)) > 1e-12:
+            problems.append(f"{where}.utilisation: must be reviews / (k × days)")
+        rate, mean = row["declined_fraud_rate"], row["declined_mean_probability"]
+        if (
+            rate is not None
+            and not none
+            and abs(rate - row["frauds_forgone"] / row["unused"]) > 1e-12
+        ):
+            problems.append(f"{where}.declined_fraud_rate: must be frauds_forgone / unused")
+        if mean is not None and mean > row["threshold"] + 1e-12:
+            problems.append(f"{where}.declined_mean_probability: the unused reviews lie below p*")
+        problems.extend(
+            f"{where}.{name}: null exactly when there are no unused reviews"
+            for name in ("declined_fraud_rate", "declined_mean_probability", "forgone_per_unused")
+            if (row[name] is None) != none
+        )
+        expected = {
+            "cost_r3": queue["reviews"] + row["ratio"] * misses,
+            "cost_r4": row["reviews"] + row["ratio"] * (misses + row["frauds_forgone"]),
+            "cost_difference": row["ratio"] * row["frauds_forgone"] - row["unused"],
+            "cost_no_review": row["ratio"] * queue["frauds"],
+        }
+        for name, value in expected.items():
+            if abs(row[name] - value) > 1e-9 * max(1.0, abs(value)):
+                problems.append(f"{where}.{name}: must be {value!r}")
+        if abs(row["relative_difference"] * row["cost_r3"] - row["cost_difference"]) > 1e-9 * max(
+            1.0, abs(row["cost_difference"])
+        ):
+            problems.append(f"{where}.relative_difference: must be cost_difference / cost_r3")
+        status = "identical" if none else "infinite" if row["frauds_forgone"] == 0 else "finite"
+        if row["fixed_status"] != status:
+            problems.append(f"{where}.fixed_status: must be {status}")
+        if (row["fixed_ratio"] is None) != (status != "finite"):
+            problems.append(f"{where}.fixed_ratio: given exactly when the status is finite")
+        elif (
+            row["fixed_ratio"] is not None
+            and abs(row["fixed_ratio"] - row["unused"] / row["frauds_forgone"]) > 1e-9
+        ):
+            problems.append(f"{where}.fixed_ratio: must be unused / frauds_forgone")
+        exposed = row["fraud_value_exposed_r3"] + row["fraud_value_forgone"]
+        if abs(row["fraud_value_exposed_r4"] - exposed) > 1e-6 * max(1.0, exposed):
+            problems.append(f"{where}.fraud_value_exposed_r4: R3's exposure plus the value forgone")
+        recall_r3, recall_r4 = row["amount_weighted_recall_r3"], row["amount_weighted_recall_r4"]
+        if recall_r3 is not None and recall_r4 is not None and recall_r4 > recall_r3 + 1e-12:
+            problems.append(f"{where}.amount_weighted_recall_r4: above R3's")
+    reviews = [row["reviews"] for row in grid]
+    if reviews != sorted(reviews):
+        problems.append("cost_analysis.grid: R4's reviews rise with the ratio")
+    return problems
+
+
+def _break_even_problems(record: Mapping[str, Any]) -> list[str]:
+    saturation, case = record["saturation"], record["break_even"]
+    problems: list[str] = []
+    if (saturation["ratio"] is None) != saturation["infinite"]:
+        problems.append("cost_analysis.saturation: the ratio is null exactly when infinite")
+    intervals, kind, ratio = case["intervals"], case["classification"], case["ratio"]
+    if case["single_interval"] != (len(intervals) <= 1):
+        problems.append("cost_analysis.break_even.single_interval: must be len(intervals) ≤ 1")
+    spans = [(i["start"], i["end"]) for i in intervals]
+    if any(
+        i["start"] > i["end"] or (i["start"] == i["end"] and not i["end_closed"]) for i in intervals
+    ):
+        problems.append("cost_analysis.break_even.intervals: start < end (a single ratio: closed)")
+    if any(a[1] > b[0] for a, b in pairwise(spans)):
+        problems.append("cost_analysis.break_even.intervals: increasing and disjoint")
+    if any(i["end_closed"] and i["end"] != RQ3_RATIO_MAX for i in intervals):
+        problems.append("cost_analysis.break_even.intervals: only the range end 1000 is closed")
+    if any(i["end_closed"] for i in intervals[:-1]):
+        problems.append("cost_analysis.break_even.intervals: only the last may reach 1000")
+    if (kind == "none") != (not intervals):
+        problems.append("cost_analysis.break_even: none exactly when no interval is negative")
+    closed = bool(intervals) and intervals[-1]["end_closed"]
+    if (kind == "right_censored") != closed:
+        problems.append(
+            "cost_analysis.break_even: right-censored exactly when the last reaches 1000"
+        )
+    if kind == "right_censored" and not (
+        saturation["infinite"] or (saturation["ratio"] or 0) > RQ3_RATIO_MAX
+    ):
+        problems.append("cost_analysis.break_even: right-censoring needs saturation above 1000")
+    if (ratio is None) != (kind in ("none", "right_censored")):
+        problems.append("cost_analysis.break_even.ratio: null for none and right-censored")
+    if ratio is not None and spans and ratio != spans[-1][1]:
+        problems.append("cost_analysis.break_even.ratio: the end of the last interval")
+    if kind == "coincidence" and ratio != saturation["ratio"]:
+        problems.append("cost_analysis.break_even: coincidence needs ratio = saturation ratio")
+    if (
+        kind == "crossing"
+        and saturation["ratio"] is not None
+        and not (ratio is not None and ratio < saturation["ratio"])
+    ):
+        problems.append("cost_analysis.break_even: crossing needs ratio < saturation ratio")
+    if case["zero_crossings"] != sorted(case["zero_crossings"]):
+        problems.append("cost_analysis.break_even.zero_crossings: increasing order")
+    if [item["phi"] for item in record["friction"]] != [float(p) for p in RQ3_FRICTION]:
+        problems.append(f"cost_analysis.friction: the values phi must be {list(RQ3_FRICTION)}")
+    for item in record["friction"]:
+        expected = None if ratio is None else (1 + item["phi"]) * ratio - item["phi"]
+        if (item["ratio"] is None) != (expected is None) or (
+            expected is not None and abs(item["ratio"] - expected) > 1e-9 * max(1.0, abs(expected))
+        ):
+            problems.append("cost_analysis.friction: ratio = (1 + phi) × break-even − phi")
+    return problems
+
+
+COST_ANALYSIS = _contract(
+    "cost_analysis",
+    1,
+    "The RQ3 cost analysis of one configuration, capacity and calibrator: R4 against R3 over the "
+    "ratio grid, the exact break-even and saturation ratios, the declined-set calibration "
+    "diagnostic, the amount proxies and the C_FP sensitivity (DR-007 §4–§9). Descriptive; "
+    "scenario costs are assumptions, never institutional costs.",
+    (
+        Field("configuration", STUDY_CONFIGURATION, "Configuration"),
+        Field("calibrator", Choice(("platt", "isotonic")), "Calibrator giving the probabilities"),
+        Field("period", PERIOD, "Full V2 (primary) or the held-out label-latency days"),
+        Field("capacity", Number(0, 1, exclusive_minimum=True), "Capacity share c"),
+        Field("k", POSITIVE, "Fixed daily review budget K"),
+        Field("days", DAYS, "Relative days analysed"),
+        Field("score", RUN_FILE, "V2 score record analysed"),
+        Field("calibration", RUN_FILE, "Calibration record of the calibrator"),
+        Field(
+            "queue",
+            Object(
+                (
+                    Field("reviews", POSITIVE, "R3's reviews N_R3"),
+                    Field("frauds", POSITIVE, "Frauds of the analysed days F"),
+                    Field("captured", COUNT, "Frauds R3 reviews"),
+                )
+            ),
+            "R3's queues over the analysed days",
+        ),
+        Field(
+            "saturation",
+            Object(
+                (
+                    Field("ratio", Number(1), "rho_sat = 1 / smallest probability", nullable=True),
+                    Field("infinite", Boolean(), "A queue member has probability 0"),
+                )
+            ),
+            "Saturation ratio: R4 fills the budget on every day from this ratio",
+        ),
+        Field(
+            "break_even",
+            Object(
+                (
+                    Field("classification", Choice(CASES), "Case of DR-007 §4"),
+                    Field("ratio", Number(1, 1000), "rho_BE (null: none or right-censored)", True),
+                    Field("single_interval", Boolean(), "ΔJ < 0 on one interval only"),
+                    Field("intervals", ListOf(BREAK_EVEN_INTERVAL), "Every interval with ΔJ < 0"),
+                    Field(
+                        "zero_crossings",
+                        ListOf(Number(1, 1000)),
+                        "Ratios where ΔJ = 0 with unused reviews (ties)",
+                    ),
+                )
+            ),
+            "Break-even ratio over (1, 1000]",
+        ),
+        Field(
+            "friction",
+            ListOf(
+                Object(
+                    (
+                        Field("phi", Number(0, exclusive_minimum=True), "phi = C_FP / C_R"),
+                        Field("ratio", Number(), "(1 + phi) rho_BE − phi", nullable=True),
+                    )
+                ),
+                min_items=1,
+            ),
+            "C_FP-converted break-even ratios (sensitivity)",
+        ),
+        Field("grid", ListOf(GRID_ROW, min_items=1), "The ratio grid of DR-007 §2"),
+    ),
+    _grid_problems,
+    _break_even_problems,
+)
+
+
+def _cost_days(record: Mapping[str, Any], partitions: DevelopmentPartitions) -> list[str]:
+    role = "full" if record["period"] == "primary" else "held_out"
+    return _range_problems("cost_analysis.days", record["days"], partitions.v2, role)
+
+
 # --- R1 selection --------------------------------------------------------------------------------
 
 R1_SELECTED = (
@@ -2195,6 +2453,7 @@ RECORD_CONTRACTS: dict[str, RecordContract] = {
         TIMING,
         DEVICE_COMPARISON,
         CALIBRATION,
+        COST_ANALYSIS,
         R1_SELECTION,
         H3_SELECTION,
         RUN_END,
@@ -2211,6 +2470,7 @@ DAY_CHECKS: dict[str, tuple[DayCheck, ...]] = {
     "evaluation": (_evaluation_days,),
     "timing": (_timing_rows,),
     "device_comparison": (_device_days,),
+    "cost_analysis": (_cost_days,),
     "calibration": (_calibration_days,),
     "r1_selection": (_selection_days("r1_selection"), _r1_rows),
     "h3_selection": (_selection_days("h3_selection"),),

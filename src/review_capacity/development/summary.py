@@ -132,6 +132,9 @@ STUDY_SCORING: Selection = (
 )
 
 
+PLATT_V2: Selection = (("calibrator", ("platt",)), ("period", ("primary",)))
+
+
 def _column(header: str, meaning: str, form: str, source: Source) -> ComparisonColumn:
     return ComparisonColumn(header, meaning, form, source)
 
@@ -371,6 +374,38 @@ COMPARISON_TABLES: tuple[ComparisonTable, ...] = (
                 "Distinct fraud pseudo-entities drawn",
                 "integer",
                 Source("device_comparison", "bootstrap.entities"),
+            ),
+        ),
+    ),
+    ComparisonTable(
+        "break_even",
+        "RQ3 saturation and break-even ratios",
+        "On V2 (the calibrators are fitted on V2, so these are in-sample pre-Test expectations), "
+        "for the Platt-calibrated probabilities: the saturation ratio rho_sat (from this miss-to-"
+        "review cost ratio R4 fills the budget on every day; empty when infinite), the break-even "
+        "ratio rho_BE (the largest ratio at which R4 is strictly cheaper than R3; empty when none "
+        "or right-censored above 1000) and its case, one column per capacity (DR-007 §4). The "
+        "ratios are scenario assumptions, never institutional costs; the full curve, the grid "
+        "and the isotonic check are in each record.",
+        "configuration",
+        (
+            _column(
+                "rho_sat",
+                "Saturation ratio by capacity",
+                "decimal",
+                Source("cost_analysis", "saturation.ratio", PLATT_V2, "capacity"),
+            ),
+            _column(
+                "rho_BE",
+                "Break-even ratio by capacity",
+                "decimal",
+                Source("cost_analysis", "break_even.ratio", PLATT_V2, "capacity"),
+            ),
+            _column(
+                "Case",
+                "Case of the break-even by capacity",
+                "text",
+                Source("cost_analysis", "break_even.classification", PLATT_V2, "capacity"),
             ),
         ),
     ),

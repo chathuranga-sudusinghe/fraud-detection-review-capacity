@@ -140,6 +140,49 @@ H3_CAPTURED = {
     "FTT-b": 880,
 }
 
+
+def _cost_grid() -> list[dict[str, Any]]:
+    """The nine-ratio grid of a 2 % cost analysis over V2: R3 reviews 1,568 transactions and
+    captures 900 of the V2 frauds (total fraud amount 1,000,000; R3 captures 400,000 of it); R4
+    declines 68 reviews (5 frauds, 500 USD) at ratio 2, 8 (1 fraud, 100 USD) at ratio 5 and none
+    from ratio 10 on."""
+    reviews, frauds, captured = 1568, V2_FRAUDS, 900
+    amount, captured_amount = 1_000_000.0, 400_000.0
+    declined = {2: (68, 5, 500.0, 0.3), 5: (8, 1, 100.0, 0.1)}
+    rows = []
+    for ratio in (2, 5, 10, 20, 50, 100, 200, 500, 1000):
+        unused, forgone, forgone_amount, mean = declined.get(ratio, (0, 0, 0.0, None))
+        cost_r3 = reviews + ratio * (frauds - captured)
+        cost_r4 = reviews - unused + ratio * (frauds - captured + forgone)
+        rows.append(
+            {
+                "ratio": float(ratio),
+                "threshold": 1 / ratio,
+                "reviews": reviews - unused,
+                "unused": unused,
+                "frauds_forgone": forgone,
+                "days_with_unused": 10 if unused else 0,
+                "utilisation": (reviews - unused) / reviews,
+                "declined_fraud_rate": forgone / unused if unused else None,
+                "declined_mean_probability": mean,
+                "cost_r3": float(cost_r3),
+                "cost_r4": float(cost_r4),
+                "cost_difference": float(cost_r4 - cost_r3),
+                "relative_difference": (cost_r4 - cost_r3) / cost_r3,
+                "cost_no_review": float(ratio * frauds),
+                "fixed_status": "finite" if unused else "identical",
+                "fixed_ratio": unused / forgone if unused else None,
+                "fraud_value_exposed_r3": amount - captured_amount,
+                "fraud_value_exposed_r4": amount - captured_amount + forgone_amount,
+                "fraud_value_forgone": forgone_amount,
+                "forgone_per_unused": forgone_amount / unused if unused else None,
+                "amount_weighted_recall_r3": captured_amount / amount,
+                "amount_weighted_recall_r4": (captured_amount - forgone_amount) / amount,
+            }
+        )
+    return rows
+
+
 _BODIES: dict[str, dict[str, Any]] = {
     "candidates": {
         "model": "lightgbm",
@@ -561,6 +604,27 @@ _BODIES: dict[str, dict[str, Any]] = {
         ],
         "status": "completed",
         "error": None,
+    },
+    "cost_analysis": {
+        "configuration": "Cat-u",
+        "calibrator": "platt",
+        "period": "primary",
+        "capacity": 0.02,
+        "k": 56,
+        "days": {"first": 127, "last": 154},
+        "score": file("scores/Cat-u/v2.json"),
+        "calibration": file("records/calibration-Cat-u-platt.json"),
+        "queue": {"reviews": 1568, "frauds": V2_FRAUDS, "captured": 900},
+        "saturation": {"ratio": 10.0, "infinite": False},
+        "break_even": {
+            "classification": "coincidence",
+            "ratio": 10.0,
+            "single_interval": True,
+            "intervals": [{"start": 1.0, "end": 10.0, "end_closed": False}],
+            "zero_crossings": [],
+        },
+        "friction": [{"phi": 1.0, "ratio": 19.0}, {"phi": 5.0, "ratio": 55.0}],
+        "grid": _cost_grid(),
     },
     "r1_selection": {
         "configuration": "Cat-b",

@@ -109,6 +109,17 @@ class ScoredPartition:
     tag: str = MODEL_ROLE  # names its files: "selected", or e.g. "seed_refit-s43"
 
 
+def check_selected(scored: ScoredPartition, main_seed: int) -> None:
+    """Stop unless ``scored`` is the scoring of the selected main-seed model: the seed refits and
+    the CatBoost CPU refit are evaluated under R3 only and never calibrated (protocol
+    Calibration, scope)."""
+    if scored.role != MODEL_ROLE or (scored.seed is not None and scored.seed != main_seed):
+        raise ModelError(
+            f"{scored.configuration}: the {scored.tag} scores are not those of the selected "
+            f"main-seed model (seed {main_seed}); only that model is calibrated and analysed"
+        )
+
+
 def _neural(context: ScoringContext) -> NeuralRun:
     if context.neural is None:
         raise SpecificationError("The neural models and the reference need the neural inputs")
