@@ -12,7 +12,6 @@ import torch
 
 from review_capacity.development.cost_timing import (
     _boundary_calls,
-    gpu_clock,
     library_threads,
     timed_on,
 )
@@ -21,7 +20,7 @@ from review_capacity.development.scoring import ScoredPartition, ScoringContext,
 from review_capacity.development.trial import TrialOutcome, trial_directory
 from review_capacity.models.neural_training import NeuralModel
 from review_capacity.models.registry import REFERENCE_SUBJECT, configuration
-from review_capacity.training.timing import Clock
+from review_capacity.training.timing import Clock, gpu_clock
 from support.search import FTT_CANDIDATES, mixed_setup
 
 

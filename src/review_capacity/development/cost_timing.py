@@ -64,6 +64,7 @@ from review_capacity.training.timing import (
     BOUNDARIES,
     Clock,
     Timed,
+    gpu_clock,
     latency_record,
     measure_latency,
     measure_scoring,
@@ -106,18 +107,6 @@ def library_threads() -> tuple[int, list[dict[str, Any]]]:
     ]
     sizes = [pool["num_threads"] for pool in pools if isinstance(pool["num_threads"], int)]
     return max(sizes, default=1), pools
-
-
-def gpu_clock(clock: Clock) -> Clock:
-    """``clock`` with the explicit synchronisation of CUDA device 0 before the clock starts and
-    after the work completes (DR-015 §9); a process without CUDA has nothing to synchronise."""
-    import torch
-
-    def synchronise() -> None:
-        if torch.cuda.is_available():
-            torch.cuda.synchronize(torch.device("cuda", 0))
-
-    return Clock(clock.now, synchronise)
 
 
 def timed_on(

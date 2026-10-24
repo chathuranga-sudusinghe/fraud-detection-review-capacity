@@ -68,6 +68,7 @@ from review_capacity.models.v1_objective import TrainingHistory, V1Objective
 from review_capacity.training.declaration import REFERENCE_MODEL, TrainingDeclaration
 from review_capacity.training.preflight import fit_hyperparameters
 from review_capacity.training.sampler import Candidate
+from review_capacity.training.timing import Clock, gpu_clock, timed
 
 if TYPE_CHECKING:
     from review_capacity.development.neural_run import NeuralRecords, NeuralRun
@@ -286,10 +287,14 @@ def _fit_neural(
     plan = neural.plans[model_name][trial]
     train = neural.train[configuration.weighting]
 
+    clock = gpu_clock(Clock()) if device == "gpu" else Clock()
+
     def timed_fit() -> float:
-        started = time.perf_counter()
-        model.fit(train, neural.v1, settings, objective=context.objective, plan=plan)
-        return time.perf_counter() - started
+        # CUDA device 0 is synchronised before the clock starts and after the work completes
+        return timed(
+            lambda: model.fit(train, neural.v1, settings, objective=context.objective, plan=plan),
+            clock,
+        )
 
     seconds, memory = run_measured(
         context.memory,
