@@ -88,6 +88,19 @@ SECTIONS: tuple[AnalysisSection, ...] = (
         "(DR-010): the binding selection on all of V2 and the label-latency check on the "
         "fitting days (descriptive; it does not change the H3 configuration).",
     ),
+    AnalysisSection(
+        "rolling_origin",
+        "Rolling-origin supplement (primary configuration)",
+        "The exploratory transfer of the R2 threshold across origins (protocol; DR-001, DR-003): "
+        "at each origin the primary configuration is refitted on the days before the gap, the "
+        "R2 threshold (2 % capacity) is set on the scores of the next 28 days (no labels) and "
+        "applied to the following 28 days against the origin's fixed daily budget K. "
+        "Retrospective: the configuration was selected on V1 and V2, which lie after the early "
+        "origins. Descriptive only; the origins overlap and share training data, so no interval "
+        "or test is given. The band count is the origins whose pooled transfer rate lies "
+        "strictly inside (0.016, 0.024). Days without an alert are left out of the rate and "
+        "volume components (DR-003) and counted.",
+    ),
 )
 
 
@@ -349,12 +362,65 @@ def h3_selection(view: LoadedRun) -> list[str]:
     return lines
 
 
+def rolling_origin(view: LoadedRun) -> list[str]:
+    records = sorted(view.of_kind("rolling_origin"), key=lambda r: r["origin"])
+    header = [
+        "Origin",
+        "Training days",
+        "Training rows",
+        "Window days",
+        "Transfer days",
+        "R2 threshold",
+        "K",
+        "Window rate",
+        "Transfer rate",
+        "r / c − 1",
+        "Days above K",
+        "Days below K",
+        "Overflow",
+        "Unused",
+        "Zero-alert days",
+        "Rate component",
+        "Volume component",
+    ]
+    rows = []
+    for r in records:
+        t, w, g = r["transfer"], r["window"], r["training"]
+        rows.append(
+            [
+                cell(r["origin"]),
+                f"{g['first_day']}–{g['last_day']}",
+                cell(g["rows"]),
+                f"{w['first_day']}–{w['last_day']}",
+                f"{t['first_day']}–{t['last_day']}",
+                cell(r["threshold"]["value"]),
+                cell(r["threshold"]["k"]),
+                cell(w["rate"]),
+                cell(t["rate"]),
+                cell(t["relative_deviation"]),
+                cell(t["days_above_budget"]),
+                cell(t["days_below_budget"]),
+                cell(t["total_overflow"]),
+                cell(t["total_unused"]),
+                cell(t["zero_alert_days"]),
+                cell(t["rate_component"]),
+                cell(t["volume_component"]),
+            ]
+        )
+    inside = sum(r["transfer"]["inside_band"] for r in records)
+    lines = [f"Configuration {code(records[0]['configuration'])}.", ""] if records else []
+    lines += _table(header, rows)
+    lines += ["", f"Origins inside the band: {inside} of {len(records)}."]
+    return lines
+
+
 _BUILDERS = {
     "threshold_outcomes": threshold_outcomes,
     "threshold_workload": threshold_workload,
     "rate_volume": rate_volume,
     "calibration": calibration,
     "h3_selection": h3_selection,
+    "rolling_origin": rolling_origin,
 }
 
 _KINDS = {
@@ -363,6 +429,7 @@ _KINDS = {
     "rate_volume": ("evaluation",),
     "calibration": ("calibration",),
     "h3_selection": ("h3_selection",),
+    "rolling_origin": ("rolling_origin",),
 }
 
 

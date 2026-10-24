@@ -101,9 +101,12 @@ Commands:
                    new analysis run that never changes the source run: stages thresholds
                    (R0–R2 and their workload, R1 selections), calibration (Platt and isotonic
                    calibrators, R4 and the RQ3 cost analysis), h3 (the H3 configuration selection
-                   and its label-latency check) and refits (the fixed-length refits and the
+                   and its label-latency check), refits (the fixed-length refits and the
                    CatBoost CPU–GPU comparison; they train models, using the preprocessing
-                   artifact and the batch plans that the source run recorded). --stages chooses
+                   artifact and the batch plans that the source run recorded) and rolling (the
+                   rolling-origin supplement for the H3 configuration: refits on the days before
+                   each origin and the transfer of the R2 threshold; it needs the h3 stage in
+                   the same run). --stages chooses
                    the stages (default: thresholds, calibration, h3); each stage can be repeated
                    in a new analysis run. Writes records, a generated summary.md and its log,
                    always run.log (--log-file is refused), to a new directory inside outputs/:
@@ -887,9 +890,10 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="+",
         default=None,
         metavar="STAGE",
-        help="thresholds, calibration, h3 and refits (default: thresholds, calibration, h3; "
-        "refits train models and are named explicitly; the neural refits use the "
-        "preprocessing artifact and the batch plans recorded in the source run)",
+        help="thresholds, calibration, h3, refits and rolling (default: thresholds, calibration, "
+        "h3; refits and rolling train models and are named explicitly; the neural refits use "
+        "the preprocessing artifact and the batch plans recorded in the source run; rolling is "
+        "the rolling-origin supplement for the H3 configuration and needs h3 in the same run)",
     )
     analysis.add_argument(
         "--output",

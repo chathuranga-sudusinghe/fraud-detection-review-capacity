@@ -13,7 +13,11 @@ closed development run (its *source*) and never changes it:
   (``development.h3``);
 * ``refits``: the fixed-length refits and the CatBoost CPU–GPU comparison
   (``development.refits``); they train models, need the shared preprocessing artifact and the
-  micro-batch preflight and are never part of the default stages.
+  micro-batch preflight and are never part of the default stages;
+* ``rolling``: the rolling-origin supplement for RQ2 (``development.rolling``): the primary
+  (H3) configuration refitted at each origin and the transfer of its R2 threshold. It trains
+  models, needs the ``h3`` stage in the same run (the primary configuration) and is never part
+  of the default stages.
 
 The analysis run is a directory of its own (``outputs/analysis/<UTC start time>/``) with its
 ``run`` record (naming the source run by the SHA-256 of its ``run_end`` record), its records, a
@@ -37,6 +41,7 @@ from review_capacity.config import (
     DatasetSpec,
     FeatureSpec,
     ModelSettings,
+    RollingOriginSpec,
     load_dataset_spec,
     load_feature_spec,
 )
@@ -61,6 +66,7 @@ from review_capacity.development.records import CONFIGURATION_NAMES, Development
 from review_capacity.development.refit_process import FreshProcess
 from review_capacity.development.refits import RefitJob, run_refits
 from review_capacity.development.rendering import write_summary
+from review_capacity.development.rolling import run_rolling
 from review_capacity.development.rq3 import evaluate_r4
 from review_capacity.development.run_output import (
     OUTPUT_ROOT,
@@ -107,8 +113,10 @@ THRESHOLDS = "thresholds"
 CALIBRATION = "calibration"
 H3 = "h3"
 REFITS = "refits"
-STAGES = (THRESHOLDS, CALIBRATION, H3, REFITS)
-DEFAULT_STAGES = (THRESHOLDS, CALIBRATION, H3)  # refits train models: named explicitly
+ROLLING = "rolling"
+STAGES = (THRESHOLDS, CALIBRATION, H3, REFITS, ROLLING)
+TRAINING_STAGES = (REFITS, ROLLING)
+DEFAULT_STAGES = (THRESHOLDS, CALIBRATION, H3)  # refits and rolling train models: named explicitly
 
 
 @dataclass(frozen=True)
@@ -148,6 +156,7 @@ class AnalysisSetup:
     session: Mapping[str, Any] = field(default_factory=dict)
     fresh: Callable[[RefitJob, Path], float] | None = None
     cap_allocator: Callable[[int], None] = cap_allocator
+    rolling: RollingOriginSpec | None = None
 
     @property
     def seed(self) -> int:
@@ -170,6 +179,10 @@ def check_stages(stages: Sequence[str]) -> tuple[str, ...]:
     unknown = sorted(set(stages) - set(STAGES))
     if unknown:
         raise SpecificationError(f"Not stages of the analysis: {unknown}; the choices are {STAGES}")
+    if ROLLING in stages and H3 not in stages:
+        raise SpecificationError(
+            "The rolling stage runs for the H3 configuration: name the h3 stage in the same run"
+        )
     return tuple(stage for stage in STAGES if stage in stages)
 
 
@@ -235,7 +248,7 @@ def prepare_analysis(
 ) -> AnalysisSetup:
     """Load and verify everything an analysis run uses, then create its directory."""
     stages = check_stages(options.stages)
-    refits = REFITS in stages
+    refits = any(stage in stages for stage in TRAINING_STAGES)
     started = options.started or run_id(now)
     with log_step(logger, f"Preparing the analysis run {started}"):
         dataset: DatasetSpec = load_dataset_spec(paths)
@@ -317,7 +330,9 @@ def prepare_analysis(
         environment=environment,
         code=code,
     )
-    return with_refit_inputs(setup, parts, dataset) if refits else setup
+    if not refits:
+        return setup
+    return replace(with_refit_inputs(setup, parts, dataset), rolling=dataset.rolling_origin)
 
 
 def _thresholds(setup: AnalysisSetup) -> None:
@@ -352,6 +367,27 @@ def _h3(setup: AnalysisSetup) -> None:
     select_primary(run, setup.partitions, setup.identity, source=setup.source)
     scored = {name: setup.saved(name, "V2") for name in CONFIGURATION_NAMES}
     select_latency(run, setup.partitions, setup.identity, setup.seed, scored)
+
+
+def _rolling(setup: AnalysisSetup) -> None:
+    spec = setup.rolling
+    if spec is None or setup.search_inputs is None:
+        raise SpecificationError(
+            "The rolling stage needs the window design (rolling_origin of config/dataset.yaml) "
+            "and the Train inputs"
+        )
+    search, scoring = refit_contexts(setup)
+    run = setup.run
+    selection = _one(
+        [r for r in load_run(run.path, setup.partitions).of_kind("h3_selection")
+         if r["period"] == "primary"],
+        "primary h3_selection records",
+    )  # fmt: skip
+    subject = configuration_named(selection["selected"])
+    if kind_of(subject) == NEURAL and training_device(setup.settings, subject) == "gpu":
+        setup.cap_allocator(setup.declaration.neural.preflight_free_margin_mib)
+    parts = [setup.search_inputs.train, setup.search_inputs.v1, setup.scoring_inputs.v2]
+    run_rolling(search, scoring, subject, selected_outcome(setup.source, subject.name), spec, parts)
 
 
 def _one(records: Sequence[Mapping[str, Any]], what: str) -> Mapping[str, Any]:
@@ -538,6 +574,7 @@ STAGE_FUNCTIONS: dict[str, Callable[[AnalysisSetup], None]] = {
     CALIBRATION: _calibration,
     H3: _h3,
     REFITS: _refits,
+    ROLLING: _rolling,
 }
 
 

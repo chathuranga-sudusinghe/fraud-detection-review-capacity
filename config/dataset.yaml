@@ -74,6 +74,16 @@ total_rows: 590540
 label_latency:
   fitting_last_day: 147
 
+# Rolling-origin supplement (protocol, Experimental Split Structure; Issue #159): at each origin s
+# the primary configuration is refitted on days 1 to s - gap_days - 1, the R2 threshold is set on the
+# window days s to s + window_days - 1 (scores only) and applied to the next transfer_days days.
+rolling_origin:
+  origins: [71, 85, 99]
+  gap_days: 21
+  window_days: 28
+  transfer_days: 28
+  minimum_training_days: 42
+
 # Partition hash: SHA-256 of the partition's TransactionIDs, sorted ascending and serialised as
 # little-endian 64-bit integers; the first 16 hexadecimal characters are recorded in DR-001.
 partitions:

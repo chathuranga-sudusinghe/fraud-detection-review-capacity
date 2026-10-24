@@ -103,12 +103,11 @@ uv sync --locked --extra ml --extra dl --extra dev
 
 ## Status
 
-**Research design documented and accepted in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); remaining design items pending; protocol not yet frozen.**
+**Research design documented and accepted in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); every design item resolved; protocol not yet frozen.**
 
 The ethics and governance status is documented in the [protocol](docs/protocol.md#ethics); no formal ethics approval or exemption is claimed.
 
 Next steps:
 
-1. Resolution of the protocol's remaining design items, in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)), among them the window design of the rolling-origin supplement (Issue #159); supervisor feedback welcome throughout.
-2. Final pre-training sweep of the repository and the analysis command that runs the post-selection stage on a completed development run (Issue #166).
-3. Development runs on Train, Validation 1 (V1) and Validation 2 (V2); protocol freeze; single Test evaluation; statistical analysis and reporting.
+1. Development runs on Train, Validation 1 (V1) and Validation 2 (V2) ([running the pipeline](docs/running-the-pipeline.md)), then the analysis run on the completed development run, including the rolling-origin supplement.
+2. Review of the development evidence; protocol freeze; single Test evaluation; statistical analysis and reporting.

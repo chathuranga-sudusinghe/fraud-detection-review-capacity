@@ -10,7 +10,8 @@ Every record is one JSON object with an envelope and kind-specific fields:
 The kinds, in the order a run produces them: ``candidates`` and ``cost_prediction`` (the search
 plan, written before any fit), ``run``, ``preprocessing``, ``preflight``, ``fit``,
 ``checkpoint``, ``trial``, ``configuration``, ``refit``, ``score``, ``evaluation``, ``timing``,
-``device_comparison``, ``calibration``, ``cost_analysis``, ``r1_selection`` and ``h3_selection``;
+``device_comparison``, ``calibration``, ``cost_analysis``, ``r1_selection``, ``h3_selection`` and
+``rolling_origin``;
 ``run_end`` closes the run (Issue #120). Records link to one another and to the
 model-run records of ``models.run_record`` by path (relative to the run directory) and SHA-256.
 JSON is the pipeline's machine-readable output and has no CSV companion: long tables live inside
@@ -33,15 +34,23 @@ and ends before the last, and its held-out evaluation range ends on the last V2 
 from __future__ import annotations
 
 import logging
+import math
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from fractions import Fraction
 from itertools import pairwise
 from pathlib import Path
 from statistics import median
 from typing import Any
 
-from review_capacity.config import DEVICES, SEED_LIMIT, DatasetSpec, PartitionSpec
+from review_capacity.config import (
+    DEVICES,
+    SEED_LIMIT,
+    DatasetSpec,
+    PartitionSpec,
+    RollingOriginSpec,
+)
 from review_capacity.data.processed import stems
 from review_capacity.development.schema import (
     AnyJSON,
@@ -77,6 +86,7 @@ class DevelopmentPartitions:
     v2: PartitionSpec
     processed: tuple[tuple[str, str], ...]
     latency_fitting_last_day: int | None = None  # protocol: label-latency fit on V2 days 127–147
+    rolling: RollingOriginSpec | None = None  # the window design of the rolling-origin supplement
 
     @classmethod
     def from_spec(cls, spec: DatasetSpec, paths: ProjectPaths) -> DevelopmentPartitions:
@@ -91,6 +101,7 @@ class DevelopmentPartitions:
             spec.partition("v2"),
             processed,
             spec.label_latency_fitting_last_day,
+            spec.rolling_origin,
         )
         if any(p.sealed for p in (partitions.train, partitions.v1, partitions.v2)):
             raise RecordContractError("A development partition is declared sealed")
@@ -1220,6 +1231,238 @@ DEVICE_COMPARISON = _contract(
     ),
     _device_rules,
     _seed_rule("device_comparison"),
+)
+
+# --- rolling origin ------------------------------------------------------------------------------
+
+ROLLING_DAILY = Object(
+    (
+        Field("day", POSITIVE, "Relative day"),
+        Field("transactions", POSITIVE, "Transactions N_d"),
+        Field("selected", COUNT, "Alerts n_d at the threshold"),
+        Field("overflow", COUNT, "max(n_d − K, 0)"),
+        Field("unused", COUNT, "max(K − n_d, 0)"),
+        Field("load_ratio", Number(minimum=0), "n_d / K"),
+    )
+)
+ROLLING_TRAINING = Object(
+    (
+        Field("first_day", POSITIVE, "First relative day of the refit's training rows"),
+        Field("last_day", POSITIVE, "Last relative day of the refit's training rows"),
+        Field("rows", POSITIVE, "Training rows"),
+        Field("frauds", POSITIVE, "Frauds among the training rows"),
+        Field(
+            "preprocessing_sha256",
+            SHA256,
+            "SHA-256 of the neural preprocessing artifact fitted on these rows",
+            nullable=True,
+        ),
+    )
+)
+ROLLING_FIT = Object(
+    (
+        Field("selected_trial", POSITIVE, "The selected trial whose setting is refitted"),
+        Field("length", POSITIVE, "Fixed length (the retained rounds or epochs)"),
+        Field("device", DEVICE, "Training device"),
+        Field("seconds", SECONDS, "Seconds of the fit"),
+        Field("model", RUN_FILE, "The saved model"),
+        Field("source_fit", RUN_FILE, "Fit record of the selected trial in the source run"),
+    )
+)
+ROLLING_WINDOW = Object(
+    (
+        Field("first_day", POSITIVE, "First relative day of the threshold window"),
+        Field("last_day", POSITIVE, "Last relative day of the threshold window"),
+        Field("transactions", POSITIVE, "Transactions N of the window"),
+        Field("alerts", COUNT, "Window transactions with score at least the threshold"),
+        Field("rate", SHARE, "Rate of the window itself"),
+    )
+)
+ROLLING_THRESHOLD = Object(
+    (
+        Field("capacity", Number(0, 1, exclusive_minimum=True), "Capacity share c"),
+        Field("rank", POSITIVE, "Rank ceil(c N) of the threshold score in the window"),
+        Field("value", Number(0, 1), "The R2 threshold: the score of that rank"),
+        Field("k", POSITIVE, "Fixed daily review budget of the origin"),
+    )
+)
+ROLLING_TRANSFER = Object(
+    (
+        Field("first_day", POSITIVE, "First relative day of the transfer window"),
+        Field("last_day", POSITIVE, "Last relative day of the transfer window"),
+        Field("transactions", POSITIVE, "Transactions of the transfer window"),
+        Field("alerts", COUNT, "Alerts of the transfer window"),
+        Field("rate", SHARE, "Pooled alert rate r"),
+        Field("relative_deviation", Number(minimum=-1), "r / c − 1"),
+        Field("total_overflow", COUNT, "Sum over days of max(n_d − K, 0)"),
+        Field("total_unused", COUNT, "Sum over days of max(K − n_d, 0)"),
+        Field("days_above_budget", COUNT, "Days with n_d > K"),
+        Field("days_below_budget", COUNT, "Days with n_d < K"),
+        Field("zero_alert_days", COUNT, "Days with n_d = 0"),
+        Field("inside_band", Boolean(), "r strictly inside the H3 band (0.016, 0.024)"),
+        Field(
+            "rate_component", Number(), "Mean ln(r_d / c) over days with an alert", nullable=True
+        ),
+        Field(
+            "volume_component",
+            Number(),
+            "Mean ln(N_d / mean daily volume of the window) over days with an alert",
+            nullable=True,
+        ),
+        Field(
+            "total_component", Number(), "Mean ln(n_d / K) over days with an alert", nullable=True
+        ),
+        Field("daily", ListOf(ROLLING_DAILY, min_items=1), "Every transfer day"),
+    )
+)
+
+
+def _rolling_rules(record: Mapping[str, Any]) -> list[str]:
+    problems: list[str] = []
+    training, window, transfer = record["training"], record["window"], record["transfer"]
+    if training["last_day"] < training["first_day"]:
+        problems.append("rolling_origin.training: last_day before first_day")
+    if training["frauds"] > training["rows"]:
+        problems.append("rolling_origin.training: more frauds than rows")
+    if record["origin"] != window["first_day"]:
+        problems.append("rolling_origin.window: it starts on the origin")
+    if transfer["first_day"] != window["last_day"] + 1:
+        problems.append("rolling_origin.transfer: it starts the day after the window")
+    if window["alerts"] > window["transactions"]:
+        problems.append("rolling_origin.window: more alerts than transactions")
+    if transfer["alerts"] > transfer["transactions"]:
+        problems.append("rolling_origin.transfer: more alerts than transactions")
+    daily, k = transfer["daily"], record["threshold"]["k"]
+    days = [row["day"] for row in daily]
+    if days != list(range(transfer["first_day"], transfer["last_day"] + 1)):
+        problems.append("rolling_origin.transfer.daily: every transfer day, once, in order")
+    for name, field in (("transactions", "transactions"), ("selected", "alerts")):
+        if sum(row[name] for row in daily) != transfer[field]:
+            problems.append(f"rolling_origin.transfer.{field}: differs from the daily sum")
+    if (
+        transfer["transactions"]
+        and abs(transfer["rate"] - transfer["alerts"] / transfer["transactions"]) > 1e-12
+    ):
+        problems.append("rolling_origin.transfer.rate: differs from alerts over transactions")
+    for row in daily:
+        if row["selected"] > row["transactions"]:
+            problems.append(
+                f"rolling_origin.transfer.daily day {row['day']}: more alerts than rows"
+            )
+        if (row["overflow"], row["unused"]) != (
+            max(row["selected"] - k, 0),
+            max(k - row["selected"], 0),
+        ):
+            problems.append(f"rolling_origin.transfer.daily day {row['day']}: overflow or unused")
+    if sum(row["overflow"] for row in daily) != transfer["total_overflow"]:
+        problems.append("rolling_origin.transfer.total_overflow: differs from the daily sum")
+    if sum(row["unused"] for row in daily) != transfer["total_unused"]:
+        problems.append("rolling_origin.transfer.total_unused: differs from the daily sum")
+    if sum(row["selected"] > k for row in daily) != transfer["days_above_budget"]:
+        problems.append("rolling_origin.transfer.days_above_budget: differs from the days")
+    if sum(row["selected"] < k for row in daily) != transfer["days_below_budget"]:
+        problems.append("rolling_origin.transfer.days_below_budget: differs from the days")
+    if sum(row["selected"] == 0 for row in daily) != transfer["zero_alert_days"]:
+        problems.append("rolling_origin.transfer.zero_alert_days: differs from the days")
+    problems += _rolling_derived(record)
+    return problems
+
+
+def _rolling_derived(record: Mapping[str, Any]) -> list[str]:
+    """The values that follow from the record's counts: the capacity, the rank, the budget, the
+    rates, the loads and the rate and volume components (DR-002 §3; DR-003)."""
+    problems: list[str] = []
+    window, threshold, transfer = record["window"], record["threshold"], record["transfer"]
+    share = Fraction(threshold["capacity"]).limit_denominator(1000)
+    if share != Fraction(2, 100):
+        problems.append("rolling_origin.threshold.capacity: the primary capacity is 0.02")
+    window_days = window["last_day"] - window["first_day"] + 1
+    if threshold["rank"] != math.ceil(share * window["transactions"]):
+        problems.append("rolling_origin.threshold.rank: ceil(c N) of the window transactions")
+    if threshold["k"] != math.floor(share * window["transactions"] / window_days + Fraction(1, 2)):
+        problems.append("rolling_origin.threshold.k: round(c x mean daily volume of the window)")
+    if abs(window["rate"] - window["alerts"] / window["transactions"]) > 1e-12:
+        problems.append("rolling_origin.window.rate: differs from alerts over transactions")
+    if abs(transfer["relative_deviation"] - (transfer["rate"] / float(share) - 1)) > 1e-9:
+        problems.append("rolling_origin.transfer.relative_deviation: differs from r / c − 1")
+    inside = abs(transfer["rate"] - 0.02) < 0.004 - 1e-12
+    if transfer["inside_band"] != inside:
+        problems.append("rolling_origin.transfer.inside_band: differs from r in (0.016, 0.024)")
+    daily, k = transfer["daily"], threshold["k"]
+    problems.extend(
+        f"rolling_origin.transfer.daily day {row['day']}: load_ratio differs from n_d / K"
+        for row in daily
+        if abs(row["load_ratio"] - row["selected"] / k) > 1e-12
+    )
+    components = ("rate_component", "volume_component", "total_component")
+    alerting = [row for row in daily if row["selected"] > 0]
+    if not alerting:
+        problems += [
+            f"rolling_origin.transfer.{name}: must be null when no day has an alert"
+            for name in components
+            if transfer[name] is not None
+        ]
+        return problems
+    missing = [name for name in components if transfer[name] is None]
+    if missing:
+        problems.append(
+            f"rolling_origin.transfer: {', '.join(missing)} required when a day has alerts"
+        )
+        return problems
+    mean_volume = window["transactions"] / window_days
+    expected = {
+        "rate_component": [
+            math.log(r["selected"] / r["transactions"] / float(share)) for r in alerting
+        ],
+        "volume_component": [math.log(r["transactions"] / mean_volume) for r in alerting],
+        "total_component": [math.log(r["selected"] / k) for r in alerting],
+    }
+    for name, terms in expected.items():
+        if abs(transfer[name] - sum(terms) / len(terms)) > 1e-9:
+            problems.append(f"rolling_origin.transfer.{name}: differs from the daily terms")
+    return problems
+
+
+def _rolling_days(record: Mapping[str, Any], partitions: DevelopmentPartitions) -> list[str]:
+    spec = partitions.rolling
+    if spec is None:
+        return ["rolling_origin: the dataset declaration has no rolling_origin window design"]
+    origin = record["origin"]
+    if origin not in spec.origins:
+        return [f"rolling_origin.origin: {origin} is not one of {list(spec.origins)}"]
+    expected = {
+        "training.first_day": (record["training"]["first_day"], partitions.train.first_day),
+        "training.last_day": (record["training"]["last_day"], spec.training_last_day(origin)),
+        "window.last_day": (record["window"]["last_day"], spec.window_last_day(origin)),
+        "transfer.last_day": (record["transfer"]["last_day"], spec.transfer_last_day(origin)),
+    }
+    return [
+        f"rolling_origin.{name}: {found} must be {wanted} for origin {origin}"
+        for name, (found, wanted) in expected.items()
+        if found != wanted
+    ]
+
+
+ROLLING_ORIGIN = _contract(
+    "rolling_origin",
+    1,
+    "One origin of the rolling-origin supplement for RQ2 (exploratory, development days only): the "
+    "primary configuration refitted on the days before the gap, the R2 threshold set on the scores "
+    "of the threshold window and its transfer to the next days, against the origin's fixed daily "
+    "budget (protocol, Experimental Split Structure; DR-001; DR-003). Descriptive only.",
+    (
+        Field("configuration", STUDY_CONFIGURATION, "The primary (H3) configuration"),
+        Field("seed", SEED, "Training seed (the main seed)"),
+        Field("origin", POSITIVE, "Origin s: the first day of the threshold window"),
+        Field("training", ROLLING_TRAINING, "The refit's training rows"),
+        Field("fit", ROLLING_FIT, "The refit"),
+        Field("scores", RUN_FILE, "Local score file of the window and transfer days"),
+        Field("window", ROLLING_WINDOW, "The threshold window"),
+        Field("threshold", ROLLING_THRESHOLD, "The R2 threshold and the budget K"),
+        Field("transfer", ROLLING_TRANSFER, "The transfer window"),
+    ),
+    _rolling_rules,
+    _seed_rule("rolling_origin"),
 )
 
 # --- score ---------------------------------------------------------------------------------------
@@ -2502,6 +2745,7 @@ RECORD_CONTRACTS: dict[str, RecordContract] = {
         COST_ANALYSIS,
         R1_SELECTION,
         H3_SELECTION,
+        ROLLING_ORIGIN,
         RUN_END,
     )
 }
@@ -2520,6 +2764,7 @@ DAY_CHECKS: dict[str, tuple[DayCheck, ...]] = {
     "calibration": (_calibration_days,),
     "r1_selection": (_selection_days("r1_selection"), _r1_rows),
     "h3_selection": (_selection_days("h3_selection"),),
+    "rolling_origin": (_rolling_days,),
 }
 
 
