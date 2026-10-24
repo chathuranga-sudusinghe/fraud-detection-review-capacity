@@ -76,6 +76,7 @@ class DevelopmentPartitions:
     v1: PartitionSpec
     v2: PartitionSpec
     processed: tuple[tuple[str, str], ...]
+    latency_fitting_last_day: int | None = None  # protocol: label-latency fit on V2 days 127–147
 
     @classmethod
     def from_spec(cls, spec: DatasetSpec, paths: ProjectPaths) -> DevelopmentPartitions:
@@ -85,7 +86,11 @@ class DevelopmentPartitions:
             for stem in stems(spec)
         )
         partitions = cls(
-            spec.partition("train"), spec.partition("v1"), spec.partition("v2"), processed
+            spec.partition("train"),
+            spec.partition("v1"),
+            spec.partition("v2"),
+            processed,
+            spec.label_latency_fitting_last_day,
         )
         if any(p.sealed for p in (partitions.train, partitions.v1, partitions.v2)):
             raise RecordContractError("A development partition is declared sealed")
@@ -94,6 +99,13 @@ class DevelopmentPartitions:
     def named(self, label: str) -> PartitionSpec:
         """The partition a record names: ``"V1"`` or ``"V2"``."""
         return {"V1": self.v1, "V2": self.v2}[label]
+
+    def latency_ranges(self) -> tuple[tuple[int, int], tuple[int, int]]:
+        """The label-latency fitting and held-out day ranges of V2, as (first, last) pairs."""
+        last = self.latency_fitting_last_day
+        if last is None:
+            raise RecordContractError("The dataset declaration has no label-latency range")
+        return (self.v2.first_day, last), (last + 1, self.v2.last_day)
 
 
 type DayCheck = Callable[[Mapping[str, Any], DevelopmentPartitions], list[str]]

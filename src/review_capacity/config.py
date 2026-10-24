@@ -264,6 +264,10 @@ class DatasetSpec:
     total_rows: int
     partitions: tuple[PartitionSpec, ...]
     identity_columns: tuple[str, ...]  # identity-file columns besides the key
+    # Last V2 day of the label-latency fitting range (protocol, Experimental Split Structure:
+    # V2 days 127-147 fit, days 148-154 are held out). None only for a synthetic declaration
+    # without a latency range.
+    label_latency_fitting_last_day: int | None = None
 
     def source_table(self, column: str) -> str:
         """Raw file a joined column comes from: ``identity`` if declared there, else
@@ -343,6 +347,14 @@ class DatasetSpec:
             )
             if not (part.contains(days[0]) and part.contains(days[1])):
                 raise SpecificationError(f"TransactionDT bounds of {part.name} outside its days")
+        latency = self.label_latency_fitting_last_day
+        if latency is not None:
+            v2 = self.partition("v2")
+            if not v2.first_day <= latency < v2.last_day:
+                raise SpecificationError(
+                    f"label_latency.fitting_last_day {latency} must lie in "
+                    f"{v2.first_day}..{v2.last_day - 1} (a held-out part must remain)"
+                )
         if sum(p.rows for p in self.partitions) != self.total_rows:
             raise SpecificationError("Partition rows do not sum to total_rows")
         sealed = [p for p in self.partitions if p.sealed]
@@ -393,6 +405,9 @@ def load_dataset_spec(paths: ProjectPaths) -> DatasetSpec:
             partitions=tuple(_partition(p) for p in raw["partitions"]),
             identity_columns=_names(
                 raw["raw_files"]["identity"]["columns_besides_key"], "identity column"
+            ),
+            label_latency_fitting_last_day=_integer(
+                raw["label_latency"]["fitting_last_day"], "label_latency fitting_last_day"
             ),
         )
         spec.validate()

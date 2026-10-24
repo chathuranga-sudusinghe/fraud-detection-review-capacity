@@ -142,12 +142,14 @@ def search_declaration() -> TrainingDeclaration:
 
 def synthetic_partitions() -> DevelopmentPartitions:
     """The development partitions of the project with the synthetic row counts and days 1 to 3
-    for V1 and V2, because records cover whole partitions."""
+    for V1 and V2, because records cover whole partitions. The label-latency fit takes days 1
+    to 2."""
     return replace(
         PARTITIONS,
         train=replace(PARTITIONS.train, rows=TRAIN_ROWS),
         v1=replace(PARTITIONS.v1, rows=V1_ROWS, first_day=1, last_day=3),
         v2=replace(PARTITIONS.v2, rows=V2_ROWS, first_day=1, last_day=3),
+        latency_fitting_last_day=2,  # fit on days 1-2, hold out day 3
     )
 
 
