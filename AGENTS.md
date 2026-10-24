@@ -321,13 +321,23 @@ These rules apply to every AI assistant (Claude, Codex, ChatGPT and any future a
 
 **Terminal commands are run by the project owner.**
 
-- No AI assistant runs a terminal command for the project or the research. The assistant gives the project owner the exact command, one command per block, with what it does and its expected result. The project owner runs it and shares the output. Claude uses that output to create, edit or update files; Codex and ChatGPT use it to produce review findings, suggested commands and proposed replacement text in their responses, without changing files.
+- No AI assistant runs a terminal command for the project or the research, except the code-quality checks, read-only inspection, GitHub-issue handling by Claude and the review exception below. The assistant gives the project owner the exact command, one command per block, with what it does and its expected result. The project owner runs it and shares the output. Claude uses that output to create, edit or update files; Codex and ChatGPT use it to produce review findings, suggested commands and proposed replacement text in their responses, without changing files.
 - **First use.** A command used for the first time in the project is always run first by the project owner.
 - **Prior owner execution.** An earlier run by the project owner may be established by the owner's statement or recorded output from any branch or session of this project. It must cover the same command with the same options and environment settings. A different branch or session alone does not require another first run. Before repeating a command, the reviewing assistant checks that its current implementation still meets every condition of the review exception.
 - **Review exception.** When the project owner asks for a review, the reviewing assistant may run verification commands that the project owner has already run at least once (for example linting, type checking, unit and integration tests, validation commands in check-only mode and link checks), to detect errors and to compare its results with the owner's output. Such a command must not:
   - train, tune or score a model on research data (unit tests that fit small models on synthetic data are verification, not training);
   - write research output (processed data, evidence files, the dataset manifest) or change the environment (installing, locking or synchronising packages);
   - read sealed Test labels.
+- **Code-quality checks.** Every assistant that has a terminal may run the following four checks on its own initiative, at any time, without a review request and without a prior run by the project owner, so that errors are found and fixed before a change is handed over:
+
+  ```bash
+  uv run --no-sync ruff format .
+  uv run --no-sync ruff check .
+  uv run --no-sync mypy
+  uv run --no-sync pytest tests/unit
+  ```
+
+  `ruff format` rewrites files, so Claude, the only assistant that edits files, runs it in that form; Codex and ChatGPT run `ruff format --check .`, which reports without rewriting. The permission covers these four checks only (unit tests that fit small models on synthetic data are verification, not training). It does not cover the integration tests, which remain under the review exception, nor any command that trains, tunes or scores a model on research data, writes research output, changes the environment or reads sealed Test labels. An assistant without a terminal, such as one that reads only the pushed repository, gives the command and uses the output the project owner shares.
 - **Read-only inspection.** Every assistant may read and search repository content and inspect Git status, diffs, history and GitHub issues, including through read-only commands such as `git status`, `git diff`, `git show` and `gh issue view`. This permission applies independently of the review exception and its first-use requirement; it does not authorise verification runs, changes to any file or to the environment, or access to sealed Test labels.
 - **GitHub issues** are the one exception to the terminal-command rule: Claude may create, update and comment on issues itself, with `gh` or GitHub tools ([Git rules](#git-rules)).
 
@@ -410,7 +420,7 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 
 **Assistant roles.** The following permissions and restrictions apply; final approval remains with the project owner:
 
-- **Claude** works with the project owner on the local repository and on GitHub. It is the **only assistant that creates, edits and updates files** (code, tests, configuration, documentation), and it prepares the terminal commands for the project owner to run.
+- **Claude** works with the project owner on the local repository and on GitHub. It is the **only assistant that creates, edits and updates files** (code, tests, configuration, documentation), and it runs the code-quality checks itself and prepares the other terminal commands for the project owner to run.
 - **Codex** reads the local repository and GitHub and **reviews only**: it reports findings and does not edit files.
 - **ChatGPT** reads the GitHub repository only (committed and pushed content) and **reviews only**: it may support planning, research synthesis, literature review, methodology review, explanation, and code and documentation review, and does not edit files.
 - Any future assistant follows the same rules.
@@ -426,7 +436,7 @@ AI assistants are **supporting tools only**. The project owner (the student) hol
 - silently expand the project scope;
 - change frozen methodology without a GitHub Issue and a Decision Record;
 - inspect sealed Test labels before this is permitted;
-- run terminal commands except for read-only inspection, GitHub-issue handling by Claude and the review exception (see [Experiment execution responsibility](#experiment-execution-responsibility));
+- run terminal commands except for the code-quality checks, read-only inspection, GitHub-issue handling by Claude and the review exception (see [Experiment execution responsibility](#experiment-execution-responsibility));
 - edit files, unless it is Claude working with the project owner (see the assistant roles above);
 - commit, push, merge or otherwise finalise repository changes (see [Git rules](#git-rules));
 - treat AI-generated text, analysis or results as authoritative research evidence without human review.
