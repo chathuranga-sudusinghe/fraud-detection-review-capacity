@@ -102,7 +102,7 @@ jobs:
 
       - run: uv lock --check
 
-      # The CUDA compiler and NCCL build LightGBM from source (DR-013 §2; README step 2). The
+      # The CUDA compiler and NCCL build LightGBM from source (DR-013 §2; docs/environment-setup.md step 2). The
       # runner has no GPU; the tests run on CPU.
       - name: Install the CUDA 12.8 compiler and NCCL 2.26.2 for the LightGBM build
         run: |
