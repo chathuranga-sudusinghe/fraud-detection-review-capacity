@@ -53,20 +53,26 @@ def truth_of(rows: PartitionRows) -> Truth:
 
 
 def evaluate_partition(context: ScoringContext, scored: ScoredPartition) -> dict[str, Any]:
-    """Write the R3 records at the four capacities and the ranking record of ``scored``; returns
-    the path of each record by name."""
+    """Write the R3 records at the four capacities and the ranking record of the selected model
+    of ``scored``; a refit (``scored.role``) is evaluated under R3 only (the records' contract:
+    refits are evaluated under R3 on V2). Returns the path of each record by name."""
     run, name, label = context.run, scored.configuration, scored.label
-    with log_step(logger, f"Evaluating the selected {name} on {label}"):
+    selected = scored.role == MODEL_ROLE
+    seed = context.seed if scored.seed is None else scored.seed
+    with log_step(logger, f"Evaluating the {scored.tag} {name} on {label}"):
         scores = read_scores(run, scored.file, scored.rows)
         truth = truth_of(scored.rows)
         queue = DailyQueue.build(scored.rows.ids, truth.days)
-        subject = Subject(name, MODEL_ROLE, context.seed, scored.record, label)
+        subject = Subject(name, scored.role, seed, scored.record, label)
         written: dict[str, Any] = {}
         for capacity in capacity_budgets(run.partitions.v2):
             outcome = r3_outcome(queue, truth, scores, capacity)
             record = r3_record(context.identity, subject, truth, capacity, outcome)
             part = f"R3-c{round(capacity.value * 100):02d}"
-            written[part] = run.write_record(record, name, MODEL_ROLE, label, part)
-        ranking = ranking_record(context.identity, subject, truth, ranking_outcome(truth, scores))
-        written["ranking"] = run.write_record(ranking, name, MODEL_ROLE, label, "ranking")
+            written[part] = run.write_record(record, name, scored.tag, label, part)
+        if selected:
+            ranking = ranking_record(
+                context.identity, subject, truth, ranking_outcome(truth, scores)
+            )
+            written["ranking"] = run.write_record(ranking, name, scored.tag, label, "ranking")
     return written

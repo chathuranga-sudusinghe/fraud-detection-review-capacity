@@ -209,7 +209,7 @@ def test_a_neural_fit_is_timed_between_two_synchronisations_of_the_device(
         train={configuration("RES-u").weighting: None},
         v1=None,
     )
-    monkeypatch.setattr(trial_module, "_neural", lambda _context: neural)
+    monkeypatch.setattr(trial_module, "neural_of", lambda _context: neural)
     monkeypatch.setattr(trial_module, "NEURAL_MODELS", {"resnet": FakeModel})
     monkeypatch.setattr(
         trial_module,
