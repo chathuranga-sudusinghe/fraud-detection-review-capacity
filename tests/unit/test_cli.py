@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from review_capacity import cli
-from review_capacity.cli import build_parser, main
+from review_capacity.cli import _log_file, build_parser, main
 from review_capacity.data.migration import MigrationResult
 from review_capacity.data.processed import read_development_features
 from review_capacity.data.profiling import profile_columns
@@ -357,3 +357,24 @@ def test_migrate_provenance_passes_check_only_to_the_migration(
     assert main(["migrate-provenance", "--check-only", "--root", root]) == 0
     assert main(["migrate-provenance", "--root", root]) == 0
     assert calls == [True, False]
+
+
+def test_analyse_development_takes_a_source_and_stages() -> None:
+    args = build_parser().parse_args(
+        ["analyse-development", "--source", "outputs/development/x", "--stages", "h3", "refits"]
+    )
+    assert args.command == "analyse-development"
+    assert args.source == Path("outputs/development/x")
+    assert args.stages == ["h3", "refits"]
+    defaults = build_parser().parse_args(["analyse-development", "--source", "s"])
+    assert defaults.stages is None  # the default stages are those without model fits
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["analyse-development"])  # the source is required
+
+
+def test_analyse_development_keeps_its_log_in_the_run_directory() -> None:
+    args = build_parser().parse_args(
+        ["--log-file", "x.log", "analyse-development", "--source", "s"]
+    )
+    with pytest.raises(SpecificationError, match="omit --log-file"):
+        _log_file(args)

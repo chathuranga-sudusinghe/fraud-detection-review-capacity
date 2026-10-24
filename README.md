@@ -140,6 +140,16 @@ The environment is pinned for reproducibility: every direct dependency has an ex
 
    `run-development` runs, in one run, the logistic-regression reference (`LR`, first, so that a convergence failure shows before the model searches start) and the eight configurations in DR-011 order (`--configurations` chooses a subset). For each it runs the declared search, selects on V1, scores V1 and V2, evaluates R3 and the ranking, and times scoring, writing dated, ignored records, `summary.md` and `run.log` to `outputs/development/<UTC start time>/` (`--output` must name a new directory inside `outputs/`). The neural models and the reference need the shared preprocessing artifact (`--preprocessing`), and the neural models the micro-batch preflight (`--preflight`), which must have been made for the same artifact, training declaration, model settings, package source and GPU. A neural model is reloaded only after its saved hyperparameters and batching are checked against the declaration and the recorded batch plan. The run record names the approved cost prediction. It refuses to start if the plan differs from the approved cost or from the training declaration. The conditions of the timing session are recorded with each timing as context; no condition is required ([DR-015](docs/decisions/DR-015-common-training-rules.md) §9). `review-capacity --help` lists every option.
 
+   The results that follow from a completed run are produced in a new **analysis run** that reads the closed development run and never changes it (`outputs/analysis/<UTC start time>/`, with a `source/` link to the development run so that every reference resolves). Its stages are `thresholds` (R0–R2 and their workload), `calibration` (calibrators, R4 and the RQ3 cost analysis), `h3` (the H3 configuration selection and its label-latency check) and `refits` (the fixed-length refits and the CatBoost CPU–GPU comparison; they train models, use the preprocessing artifact and the batch plans that the development run recorded, and are named explicitly). Each stage can be repeated in a new analysis run. The `thresholds`, `calibration` and `h3` stages read the saved scores only (no model is fitted); the `h3` record is the binding selection of the H3 configuration, committed before the Test period is unsealed:
+
+   ```bash
+   .venv/bin/review-capacity analyse-development --source outputs/development/<UTC start time>
+   ```
+
+   ```bash
+   .venv/bin/review-capacity analyse-development --source outputs/development/<UTC start time> --stages refits
+   ```
+
    Before any neural run or run of the reference, the shared Train-only preprocessing of the two neural models ([DR-012](docs/decisions/DR-012-neural-network-input-representation.md)) is fitted once (a consequential step under the same execution rules; it reads the processed development files only):
 
    ```bash

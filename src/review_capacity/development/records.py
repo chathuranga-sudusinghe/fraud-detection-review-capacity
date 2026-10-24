@@ -239,7 +239,7 @@ IDENTITY = Object(
         Field("run_id", RUN_ID, "Run identifier: the UTC start time naming the run directory"),
         Field(
             "run_type",
-            Choice(("development", "search_plan")),
+            Choice(("development", "search_plan", "analysis")),
             "Run type (the outputs/ subdirectory)",
         ),
         Field("code_commit", GIT_COMMIT, "Git commit of the project root", nullable=True),
@@ -578,6 +578,20 @@ def _run_inputs(record: Mapping[str, Any], partitions: DevelopmentPartitions) ->
     return problems
 
 
+def _run_source(record: Mapping[str, Any]) -> list[str]:
+    """A development run has no source; an analysis run names the closed development run whose
+    records and files it reads (its ``source/`` link) by the SHA-256 of that run's ``run_end``."""
+    source, run_type = record["source"], record["identity"]["run_type"]
+    if run_type == "analysis":
+        if source is None:
+            return ["run.source: an analysis run names its source run"]
+        parts = source["run_end"]["path"].split("/")
+        if len(parts) < 3 or parts[-2:] != ["records", "run_end.json"]:
+            return ["run.source.run_end: the path of a source run's records/run_end.json"]
+        return []
+    return [] if source is None else [f"run.source: a {run_type} run has no source run"]
+
+
 def _run_contracts(record: Mapping[str, Any]) -> list[str]:
     expected = contract_versions()
     actual = record["contracts"]
@@ -588,7 +602,7 @@ def _run_contracts(record: Mapping[str, Any]) -> list[str]:
 
 RUN = _contract(
     "run",
-    2,
+    3,
     "The run's full provenance, written first; every other record repeats its identity.",
     (
         Field("started", TIMESTAMP, "When the run started"),
@@ -617,8 +631,20 @@ RUN = _contract(
             "Configurations run, in run order",
         ),
         Field("contracts", MapOf(POSITIVE), "Contract version of every record kind written"),
+        Field(
+            "source",
+            Object(
+                (
+                    Field("run_id", RUN_ID, "Run identifier of the source development run"),
+                    Field("run_end", PROJECT_FILE, "The source run's closing record"),
+                )
+            ),
+            "The closed development run an analysis run reads (null for a development run)",
+            nullable=True,
+        ),
     ),
     _run_identity,
+    _run_source,
     _run_contracts,
 )
 

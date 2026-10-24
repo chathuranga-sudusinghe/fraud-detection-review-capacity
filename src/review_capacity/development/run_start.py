@@ -46,11 +46,12 @@ def run_identity(
     settings_file: SettingsSnapshot,
     main_seed: int,
     manifest: Path,
+    run_type: str = RUN_TYPE,
 ) -> dict[str, Any]:
-    """The run identity of a development run's records."""
+    """The run identity of a run's records (a development run, or an analysis run)."""
     return {
         "run_id": started,
-        "run_type": RUN_TYPE,
+        "run_type": run_type,
         "code_commit": code["git_commit"],
         "uncommitted_changes": code["git_uncommitted_changes"],
         "source_sha256": code["package"]["source_sha256"],
@@ -94,9 +95,11 @@ def run_record(
     stems: Iterable[str],
     configurations: Iterable[str],
     plan: Mapping[str, str],
+    source: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The ``run`` record: the full provenance of the run, written first. ``plan`` is the
-    approved search plan's cost prediction (its path and its approved SHA-256)."""
+    approved search plan's cost prediction (its path and its approved SHA-256); ``source`` names
+    the closed development run that an analysis run reads (none for a development run)."""
     return {
         "record": "run",
         "schema_version": RECORD_CONTRACTS["run"].version,
@@ -113,6 +116,7 @@ def run_record(
         },
         "configurations": list(configurations),
         "contracts": contract_versions(),
+        "source": None if source is None else dict(source),
     }
 
 

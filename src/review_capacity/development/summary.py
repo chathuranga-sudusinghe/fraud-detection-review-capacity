@@ -718,5 +718,8 @@ def reference_markdown() -> str:
                 else _source_text(source, columns=True)
             )
             lines.append(f"| {column.header} | {_escape(column.meaning)} | {_escape(origin)} |")
+    from review_capacity.development.analysis_summary import analysis_reference
+
+    lines += [_escape(line) if line.startswith("|") else line for line in analysis_reference()]
     lines.append("")
     return "\n".join(lines)

@@ -18,6 +18,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from review_capacity.development.analysis_summary import analysis_markdown
 from review_capacity.development.records import (
     ALL_CONFIGURATIONS,
     MODEL_OF,
@@ -25,7 +26,12 @@ from review_capacity.development.records import (
     DevelopmentPartitions,
     contract_of,
 )
-from review_capacity.development.run_output import SUMMARY_NAME, LoadedRun, load_run
+from review_capacity.development.run_output import (
+    SOURCE_LINK,
+    SUMMARY_NAME,
+    LoadedRun,
+    load_run,
+)
 from review_capacity.development.summary import (
     COMPARISON_TABLES,
     CONTRAST_BALANCED,
@@ -43,6 +49,7 @@ from review_capacity.development.summary import (
 )
 from review_capacity.errors import RecordContractError
 from review_capacity.files import write_atomically
+from review_capacity.hashing import file_sha256
 
 logger = logging.getLogger(__name__)
 
@@ -387,12 +394,26 @@ def _outcome(run: LoadedRun) -> list[str]:
     return ["| Field | Value |", "|---|---|", *(f"| {code(k)} | {cell(v)} |" for k, v in rows)]
 
 
-def render_summary(run: LoadedRun) -> str:
-    """The Markdown summary of ``run``, from its records alone."""
+def _view(run: LoadedRun, source: LoadedRun | None) -> LoadedRun:
+    """The records the tables read: those of ``run`` and, for an analysis run, those of its source
+    run (other than its ``run`` and ``run_end`` records), the analysis run's own ``run`` first."""
+    if source is None:
+        return run
+    own = [(n, r) for n, r in run.records if r["record"] == "run"]
+    others = [(n, r) for n, r in source.records if r["record"] != "run"]
+    rest = [(n, r) for n, r in run.records if r["record"] != "run"]
+    return LoadedRun(run.path, [*own, *others, *rest], run.end)
+
+
+def render_summary(run: LoadedRun, source: LoadedRun | None = None) -> str:
+    """The Markdown summary of ``run``, from its records alone; for an analysis run, with the
+    records of its source development run (``source``) beside its own."""
     first = run.records[0][1]
     shared = tuple(f.name for f in contract_of(first).body.fields if f.name != "identity")
+    view = _view(run, source)
+    kind = "Analysis" if run.identity["run_type"] == "analysis" else "Development"
     lines = [
-        f"# Development run {run.identity['run_id']}",
+        f"# {kind} run {run.identity['run_id']}",
         "",
         "Generated from the JSON records of this run directory; not edited by hand.",
         "",
@@ -402,7 +423,8 @@ def render_summary(run: LoadedRun) -> str:
         "",
         record_markdown(first, omit=shared).rstrip("\n"),
         "",
-        *_tables(run),
+        *_tables(view),
+        *analysis_markdown(view),
         "",
         "## Records",
     ]
@@ -412,9 +434,47 @@ def render_summary(run: LoadedRun) -> str:
     return "\n".join(lines) + "\n"
 
 
-def write_summary(directory: Path, partitions: DevelopmentPartitions) -> Path:
-    """Regenerate ``summary.md`` of a run directory from its records, atomically."""
-    text = render_summary(load_run(directory, partitions))
+def load_source_of(
+    run: LoadedRun,
+    directory: Path,
+    partitions: DevelopmentPartitions,
+    root: Path | None = None,
+) -> LoadedRun | None:
+    """The source development run of an analysis run (through its ``source/`` link), checked
+    against the identifier and the SHA-256 of its ``run_end`` record that the ``run`` record
+    names; ``None`` for a development run. With the project ``root``, the link must also lead to
+    the directory the record names, inside the project."""
+    named = run.of_kind("run")[0]["source"]
+    if named is None:
+        return None
+    link = directory / SOURCE_LINK
+    if root is not None:
+        recorded = (root / named["run_end"]["path"]).parent.parent.resolve()
+        if link.resolve() != recorded or not recorded.is_relative_to(root.resolve()):
+            raise RecordContractError(
+                f"{directory}: the {SOURCE_LINK}/ link does not lead to the source run "
+                f"{named['run_end']['path']!r} of the project"
+            )
+    source = load_run(link, partitions)
+    end = source.path / "records" / "run_end.json"
+    if (
+        source.end is None
+        or source.identity["run_id"] != named["run_id"]
+        or file_sha256(end) != named["run_end"]["sha256"]
+    ):
+        raise RecordContractError(
+            f"{directory}: the source run differs from the one its run record names"
+        )
+    return source
+
+
+def write_summary(
+    directory: Path, partitions: DevelopmentPartitions, root: Path | None = None
+) -> Path:
+    """Regenerate ``summary.md`` of a run directory from its records, atomically (``root``: the
+    project root, with which an analysis run's source link is checked)."""
+    run = load_run(directory, partitions)
+    text = render_summary(run, load_source_of(run, directory, partitions, root))
     path = directory / SUMMARY_NAME
     write_atomically(path, lambda target: target.write_text(text, encoding="utf-8"))
     logger.info("Summary written to %s", path)

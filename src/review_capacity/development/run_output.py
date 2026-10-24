@@ -17,6 +17,7 @@ close. There is no resume: a rerun uses a new directory, and a record file is ne
 from __future__ import annotations
 
 import logging
+import os
 import re
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
@@ -41,10 +42,17 @@ RECORDS_DIR = "records"
 LOG_NAME = "run.log"
 SUMMARY_NAME = "summary.md"
 RUN_KIND = "run"
+SOURCE_LINK = "source"  # the link of an analysis run to the development run it reads
 END_KIND = "run_end"
 
 _PART = re.compile(r"[A-Za-z0-9_.-]+")
 _KIND_ORDER = {kind: index for index, kind in enumerate(RECORD_CONTRACTS)}
+
+
+def source_file(reference: Mapping[str, str]) -> dict[str, str]:
+    """A reference to a file of the source run, as written in an analysis run: the same path and
+    SHA-256, with the path under the ``source/`` link."""
+    return {"path": f"{SOURCE_LINK}/{reference['path']}", "sha256": reference["sha256"]}
 
 
 def run_id(now: datetime | None = None) -> str:
@@ -109,14 +117,19 @@ class RunDirectory:
         output: Path | None = None,
         *,
         log_opened: bool = False,
+        source: Path | None = None,
     ) -> RunDirectory:
         """Create the run's directory (``output``, or by default the dated one) and its
-        ``records/`` subdirectory; refuse any directory that is already in use."""
+        ``records/`` subdirectory; refuse any directory that is already in use. An analysis run
+        passes the ``source`` run directory it reads: ``source/`` in the new directory is a
+        relative link to it, so that a reference ``source/<path>`` resolves inside the run."""
         root = root.resolve()
         target = output if output is not None else default_directory(root, run_type, started)
         path = check_new_directory(target, root, log_opened=log_opened)
         try:
             (path / RECORDS_DIR).mkdir(parents=True)
+            if source is not None:
+                (path / SOURCE_LINK).symlink_to(os.path.relpath(source.resolve(), path))
         except OSError as error:
             raise FileAccessError(f"{path}: cannot be created ({error.strerror})") from error
         logger.info("Run directory %s", path)

@@ -166,6 +166,28 @@ def test_a_label_latency_selection_uses_the_declared_fitting_days(kind: str) -> 
     assert_rejected(wrong, "label-latency fitting days are 127–147")
 
 
+def test_an_analysis_run_names_its_source_run_and_a_development_run_has_none() -> None:
+    run = example("run")
+    assert problems(run) == []
+    source = {
+        "run_id": "2026-10-19T080000Z",
+        "run_end": file("outputs/development/2026-10-19T080000Z/records/run_end.json"),
+    }
+    assert_rejected(run | {"source": source}, "a development run has no source run")
+    identity = run["identity"] | {"run_type": "analysis"}
+    analysis = run | {"identity": identity, "source": source}
+    assert problems(analysis) == []
+    assert_rejected(analysis | {"source": None}, "names its source run")
+    wrong_file = file("outputs/development/2026-10-19T080000Z/records/run.json")
+    assert_rejected(
+        analysis | {"source": source | {"run_end": wrong_file}}, "the path of a source run"
+    )
+    short = file("run_end.json")  # a path of too few segments is a contract problem, not a crash
+    assert_rejected(analysis | {"source": source | {"run_end": short}}, "the path of a source run")
+    custom = file("outputs/my-run/records/run_end.json")  # a custom --output directory name
+    assert problems(analysis | {"source": source | {"run_end": custom}}) == []
+
+
 def test_a_device_comparison_is_a_catboost_pair_over_all_of_v2() -> None:
     record = example("device_comparison")
     assert problems(record) == []
