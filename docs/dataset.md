@@ -143,7 +143,7 @@ review-capacity prepare-data               # validate, then write the processed 
 review-capacity prepare-data --check-only  # validate and print the summary; write nothing
 ```
 
-- The machine-readable declaration of the raw files, the partitions and their anchors is [`config/dataset.yaml`](../config/dataset.yaml). Column roles come from [`config/features.yaml`](../config/features.yaml).
+- The machine-readable declaration of the raw files, the partitions and their anchors, and of the label-latency fitting range of V2, is [`config/dataset.yaml`](../config/dataset.yaml). Column roles come from [`config/features.yaml`](../config/features.yaml).
 - The stage stops with an error unless both file checksums match, every partition reproduces its DR-001 row count, `TransactionDT` bounds and hash prefix, and the data validation contract passes (DR-008 §§4–5). On 10 October 2026 the real files reproduced every anchor, and the integration tests passed.
 - Test-period labels are never read: labels are parsed only up to the last row of the development partitions, and the stage refuses to start unless the Test partition is declared sealed.
 

@@ -47,6 +47,7 @@ def test_dataset_declaration_matches_dr001() -> None:
     assert [p.name for p in spec.development] == ["train", "v1", "v2"]
     assert spec.partition("test").sealed
     assert spec.last_development_day == 154
+    assert spec.label_latency_fitting_last_day == 147  # fit on V2 days 127–147, hold out 148–154
 
 
 def test_repeated_input_rejected() -> None:
@@ -92,6 +93,9 @@ def _test_partition(content: dict[str, Any]) -> dict[str, Any]:
         (lambda c: c.update(seconds_per_day=3600), "must be 86400"),
         (lambda c: c["partitions"][0].update(rows="368632"), "must be an integer"),
         (lambda c: c.pop("key"), "malformed declaration"),
+        (lambda c: c.pop("label_latency"), "malformed declaration"),
+        (lambda c: c["label_latency"].update(fitting_last_day=154), "held-out part"),
+        (lambda c: c["label_latency"].update(fitting_last_day=126), "held-out part"),
     ],
 )
 def test_malformed_dataset_declaration_rejected(

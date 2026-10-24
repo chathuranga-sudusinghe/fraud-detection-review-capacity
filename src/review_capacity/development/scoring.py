@@ -24,7 +24,7 @@ import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
 import pandas as pd
@@ -190,7 +190,14 @@ def score_path(run: RunDirectory, configuration: str, label: str) -> Path:
     return run.path / SCORES_DIR / f"{configuration}-{MODEL_ROLE}-{label}.parquet"
 
 
-def read_scores(run: RunDirectory, file: Mapping[str, str], rows: PartitionRows) -> Scores:
+class HoldsRunFiles(Protocol):
+    """A run directory, open (``RunDirectory``) or loaded (``LoadedRun``): it names its path."""
+
+    @property
+    def path(self) -> Path: ...
+
+
+def read_scores(run: HoldsRunFiles, file: Mapping[str, str], rows: PartitionRows) -> Scores:
     """The scores of a score file, after checking its columns, its SHA-256 and that its ordered
     ``TransactionID`` sequence is that of ``rows`` (and so of the labels and amounts)."""
     path = run.path / file["path"]

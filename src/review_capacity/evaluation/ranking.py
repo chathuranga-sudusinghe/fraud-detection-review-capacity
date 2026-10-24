@@ -281,7 +281,7 @@ class Subject:
     period: str = "primary"
 
 
-def _record(
+def evaluation_record(
     identity: Mapping[str, Any], subject: Subject, truth: Truth, policy: str
 ) -> dict[str, Any]:
     return {
@@ -317,7 +317,7 @@ def r3_record(
     outcome: R3Outcome,
 ) -> dict[str, Any]:
     """The ``evaluation`` record of R3 at ``capacity`` (validated by its writer)."""
-    record = _record(identity, subject, truth, "R3")
+    record = evaluation_record(identity, subject, truth, "R3")
     record |= {
         "capacity": capacity.value,
         "k": capacity.k,
@@ -333,6 +333,6 @@ def ranking_record(
     identity: Mapping[str, Any], subject: Subject, truth: Truth, metrics: Mapping[str, float | None]
 ) -> dict[str, Any]:
     """The ``evaluation`` record of the whole ranking (Average Precision and ROC-AUC)."""
-    record = _record(identity, subject, truth, "ranking")
+    record = evaluation_record(identity, subject, truth, "ranking")
     record["metrics"] = dict(metrics)
     return record
