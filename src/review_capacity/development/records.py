@@ -2298,6 +2298,15 @@ BREAK_EVEN_INTERVAL = Object(
         Field("end_closed", Boolean(), "True when the end is the range end 1000 (included)"),
     )
 )
+CURVE_SEGMENT = Object(
+    (
+        Field("start", Number(1, 1000), "Start of the segment of ratios (closed; open at 1)"),
+        Field("end", Number(1, 1000), "End of the segment"),
+        Field("end_closed", Boolean(), "True when the end is the range end 1000 (included)"),
+        Field("unused", COUNT, "Queue members R4 declines on the segment: u"),
+        Field("frauds_forgone", COUNT, "Frauds among them: f, so ΔJ(rho) = rho f − u"),
+    )
+)
 CASES = ("coincidence", "crossing", "none", "right_censored")
 # DR-007 §2 and §1: the ratio grid of the tabulated RQ3 results and the C_FP sensitivities
 # phi = C_FP / C_R; the continuous range is (1, RQ3_RATIO_MAX].
@@ -2431,9 +2440,125 @@ def _break_even_problems(record: Mapping[str, Any]) -> list[str]:
     return problems
 
 
+def _negative_stretches(
+    curve: list[Mapping[str, Any]],
+) -> tuple[list[tuple[float, float, bool]], list[float]]:
+    """The ratios with ΔJ < 0 and the ties (ΔJ = 0 with unused reviews) that the segments imply,
+    as ``evaluation.cost.exact_curve`` derives them: on a segment ΔJ(rho) = rho f − u, negative
+    below u / f (everywhere when f = 0), and the last segment runs on past 1000."""
+    negative: list[tuple[float, float, bool]] = []
+    ties: list[float] = []
+    for i, segment in enumerate(curve):
+        lo, hi = segment["start"], math.inf if i == len(curve) - 1 else segment["end"]
+        u, f = segment["unused"], segment["frauds_forgone"]
+        if u == 0:
+            continue
+        root = u / f if f else math.inf
+        if f and lo <= root < hi and 1.0 < root <= RQ3_RATIO_MAX:
+            ties.append(root)
+        end = min(hi, root)
+        if end > RQ3_RATIO_MAX:
+            negative.append((lo, float(RQ3_RATIO_MAX), True))
+        elif end > lo:
+            negative.append((lo, end, False))
+    merged: list[tuple[float, float, bool]] = []
+    for start, end, closed in negative:
+        if merged and not merged[-1][2] and merged[-1][1] == start:
+            merged[-1] = (merged[-1][0], end, closed)
+        else:
+            merged.append((start, end, closed))
+    return merged, ties
+
+
+def _break_even_from_curve(record: Mapping[str, Any], curve: list[Mapping[str, Any]]) -> list[str]:
+    """The recorded negative intervals, ties and break-even case are those of the segments. The
+    values are computed by the same arithmetic as ``evaluation.cost.exact_curve`` and survive the
+    JSON round trip exactly, so they are compared exactly."""
+    case, saturation = record["break_even"], record["saturation"]["ratio"]
+    intervals, ties = _negative_stretches(curve)
+    problems: list[str] = []
+    recorded = [(i["start"], i["end"], i["end_closed"]) for i in case["intervals"]]
+    if recorded != intervals:
+        problems.append("cost_analysis.break_even.intervals: differ from the ratios where ΔJ < 0")
+    if case["zero_crossings"] != ties:
+        problems.append("cost_analysis.break_even.zero_crossings: differ from the curve's ties")
+    ratio = None if not intervals or intervals[-1][2] else intervals[-1][1]
+    if not intervals:
+        kind = "none"
+    elif intervals[-1][2] and (saturation is None or saturation > RQ3_RATIO_MAX):
+        kind = "right_censored"
+    else:
+        kind = "coincidence" if ratio == saturation else "crossing"
+    if (case["classification"], case["ratio"]) != (kind, ratio):
+        problems.append(
+            f"cost_analysis.break_even: the curve gives {kind} with ratio {ratio!r}, "
+            f"not {case['classification']} with {case['ratio']!r}"
+        )
+    return problems
+
+
+def _curve_problems(record: Mapping[str, Any]) -> list[str]:
+    """The segments of the exact curve: they cover (1, 1000] without gap, the declined set only
+    shrinks as the ratio grows, and the grid rows and the saturation ratio agree with them."""
+    curve, queue = record["curve"], record["queue"]
+    problems: list[str] = []
+    if curve[0]["start"] != 1.0:
+        problems.append("cost_analysis.curve: the first segment starts at 1")
+    if curve[-1]["end"] != RQ3_RATIO_MAX or not curve[-1]["end_closed"]:
+        problems.append("cost_analysis.curve: the last segment ends at 1000, included")
+    for i, segment in enumerate(curve):
+        where = f"cost_analysis.curve[{i}]"
+        if segment["end_closed"] != (i == len(curve) - 1):
+            problems.append(f"{where}.end_closed: only the last segment includes its end")
+        if segment["start"] > segment["end"] or (
+            segment["start"] == segment["end"] and (i != len(curve) - 1)
+        ):
+            problems.append(f"{where}: a segment has positive length (but a final point at 1000)")
+        if segment["frauds_forgone"] > min(segment["unused"], queue["captured"]):
+            problems.append(f"{where}.frauds_forgone: exceeds the unused reviews or R3's frauds")
+        if segment["unused"] > queue["reviews"]:
+            problems.append(f"{where}.unused: exceeds the R3 reviews")
+        if queue["captured"] - segment["frauds_forgone"] > queue["reviews"] - segment["unused"]:
+            problems.append(f"{where}: more frauds kept than reviews kept (R3 captured the rest)")
+        if i:
+            before = curve[i - 1]
+            if before["end"] != segment["start"]:
+                problems.append(f"{where}.start: the end of the previous segment")
+            fewer = before["unused"] - segment["unused"]
+            if fewer < 0 or segment["frauds_forgone"] > before["frauds_forgone"]:
+                problems.append(f"{where}: the declined set shrinks as the ratio grows")
+            elif before["frauds_forgone"] - segment["frauds_forgone"] > fewer:
+                problems.append(f"{where}: fewer frauds declined than reviews now made")
+
+    def at(ratio: float) -> Any:
+        for segment in curve:
+            if segment["start"] <= ratio < segment["end"] or (
+                segment["end_closed"] and ratio == segment["end"]
+            ):
+                return segment
+        return None
+
+    for i, row in enumerate(record["grid"]):
+        segment = at(row["ratio"])
+        if segment is None or (segment["unused"], segment["frauds_forgone"]) != (
+            row["unused"],
+            row["frauds_forgone"],
+        ):
+            problems.append(f"cost_analysis.grid[{i}]: differs from the curve at its ratio")
+    problems += _break_even_from_curve(record, curve)
+    saturation = record["saturation"]["ratio"]
+    emptied = [s for s in curve if s["unused"] == 0]
+    if saturation is None or saturation > RQ3_RATIO_MAX:
+        if emptied:
+            problems.append("cost_analysis.curve: unused reviews remain up to the saturation ratio")
+    elif not emptied or emptied[0]["start"] != max(saturation, 1.0):
+        problems.append("cost_analysis.curve: no unused review from the saturation ratio")
+    return problems
+
+
 COST_ANALYSIS = _contract(
     "cost_analysis",
-    1,
+    2,
     "The RQ3 cost analysis of one configuration, capacity and calibrator: R4 against R3 over the "
     "ratio grid, the exact break-even and saturation ratios, the declined-set calibration "
     "diagnostic, the amount proxies and the C_FP sensitivity (DR-007 §4–§9). Descriptive; "
@@ -2463,7 +2588,12 @@ COST_ANALYSIS = _contract(
             Object(
                 (
                     Field("ratio", Number(1), "rho_sat = 1 / smallest probability", nullable=True),
-                    Field("infinite", Boolean(), "A queue member has probability 0"),
+                    Field(
+                        "infinite",
+                        Boolean(),
+                        "No finite ratio reviews every queue member: one has probability 0, or one "
+                        "so small that its boundary overflows",
+                    ),
                 )
             ),
             "Saturation ratio: R4 fills the budget on every day from this ratio",
@@ -2498,10 +2628,17 @@ COST_ANALYSIS = _contract(
             ),
             "C_FP-converted break-even ratios (sensitivity)",
         ),
+        Field(
+            "curve",
+            ListOf(CURVE_SEGMENT, min_items=1),
+            "The exact curve over (1, 1000]: ΔJ(rho) = rho f − u and the utilisation "
+            "(reviews − u) / (K × days) on every segment; the grid below is a table of it",
+        ),
         Field("grid", ListOf(GRID_ROW, min_items=1), "The ratio grid of DR-007 §2"),
     ),
     _grid_problems,
     _break_even_problems,
+    _curve_problems,
 )
 
 

@@ -28,7 +28,7 @@ import numpy as np
 
 from review_capacity.development.calibration import FittedCalibrator
 from review_capacity.development.evaluation import truth_of
-from review_capacity.development.records import DevelopmentPartitions
+from review_capacity.development.records import RECORD_CONTRACTS, DevelopmentPartitions
 from review_capacity.development.run_output import RunDirectory
 from review_capacity.development.scoring import (
     MODEL_ROLE,
@@ -107,7 +107,7 @@ def evaluate_r4(
                 analysis = analyse(truth, selection, probabilities, capacity)
                 record = {
                     "record": "cost_analysis",
-                    "schema_version": 1,
+                    "schema_version": RECORD_CONTRACTS["cost_analysis"].version,
                     "identity": dict(identity),
                     "configuration": name,
                     "calibrator": fitted.method,

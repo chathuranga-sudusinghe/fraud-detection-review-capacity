@@ -11,6 +11,12 @@ result file. The child rebuilds what the fit needs from the project files, exact
 neural model, the shared preprocessing artifact and the selected trial's recorded batch plan),
 checks that its package source is the run's, fits for exactly the selected length, and saves the
 model in the directory it is given. The parent reloads it and scores it like any other model.
+
+The GPU is shared by the two processes. Before it starts the child, the parent releases what it
+no longer uses (``release_gpu_memory``): the child cannot reclaim the blocks that the parent's
+allocator caches. A new process does not inherit the parent's allocator cap, so a neural fit on
+the GPU applies it again in the child (``cap_allocator``, margin of the training declaration):
+under WSL the device otherwise spills into system memory instead of failing (Issue #175).
 """
 
 from __future__ import annotations
@@ -50,6 +56,7 @@ from review_capacity.models.v1_objective import V1Objective
 from review_capacity.paths import ProjectPaths
 from review_capacity.provenance import code_provenance
 from review_capacity.training.declaration import load_declaration
+from review_capacity.training.preflight import cap_allocator, release_gpu_memory
 from review_capacity.training.sampler import Candidate
 
 logger = logging.getLogger(__name__)
@@ -104,12 +111,14 @@ class FreshProcess:
         neural: NeuralRun | None = None,
         *,
         launch: Callable[[list[str]], int] | None = None,
+        release: Callable[[], None] = release_gpu_memory,
     ) -> None:
         self.root = root
         self.run = run
         self.identity = identity
         self.neural = neural
         self.launch = launch or (lambda command: subprocess.run(command, check=False).returncode)
+        self.release = release
 
     def __call__(self, job: RefitJob, directory: Path) -> float:
         name, tag = job.configuration, job.spec.tag
@@ -137,6 +146,7 @@ class FreshProcess:
             "--job",
             str(job_file),
         ]
+        self.release()  # the child cannot reclaim what this process caches on the GPU
         with log_step(logger, f"Fresh process for the {tag} of {name}"):
             code = self.launch(command)
         if code != 0:
@@ -241,15 +251,23 @@ def load_context(job: Mapping[str, Any]) -> SearchContext:
     )
 
 
-def run_job(job: Mapping[str, Any], *, load: ContextLoader = load_context) -> float:
+def run_job(
+    job: Mapping[str, Any],
+    *,
+    load: ContextLoader = load_context,
+    cap: Callable[[int], None] = cap_allocator,
+) -> float:
     """Fit and save the refit that ``job`` describes, write its result file and return the fit
-    seconds. ``load`` rebuilds the shared state (tests substitute synthetic inputs)."""
+    seconds. ``load`` rebuilds the shared state (tests substitute synthetic inputs); ``cap`` caps
+    the GPU allocator of this new process before a neural fit on the GPU."""
     subject = configuration_named(job["configuration"])
     spec = RefitSpec(job["kind"], job["seed"], job["device"], fresh_process=True)
     candidate: Candidate = dict(job["hyperparameters"])
     refit = RefitJob(subject.name, spec, job["trial"], candidate, job["length"])
     with log_step(logger, f"Fresh-process {spec.tag} of {subject.name}"):
         context = load(job)
+        if spec.device == "gpu" and kind_of(subject) == NEURAL:
+            cap(context.declaration.neural.preflight_free_margin_mib)
         seconds, _ = fit_refit(context, subject, refit, Path(job["directory"]))
     text = json.dumps({"seconds": seconds}, sort_keys=True)
     result = Path(job["result"])
@@ -257,10 +275,15 @@ def run_job(job: Mapping[str, Any], *, load: ContextLoader = load_context) -> fl
     return seconds
 
 
-def run_job_file(path: Path, *, load: ContextLoader | None = None) -> float:
+def run_job_file(
+    path: Path,
+    *,
+    load: ContextLoader | None = None,
+    cap: Callable[[int], None] = cap_allocator,
+) -> float:
     """``run_job`` for the job file written by ``FreshProcess``."""
     try:
         job = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         raise FileAccessError(f"{path}: the job file cannot be read") from error
-    return run_job(job, load=load_context if load is None else load)
+    return run_job(job, load=load_context if load is None else load, cap=cap)

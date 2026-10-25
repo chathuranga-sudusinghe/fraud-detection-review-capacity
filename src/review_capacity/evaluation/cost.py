@@ -22,7 +22,9 @@ $$
 
 A queue member with probability ``q`` is reviewed once ``rho ≥ 1/q`` (never when ``q = 0``), so
 ``u`` and ``f`` are step functions of rho and ΔJ is linear between the finitely many breakpoints
-``1/q``: its sign is decided exactly, segment by segment, with no interpolation (DR-007 §4).
+``1/q``: its sign is decided exactly, segment by segment, with no interpolation (DR-007 §4). In
+floating point a breakpoint is the smallest float ratio at which ``reviewed`` reviews the member
+(``boundary``), so the retained segments (``Curve.segments``) agree with R4 at every float ratio.
 
 * **Saturation ratio** rho_sat = 1 / (smallest probability in R3's queues); infinite when a queue
   member has probability 0 (then R4 never fills every day).
@@ -233,12 +235,38 @@ class Interval:
 
 
 @dataclass(frozen=True)
-class Curve:
-    """The exact sign analysis of ΔJ over (1, 1000]."""
+class Segment:
+    """A range of ratios on which R4 declines the same queue members: for ``start`` ≤ rho <
+    ``end`` (``end`` included at the range end 1000), ``unused`` reviews are declined, of which
+    ``frauds_forgone`` are frauds, so that ΔJ(rho) = rho × frauds_forgone − unused and the
+    utilisation is (reviews − unused) / (K × days). The first segment starts at 1, which is
+    excluded from the range."""
 
-    saturation: float | None  # None: infinite
+    start: float
+    end: float
+    end_closed: bool
+    unused: int
+    frauds_forgone: int
+
+    def as_record(self) -> dict[str, Any]:
+        return {
+            "start": self.start,
+            "end": self.end,
+            "end_closed": self.end_closed,
+            "unused": self.unused,
+            "frauds_forgone": self.frauds_forgone,
+        }
+
+
+@dataclass(frozen=True)
+class Curve:
+    """The exact sign analysis of ΔJ over (1, 1000], with the segments that give the whole
+    curve."""
+
+    saturation: float | None  # None: infinite (no finite ratio reviews every queue member)
     intervals: tuple[Interval, ...]
     zero_crossings: tuple[float, ...]
+    segments: tuple[Segment, ...] = ()
 
     @property
     def break_even(self) -> float | None:
@@ -257,9 +285,27 @@ class Curve:
         return "coincidence" if self.break_even == self.saturation else "crossing"
 
 
+def boundary(probability: float) -> float:
+    """The smallest float ratio at which a member with ``probability`` > 0 is reviewed.
+
+    ``reviewed`` compares ``probability >= 1.0 / ratio`` in floating point. The float division
+    1.0 / x never increases with x, so the ratios that satisfy the comparison form a half-line,
+    and its start is found by stepping from 1 / probability, which can be one or two floats off
+    (for 0.95 the quotient 1 / 0.95 gives a ratio whose reciprocal is 0.9500000000000001). The
+    segments of the curve start at these boundaries, so that they agree with ``reviewed`` at every
+    float ratio, not only at the integer ratios of the grid."""
+    ratio = 1.0 / probability
+    while 1.0 / ratio > probability:
+        ratio = math.nextafter(ratio, math.inf)
+    while 1.0 / math.nextafter(ratio, 0.0) <= probability:
+        ratio = math.nextafter(ratio, 0.0)
+    return ratio
+
+
 def exact_curve(probabilities: Floats, labels: npt.NDArray[np.int8]) -> Curve:
     """The sign of ΔJ(rho) = rho f − u over (1, 1000] for the R3 queue members with calibrated
-    ``probabilities`` and fraud ``labels``, exact between the breakpoints 1 / probability."""
+    ``probabilities`` and fraud ``labels``, exact between the breakpoints (the smallest ratio at
+    which each probability is reviewed, ``boundary``)."""
     if probabilities.shape != labels.shape or probabilities.ndim != 1 or len(probabilities) == 0:
         raise DataValidationError("The queue members need one probability and one label each")
     members = len(probabilities)
@@ -272,7 +318,7 @@ def exact_curve(probabilities: Floats, labels: npt.NDArray[np.int8]) -> Curve:
     if positive:
         last = np.concatenate((np.flatnonzero(np.diff(ranked[:positive])), [positive - 1]))
     levels = ranked[last]
-    breakpoints = [1.0 / float(level) for level in levels]
+    breakpoints = [boundary(float(level)) for level in levels]
     declined = [members, *(members - (last + 1)).tolist()]
     declined_frauds = [frauds, *(frauds - ranked_frauds[last]).tolist()]
     # Segment j (0 .. m): ratios in [lo_j, hi_j) with u = declined[j] and f = declined_frauds[j];
@@ -281,8 +327,12 @@ def exact_curve(probabilities: Floats, labels: npt.NDArray[np.int8]) -> Curve:
     ends = [*breakpoints, math.inf]
     negative: list[Interval] = []
     ties: list[float] = []
+    segments: list[Segment] = []
     for j, (lo, hi) in enumerate(zip(starts, ends, strict=True)):
         u, f = declined[j], declined_frauds[j]
+        if hi > 1.0 and lo <= RATIO_MAX and (lo < hi):
+            closed = hi > RATIO_MAX
+            segments.append(Segment(lo, min(hi, RATIO_MAX), closed, u, f))
         if u == 0 or hi <= 1.0 or lo > RATIO_MAX:
             continue
         root = u / f if f else math.inf
@@ -300,8 +350,10 @@ def exact_curve(probabilities: Floats, labels: npt.NDArray[np.int8]) -> Curve:
             merged[-1] = Interval(merged[-1].start, interval.end, interval.end_closed)
         else:
             merged.append(interval)
-    saturation = None if positive < members else 1.0 / float(levels[-1])
-    return Curve(saturation, tuple(merged), tuple(ties))
+    # infinite: a member has probability 0, or one so small (subnormal) that no finite ratio
+    # reaches it, so that its boundary overflows
+    saturation = None if positive < members or math.isinf(breakpoints[-1]) else breakpoints[-1]
+    return Curve(saturation, tuple(merged), tuple(ties), tuple(segments))
 
 
 # --- The analysis --------------------------------------------------------------------------------
@@ -393,6 +445,7 @@ def analyse(
             "intervals": [interval.as_record() for interval in curve.intervals],
             "zero_crossings": list(curve.zero_crossings),
         },
+        "curve": [segment.as_record() for segment in curve.segments],
         "friction": [
             {
                 "phi": float(phi),

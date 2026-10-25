@@ -6,7 +6,7 @@ Every step below is consequential and is governed by the [execution rules](../AG
 
 | Step | Command | Reads | Writes |
 |---|---|---|---|
-| 0 | the three checks before the first run | Train (the logistic-regression check); synthetic data (the CatBoost and graphics processing unit, GPU, handoff checks) | `outputs/catboost_objective_acceptance/<UTC start time>/` |
+| 0 | the four checks before the first run | Train (the logistic-regression check); synthetic data (the CatBoost, graphics processing unit, GPU, handoff and GPU child-process checks) | `outputs/catboost_objective_acceptance/<UTC start time>/` |
 | 1 | `plan-search` | no data | `outputs/search_plan/<UTC start time>/` |
 | 2 | `fit-neural-preprocessing` | processed development files | `outputs/neural_preprocessing/<UTC start time>/` |
 | 3 | `preflight-neural` | the preprocessing artifact; synthetic inputs | `outputs/neural_preflight/<UTC start time>/` |
@@ -18,7 +18,7 @@ The Test period is never read by any of these steps.
 
 ## 0. Checks before the first run
 
-Three checks precede the first development run, each on the final committed code. Their results are recorded as evidence of the run's starting state.
+Four checks precede the first development run, each on the final committed code. Their results are recorded as evidence of the run's starting state.
 
 **Logistic-regression candidate check** ([DR-015](decisions/DR-015-common-training-rules.md) §8). The ten recorded candidates of the logistic-regression reference are fitted on Train alone with the declared settings (the L-BFGS solver, `tol=1e-5`, `max_iter=5000`), and each must converge and give finite probabilities in [0, 1]. V1 plays no part in it and no setting is chosen by a validation result. The iteration count and time of each fit are in the log. It is an opt-in integration test that reads Train through the verified reader and writes nothing:
 
@@ -36,6 +36,12 @@ REVIEW_CAPACITY_INTEGRATION=1 uv run --no-sync pytest tests/integration/test_log
 
 ```bash
 REVIEW_CAPACITY_INTEGRATION=1 uv run --no-sync pytest tests/integration/test_gpu_memory_handoff.py
+```
+
+**GPU child-process check** (Issue #175). The fresh-process refit of the analysis starts a child that does not inherit the parent's allocator cap, and the parent's cached GPU memory stays in use on the device until the parent releases it. The check sizes its requests from the device memory that no process uses (read device-wide with `nvidia-smi`, because under WSL2 a process's own reading does not see another's cache) and skips when too little is left, so it does not ask for anything near the physical limit: a synthetic child applies the allocator cap with a small allowed size and must be refused by its own allocator beyond it, at once; and the device-wide memory in use (`nvidia-smi`) must still count the parent's cache after its tensors are freed and no longer count it after `release_gpu_memory`. It reads no data and writes nothing:
+
+```bash
+REVIEW_CAPACITY_INTEGRATION=1 uv run --no-sync pytest tests/integration/test_gpu_child_process.py
 ```
 
 The development run starts only after these checks pass. A change to `src/` after the neural preflight invalidates the preflight (its record binds the package source), so the checks, the search plan, the preprocessing and the preflight are all made from the final code.
