@@ -116,7 +116,7 @@ from review_capacity.paths import ProjectPaths
 from review_capacity.provenance import code_provenance
 from review_capacity.training.declaration import TrainingDeclaration, load_declaration
 from review_capacity.training.plan import COST_NAME
-from review_capacity.training.preflight import cap_allocator
+from review_capacity.training.preflight import cap_allocator, release_gpu_memory
 from review_capacity.training.sampler import CandidateList, generate_candidates
 from review_capacity.training.timing import Clock, session_conditions
 
@@ -169,6 +169,7 @@ class DevelopmentSetup:
     neural: NeuralRun | None = None
     paths: ProjectPaths | None = None
     cap_allocator: Callable[[int], None] = cap_allocator
+    release: Callable[[], None] = release_gpu_memory
 
 
 def chosen_configurations(names: Sequence[str]) -> tuple[Subject, ...]:
@@ -404,4 +405,7 @@ def run_development(setup: DevelopmentSetup) -> Path:
         with log_step(logger, f"Development run {run.started}"):
             for chosen in setup.configurations:
                 _run_configuration(setup, search, scoring, chosen, candidate_files)
+                # The configuration's model, optimiser and cached GPU blocks are released before
+                # the next one starts, which may use another library (FTT-u is followed by Cat-b).
+                setup.release()
     return run.path

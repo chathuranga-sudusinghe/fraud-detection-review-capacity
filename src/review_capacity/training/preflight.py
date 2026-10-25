@@ -53,6 +53,7 @@ import hashlib
 import json
 import logging
 import random
+import sys
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -286,6 +287,23 @@ def cap_allocator(margin_mib: int) -> None:
 
     total_mib = torch.cuda.get_device_properties(0).total_memory // (1 << 20)
     torch.cuda.set_per_process_memory_fraction((total_mib - margin_mib) / total_mib)
+
+
+def _loaded_torch() -> Any:
+    """PyTorch if this process has imported it, else None."""
+    return sys.modules.get("torch")
+
+
+def release_gpu_memory() -> None:
+    """Free what a finished configuration leaves on the GPU, so that the next one, possibly of
+    another library, can use it: collect the objects that are no longer referenced (a model, its
+    optimiser and activations) and hand PyTorch's unused cached blocks back to the device. PyTorch
+    keeps freed blocks in its cache, where CatBoost's separate allocator cannot use them. Nothing
+    happens when PyTorch is not loaded or no GPU is present."""
+    gc.collect()
+    torch = _loaded_torch()
+    if torch is not None and torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def _release(device: Device) -> None:

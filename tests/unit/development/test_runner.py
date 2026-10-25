@@ -57,6 +57,22 @@ def test_a_run_searches_scores_evaluates_times_and_summarises(tmp_path: Path) ->
     assert "LGB-b" in summary
 
 
+def test_the_gpu_is_released_after_every_configuration_before_the_next_starts(
+    tmp_path: Path,
+) -> None:
+    setup = development_setup(tmp_path, ("LGB-u", "LGB-b"))
+    finished: list[int] = []
+
+    def release() -> None:
+        # called when the configuration just run has written its record and no other has started
+        finished.append(
+            len(load_run(setup.run.path, setup.run.partitions).of_kind("configuration"))
+        )
+
+    run_development(replace(setup, release=release))
+    assert finished == [1, 2]
+
+
 def test_the_reference_runs_first_and_the_configurations_follow_dr011_order() -> None:
     chosen = chosen_configurations(["Cat-b", "RES-u", "LR", "LGB-u", "LGB-b"])
     assert [c.name for c in chosen] == ["LR", "LGB-u", "RES-u", "LGB-b", "Cat-b"]

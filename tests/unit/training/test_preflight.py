@@ -544,3 +544,59 @@ def test_the_command_line_needs_the_preprocessing_artifact() -> None:
     assert args.output is None
     with pytest.raises(SystemExit):
         build_parser().parse_args(["preflight-neural"])
+
+
+class _Cycle:
+    """An object that only the cyclic garbage collector can free."""
+
+    def __init__(self) -> None:
+        self.me = self
+
+
+def test_the_gpu_release_collects_garbage_and_empties_the_cache_only_with_a_gpu(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import gc
+    import weakref
+
+    calls: list[str] = []
+    collected: list[bool] = []
+    holder: list[weakref.ref[_Cycle]] = []
+
+    class FakeCuda:
+        def __init__(self, available: bool) -> None:
+            self.available = available
+
+        def is_available(self) -> bool:
+            return self.available
+
+        def empty_cache(self) -> None:
+            collected.append(holder[0]() is None)  # the garbage is collected first
+            calls.append("empty_cache")
+
+    class FakeTorch:
+        def __init__(self, available: bool) -> None:
+            self.cuda = FakeCuda(available)
+
+    was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        garbage = _Cycle()
+        reference = weakref.ref(garbage)
+        holder.append(reference)
+        del garbage
+        assert reference() is not None  # a cycle survives until it is collected
+        monkeypatch.setattr(preflight_module, "_loaded_torch", lambda: FakeTorch(True))
+        preflight_module.release_gpu_memory()
+        assert reference() is None
+        assert calls == ["empty_cache"]
+        assert collected == [True]
+        monkeypatch.setattr(preflight_module, "_loaded_torch", lambda: FakeTorch(False))
+        preflight_module.release_gpu_memory()
+        assert calls == ["empty_cache"]  # no GPU: the cache is left alone
+        monkeypatch.setattr(preflight_module, "_loaded_torch", lambda: None)
+        preflight_module.release_gpu_memory()  # PyTorch not loaded: nothing to empty
+        assert calls == ["empty_cache"]
+    finally:
+        if was_enabled:
+            gc.enable()
