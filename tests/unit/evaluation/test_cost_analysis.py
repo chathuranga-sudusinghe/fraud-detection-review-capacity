@@ -14,6 +14,7 @@ from review_capacity.evaluation.cost import (
     RATIO_GRID,
     Curve,
     analyse,
+    boundary,
     exact_curve,
     r4_outcome,
     r4_record,
@@ -151,13 +152,15 @@ def test_a_probability_of_zero_makes_the_saturation_infinite_and_can_censor_the_
     assert fraud.zero_crossings == (2.0,)
 
 
-def test_a_negative_result_exactly_at_the_range_end_is_a_closed_point() -> None:
-    # Both members are declined below 1000, where ΔJ = rho - 2; at 1000 the fraud is reviewed
-    # (0.001 >= 1/1000) and ΔJ = -1: a single negative ratio at the end of the range.
+def test_a_negative_result_at_the_range_end_is_a_closed_interval_of_the_last_floats() -> None:
+    # Both members are declined below 1000, where ΔJ = rho - 2; the fraud is reviewed from the
+    # float 999.9999999999999 on (0.001 >= 1 / 1000, as reviewed() compares) and ΔJ = -1 there:
+    # a negative stretch of the last floats of the range, closed at 1000.
     curve = exact_curve(np.array([0.001, 0.0]), np.array([1, 0], dtype=np.int8))
+    assert boundary(0.001) == 999.9999999999999
     assert [(i.start, i.end, i.end_closed) for i in curve.intervals] == [
         (1.0, 2.0, False),
-        (1000.0, 1000.0, True),
+        (boundary(0.001), 1000.0, True),
     ]
     assert curve.saturation is None
     assert curve.classification == "right_censored"
@@ -285,3 +288,184 @@ def test_curve_values_are_plain_data() -> None:
     curve = Curve(None, (), ())
     assert curve.classification == "none"
     assert curve.break_even is None
+
+
+def declined_counts(q: np.ndarray, y: np.ndarray, rho: float) -> tuple[int, int]:
+    declined = q < 1.0 / rho
+    return int(declined.sum()), int(y[declined].sum())
+
+
+def segment_at(curve: Curve, rho: float) -> tuple[int, int]:
+    (found,) = [
+        s
+        for s in curve.segments
+        if s.start <= rho < s.end or (s.end_closed and s.start <= rho <= s.end)
+    ]
+    return found.unused, found.frauds_forgone
+
+
+@pytest.mark.parametrize("seed", range(25))
+def test_the_segments_give_the_exact_curve_at_every_ratio(seed: int) -> None:
+    rng = np.random.default_rng(seed)
+    members = int(rng.integers(2, 40))
+    q = rng.integers(0, 41, members) / 40.0  # exact ties, zeros and ones
+    y = (rng.random(members) < 0.25).astype(np.int8)
+    curve = exact_curve(q, y)
+    segments = curve.segments
+    assert segments[0].start == 1.0
+    assert segments[-1].end == 1000.0
+    assert segments[-1].end_closed
+    assert all(a.end == b.start for a, b in pairwise(segments))  # no gap, no overlap
+    assert all(not s.end_closed for s in segments[:-1])
+    breakpoints = {boundary(float(v)) for v in q if v > 0 and 1 < boundary(float(v)) < 1000}
+    # on every breakpoint and on its neighbouring floats, where the float division 1 / rho and
+    # the reciprocal 1 / q of the probability can disagree
+    probes = {1.0 + 1e-9, 1000.0}
+    for b in breakpoints:
+        probes |= {b, math.nextafter(b, 0.0), math.nextafter(b, math.inf)}
+        probes |= {b * (1 + 1e-9), b * (1 - 1e-9)}
+    probes |= set(rng.uniform(1.0, 1000.0, 50))
+    for rho in sorted(probes):
+        if 1.0 < rho <= 1000.0:
+            assert segment_at(curve, rho) == declined_counts(q, y, rho), rho
+    # the cost difference and the utilisation of the curve are those of the direct evaluation
+    for rho in (1.5, 2.0, 7.0, 55.5, 1000.0):
+        unused, forgone = segment_at(curve, rho)
+        assert rho * forgone - unused == pytest.approx(delta(q, y, rho))
+
+
+def test_the_grid_of_a_cost_analysis_is_a_table_of_its_curve() -> None:
+    truth, queue, raw, probabilities = small()
+    capacity = Capacity(Fraction(2, 100), 2)
+    body = analyse(truth, queue.select(raw, 2), probabilities, capacity)
+    curve = body["curve"]
+    assert curve[0]["start"] == 1.0
+    assert curve[-1]["end"] == 1000.0
+    for row in body["grid"]:
+        (found,) = [
+            s
+            for s in curve
+            if s["start"] <= row["ratio"] < s["end"]
+            or (s["end_closed"] and row["ratio"] == s["end"])
+        ]
+        assert (found["unused"], found["frauds_forgone"]) == (row["unused"], row["frauds_forgone"])
+
+
+def test_a_breakpoint_is_the_smallest_float_ratio_at_which_the_member_is_reviewed() -> None:
+    # 1 / 0.95 = 1.0526315789473684 has the reciprocal 0.9500000000000001, which exceeds 0.95: the
+    # member is still declined at that ratio, and reviewed from the next float on
+    assert 1.0 / (1.0 / 0.95) > 0.95
+    assert boundary(0.95) == math.nextafter(1.0 / 0.95, math.inf)
+    for value in (0.95, 0.9, 0.7, 0.3, 0.1, 0.05, 0.0123, 1 / 3, 0.999999, 1.0):
+        edge = boundary(value)
+        assert 1.0 / edge <= value
+        assert 1.0 / math.nextafter(edge, 0.0) > value or edge == 1.0
+    # the segments of a queue that holds such a member start at that boundary
+    curve = exact_curve(np.array([0.95, 0.5]), np.array([1, 0], dtype=np.int8))
+    assert [s.start for s in curve.segments] == [1.0, boundary(0.95), boundary(0.5)]
+    assert curve.saturation == boundary(0.5)
+
+
+def test_the_edge_cases_of_the_segments() -> None:
+    # a probability of 1 is reviewed at every ratio above 1: no zero-length first segment
+    curve = exact_curve(np.array([1.0, 0.5]), np.array([0, 1], dtype=np.int8))
+    assert [(s.start, s.end, s.unused) for s in curve.segments] == [(1.0, 2.0, 1), (2.0, 1000.0, 0)]
+    # a queue with a zero probability keeps that member declined to the end: one point at 1000
+    zero = exact_curve(np.array([0.5, 0.0]), np.array([0, 1], dtype=np.int8))
+    assert zero.saturation is None
+    assert [(s.start, s.end, s.end_closed, s.unused, s.frauds_forgone) for s in zero.segments] == [
+        (1.0, 2.0, False, 2, 1),
+        (2.0, 1000.0, True, 1, 1),
+    ]
+    # an entirely zero queue: one segment, declining everything, over the whole range
+    nothing = exact_curve(np.zeros(3), np.array([0, 1, 0], dtype=np.int8))
+    assert [(s.start, s.end, s.end_closed, s.unused) for s in nothing.segments] == [
+        (1.0, 1000.0, True, 3)
+    ]
+    # a member first reviewed at the last floats of the range: a segment that ends at 1000, included
+    last = exact_curve(np.array([0.001]), np.array([1], dtype=np.int8))
+    assert last.segments[-1].start == boundary(0.001)
+    assert last.segments[-1].end == 1000.0
+    assert last.segments[-1].end_closed
+    assert last.saturation == boundary(0.001)
+    # a member whose boundary lies above 1000 is declined to the end of the range
+    beyond = exact_curve(np.array([0.0009999999999999998]), np.array([1], dtype=np.int8))
+    assert [(s.start, s.end, s.end_closed, s.unused) for s in beyond.segments] == [
+        (1.0, 1000.0, True, 1)
+    ]
+
+
+def test_the_utilisation_of_a_segment_is_the_reviews_left_over_the_budget() -> None:
+    q = np.array([0.9, 0.5, 0.2, 0.05])
+    y = np.array([1, 0, 1, 0], dtype=np.int8)
+    curve = exact_curve(q, y)
+    reviews, k, days = 4, 1, 4  # R3's four queue members over four days at K = 1
+    for rho in (1.2, 3.0, 8.0, 40.0):
+        unused, _ = segment_at(curve, rho)
+        reviewed_now = int((q >= 1.0 / rho).sum())
+        assert (reviews - unused) / (k * days) == reviewed_now / (k * days)
+
+
+@pytest.mark.parametrize("seed", range(60))
+def test_every_record_the_analysis_produces_satisfies_the_contract(seed: int) -> None:
+    """The rules of the ``cost_analysis`` contract accept what ``analyse`` writes: ties, zeros,
+    ones, no unused review, a queue that ends before 1000 and one that does not."""
+    from review_capacity.development.records import contract_of
+    from support.development import example
+
+    rng = np.random.default_rng(seed)
+    n_days, per_day, k = 6, 40, int(rng.integers(2, 9))
+    days = np.repeat(np.arange(1, n_days + 1), per_day).astype(np.int64)
+    labels = (rng.random(len(days)) < 0.2).astype(np.int8)
+    labels[0] = 1  # the partition has a fraud
+    amounts = rng.gamma(2.0, 50.0, len(days))
+    raw = rng.random(len(days))
+    levels = rng.integers(0, 41, len(days)) / 40.0  # many exact ties, some zeros and ones
+    if seed % 3 == 0:
+        levels = np.clip(levels, 0.002, 1.0)  # no zero probability: a finite saturation ratio
+    if seed % 5 == 0:
+        levels = np.clip(levels, 0.5, 1.0)  # saturation soon: no unused review at large ratios
+    truth = Truth.build(days, labels, amounts)
+    queue = DailyQueue.build(np.arange(1, len(days) + 1, dtype=np.int64), days)
+    capacity = Capacity(Fraction(2, 100), k)
+    body = analyse(truth, queue.select(raw, k), levels, capacity)
+    record = example("cost_analysis") | body
+    record |= {"k": k, "days": {"first": 127, "last": 127 + n_days - 1}}
+    assert contract_of(record).problems(record) == []
+
+
+def record_problems_for(levels: np.ndarray) -> list[str]:
+    """The contract problems of the record that ``analyse`` writes for one queue of 8 members
+    with ``levels`` as calibrated probabilities (two days of four transactions, K = 4)."""
+    from review_capacity.development.records import contract_of
+    from support.development import example
+
+    days = np.repeat([1, 2], 4).astype(np.int64)
+    labels = np.array([1, 0, 1, 0, 0, 1, 0, 0], dtype=np.int8)
+    truth = Truth.build(days, labels, np.full(8, 10.0))
+    queue = DailyQueue.build(np.arange(1, 9, dtype=np.int64), days)
+    raw = np.linspace(0.9, 0.1, 8)
+    body = analyse(truth, queue.select(raw, 4), levels, Capacity(Fraction(2, 100), 4))
+    record = example("cost_analysis") | body | {"k": 4, "days": {"first": 127, "last": 128}}
+    return contract_of(record).problems(record)
+
+
+@pytest.mark.parametrize("value", [5e-324, 1e-310, 1e-309])
+def test_a_probability_whose_boundary_overflows_makes_the_saturation_infinite(
+    value: float,
+) -> None:
+    assert math.isinf(boundary(value))  # no finite ratio reaches it
+    curve = exact_curve(np.array([0.5, value]), np.array([0, 1], dtype=np.int8))
+    assert curve.saturation is None  # not infinity: the record could not hold it
+    assert curve.segments[-1].unused == 1  # the member stays declined over the whole range
+    levels = np.array([0.9, 0.5, value, 0.3, 0.2, 0.4, 0.6, 0.8])
+    assert record_problems_for(levels) == []  # and the record is written and valid
+
+
+def test_a_tiny_probability_with_a_finite_boundary_keeps_a_finite_saturation() -> None:
+    value = 1e-308  # its reciprocal 1e308 is finite, far beyond the range
+    assert boundary(value) == pytest.approx(1e308)
+    curve = exact_curve(np.array([0.5, value]), np.array([0, 1], dtype=np.int8))
+    assert curve.saturation == boundary(value)
+    levels = np.array([0.9, 0.5, value, 0.3, 0.2, 0.4, 0.6, 0.8])
+    assert record_problems_for(levels) == []

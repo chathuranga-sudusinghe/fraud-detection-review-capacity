@@ -616,11 +616,18 @@ def _table(header: list[str], body: list[list[str]]) -> list[str]:
     ]
 
 
+# Lists that can hold thousands of entries (one segment per distinct calibrated probability of a
+# queue) show only their first and last entries in the Markdown, with the count; every entry stays
+# in the record (JSON), which is the complete output (Issue #175). Keys: ``kind.field``.
+BOUNDED_LISTS: Mapping[str, int] = {"cost_analysis.curve": 20}
+
+
 def record_markdown(record: Mapping[str, Any], *, omit: tuple[str, ...] = ()) -> str:
     """Every field of ``record`` as Markdown: a field/value table, then one table per list of
-    objects (one row per entry). The caller validates the record and adds the heading. A page
-    that shows several records of one run may present their shared fields once and ``omit``
-    them from the others (for example ``identity``)."""
+    objects (one row per entry; a list of ``BOUNDED_LISTS`` shows its first and last entries
+    only). The caller validates the record and adds the heading. A page that shows several records
+    of one run may present their shared fields once and ``omit`` them from the others (for
+    example ``identity``)."""
     contract = contract_of(record)
     scalars: list[tuple[str, object]] = []
     lists: list[tuple[str, Object, list[Mapping[str, Any]]]] = []
@@ -634,12 +641,19 @@ def record_markdown(record: Mapping[str, Any], *, omit: tuple[str, ...] = ()) ->
             scalars += _flatten(Object((f,)), {f.name: item}, "")
     lines = _table(["Field", "Value"], [[code(path), cell(value)] for path, value in scalars])
     for name, item, entries in lists:
-        lines += ["", f"**{code(name)}** ({len(entries)} entries)", ""]
+        limit = BOUNDED_LISTS.get(f"{contract.kind}.{name}")
+        shown = entries
+        note = f"{len(entries)} entries"
+        if limit is not None and len(entries) > limit:
+            half = limit // 2
+            shown = [*entries[:half], *entries[-half:]]
+            note += f"; the first {half} and the last {half} are shown, all are in the record"
+        lines += ["", f"**{code(name)}** ({note})", ""]
         if not entries:
             lines.append("None.")
             continue
         header = [code(path) for path, _ in _flatten(item, entries[0], "")]
-        body = [[cell(value) for _, value in _flatten(item, entry, "")] for entry in entries]
+        body = [[cell(value) for _, value in _flatten(item, entry, "")] for entry in shown]
         lines += _table(header, body)
     return "\n".join(lines) + "\n"
 

@@ -192,3 +192,33 @@ def test_reference_documents_every_contract() -> None:
 def test_run_records_list_the_contract_versions() -> None:
     assert contract_versions() == {kind: c.version for kind, c in RECORD_CONTRACTS.items()}
     validate_record(example("run") | {"contracts": contract_versions()}, PARTITIONS)
+
+
+def test_a_long_curve_shows_its_first_and_last_segments_only() -> None:
+    record = example("cost_analysis")
+    segments = [
+        {
+            "start": 1.0 + i,
+            "end": 2.0 + i,
+            "end_closed": False,
+            "unused": 9000 - i,
+            "frauds_forgone": 0,
+        }
+        for i in range(5000)
+    ]
+    text = record_markdown(record | {"curve": segments})
+    assert (
+        "**`curve`** (5000 entries; the first 10 and the last 10 are shown, all are in the record)"
+        in text
+    )
+    curve_lines = text.split("**`curve`**")[1].split("**`grid`**")[0].splitlines()
+    rows = [
+        line for line in curve_lines if line.startswith("| `") and not line.startswith("| `start`")
+    ]
+    assert len(rows) == 20  # not 5,000
+    assert rows[0].startswith("| `1.0` |")
+    assert rows[-1].startswith("| `5000.0` |")
+    assert len(text) < 20_000  # a bounded page however long the curve
+    # a short curve is shown in full, as every other list
+    short = record_markdown(example("cost_analysis"))
+    assert "**`curve`** (4 entries)" in short

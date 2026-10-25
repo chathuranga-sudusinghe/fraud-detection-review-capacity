@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from review_capacity.cli import build_parser
+from review_capacity.development import refit_process as refit_process_module
 from review_capacity.development.refit_process import (
     COMMAND,
     JOBS_DIR,
@@ -123,6 +124,67 @@ def test_the_parent_starts_the_command_and_reads_the_result(
     assert log.parent == search.run.path
     job_file = Path(command[command.index("--job") + 1])
     assert json.loads(job_file.read_text(encoding="utf-8"))["configuration"] == "LGB-u"
+
+
+def test_the_parent_releases_its_gpu_memory_before_it_starts_the_child(
+    searched_context: tuple[SearchContext, TrialOutcome, RefitJob], tmp_path: Path
+) -> None:
+    search, _, job = searched_context
+    directory = refit_directory(search.run.path, "LGB-u", SPEC)
+    events: list[str] = []
+
+    def launch(_command: list[str]) -> int:
+        events.append("launch")
+        result = search.run.path / JOBS_DIR / "LGB-u-same_seed_repeat.result.json"
+        result.write_text('{"seconds": 1.0}', encoding="utf-8")
+        return 0
+
+    fresh = FreshProcess(
+        tmp_path,
+        search.run,
+        search.identity,
+        launch=launch,
+        release=lambda: events.append("release"),
+    )
+    fresh(job, directory)
+    assert events == ["release", "launch"]
+
+
+@pytest.mark.parametrize(
+    ("name", "device", "capped"),
+    [
+        ("RES-u", "gpu", True),  # a neural fit on the GPU: the new process has no allocator cap
+        ("FTT-b", "gpu", True),
+        ("RES-u", "cpu", False),
+        ("LGB-u", "gpu", False),  # a tree-based library has its own allocator, not PyTorch's
+    ],
+)
+def test_the_child_caps_the_gpu_allocator_before_a_neural_fit_on_the_gpu(
+    searched_context: tuple[SearchContext, TrialOutcome, RefitJob],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    device: str,
+    capped: bool,
+) -> None:
+    search, _, job = searched_context
+    directory = refit_directory(search.run.path, "LGB-u", SPEC)
+    result = tmp_path / "result.json"
+    document = job_document(tmp_path, search.run, search.identity, job, directory, result, None)
+    document |= {"configuration": name, "device": device}
+    events: list[object] = []
+
+    def fake_fit(*_args: object) -> tuple[float, None]:
+        events.append("fit")
+        return 0.5, None
+
+    def cap(margin: int) -> None:
+        events.append(margin)
+
+    monkeypatch.setattr(refit_process_module, "fit_refit", fake_fit)
+    run_job(document, load=lambda _job: search, cap=cap)
+    margin = search.declaration.neural.preflight_free_margin_mib
+    assert events == ([margin, "fit"] if capped else ["fit"])  # capped before the fit starts
 
 
 def test_a_failing_child_is_a_model_error_naming_its_log(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import math
+from collections.abc import Mapping
 from typing import Any
 
 from review_capacity.config import load_dataset_spec
@@ -142,14 +143,16 @@ H3_CAPTURED = {
 }
 
 
-def _cost_grid() -> list[dict[str, Any]]:
+def cost_grid(
+    declined: Mapping[int, tuple[int, int, float, float | None]] | None = None,
+) -> list[dict[str, Any]]:
     """The nine-ratio grid of a 2 % cost analysis over V2: R3 reviews 1,568 transactions and
     captures 900 of the V2 frauds (total fraud amount 1,000,000; R3 captures 400,000 of it); R4
-    declines 68 reviews (5 frauds, 500 USD) at ratio 2, 8 (1 fraud, 100 USD) at ratio 5 and none
+    declines 68 reviews (5 frauds, 500 USD) at ratio 2, 12 (1 fraud, 100 USD) at ratio 5 and none
     from ratio 10 on."""
     reviews, frauds, captured = 1568, V2_FRAUDS, 900
     amount, captured_amount = 1_000_000.0, 400_000.0
-    declined = {2: (68, 5, 500.0, 0.3), 5: (8, 1, 100.0, 0.1)}
+    declined = declined or {2: (68, 5, 500.0, 0.3), 5: (12, 1, 100.0, 0.1)}
     rows = []
     for ratio in (2, 5, 10, 20, 50, 100, 200, 500, 1000):
         unused, forgone, forgone_amount, mean = declined.get(ratio, (0, 0, 0.0, None))
@@ -171,8 +174,10 @@ def _cost_grid() -> list[dict[str, Any]]:
                 "cost_difference": float(cost_r4 - cost_r3),
                 "relative_difference": (cost_r4 - cost_r3) / cost_r3,
                 "cost_no_review": float(ratio * frauds),
-                "fixed_status": "finite" if unused else "identical",
-                "fixed_ratio": unused / forgone if unused else None,
+                "fixed_status": (
+                    "identical" if not unused else ("finite" if forgone else "infinite")
+                ),
+                "fixed_ratio": unused / forgone if unused and forgone else None,
                 "fraud_value_exposed_r3": amount - captured_amount,
                 "fraud_value_exposed_r4": amount - captured_amount + forgone_amount,
                 "fraud_value_forgone": forgone_amount,
@@ -626,7 +631,13 @@ _BODIES: dict[str, dict[str, Any]] = {
             "zero_crossings": [],
         },
         "friction": [{"phi": 1.0, "ratio": 19.0}, {"phi": 5.0, "ratio": 55.0}],
-        "grid": _cost_grid(),
+        "curve": [
+            {"start": 1.0, "end": 2.0, "end_closed": False, "unused": 120, "frauds_forgone": 9},
+            {"start": 2.0, "end": 5.0, "end_closed": False, "unused": 68, "frauds_forgone": 5},
+            {"start": 5.0, "end": 10.0, "end_closed": False, "unused": 12, "frauds_forgone": 1},
+            {"start": 10.0, "end": 1000.0, "end_closed": True, "unused": 0, "frauds_forgone": 0},
+        ],
+        "grid": cost_grid(),
     },
     "r1_selection": {
         "configuration": "Cat-b",

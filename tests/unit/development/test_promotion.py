@@ -7,8 +7,10 @@ import json
 import shutil
 import subprocess
 from collections.abc import Callable
+from fractions import Fraction
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from review_capacity.development.promotion import (
@@ -19,7 +21,10 @@ from review_capacity.development.promotion import (
 )
 from review_capacity.development.rendering import write_summary
 from review_capacity.errors import FileAccessError, RecordContractError, SpecificationError
-from support.development import IDENTITY, PARTITIONS
+from review_capacity.evaluation.cost import analyse
+from review_capacity.evaluation.queue import DailyQueue
+from review_capacity.evaluation.ranking import Capacity, Truth
+from support.development import IDENTITY, PARTITIONS, example
 from support.runs import RUN_ID, finished_run, new_run, write_records
 from support.synthetic import REPO_PATHS
 
@@ -323,3 +328,34 @@ def test_a_linked_manifest_is_refused_before_it_is_read(tmp_path: Path) -> None:
     manifest.symlink_to(real)
     with pytest.raises(RecordContractError, match="manifest must be a regular file"):
         verify_promoted(destination)
+
+
+def test_a_run_with_a_long_curve_is_summarised_and_promoted_in_bounded_size(
+    tmp_path: Path,
+) -> None:
+    """A cost-analysis record that ``analyse`` writes for a large queue of distinct probabilities
+    (one segment each): the JSON keeps every segment, the summary shows the first and the last
+    (Issue #175)."""
+    rng = np.random.default_rng(7)
+    n_days, per_day, k = 28, 80, 60  # the 28 days of V2; a queue of 1,680 members
+    days = np.repeat(np.arange(1, n_days + 1), per_day).astype(np.int64)
+    labels = (rng.random(len(days)) < 0.2).astype(np.int8)
+    truth = Truth.build(days, labels, rng.gamma(2.0, 50.0, len(days)))
+    queue = DailyQueue.build(np.arange(1, len(days) + 1, dtype=np.int64), days)
+    selection = queue.select(rng.random(len(days)), k)
+    probabilities = rng.random(len(days))  # distinct: one segment per queue member
+    body = analyse(truth, selection, probabilities, Capacity(Fraction(2, 100), k))
+    record = example("cost_analysis") | body | {"k": k, "days": {"first": 127, "last": 154}}
+    assert len(record["curve"]) > 1_000
+    run = new_run(tmp_path)
+    run.log_file.write_text("log of the run\n", encoding="utf-8")
+    with run.closing(lambda path: write_summary(path, PARTITIONS)):
+        run.write_record(example("run"))
+        run.write_record(record, "Cat-u", "platt", "c02", "primary")
+    summary = (run.path / "summary.md").read_text(encoding="utf-8")
+    assert f"**`curve`** ({len(record['curve'])} entries; the first 10 and the last 10" in summary
+    assert len(summary) < 60_000  # bounded, however many segments the record keeps
+    destination = promote(run.path, tmp_path, PARTITIONS)
+    verify_promoted(destination)
+    promoted = next(destination.rglob("cost_analysis*.json"))
+    assert len(json.loads(promoted.read_text(encoding="utf-8"))["curve"]) == len(record["curve"])

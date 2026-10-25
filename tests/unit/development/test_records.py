@@ -3,6 +3,7 @@ required fields, and rejects records that break its rules (synthetic records; no
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ from support.development import (
     V2_FRAUDS,
     V2_ROWS,
     bins,
+    cost_grid,
     example,
     file,
     history,
@@ -123,10 +125,19 @@ def test_a_cost_analysis_keeps_its_arithmetic_and_cases_consistent() -> None:
     reach = {"start": 1.0, "end": 1000.0, "end_closed": True}
     censored = case | {"classification": "right_censored", "ratio": None, "intervals": [reach]}
     infinite = {"ratio": None, "infinite": True}
+    # every ratio of the grid still declines 8 reviews, none of them a fraud: ΔJ = −8 < 0 on the
+    # whole range, the saturation ratio is infinite and the break-even is right-censored
+    every_ratio = {
+        r: (8, 0, 0.0, 0.5 / r) for r in (2, 5, 10, 20, 50, 100, 200, 500, 1000)
+    }  # the mean probability of the declined lies below 1 / ratio
     censored_record = record | {
         "break_even": censored,
         "saturation": infinite,
         "friction": no_ratio,
+        "curve": [
+            {"start": 1.0, "end": 1000.0, "end_closed": True, "unused": 8, "frauds_forgone": 0}
+        ],
+        "grid": cost_grid(every_ratio),
     }
     assert problems(censored_record) == []
     # right-censoring needs ΔJ(1000) < 0 and a saturation ratio above 1000 (or infinite)
@@ -143,12 +154,40 @@ def test_a_cost_analysis_keeps_its_arithmetic_and_cases_consistent() -> None:
         record | {"break_even": short, "saturation": infinite, "friction": no_ratio},
         "only the range end 1000 is closed",
     )
-    # a single negative ratio, exactly 1000, is a closed point interval
+    # intervals that the curve does not give are rejected
     point = {"start": 1000.0, "end": 1000.0, "end_closed": True}
     single = case | {"classification": "right_censored", "ratio": None, "intervals": [point]}
-    assert (
-        problems(record | {"break_even": single, "saturation": infinite, "friction": no_ratio})
-        == []
+    assert_rejected(
+        censored_record | {"break_even": single, "saturation": infinite, "friction": no_ratio},
+        "differ from the ratios where ΔJ < 0",
+    )
+    # the last floats of the range: 2 declined reviews (1 fraud) up to 1000, then 1 (no fraud)
+    # at 1000 itself: negative on (1, 2) and on the closed point 1000, with a tie at 2
+    ends = {r: (2, 1, 100.0, 0.25 / r) for r in (2, 5, 10, 20, 50, 100, 200, 500)}
+    ends[1000] = (1, 0, 0.0, 0.0005)
+    two = case | {
+        "classification": "right_censored",
+        "ratio": None,
+        "single_interval": False,
+        "intervals": [
+            {"start": 1.0, "end": 2.0, "end_closed": False},
+            {"start": 1000.0, "end": 1000.0, "end_closed": True},
+        ],
+        "zero_crossings": [2.0],
+    }
+    point_record = record | {
+        "break_even": two,
+        "saturation": infinite,
+        "friction": no_ratio,
+        "curve": [
+            {"start": 1.0, "end": 1000.0, "end_closed": False, "unused": 2, "frauds_forgone": 1},
+            {"start": 1000.0, "end": 1000.0, "end_closed": True, "unused": 1, "frauds_forgone": 0},
+        ],
+        "grid": cost_grid(ends),
+    }
+    assert problems(point_record) == []
+    assert_rejected(
+        point_record | {"break_even": two | {"zero_crossings": []}}, "differ from the curve's ties"
     )
     open_point = {"start": 5.0, "end": 5.0, "end_closed": False}
     assert_rejected(
@@ -1461,3 +1500,104 @@ def test_a_rolling_origin_values_follow_from_its_counts() -> None:
     assert_rejected(record | {"transfer": transfer | {"daily": shifted}}, "load_ratio")
     partial = transfer | {"volume_component": None}
     assert_rejected(record | {"transfer": partial}, "volume_component required when a day has")
+
+
+def test_the_exact_curve_of_a_cost_analysis_is_contiguous_shrinking_and_agrees_with_its_grid() -> (
+    None
+):
+    record = example("cost_analysis")
+    assert problems(record) == []
+    curve = record["curve"]
+
+    def with_segments(segments: list[dict[str, Any]]) -> dict[str, Any]:
+        return record | {"curve": segments}
+
+    assert_rejected(with_segments(curve[1:]), "the first segment starts at 1")
+    assert_rejected(with_segments(curve[:-1]), "ends at 1000, included")
+    gap = [curve[0] | {"end": 1.5}, *curve[1:]]
+    assert_rejected(with_segments(gap), "the end of the previous segment")
+    grows = [curve[0], curve[1] | {"unused": 130}, *curve[2:]]
+    assert_rejected(with_segments(grows), "the declined set shrinks as the ratio grows")
+    closed_early = [curve[0] | {"end_closed": True}, *curve[1:]]
+    assert_rejected(with_segments(closed_early), "only the last segment includes its end")
+    too_many = [curve[0] | {"unused": 5000}, *curve[1:]]
+    assert_rejected(with_segments(too_many), "exceeds the R3 reviews")
+    fraud_heavy = [curve[0] | {"frauds_forgone": 500}, *curve[1:]]
+    assert_rejected(with_segments(fraud_heavy), "exceeds the unused reviews or R3's frauds")
+    # the grid is a table of the curve: ratio 5 sits in the segment [5, 10) with 12 unused reviews
+    assert_rejected(with_segments([*curve[:2], curve[2] | {"unused": 9}, curve[3]]), "grid[1]")
+    # the declined set is empty from the saturation ratio on, and not before
+    late = [*curve[:2], curve[2] | {"unused": 0, "frauds_forgone": 0}, curve[3]]
+    assert_rejected(with_segments(late), "no unused review from the saturation ratio")
+    early = [*curve[:3], curve[3] | {"unused": 1, "frauds_forgone": 0}]
+    assert_rejected(with_segments(early), "no unused review from the saturation ratio")
+    # an infinite saturation ratio leaves unused reviews on every segment
+    infinite = {"ratio": None, "infinite": True}
+    assert_rejected(record | {"saturation": infinite}, "unused reviews remain")
+
+
+def test_a_curve_that_contradicts_its_break_even_or_its_counts_is_rejected() -> None:
+    record = example("cost_analysis")
+    curve = record["curve"]
+    # a right-censored result needs ΔJ(1000) < 0: with u = 8 and f = 1 the cost difference at 1000
+    # is 992 and the negative stretch ends at 8
+    contradiction = record | {
+        "break_even": record["break_even"]
+        | {
+            "classification": "right_censored",
+            "ratio": None,
+            "intervals": [{"start": 1.0, "end": 1000.0, "end_closed": True}],
+        },
+        "saturation": {"ratio": None, "infinite": True},
+        "friction": [{"phi": 1.0, "ratio": None}, {"phi": 5.0, "ratio": None}],
+        "curve": [
+            {"start": 1.0, "end": 1000.0, "end_closed": True, "unused": 8, "frauds_forgone": 1}
+        ],
+        "grid": cost_grid(
+            dict.fromkeys((2, 5, 10, 20, 50, 100, 200, 500, 1000), (8, 1, 100.0, 0.01))
+        ),
+    }
+    assert_rejected(contradiction, "differ from the ratios where ΔJ < 0")
+    # removing one transaction cannot remove several frauds
+    fewer = [curve[0] | {"unused": 69, "frauds_forgone": 9}, curve[1] | {"frauds_forgone": 5}]
+    assert_rejected(record | {"curve": [*fewer, *curve[2:]]}, "fewer frauds declined than reviews")
+    # only the final segment may have no length
+    flat = [curve[0], curve[1] | {"end": 2.0}, curve[2] | {"start": 2.0}, *curve[3:]]
+    assert_rejected(record | {"curve": flat}, "positive length")
+
+
+def test_the_frauds_a_segment_keeps_cannot_exceed_the_reviews_it_keeps() -> None:
+    record = example("cost_analysis")
+    curve = record["curve"]
+    queue = record["queue"]
+    # a first segment that declines every queue member but only 9 of the 900 captured frauds
+    impossible = [
+        curve[0] | {"unused": queue["reviews"], "frauds_forgone": 9},
+        {"start": 2.0, "end": 1000.0, "end_closed": True, "unused": 0, "frauds_forgone": 0},
+    ]
+    assert_rejected(record | {"curve": impossible}, "more frauds kept than reviews kept")
+
+
+def test_the_break_even_case_is_derived_from_the_curve_exactly() -> None:
+    record = example("cost_analysis")
+    assert problems(record) == []  # coincidence: the break-even 10 is the saturation ratio
+    below = math.nextafter(10.0, 0.0)
+    case = record["break_even"]
+    crossing = record | {
+        "break_even": case
+        | {
+            "classification": "crossing",
+            "ratio": below,
+            "intervals": [{"start": 1.0, "end": below, "end_closed": False}],
+        },
+        "friction": [
+            {"phi": 1.0, "ratio": 2 * below - 1.0},
+            {"phi": 5.0, "ratio": 6 * below - 5.0},
+        ],
+    }
+    # the curve is unchanged: a break-even one float below the saturation ratio is not its own
+    assert_rejected(crossing, "differ from the ratios where ΔJ < 0")
+    assert_rejected(
+        record | {"break_even": case | {"classification": "crossing"}},
+        "the curve gives coincidence",
+    )
