@@ -93,7 +93,7 @@ fraud-detection-review-capacity/
 
 ## Quick start
 
-Create the environment and prepare the data once ([environment setup](docs/environment-setup.md)), then run the steps in order ([running the pipeline](docs/running-the-pipeline.md)). Consequential runs are executed by the project owner under the [execution rules](AGENTS.md#experiment-execution-responsibility).
+Create the environment and prepare the data once ([environment setup](docs/environment-setup.md)), then run the steps in order ([running the pipeline](docs/running-the-pipeline.md)). Consequential runs follow the [execution rules](AGENTS.md#experiment-execution-responsibility).
 
 ```bash
 uv sync --locked --extra ml --extra dl --extra dev

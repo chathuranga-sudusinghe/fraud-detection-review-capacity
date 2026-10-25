@@ -4,6 +4,8 @@ Records of the graphics processing unit (GPU) acceptance probe of [DR-013](../..
 
 Each run has its own directory, written by `review-capacity probe-gpu`. The files are unchanged copies of the run's records (`probe.json`, `probe.md`, `probe.log`). Each run's comparison files (`scores/`, synthetic score arrays) stay in its local run directory under `outputs/gpu_acceptance_probe/`, which Git ignores. Each comparison file is identified in `probe.json` by the SHA-256 (Secure Hash Algorithm, 256-bit) of its canonical score bytes (little-endian 64-bit floats) and of its ordered synthetic row-identifier bytes (little-endian 64-bit integers); these are checked by loading the arrays, not by hashing the `.npz` file. C1–C13 identify the probe checks and T1–T4 its tolerances ([specification](../../docs/gpu-acceptance-probe.md) Sections 3 and 4).
 
+**Navigation.** The specification link inside each saved `probe.md` is relative to the run's original output directory outside the repository, so it does not resolve from here; the saved reports are kept unchanged, and the specification is [`docs/gpu-acceptance-probe.md`](../../docs/gpu-acceptance-probe.md).
+
 **Result: the GPU acceptance gate of DR-013 §8 is passed** by acceptance runs 4 and 5 (below; [specification](../../docs/gpu-acceptance-probe.md) Section 7).
 
 ## Runs of 15 October 2026: LightGBM CUDA failure
