@@ -89,7 +89,7 @@ def restore_torch_state() -> Iterator[None]:
 @pytest.fixture(autouse=True)
 def one_epoch_phases(monkeypatch: pytest.MonkeyPatch) -> None:
     """One measured epoch keeps the CPU tests fast; the epoch count has its own test."""
-    monkeypatch.setattr(preflight_module, "PHASE_EPOCHS", 1)
+    monkeypatch.setattr(preflight_module, "PHASE_EPOCHS", {"resnet": 1, "ft_transformer": 1})
 
 
 @pytest.fixture(scope="module")
@@ -315,7 +315,7 @@ def test_the_phases_run_two_effective_batches_per_epoch_for_several_epochs_in_on
         original(model, train, valid, hyperparameters, **kwargs)
 
     monkeypatch.setattr(FTTransformerModel, "fit", watching)
-    monkeypatch.setattr(preflight_module, "PHASE_EPOCHS", 2)
+    monkeypatch.setattr(preflight_module, "PHASE_EPOCHS", {"resnet": 2, "ft_transformer": 2})
     run(declaration, settings, Scripted(), models=("ft_transformer",))
     effective = declaration.neural.effective_batch
     assert len(calls) == 4  # per candidate: one training fit, one evaluation fit
@@ -328,11 +328,21 @@ def test_the_phases_run_two_effective_batches_per_epoch_for_several_epochs_in_on
     assert "iterations" not in calls[1][3]
 
 
-def test_the_measured_phase_is_long_enough_to_be_sampled() -> None:
+# The fastest candidate of each model, seconds per epoch (Issue #173): the ResNet-style MLP's
+# 5 epochs took 0.2 s; the FT-Transformer's took 2.3 s (the preflight of 23 October 2026).
+FASTEST_EPOCH_SECONDS = {"resnet": 0.04, "ft_transformer": 0.46}
+
+
+@pytest.mark.parametrize("model", ["resnet", "ft_transformer"])
+def test_the_measured_phase_is_long_enough_to_be_sampled_at_the_fastest_speed(model: str) -> None:
     assert preflight_module.MIN_SAMPLES >= 3
     assert preflight_module.SAMPLE_INTERVAL_MS <= 100
-    # a phase of PHASE_EPOCHS epochs of two effective batches lasts several sampling intervals
-    assert DEFAULT_EPOCHS * preflight_module.EFFECTIVE_BATCHES >= 8
+    assert DEFAULT_EPOCHS == {"resnet": 25, "ft_transformer": 5}
+    interval = preflight_module.SAMPLE_INTERVAL_MS / 1000
+    phase = DEFAULT_EPOCHS[model] * FASTEST_EPOCH_SECONDS[model]
+    # it lasts at least three times the sampling time that the minimum number of readings needs,
+    # so a run that is somewhat faster still gives the readings
+    assert phase >= 3 * preflight_module.MIN_SAMPLES * interval
 
 
 def test_a_failed_phase_reports_its_actual_reason() -> None:

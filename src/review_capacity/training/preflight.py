@@ -6,10 +6,12 @@ each of a model's ten candidates:
 1. It uses the production implementation (the neural loop of ``models.neural_training``) with
    full-size synthetic inputs and the vocabularies of the shared preprocessing artifact, strict
    determinism and the precision and attention backend of DR-013 §4.
-2. **Training phase:** ``PHASE_EPOCHS`` epochs of **two** effective batches (2,048 rows) in one fit,
-   so that every batch after the first runs its forward and backward passes with the AdamW state
-   initialised by the first update, as in a real epoch. The repetition also makes the phase last
-   long enough for the memory sampler to observe it.
+2. **Training phase:** ``PHASE_EPOCHS`` epochs (by model) of **two** effective batches (2,048
+   rows) in one fit, so that every batch after the first runs its forward and backward passes
+   with the AdamW state initialised by the first update, as in a real epoch. The repetition also
+   makes the phase last long enough for the memory sampler to observe it: the fastest candidate
+   of each model lasts about 1 s (ResNet-style MLP, 25 epochs) or 2 s (FT-Transformer, 5 epochs),
+   ten or more sampling intervals against the three required (Issue #173).
 3. **Evaluation phase:** the same fit with early stopping on a synthetic validation set of one full
    evaluation batch (4,096 or 16 rows) and the shared V1 objective, so that the float32 evaluation
    runs after every epoch inside the training loop, with the optimiser state alive, exactly where
@@ -98,7 +100,12 @@ SYNTHETIC_FRAUD_SHARE = 0.2
 SYNTHETIC_SEED = 0
 SYNTHETIC_DAYS = 3  # relative days of the synthetic validation rows
 EFFECTIVE_BATCHES = 2  # effective batches of a measured epoch
-PHASE_EPOCHS = 5  # epochs of a measured phase: long enough to be sampled, state alive throughout
+# Epochs of a measured phase, by model: long enough to be sampled, state alive throughout. The
+# ResNet-style MLP's fastest candidate takes about 0.04 s per epoch, so 25 epochs last about 1 s
+# (5 epochs lasted 0.2 s on one run and left two readings, Issue #173); the FT-Transformer's fastest
+# takes about 0.5 s per epoch, so 5 epochs already last more than 2 s, and more would only make its
+# larger candidates (13 s per epoch) run for minutes.
+PHASE_EPOCHS: Mapping[str, int] = {"resnet": 25, "ft_transformer": 5}
 MIN_SAMPLES = 3  # memory samples a phase needs for its reading to count
 SAMPLE_INTERVAL_MS = 100  # nvidia-smi sampling interval of the preflight
 RECORD_KEYS = frozenset(
@@ -394,13 +401,21 @@ def _attempt(
                     instance.fit(
                         setting.train,
                         valid,
-                        {**hyperparameters, "max_epochs": PHASE_EPOCHS, "patience": PHASE_EPOCHS},
+                        {
+                            **hyperparameters,
+                            "max_epochs": PHASE_EPOCHS[model],
+                            "patience": PHASE_EPOCHS[model],
+                        },
                         objective=objective,
                         plan=plan,
                     )
                 else:
                     instance.fit(
-                        setting.train, None, hyperparameters, iterations=PHASE_EPOCHS, plan=plan
+                        setting.train,
+                        None,
+                        hyperparameters,
+                        iterations=PHASE_EPOCHS[model],
+                        plan=plan,
                     )
             except ModelError as failure:
                 if not _out_of_memory(failure):
@@ -557,7 +572,7 @@ def build_record(
         "margin_mib": declaration.neural.preflight_free_margin_mib,
         "micro_batch_candidates": list(declaration.neural.micro_batch_candidates),
         "effective_batches_per_epoch": EFFECTIVE_BATCHES,
-        "epochs_measured": PHASE_EPOCHS,
+        "epochs_measured": dict(PHASE_EPOCHS),
         "models": jsonable(dict(models)),
     }
 
