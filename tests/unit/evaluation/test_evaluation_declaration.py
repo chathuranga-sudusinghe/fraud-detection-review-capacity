@@ -255,6 +255,28 @@ def test_the_streams_follow_the_order_of_dr_006() -> None:
         assert marker in text
 
 
+def test_the_protocol_lists_the_streams_in_the_declared_order() -> None:
+    phrases = {
+        "pigeonhole_h1_h2": "H1/H2 pigeonhole",
+        "naive_s1": "S1 fraud-level bootstrap",
+        "day_block_s2": "S2 day blocks",
+        "day_block_h3": "H3 day blocks",
+        "day_block_rq3": "RQ3 day blocks",
+        "pigeonhole_rq3": "RQ3 pigeonhole sensitivity",
+        "pigeonhole_false_negative": "false-negative pigeonhole",
+        "day_block_secondary": "secondary-outcome day blocks",
+    }
+    assert set(phrases) == set(STREAMS)  # a stream added to the declaration fails here
+    line = next(
+        entry for entry in PROTOCOL.splitlines() if "child streams in a fixed order:" in entry
+    )
+    positions = [line.index(f"({number}) ") for number in range(1, len(STREAMS) + 1)]
+    assert positions == sorted(positions)
+    for number, name in enumerate(STREAMS, start=1):
+        assert line[line.index(f"({number}) ") :].startswith(f"({number}) {phrases[name]}")
+    assert f"({len(STREAMS) + 1}) " not in line
+
+
 def test_the_levels_match_dr_006(declaration: EvaluationDeclaration) -> None:
     assert declaration.levels.difference == percent(
         search(r"(\d+) % for difference estimates", DR006).group(1)

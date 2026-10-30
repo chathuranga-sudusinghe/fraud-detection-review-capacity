@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) and 2026-10-30 (Issue #183: block construction, smallest equivalence tolerance, interval labels; Issue #185: interval wording of the daily-budget statistics) |
+| Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) and 2026-10-30 (Issue #183: block construction, smallest equivalence tolerance, interval labels; Issue #185: interval wording of the daily-budget statistics; Issue #193: wording of historical and supervisor statements) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (H1/H2 bootstrap), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (H3 configuration), [protocol](../protocol.md) |
 
@@ -166,7 +166,7 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 
 - A day-level SD of at least about 13 % is unavoidable: per-day binomial noise at about 2,800 transactions per day is already about that size.
 - With x = 20 %, H3₁ can be concluded under moderate day-level variation, and only under near-perfect transfer in the most pessimistic scenario.
-- These are planning assumptions, not measured Test quantities. No model scores exist yet.
+- These are planning assumptions, not measured Test quantities. They were set before any model scores existed; V2 scores of the development run exist now and are not Test quantities.
 
 **Sensitivity reporting (non-confirmatory).**
 - Report the 90 % CI for r against the alternative bounds ±10 %, ±25 % and ±50 %.
@@ -232,7 +232,7 @@ The rate component answers the research question, *does a validation-selected op
 
 ## Threats and limitations
 
-- **Δ is a judgement.** No fraud- or alerting-specific literature standard exists. The 20 % magnitude rests on development-period volume variation and operational reasoning, and is reported with sensitivity bounds. It should be reviewed with the supervisor before the protocol freeze.
+- **Δ is a judgement.** No fraud- or alerting-specific literature standard exists. The 20 % magnitude rests on development-period volume variation and operational reasoning, and is reported with sensitivity bounds. Supervisor feedback on the magnitude is welcome and is not a precondition for the protocol freeze.
 - **The feasibility table relies on planning assumptions** (day-level SD, autocorrelation), not measured model behaviour.
 - **With 28 days and ℓ = 3, the bootstrap has about 26 distinct blocks.** Coverage of the 90 % interval is approximate.
 - **The volume anchor uses V2 only (28 days).** A different reference period would give somewhat different percentiles.

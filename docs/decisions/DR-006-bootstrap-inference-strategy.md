@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #14, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison; Issue #185: streams for false-negative and secondary-outcome intervals; Issue #189: draw conventions; Issue #191: S1 variances and Wald p-values) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison; Issue #185: streams for false-negative and secondary-outcome intervals; Issue #189: draw conventions; Issue #191: S1 variances and Wald p-values; Issue #193: wording of a historical statement) |
 | Evidence source | Development-period (V2, relative days 127–154) dependence diagnostics, computed for this decision with no Test labels and no model scores; `notebooks/01_dataset_feasibility_audit.ipynb` §15; bootstrap and clustered-inference literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -249,7 +249,7 @@ The more frauds concentrate in large clusters, the larger DE becomes; DE = 1 whe
 
 ### Proxy variance diagnostic [D, with interpretation I]
 
-**Why a proxy is needed.** Model capture indicators do not exist yet: no models have been trained and no Test scores exist. As a proxy, four **entity-linked binary attributes of V2 frauds** were used: identity present; ProductCD = C; card6 = credit; amount above the V2 fraud median.
+**Why a proxy was needed.** When this diagnostic was made, model capture indicators did not exist: no models had been trained and no Test scores existed (trained models exist now; Test scores still do not). As a proxy, four **entity-linked binary attributes of V2 frauds** were used: identity present; ProductCD = C; card6 = credit; amount above the V2 fraud median.
 
 **Method.** For each attribute, the variance of the fraud-level proportion was estimated under several resampling schemes (4,000 replicates each, fixed seed). Each variance is expressed relative to a naive fraud-level bootstrap.
 
