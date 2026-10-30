@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #8, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24 (Issue #8: SESOI fixed at 2 percentage points of Recall@2%); revised 2026-10-09 (Issue #54: estimands for the eight-configuration model set; bootstrap p-value definition) and 2026-10-30 (Issue #183: open bounds at ±SESOI; list of cell contrasts) |
+| Date | 2026-09-24 (Issue #8: SESOI fixed at 2 percentage points of Recall@2%); revised 2026-10-09 (Issue #54: estimands for the eight-configuration model set; bootstrap p-value definition) and 2026-10-30 (Issues #183 and #191: open bounds at ±SESOI; list of cell contrasts; per-weighting family effects; exact McNemar test) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§6–7, 15; development-period (V2) projections; equivalence-testing and practical-significance literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -76,7 +76,7 @@ In addition, the magnitude of δ_F is interpreted against ±SESOI using its **90
 **Bounds.** The bounds ±0.02 are **open**, as for H3 ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)): a CI endpoint exactly equal to −0.02 or +0.02 is neither "within" nor "beyond", so such an interval is classified as **crossing** ±0.02. The same rule applies to the position of the four 90 % CIs of δ_W,m relative to (−0.02, +0.02).
 
 **Qualification rules (descriptive).**
-- If the 95 % CI of the family × weighting interaction excludes 0 **and** its point estimate exceeds the SESOI in magnitude, the family effect is reported separately for each weighting condition.
+- If the 95 % CI of the family × weighting interaction excludes 0 **and** its point estimate exceeds the SESOI in magnitude, the family effect is reported separately for each weighting condition: N_w − T_w for w = u and b, each with its 95 % interval, computed within every replicate of the paired bootstrap (never by combining interval endpoints).
 - The two within-family model contrasts are always reported, so that a family effect driven by one model is visible.
 
 ### 4. H2 — class-weighting effect: equivalence (intersection-union TOST, Two One-Sided Tests)
@@ -114,6 +114,20 @@ In addition, the magnitude of δ_F is interpreted against ±SESOI using its **90
 | **Multiplicity** | **Holm** [REF-029] at family-wise α = 0.05 over the confirmatory family {H1, H2, H3}, using p_H1, p_H2 and p_H3 (H3 is the alert-rate transfer hypothesis, tested once on the H3 configuration; [DR-010](DR-010-h3-confirmatory-configuration.md)). Decisions use the Holm-adjusted p-values defined below the table, so Holm's step-down stopping rule applies. Holm controls the family-wise error rate under arbitrary dependence and can combine difference and equivalence p-values, since each is a valid p-value for its own null. H2 is one family member because its intersection-union structure needs no internal split [REF-062]. |
 | **Is Holm appropriate?** | Yes. It is conservative, but the confirmatory claims are few and pre-specified, and conservatism suits a single-holdout study. The cost is lower power at the first Holm step (α = 0.0167); this is shown in the power table. |
 | **Effect-size reporting** | For every estimand: the point estimate in pp; frauds per 28 days and per day; the Precision@K equivalent; normalised recall; CIs. Sensitivity: H1/H2 interpretations are also shown against SESOIs of 1, 3 and 5 pp (not confirmatory). |
+
+**Exact McNemar test (descriptive).** For a cell contrast a − b, let `d_a` be the number of Test frauds captured by configuration a only and `d_b` the number captured by b only. The two-sided exact p-value is:
+
+$$
+p = \min\left\lbrace 1,\ 2 \cdot \Pr\left(X \le \min(d_a, d_b)\right) \right\rbrace, \qquad X \sim \mathrm{Binomial}\left(d_a + d_b,\ \tfrac{1}{2}\right)
+$$
+
+where:
+
+- `d_a`, `d_b` = the discordant counts of the contrast;
+- `X` = a binomial variable with `d_a + d_b` trials and success probability ½;
+- `p` = 1 when `d_a + d_b` = 0.
+
+The counts are reported with p. The test assumes independent frauds, is labelled independence-based and stays outside the Holm family.
 
 The H1 bootstrap p-value is:
 
@@ -268,6 +282,8 @@ REF-004, REF-005, REF-006, REF-019, REF-020, REF-028, REF-029, REF-030, REF-035,
 | δ_F | Model-family effect: neural mean minus tree mean of Recall@2% (H1 estimand) |
 | δ*_F | δ_F in one bootstrap replicate |
 | δ_W,m | Weighting simple effect of model m (H2 estimands) |
+| d_a, d_b | Test frauds captured only by configuration a, only by b (McNemar discordant counts) |
+| X | Binomial variable of the exact McNemar test |
 | DE | Design effect: variance inflation due to clustering |
 | Δ | H3 equivalence tolerance on the alert rate (defined in DR-003) |
 | F | Number of Test frauds (projected ≈ 2,660) |

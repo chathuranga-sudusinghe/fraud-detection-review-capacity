@@ -88,6 +88,49 @@ def test_the_engine_reproduces_the_development_paired_bootstrap() -> None:
     assert upper == pytest.approx(interval.upper, rel=1e-9, abs=1e-12)
 
 
+def test_the_engine_reproduces_the_development_bootstrap_across_memory_blocks() -> None:
+    a, b, day, entity = frauds()
+    for fraud_days in (6, 40):  # 40 days leave most replicates without any fraud weight
+        spread = np.minimum(day * (fraud_days // 6), fraud_days - 1).astype(np.intp)
+        replicates = pigeonhole_ratios(
+            np.random.default_rng(SEED),
+            np.vstack([a, b]),
+            spread,
+            fraud_days,
+            entity,
+            replicates=1001,  # crosses the 500-replicate blocks twice
+        )
+        interval = paired_difference(a, b, spread, fraud_days, entity, replicates=1001)
+        difference = replicates.ratios[:, 0] - replicates.ratios[:, 1]
+        defined = difference[np.isfinite(difference)]
+        lower, upper = np.percentile(defined, [2.5, 97.5], method="linear")
+        assert replicates.undefined_count == interval.undefined_replicates
+        assert lower == pytest.approx(interval.lower, rel=1e-9, abs=1e-12)
+        assert upper == pytest.approx(interval.upper, rel=1e-9, abs=1e-12)
+    assert replicates.undefined_count > 0  # the sparse case did reach undefined replicates
+
+
+def test_one_fraud_on_one_entity_is_defined_exactly_when_its_day_is_drawn() -> None:
+    day = np.array([0], dtype=np.intp)
+    entity = np.array([0], dtype=np.intp)
+    result = pigeonhole_ratios(
+        np.random.default_rng(17), np.array([[1.0]]), day, 3, entity, replicates=3000
+    )
+    defined = result.ratios[~result.undefined, 0]
+    assert (defined == 1.0).all()
+    assert result.undefined_count / 3000 == pytest.approx((2 / 3) ** 3, abs=0.03)
+
+
+def test_one_replicate_is_enough_for_the_ratio_engines() -> None:
+    a, _, day, entity = frauds()
+    one = pigeonhole_ratios(np.random.default_rng(1), a[np.newaxis], day, 6, entity, replicates=1)
+    assert one.ratios.shape == (1, 1)
+    assert naive_ratios(np.random.default_rng(1), a[np.newaxis], replicates=1).ratios.shape == (
+        1,
+        1,
+    )
+
+
 def test_the_result_does_not_depend_on_the_block_size(monkeypatch: pytest.MonkeyPatch) -> None:
     a, b, day, entity = frauds()
     captures = np.vstack([a, b])

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #14, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison; Issue #185: streams for false-negative and secondary-outcome intervals; Issue #189: draw conventions) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison; Issue #185: streams for false-negative and secondary-outcome intervals; Issue #189: draw conventions; Issue #191: S1 variances and Wald p-values) |
 | Evidence source | Development-period (V2, relative days 127–154) dependence diagnostics, computed for this decision with no Test labels and no model scores; `notebooks/01_dataset_feasibility_audit.ipynb` §15; bootstrap and clustered-inference literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -49,7 +49,27 @@ This record fixes that choice using development-period evidence only.
   - `δ̂` = point estimate of the paired difference (δ_F or δ_W,m);
   - `z` = standard-normal quantile for the interval level (e.g. 1.96 for 95 %).
 
-  This removes the known over-count and shows how far conclusions depend on the primary method's conservatism. If the corrected variance is ≤ 0, S1 is reported as not estimable.
+  This removes the known over-count and shows how far conclusions depend on the primary method's conservatism. `V_pigeonhole` and `V_naive` are the sample variances (divisor n − 1, with n the number of defined replicates) of the same estimand over the defined replicates of the pigeonhole and the fraud-level bootstrap. The Wald interval uses the level of the quantity it is compared with (90 % for the H1 category and H2, 95 % for the descriptive contrasts).
+
+  The S1 p-values come from the standard normal distribution:
+
+  $$
+  \begin{aligned}
+  p^{\mathrm{S1}}_{\mathrm{H1}} &= 2\left(1 - \Phi\left(\frac{\lvert \hat{\delta}_F \rvert}{\mathrm{SE}_F}\right)\right) \\
+  p^{\mathrm{S1}}_{a,m} &= 1 - \Phi\left(\frac{\hat{\delta}_{W,m} + 0.02}{\mathrm{SE}_m}\right) \\
+  p^{\mathrm{S1}}_{b,m} &= \Phi\left(\frac{\hat{\delta}_{W,m} - 0.02}{\mathrm{SE}_m}\right) \\
+  p^{\mathrm{S1}}_{\mathrm{H2}} &= \max_{m} \max\left(p^{\mathrm{S1}}_{a,m},\ p^{\mathrm{S1}}_{b,m}\right)
+  \end{aligned}
+  $$
+
+  where:
+
+  - `Φ` = the standard-normal distribution function;
+  - `SE_F`, `SE_m` = the corrected standard errors of δ̂_F and of δ̂_W,m;
+  - `0.02` = the SESOI;
+  - `p_a,m`, `p_b,m` = the one-sided p-values for the lower and upper equivalence bounds of model m.
+
+  S1 is not estimable for H1 when the corrected variance of δ_F is ≤ 0, and for H2 when the corrected variance of any of the four δ_W,m is ≤ 0. Holm needs both p-values, so when either is not estimable the comparison of conclusions is reported as not estimable.
 - **S2 — Day-level moving-block bootstrap, ℓ (block length) = 3 days.** Circular wrap is not used, to match H3; the blocks are built as in [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) (non-circular start positions, series truncated to 28 days). This is a key-free check that preserves each day's top-K exactly. The same B and interval type as the primary are used.
 
 **Robustness rule.**
@@ -347,6 +367,7 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | FT-Transformer | Feature Tokenizer + Transformer |
 | N, T | Neural family {RES, FTT}; tree-based family {LGB, Cat} |
 | #{ · } | Number of bootstrap replicates satisfying a condition |
+| n | Number of defined replicates (divisor n − 1 of the S1 sample variances) |
 | n_obs | Number of observations (in the variance approximation of Owen, REF-068) |
 | ν_A, ν_B | Owen's imbalance measures for factors A and B, as defined in REF-068 |
 | p_a,m, p_b,m | One-sided H2 p-values for the lower and upper bounds of model m |
@@ -357,6 +378,8 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | Recall@2% | Share of frauds reviewed at the 2 % review capacity |
 | S1, S2 | Sensitivity analyses: Owen-corrected variance; day-level moving-block bootstrap |
 | SE | Standard error |
+| SE_F, SE_m | Corrected standard errors of δ̂_F and δ̂_W,m (S1) |
+| Φ | Standard-normal distribution function (S1 Wald p-values) |
 | SE_MC | Monte Carlo standard error of a bootstrap tail proportion |
 | Holm | Holm's sequentially rejective multiple-testing procedure over {H1, H2, H3} |
 | RQ3 | Research question 3: cost-aware capacity use (DR-007) |
