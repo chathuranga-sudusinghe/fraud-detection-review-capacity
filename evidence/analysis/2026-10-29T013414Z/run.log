@@ -1,0 +1,1203 @@
+2026-10-29 07:04:14 INFO    review_capacity.cli | review-capacity analyse-development
+2026-10-29 07:04:14 INFO    review_capacity.cli | Project root: /home/chathuranga/projects/fraud-detection-review-capacity
+2026-10-29 07:04:14 INFO    review_capacity.development.analysis | Preparing the analysis run 2026-10-29T013414Z ...
+2026-10-29 07:04:14 INFO    review_capacity.development.inputs | Reading the verified partitions train, v1, v2 ...
+2026-10-29 07:04:14 INFO    review_capacity.data.processed | development_joined.parquet verified: SHA-256 matches its record; 511998 rows, 436 columns; built by commit 319207a97e2b
+2026-10-29 07:04:14 INFO    review_capacity.data.processed | development_joined.parquet was built with another dataset.yaml; its partition content is checked against the current one
+2026-10-29 07:04:14 INFO    review_capacity.data.processed | train.parquet verified: SHA-256 matches its record; 368632 rows, 436 columns; built by commit 319207a97e2b
+2026-10-29 07:04:14 INFO    review_capacity.data.processed | train.parquet was built with another dataset.yaml; its partition content is checked against the current one
+2026-10-29 07:04:15 INFO    review_capacity.development.inputs | train: 368632 rows, 12484 frauds, ordered identifiers f3c088aa2f95
+2026-10-29 07:04:15 INFO    review_capacity.data.processed | v1.parquet verified: SHA-256 matches its record; 65544 rows, 436 columns; built by commit 319207a97e2b
+2026-10-29 07:04:15 INFO    review_capacity.data.processed | v1.parquet was built with another dataset.yaml; its partition content is checked against the current one
+2026-10-29 07:04:15 INFO    review_capacity.development.inputs | v1: 65544 rows, 2768 frauds, ordered identifiers cb1325d41dae
+2026-10-29 07:04:15 INFO    review_capacity.data.processed | v2.parquet verified: SHA-256 matches its record; 77822 rows, 436 columns; built by commit 319207a97e2b
+2026-10-29 07:04:15 INFO    review_capacity.data.processed | v2.parquet was built with another dataset.yaml; its partition content is checked against the current one
+2026-10-29 07:04:15 INFO    review_capacity.development.inputs | v2: 77822 rows, 2637 frauds, ordered identifiers 54edb97bc6b8
+2026-10-29 07:04:15 INFO    review_capacity.development.inputs | Reading the verified partitions train, v1, v2: done in 0.9 s
+2026-10-29 07:04:17 INFO    review_capacity.development.run_output | Run directory /home/chathuranga/projects/fraud-detection-review-capacity/outputs/analysis/2026-10-29T013414Z
+2026-10-29 07:04:17 INFO    review_capacity.development.analysis | Preparing the analysis run 2026-10-29T013414Z: done in 3.6 s
+2026-10-29 07:04:18 INFO    review_capacity.models.device | LightGBM 4.7.0: the recorded CUDA build (SHA-256 716e9be697f5a703...)
+2026-10-29 07:04:18 INFO    review_capacity.development.neural_run | Neural inputs of the run ...
+2026-10-29 07:04:18 INFO    review_capacity.features.neural_preprocessing | Loading the neural preprocessing artifact from /home/chathuranga/projects/fraud-detection-review-capacity/outputs/neural_preprocessing/2026-10-25T115216Z ...
+2026-10-29 07:04:18 INFO    review_capacity.features.neural_preprocessing | Loading the neural preprocessing artifact from /home/chathuranga/projects/fraud-detection-review-capacity/outputs/neural_preprocessing/2026-10-25T115216Z: done in 0.0 s
+2026-10-29 07:04:29 INFO    review_capacity.development.neural_run | Neural inputs of the run: done in 11.7 s
+2026-10-29 07:04:32 INFO    review_capacity.development.analysis | Analysis run 2026-10-29T013414Z: stages h3, rolling ...
+2026-10-29 07:04:32 INFO    review_capacity.development.analysis | Stage h3 ...
+2026-10-29 07:04:32 INFO    review_capacity.development.h3 | Selecting the H3 configuration on V2 ...
+2026-10-29 07:04:32 INFO    review_capacity.development.h3 | Selecting the H3 configuration on V2: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.development.h3 | H3 configuration (binding): LGB-b
+2026-10-29 07:04:32 INFO    review_capacity.development.h3 | Label-latency H3 selection on V2 days 127–147 ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56) ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56): done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56) ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56): done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56) ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56): done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56) ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56): done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56) ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56): done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56) ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56): done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56) ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56): done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 56,379 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56) ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | R3 at 2% (K = 56): done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.ranking | Average Precision and ROC-AUC: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.development.h3 | Label-latency H3 selection on V2 days 127–147: done in 0.6 s
+2026-10-29 07:04:32 INFO    review_capacity.development.h3 | H3 configuration on days 127–147 (descriptive): LGB-u
+2026-10-29 07:04:32 INFO    review_capacity.development.analysis | Stage h3: done in 0.6 s
+2026-10-29 07:04:32 INFO    review_capacity.development.analysis | Stage rolling ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 65,544 transactions ...
+2026-10-29 07:04:32 INFO    review_capacity.evaluation.queue | Building the daily review queue of 65,544 transactions: done in 0.0 s
+2026-10-29 07:04:32 INFO    review_capacity.development.rolling | Rolling-origin supplement of LGB-b (3) ...
+2026-10-29 07:04:32 INFO    review_capacity.development.rolling | Rolling origin 71 of LGB-b ...
+2026-10-29 07:04:33 INFO    review_capacity.development.refits | rolling_origin fit of LGB-b (seed 42, 353 units) ...
+2026-10-29 07:04:33 INFO    review_capacity.models.lightgbm_model | Fit LGB-b on cpu (192688 Train rows) ...
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] Categorical features with more bins than the configured maximum bin number found.
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] For categorical features, max_bin and max_bin_by_feature may be ignored with a large number of categories.
+2026-10-29 07:04:35 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Number of positive: 5629, number of negative: 187059
+2026-10-29 07:04:35 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Total Bins 39866
+2026-10-29 07:04:35 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Number of data points in the train set: 192688, number of used features: 433
+2026-10-29 07:04:35 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] [binary:BoostFromScore]: pavg=0.500000 -> initscore=-0.000000
+2026-10-29 07:04:35 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Start training from score -0.000000
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:39 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:40 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:41 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:42 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:43 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:44 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:45 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:46 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:46 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:47 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:47 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:47 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:47 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:47 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:48 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:49 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:50 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:51 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:52 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:53 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:53 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:53 INFO    review_capacity.models.lightgbm_model | LGB-b boosting: 353/353 (100 %), elapsed 17.9 s, about 0.0 s left
+2026-10-29 07:04:53 INFO    review_capacity.models.lightgbm_model | Fit LGB-b on cpu (192688 Train rows): done in 18.0 s
+2026-10-29 07:04:53 INFO    review_capacity.models.lightgbm_model | LGB-b fitted: 353 trees kept
+2026-10-29 07:04:53 INFO    review_capacity.development.refits | rolling_origin fit of LGB-b (seed 42, 353 units): done in 18.8 s
+2026-10-29 07:04:53 INFO    review_capacity.development.scoring | Loading the LGB-b saved in rolling-s71 (trial 2) ...
+2026-10-29 07:04:53 INFO    review_capacity.development.scoring | Loading the LGB-b saved in rolling-s71 (trial 2): done in 0.0 s
+2026-10-29 07:04:55 INFO    review_capacity.development.rolling | Rolling origin 71 of LGB-b: done in 21.3 s
+2026-10-29 07:04:55 INFO    review_capacity.development.rolling | LGB-b origin 71: threshold 0.128366, K = 65, transfer rate 0.0219
+2026-10-29 07:04:55 INFO    review_capacity.development.rolling | Rolling origin 85 of LGB-b ...
+2026-10-29 07:04:55 INFO    review_capacity.development.refits | rolling_origin fit of LGB-b (seed 42, 353 units) ...
+2026-10-29 07:04:56 INFO    review_capacity.models.lightgbm_model | Fit LGB-b on cpu (233881 Train rows) ...
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] Categorical features with more bins than the configured maximum bin number found.
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] For categorical features, max_bin and max_bin_by_feature may be ignored with a large number of categories.
+2026-10-29 07:04:58 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Number of positive: 7418, number of negative: 226463
+2026-10-29 07:04:58 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Total Bins 40145
+2026-10-29 07:04:58 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Number of data points in the train set: 233881, number of used features: 433
+2026-10-29 07:04:58 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] [binary:BoostFromScore]: pavg=0.500000 -> initscore=-0.000000
+2026-10-29 07:04:58 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Start training from score -0.000000
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:58 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:04:59 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:00 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:01 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:02 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:03 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:04 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:05 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:06 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:07 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:08 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:09 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:10 INFO    review_capacity.models.lightgbm_model | LGB-b boosting: 353/353 (100 %), elapsed 13.7 s, about 0.0 s left
+2026-10-29 07:05:10 INFO    review_capacity.models.lightgbm_model | Fit LGB-b on cpu (233881 Train rows): done in 13.7 s
+2026-10-29 07:05:10 INFO    review_capacity.models.lightgbm_model | LGB-b fitted: 353 trees kept
+2026-10-29 07:05:10 INFO    review_capacity.development.refits | rolling_origin fit of LGB-b (seed 42, 353 units): done in 14.9 s
+2026-10-29 07:05:10 INFO    review_capacity.development.scoring | Loading the LGB-b saved in rolling-s85 (trial 2) ...
+2026-10-29 07:05:10 INFO    review_capacity.development.scoring | Loading the LGB-b saved in rolling-s85 (trial 2): done in 0.0 s
+2026-10-29 07:05:12 INFO    review_capacity.development.rolling | Rolling origin 85 of LGB-b: done in 17.6 s
+2026-10-29 07:05:12 INFO    review_capacity.development.rolling | LGB-b origin 85: threshold 0.109391, K = 66, transfer rate 0.0239
+2026-10-29 07:05:12 INFO    review_capacity.development.rolling | Rolling origin 99 of LGB-b ...
+2026-10-29 07:05:13 INFO    review_capacity.development.refits | rolling_origin fit of LGB-b (seed 42, 353 units) ...
+2026-10-29 07:05:14 INFO    review_capacity.models.lightgbm_model | Fit LGB-b on cpu (277368 Train rows) ...
+2026-10-29 07:05:16 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] Categorical features with more bins than the configured maximum bin number found.
+2026-10-29 07:05:16 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] For categorical features, max_bin and max_bin_by_feature may be ignored with a large number of categories.
+2026-10-29 07:05:16 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Number of positive: 9294, number of negative: 268074
+2026-10-29 07:05:16 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Total Bins 40222
+2026-10-29 07:05:16 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Number of data points in the train set: 277368, number of used features: 433
+2026-10-29 07:05:16 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] [binary:BoostFromScore]: pavg=0.500000 -> initscore=0.000000
+2026-10-29 07:05:16 INFO    review_capacity.models.lightgbm_model | [LightGBM] [Info] Start training from score 0.000000
+2026-10-29 07:05:17 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:18 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:18 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:18 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:18 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:18 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:18 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:18 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:18 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:19 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:19 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:19 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:19 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:19 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:19 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:20 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:22 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:23 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:24 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:25 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:25 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:25 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:25 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:25 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:25 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:26 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:27 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:28 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:29 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:29 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:29 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:29 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:29 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:29 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:29 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:29 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:31 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:32 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:33 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:34 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:35 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:36 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:37 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 WARNING review_capacity.models.lightgbm_model | [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+2026-10-29 07:05:38 INFO    review_capacity.models.lightgbm_model | LGB-b boosting: 353/353 (100 %), elapsed 21.8 s, about 0.0 s left
+2026-10-29 07:05:38 INFO    review_capacity.models.lightgbm_model | Fit LGB-b on cpu (277368 Train rows): done in 21.8 s
+2026-10-29 07:05:38 INFO    review_capacity.models.lightgbm_model | LGB-b fitted: 353 trees kept
+2026-10-29 07:05:38 INFO    review_capacity.development.refits | rolling_origin fit of LGB-b (seed 42, 353 units): done in 23.3 s
+2026-10-29 07:05:38 INFO    review_capacity.development.scoring | Loading the LGB-b saved in rolling-s99 (trial 2) ...
+2026-10-29 07:05:38 INFO    review_capacity.development.scoring | Loading the LGB-b saved in rolling-s99 (trial 2): done in 0.0 s
+2026-10-29 07:05:40 INFO    review_capacity.development.rolling | Rolling origin 99 of LGB-b: done in 26.1 s
+2026-10-29 07:05:40 INFO    review_capacity.development.rolling | LGB-b origin 99: threshold 0.451323, K = 62, transfer rate 0.0136
+2026-10-29 07:05:40 INFO    review_capacity.development.rolling | Rolling-origin supplement of LGB-b (3): done in 65.0 s
+2026-10-29 07:05:40 INFO    review_capacity.development.analysis | Stage rolling: done in 65.1 s
+2026-10-29 07:05:40 INFO    review_capacity.development.analysis | Analysis run 2026-10-29T013414Z: stages h3, rolling: done in 65.6 s
+2026-10-29 07:05:40 INFO    review_capacity.development.run_output | Run closed: completed (22 records)
+2026-10-29 07:05:40 INFO    review_capacity.development.rendering | Summary written to /home/chathuranga/projects/fraud-detection-review-capacity/outputs/analysis/2026-10-29T013414Z/summary.md
+2026-10-29 07:05:40 INFO    review_capacity.cli | Analysis run written to /home/chathuranga/projects/fraud-detection-review-capacity/outputs/analysis/2026-10-29T013414Z

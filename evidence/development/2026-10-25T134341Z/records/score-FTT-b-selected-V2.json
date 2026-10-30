@@ -1,0 +1,50 @@
+{
+  "record": "score",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "FTT-b",
+  "model_role": "selected",
+  "seed": 42,
+  "fit": {
+    "path": "records/fit-FTT-b-trial6.json",
+    "sha256": "f09dbdff7c96bb860eda406fdc834575728e69ed08f058a113ecea515598670c"
+  },
+  "partition": "V2",
+  "first_day": 127,
+  "last_day": 154,
+  "rows": 77822,
+  "file": {
+    "path": "scores/FTT-b-selected-V2.parquet",
+    "sha256": "44be1e03023808f22d420ca542688bc0798b7b0906ef837c38ef8795441d2554"
+  },
+  "format": "parquet",
+  "columns": [
+    "TransactionID",
+    "score"
+  ],
+  "score_dtype": "float64",
+  "device": "gpu",
+  "batch_rows": 16,
+  "min_score": 6.463878878888576e-05,
+  "max_score": 0.9997878977616877,
+  "distinct_scores": 77441,
+  "seconds": 43.70044756203424
+}

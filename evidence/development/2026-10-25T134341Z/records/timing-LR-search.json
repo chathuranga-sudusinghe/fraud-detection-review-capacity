@@ -1,0 +1,146 @@
+{
+  "record": "timing",
+  "schema_version": 4,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "LR",
+  "measurement": "search",
+  "model_role": null,
+  "subject": null,
+  "partition": null,
+  "device": "cpu",
+  "boundary": null,
+  "threads": 24,
+  "cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "synchronised": false,
+  "attention_backend": null,
+  "row_selection": null,
+  "rows_sha256": null,
+  "batch_rows": null,
+  "warmup": null,
+  "repetitions": null,
+  "rows": null,
+  "seconds": 5277.6719976839995,
+  "rows_per_second": null,
+  "latency_ms": null,
+  "peak_gpu_mib": null,
+  "peak_host_mib": 14949.859375,
+  "memory_scope": "the maximum over the trials' fit phases (model saving and selection excluded); not a whole-search peak; peak resident memory of the parent process during the phase",
+  "settings": {
+    "threads_note": "the code does not set the reference's threads (scikit-learn and its numerical libraries choose them); the count is the largest thread pool reported by threadpoolctl",
+    "thread_pools": [
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 24,
+        "threading_layer": null
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 24,
+        "threading_layer": "pthreads"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 24,
+        "threading_layer": "pthreads"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 24,
+        "threading_layer": null
+      }
+    ],
+    "trials_completed": 10,
+    "trials_declared": 10,
+    "interrupted": false,
+    "procedure_version": 1,
+    "session": {
+      "load_average_1m": 0.2900390625,
+      "visible_cpus": 24,
+      "allowed_cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "kernel": "6.6.87.2-microsoft-standard-WSL2",
+      "memory_total_mib": 56236,
+      "swap_total_mib": 16384,
+      "gpu": {
+        "available": true,
+        "temperature_c": 42.0,
+        "clock_sm_mhz": 180.0,
+        "clock_max_sm_mhz": 3090.0,
+        "power_w": 5.19
+      }
+    },
+    "memory_problems": [],
+    "host_memory_method": "clear_refs"
+  }
+}

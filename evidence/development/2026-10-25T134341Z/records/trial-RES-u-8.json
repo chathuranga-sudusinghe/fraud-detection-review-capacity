@@ -1,0 +1,167 @@
+{
+  "record": "trial",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "RES-u",
+  "trial": 8,
+  "candidate_list": {
+    "path": "candidates/resnet.json",
+    "sha256": "36fc54fab4899fa2266ccb07227168291b3876d2f0fade90c1031285d07330a7"
+  },
+  "hyperparameters": {
+    "n_layers": 10,
+    "d": 235,
+    "d_hidden_factor": 3.780540683737454,
+    "hidden_dropout": 0.18971705150221702,
+    "residual_dropout": 0.0,
+    "d_embedding": 84,
+    "lr": 0.0003774249693509198,
+    "weight_decay": 0.0002462038927745929
+  },
+  "seed": 42,
+  "device": "gpu",
+  "unit": "epoch",
+  "objective_k": 62,
+  "patience": 5,
+  "maximum": 15,
+  "best_checkpoint": 15,
+  "best_objective": 0.3854768786127168,
+  "stopped_at": 15,
+  "stopping_reason": "maximum",
+  "runtime_seconds": 132.65258197399817,
+  "checkpoints": [
+    {
+      "checkpoint": 1,
+      "objective": 0.3619942196531792,
+      "improved": true,
+      "best_checkpoint": 1,
+      "seconds": 8.676396663002379
+    },
+    {
+      "checkpoint": 2,
+      "objective": 0.3634393063583815,
+      "improved": true,
+      "best_checkpoint": 2,
+      "seconds": 17.27859366100165
+    },
+    {
+      "checkpoint": 3,
+      "objective": 0.37608381502890176,
+      "improved": true,
+      "best_checkpoint": 3,
+      "seconds": 25.78601074800099
+    },
+    {
+      "checkpoint": 4,
+      "objective": 0.3638005780346821,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 34.404419785001664
+    },
+    {
+      "checkpoint": 5,
+      "objective": 0.36416184971098264,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 42.92661131200293
+    },
+    {
+      "checkpoint": 6,
+      "objective": 0.37210982658959535,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 51.65499410100165
+    },
+    {
+      "checkpoint": 7,
+      "objective": 0.3699421965317919,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 60.20966044499801
+    },
+    {
+      "checkpoint": 8,
+      "objective": 0.377528901734104,
+      "improved": true,
+      "best_checkpoint": 8,
+      "seconds": 68.72123569800169
+    },
+    {
+      "checkpoint": 9,
+      "objective": 0.3782514450867052,
+      "improved": true,
+      "best_checkpoint": 9,
+      "seconds": 78.56123095200019
+    },
+    {
+      "checkpoint": 10,
+      "objective": 0.37210982658959535,
+      "improved": false,
+      "best_checkpoint": 9,
+      "seconds": 87.49190302599891
+    },
+    {
+      "checkpoint": 11,
+      "objective": 0.3793352601156069,
+      "improved": true,
+      "best_checkpoint": 11,
+      "seconds": 96.03910022800119
+    },
+    {
+      "checkpoint": 12,
+      "objective": 0.3811416184971098,
+      "improved": true,
+      "best_checkpoint": 12,
+      "seconds": 104.78093290900142
+    },
+    {
+      "checkpoint": 13,
+      "objective": 0.3768063583815029,
+      "improved": false,
+      "best_checkpoint": 12,
+      "seconds": 114.16249742900254
+    },
+    {
+      "checkpoint": 14,
+      "objective": 0.38222543352601157,
+      "improved": true,
+      "best_checkpoint": 14,
+      "seconds": 122.78950914300367
+    },
+    {
+      "checkpoint": 15,
+      "objective": 0.3854768786127168,
+      "improved": true,
+      "best_checkpoint": 15,
+      "seconds": 132.40875083800347
+    }
+  ],
+  "fit": {
+    "path": "records/fit-RES-u-trial8.json",
+    "sha256": "3ab3791d9f2dfa6e83e2a9b25f29429d31f3546111acfb7da1b5d65f5bc5e464"
+  },
+  "checkpoint": {
+    "path": "records/checkpoint-RES-u-trial8.json",
+    "sha256": "ff588e670dc66e5e501807df4b762ed09839480501f69cb439cc90ea0d64a256"
+  },
+  "status": "completed",
+  "error": null
+}

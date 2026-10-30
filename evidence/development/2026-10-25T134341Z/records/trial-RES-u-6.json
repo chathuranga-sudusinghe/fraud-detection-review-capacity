@@ -1,0 +1,167 @@
+{
+  "record": "trial",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "RES-u",
+  "trial": 6,
+  "candidate_list": {
+    "path": "candidates/resnet.json",
+    "sha256": "36fc54fab4899fa2266ccb07227168291b3876d2f0fade90c1031285d07330a7"
+  },
+  "hyperparameters": {
+    "n_layers": 4,
+    "d": 288,
+    "d_hidden_factor": 3.5650580360604645,
+    "hidden_dropout": 0.15442784278207156,
+    "residual_dropout": 0.0,
+    "d_embedding": 141,
+    "lr": 0.0003493373118435067,
+    "weight_decay": 1.116189559640079e-06
+  },
+  "seed": 42,
+  "device": "gpu",
+  "unit": "epoch",
+  "objective_k": 62,
+  "patience": 5,
+  "maximum": 15,
+  "best_checkpoint": 13,
+  "best_objective": 0.38258670520231214,
+  "stopped_at": 15,
+  "stopping_reason": "maximum",
+  "runtime_seconds": 94.65503486100351,
+  "checkpoints": [
+    {
+      "checkpoint": 1,
+      "objective": 0.35946531791907516,
+      "improved": true,
+      "best_checkpoint": 1,
+      "seconds": 6.654683710003155
+    },
+    {
+      "checkpoint": 2,
+      "objective": 0.3619942196531792,
+      "improved": true,
+      "best_checkpoint": 2,
+      "seconds": 12.833987327001523
+    },
+    {
+      "checkpoint": 3,
+      "objective": 0.37102601156069365,
+      "improved": true,
+      "best_checkpoint": 3,
+      "seconds": 19.028685632001725
+    },
+    {
+      "checkpoint": 4,
+      "objective": 0.37210982658959535,
+      "improved": true,
+      "best_checkpoint": 4,
+      "seconds": 25.1731221020018
+    },
+    {
+      "checkpoint": 5,
+      "objective": 0.3598265895953757,
+      "improved": false,
+      "best_checkpoint": 4,
+      "seconds": 31.363152796999202
+    },
+    {
+      "checkpoint": 6,
+      "objective": 0.377528901734104,
+      "improved": true,
+      "best_checkpoint": 6,
+      "seconds": 37.5591489139988
+    },
+    {
+      "checkpoint": 7,
+      "objective": 0.3699421965317919,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 43.69682679000107
+    },
+    {
+      "checkpoint": 8,
+      "objective": 0.3699421965317919,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 49.87607404500159
+    },
+    {
+      "checkpoint": 9,
+      "objective": 0.3815028901734104,
+      "improved": true,
+      "best_checkpoint": 9,
+      "seconds": 55.99985824000032
+    },
+    {
+      "checkpoint": 10,
+      "objective": 0.37427745664739887,
+      "improved": false,
+      "best_checkpoint": 9,
+      "seconds": 62.16141088400036
+    },
+    {
+      "checkpoint": 11,
+      "objective": 0.37463872832369943,
+      "improved": false,
+      "best_checkpoint": 9,
+      "seconds": 69.58313968100265
+    },
+    {
+      "checkpoint": 12,
+      "objective": 0.381864161849711,
+      "improved": true,
+      "best_checkpoint": 12,
+      "seconds": 75.74734806099877
+    },
+    {
+      "checkpoint": 13,
+      "objective": 0.38258670520231214,
+      "improved": true,
+      "best_checkpoint": 13,
+      "seconds": 82.23241555799905
+    },
+    {
+      "checkpoint": 14,
+      "objective": 0.37789017341040465,
+      "improved": false,
+      "best_checkpoint": 13,
+      "seconds": 88.35109754800214
+    },
+    {
+      "checkpoint": 15,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 13,
+      "seconds": 94.44066586899862
+    }
+  ],
+  "fit": {
+    "path": "records/fit-RES-u-trial6.json",
+    "sha256": "e67601198710f034b70a44c151e63e050995a00a719dd4f3718d23d25f6be606"
+  },
+  "checkpoint": {
+    "path": "records/checkpoint-RES-u-trial6.json",
+    "sha256": "3c067bf39734dbeab747256c3244f8e7ae0be2c13324fab15aefb007e9e585c3"
+  },
+  "status": "completed",
+  "error": null
+}

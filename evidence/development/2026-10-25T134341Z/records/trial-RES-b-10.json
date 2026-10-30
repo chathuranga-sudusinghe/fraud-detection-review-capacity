@@ -1,0 +1,167 @@
+{
+  "record": "trial",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "RES-b",
+  "trial": 10,
+  "candidate_list": {
+    "path": "candidates/resnet.json",
+    "sha256": "36fc54fab4899fa2266ccb07227168291b3876d2f0fade90c1031285d07330a7"
+  },
+  "hyperparameters": {
+    "n_layers": 14,
+    "d": 1010,
+    "d_hidden_factor": 3.5329847380799,
+    "hidden_dropout": 0.49846777509528856,
+    "residual_dropout": 0.0,
+    "d_embedding": 405,
+    "lr": 0.005525263577401647,
+    "weight_decay": 0.0
+  },
+  "seed": 42,
+  "device": "gpu",
+  "unit": "epoch",
+  "objective_k": 62,
+  "patience": 5,
+  "maximum": 15,
+  "best_checkpoint": 10,
+  "best_objective": 0.3468208092485549,
+  "stopped_at": 15,
+  "stopping_reason": "maximum",
+  "runtime_seconds": 453.02577790399664,
+  "checkpoints": [
+    {
+      "checkpoint": 1,
+      "objective": 0.3190028901734104,
+      "improved": true,
+      "best_checkpoint": 1,
+      "seconds": 30.05192687601084
+    },
+    {
+      "checkpoint": 2,
+      "objective": 0.3255057803468208,
+      "improved": true,
+      "best_checkpoint": 2,
+      "seconds": 60.20820998999989
+    },
+    {
+      "checkpoint": 3,
+      "objective": 0.32153179190751446,
+      "improved": false,
+      "best_checkpoint": 2,
+      "seconds": 90.40938835800625
+    },
+    {
+      "checkpoint": 4,
+      "objective": 0.3258670520231214,
+      "improved": true,
+      "best_checkpoint": 4,
+      "seconds": 120.38509375799913
+    },
+    {
+      "checkpoint": 5,
+      "objective": 0.3363439306358382,
+      "improved": true,
+      "best_checkpoint": 5,
+      "seconds": 150.49672687400016
+    },
+    {
+      "checkpoint": 6,
+      "objective": 0.33778901734104044,
+      "improved": true,
+      "best_checkpoint": 6,
+      "seconds": 180.6682123299979
+    },
+    {
+      "checkpoint": 7,
+      "objective": 0.32984104046242774,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 210.88384195801336
+    },
+    {
+      "checkpoint": 8,
+      "objective": 0.3417630057803468,
+      "improved": true,
+      "best_checkpoint": 8,
+      "seconds": 241.002524067997
+    },
+    {
+      "checkpoint": 9,
+      "objective": 0.3399566473988439,
+      "improved": false,
+      "best_checkpoint": 8,
+      "seconds": 271.4169842299889
+    },
+    {
+      "checkpoint": 10,
+      "objective": 0.3468208092485549,
+      "improved": true,
+      "best_checkpoint": 10,
+      "seconds": 301.51472532199114
+    },
+    {
+      "checkpoint": 11,
+      "objective": 0.3421242774566474,
+      "improved": false,
+      "best_checkpoint": 10,
+      "seconds": 331.7506489799998
+    },
+    {
+      "checkpoint": 12,
+      "objective": 0.3320086705202312,
+      "improved": false,
+      "best_checkpoint": 10,
+      "seconds": 362.03692083101487
+    },
+    {
+      "checkpoint": 13,
+      "objective": 0.3406791907514451,
+      "improved": false,
+      "best_checkpoint": 10,
+      "seconds": 392.0761174969957
+    },
+    {
+      "checkpoint": 14,
+      "objective": 0.3417630057803468,
+      "improved": false,
+      "best_checkpoint": 10,
+      "seconds": 422.1554194150085
+    },
+    {
+      "checkpoint": 15,
+      "objective": 0.3345375722543353,
+      "improved": false,
+      "best_checkpoint": 10,
+      "seconds": 452.38050899500377
+    }
+  ],
+  "fit": {
+    "path": "records/fit-RES-b-trial10.json",
+    "sha256": "4e029c4511b8a8b2a03594abf80d397580e3a4cd4482ed5bdc8712dafb4c76dd"
+  },
+  "checkpoint": {
+    "path": "records/checkpoint-RES-b-trial10.json",
+    "sha256": "d295dba19cb7ef71321515fc1afde6ec1ecabe6525d2dbc0e5e0b321985402e7"
+  },
+  "status": "completed",
+  "error": null
+}

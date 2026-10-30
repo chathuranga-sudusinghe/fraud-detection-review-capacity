@@ -1,0 +1,123 @@
+{
+  "record": "trial",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "FTT-b",
+  "trial": 9,
+  "candidate_list": {
+    "path": "candidates/ft_transformer.json",
+    "sha256": "b9434c34eb1307fa67266efe0d751a1bd073dfe29a6d3fb41310ed7af7fbcd77"
+  },
+  "hyperparameters": {
+    "n_layers": 1,
+    "d_token": 328,
+    "attention_dropout": 0.3726096168615472,
+    "ffn_dropout": 0.23834464569527058,
+    "lr": 0.0001575407361166988,
+    "weight_decay": 9.61820691351985e-06
+  },
+  "seed": 42,
+  "device": "gpu",
+  "unit": "epoch",
+  "objective_k": 62,
+  "patience": 5,
+  "maximum": 15,
+  "best_checkpoint": 3,
+  "best_objective": 0.3442919075144509,
+  "stopped_at": 9,
+  "stopping_reason": "early_stopping",
+  "runtime_seconds": 766.1258726769593,
+  "checkpoints": [
+    {
+      "checkpoint": 1,
+      "objective": 0.3305635838150289,
+      "improved": true,
+      "best_checkpoint": 1,
+      "seconds": 86.04096735501662
+    },
+    {
+      "checkpoint": 2,
+      "objective": 0.3435693641618497,
+      "improved": true,
+      "best_checkpoint": 2,
+      "seconds": 170.98397078097332
+    },
+    {
+      "checkpoint": 3,
+      "objective": 0.3442919075144509,
+      "improved": true,
+      "best_checkpoint": 3,
+      "seconds": 255.67248204600764
+    },
+    {
+      "checkpoint": 4,
+      "objective": 0.34284682080924855,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 340.7780311909737
+    },
+    {
+      "checkpoint": 5,
+      "objective": 0.3374277456647399,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 425.76264353096485
+    },
+    {
+      "checkpoint": 6,
+      "objective": 0.33598265895953755,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 510.8889217010001
+    },
+    {
+      "checkpoint": 7,
+      "objective": 0.3302023121387283,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 595.8386911799898
+    },
+    {
+      "checkpoint": 8,
+      "objective": 0.3302023121387283,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 680.7265519399662
+    },
+    {
+      "checkpoint": 9,
+      "objective": 0.3334537572254335,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 765.7188256639638
+    }
+  ],
+  "fit": {
+    "path": "records/fit-FTT-b-trial9.json",
+    "sha256": "948e6d77cd254887fd910051d1547961acafa9a58e8e4a28cf19341741a26e49"
+  },
+  "checkpoint": {
+    "path": "records/checkpoint-FTT-b-trial9.json",
+    "sha256": "414915ae43630e417ec681930d75f046a8deb50184c5dbdf80075a840d521d15"
+  },
+  "status": "completed",
+  "error": null
+}

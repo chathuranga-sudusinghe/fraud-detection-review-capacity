@@ -1,0 +1,50 @@
+{
+  "record": "score",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-29T034844Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "Cat-u",
+  "model_role": "seed_refit",
+  "seed": 44,
+  "fit": {
+    "path": "records/fit-Cat-u-seed_refit-s44.json",
+    "sha256": "84f0b0e4d9cd3ddc5590da3bcb594bcc67331e4541a55e0f215f34843d9d18a1"
+  },
+  "partition": "V2",
+  "first_day": 127,
+  "last_day": 154,
+  "rows": 77822,
+  "file": {
+    "path": "scores/Cat-u-seed_refit-s44-V2.parquet",
+    "sha256": "91e4580fd73f949599b42b6e6410fca799458ca5e4b744e1b754368ce9c4c692"
+  },
+  "format": "parquet",
+  "columns": [
+    "TransactionID",
+    "score"
+  ],
+  "score_dtype": "float64",
+  "device": "cpu",
+  "batch_rows": null,
+  "min_score": 0.00015446322001113556,
+  "max_score": 0.999760139762949,
+  "distinct_scores": 77722,
+  "seconds": 0.42979543499996
+}

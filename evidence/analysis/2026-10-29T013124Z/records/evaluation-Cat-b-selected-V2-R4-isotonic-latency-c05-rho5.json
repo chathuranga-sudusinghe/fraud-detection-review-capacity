@@ -1,0 +1,159 @@
+{
+  "record": "evaluation",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-29T013124Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "Cat-b",
+  "model_role": "selected",
+  "seed": 42,
+  "score": {
+    "path": "source/records/score-Cat-b-selected-V2.json",
+    "sha256": "6c3b5a752fce19ff08c04deaf61c82e15335513096cd2d9c3fab40363e7c49df"
+  },
+  "partition": "V2",
+  "period": "latency",
+  "days": {
+    "first": 148,
+    "last": 154
+  },
+  "policy": "R4",
+  "capacity": 0.05,
+  "k": 139,
+  "threshold": 0.2,
+  "cost_ratio": 5.0,
+  "calibrator": "isotonic",
+  "calibration": {
+    "path": "records/calibration-Cat-b-isotonic-latency.json",
+    "sha256": "78d2f3d6a51f97b5ef646135b6f96a0ff1074e170ce215706d1f8b8cc2c07fb8"
+  },
+  "counts": {
+    "days": 7,
+    "transactions": 21443,
+    "frauds": 660,
+    "selected": 776,
+    "true_positives": 349,
+    "false_positives": 427,
+    "false_negatives": 311
+  },
+  "metrics": {
+    "recall": 0.5287878787878788,
+    "precision": 0.4497422680412371,
+    "frauds_per_1000_reviews": 449.74226804123714,
+    "oracle_ceiling": 1.0,
+    "normalised_recall": 0.5287878787878788,
+    "random_review_recall": 0.036188966096161915,
+    "lift": 14.611853717588254,
+    "utilisation": 0.7975334018499486,
+    "capacity_to_prevalence": 1.624469696969697,
+    "amount_weighted_recall": 0.41576850199640847,
+    "fraud_value_exposed": 51321.962,
+    "scenario_cost": 2331.0
+  },
+  "daily": [
+    {
+      "day": 148,
+      "transactions": 3060,
+      "frauds": 86,
+      "selected": 108,
+      "true_positives": 48,
+      "oracle_reviewable": 86,
+      "overflow": 0,
+      "unused": 31,
+      "load_ratio": 0.7769784172661871,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 149,
+      "transactions": 2289,
+      "frauds": 66,
+      "selected": 80,
+      "true_positives": 32,
+      "oracle_reviewable": 66,
+      "overflow": 0,
+      "unused": 59,
+      "load_ratio": 0.5755395683453237,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 150,
+      "transactions": 2209,
+      "frauds": 69,
+      "selected": 95,
+      "true_positives": 29,
+      "oracle_reviewable": 69,
+      "overflow": 0,
+      "unused": 44,
+      "load_ratio": 0.6834532374100719,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 151,
+      "transactions": 3101,
+      "frauds": 99,
+      "selected": 127,
+      "true_positives": 58,
+      "oracle_reviewable": 99,
+      "overflow": 0,
+      "unused": 12,
+      "load_ratio": 0.9136690647482014,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 152,
+      "transactions": 3896,
+      "frauds": 120,
+      "selected": 122,
+      "true_positives": 58,
+      "oracle_reviewable": 120,
+      "overflow": 0,
+      "unused": 17,
+      "load_ratio": 0.8776978417266187,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 153,
+      "transactions": 3105,
+      "frauds": 126,
+      "selected": 129,
+      "true_positives": 84,
+      "oracle_reviewable": 126,
+      "overflow": 0,
+      "unused": 10,
+      "load_ratio": 0.9280575539568345,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 154,
+      "transactions": 3783,
+      "frauds": 94,
+      "selected": 115,
+      "true_positives": 40,
+      "oracle_reviewable": 94,
+      "overflow": 0,
+      "unused": 24,
+      "load_ratio": 0.8273381294964028,
+      "cutoff_tied_group": null
+    }
+  ],
+  "cutoff_ties": {
+    "days": 0,
+    "group_sizes": []
+  }
+}

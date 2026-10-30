@@ -1,0 +1,579 @@
+{
+  "record": "cost_analysis",
+  "schema_version": 2,
+  "identity": {
+    "run_id": "2026-10-29T013124Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "LGB-u",
+  "calibrator": "isotonic",
+  "period": "primary",
+  "capacity": 0.1,
+  "k": 278,
+  "days": {
+    "first": 127,
+    "last": 154
+  },
+  "score": {
+    "path": "source/records/score-LGB-u-selected-V2.json",
+    "sha256": "f51d16e12bcd5de88d84fd3b1f0fa630c3bd784908c8f2a1a564601fb198e3f9"
+  },
+  "calibration": {
+    "path": "records/calibration-LGB-u-isotonic-primary.json",
+    "sha256": "b2615e811b26c5ea5cf7c64757c274ff2d5cded4df889d5a793a9eac01b3f73c"
+  },
+  "queue": {
+    "reviews": 7784,
+    "frauds": 2637,
+    "captured": 1857
+  },
+  "saturation": {
+    "ratio": 28.86046511627907,
+    "infinite": false
+  },
+  "break_even": {
+    "classification": "crossing",
+    "ratio": 23.0,
+    "single_interval": false,
+    "intervals": [
+      {
+        "start": 1.0,
+        "end": 19.42857142857143,
+        "end_closed": false
+      },
+      {
+        "start": 20.89108910891089,
+        "end": 23.0,
+        "end_closed": false
+      }
+    ],
+    "zero_crossings": [
+      23.0
+    ]
+  },
+  "curve": [
+    {
+      "start": 1.0,
+      "end": 1.1111111111111112,
+      "end_closed": false,
+      "unused": 7712,
+      "frauds_forgone": 1785
+    },
+    {
+      "start": 1.1111111111111112,
+      "end": 1.132596685082873,
+      "end_closed": false,
+      "unused": 7692,
+      "frauds_forgone": 1767
+    },
+    {
+      "start": 1.132596685082873,
+      "end": 1.1355932203389831,
+      "end_closed": false,
+      "unused": 7282,
+      "frauds_forgone": 1405
+    },
+    {
+      "start": 1.1355932203389831,
+      "end": 1.1666666666666667,
+      "end_closed": false,
+      "unused": 7215,
+      "frauds_forgone": 1346
+    },
+    {
+      "start": 1.1666666666666667,
+      "end": 1.2402597402597404,
+      "end_closed": false,
+      "unused": 7180,
+      "frauds_forgone": 1316
+    },
+    {
+      "start": 1.2402597402597404,
+      "end": 1.3695652173913044,
+      "end_closed": false,
+      "unused": 6989,
+      "frauds_forgone": 1162
+    },
+    {
+      "start": 1.3695652173913044,
+      "end": 1.4042553191489362,
+      "end_closed": false,
+      "unused": 6926,
+      "frauds_forgone": 1116
+    },
+    {
+      "start": 1.4042553191489362,
+      "end": 1.7142857142857142,
+      "end_closed": false,
+      "unused": 6860,
+      "frauds_forgone": 1069
+    },
+    {
+      "start": 1.7142857142857142,
+      "end": 1.75,
+      "end_closed": false,
+      "unused": 6824,
+      "frauds_forgone": 1048
+    },
+    {
+      "start": 1.75,
+      "end": 1.78125,
+      "end_closed": false,
+      "unused": 6803,
+      "frauds_forgone": 1036
+    },
+    {
+      "start": 1.78125,
+      "end": 1.9354838709677413,
+      "end_closed": false,
+      "unused": 6518,
+      "frauds_forgone": 876
+    },
+    {
+      "start": 1.9354838709677413,
+      "end": 2.0,
+      "end_closed": false,
+      "unused": 6458,
+      "frauds_forgone": 845
+    },
+    {
+      "start": 2.0,
+      "end": 2.3902439024390243,
+      "end_closed": false,
+      "unused": 6444,
+      "frauds_forgone": 838
+    },
+    {
+      "start": 2.3902439024390243,
+      "end": 2.444444444444444,
+      "end_closed": false,
+      "unused": 6346,
+      "frauds_forgone": 797
+    },
+    {
+      "start": 2.444444444444444,
+      "end": 2.673913043478261,
+      "end_closed": false,
+      "unused": 6324,
+      "frauds_forgone": 788
+    },
+    {
+      "start": 2.673913043478261,
+      "end": 2.75,
+      "end_closed": false,
+      "unused": 6201,
+      "frauds_forgone": 742
+    },
+    {
+      "start": 2.75,
+      "end": 2.7777777777777777,
+      "end_closed": false,
+      "unused": 6190,
+      "frauds_forgone": 738
+    },
+    {
+      "start": 2.7777777777777777,
+      "end": 2.8352941176470585,
+      "end_closed": false,
+      "unused": 6040,
+      "frauds_forgone": 684
+    },
+    {
+      "start": 2.8352941176470585,
+      "end": 3.5,
+      "end_closed": false,
+      "unused": 5799,
+      "frauds_forgone": 599
+    },
+    {
+      "start": 3.5,
+      "end": 3.727272727272727,
+      "end_closed": false,
+      "unused": 5792,
+      "frauds_forgone": 597
+    },
+    {
+      "start": 3.727272727272727,
+      "end": 4.775280898876405,
+      "end_closed": false,
+      "unused": 5751,
+      "frauds_forgone": 586
+    },
+    {
+      "start": 4.775280898876405,
+      "end": 4.833333333333334,
+      "end_closed": false,
+      "unused": 5326,
+      "frauds_forgone": 497
+    },
+    {
+      "start": 4.833333333333334,
+      "end": 5.3809523809523805,
+      "end_closed": false,
+      "unused": 5297,
+      "frauds_forgone": 491
+    },
+    {
+      "start": 5.3809523809523805,
+      "end": 5.4,
+      "end_closed": false,
+      "unused": 5071,
+      "frauds_forgone": 449
+    },
+    {
+      "start": 5.4,
+      "end": 5.823529411764706,
+      "end_closed": false,
+      "unused": 4909,
+      "frauds_forgone": 419
+    },
+    {
+      "start": 5.823529411764706,
+      "end": 6.1000000000000005,
+      "end_closed": false,
+      "unused": 4810,
+      "frauds_forgone": 402
+    },
+    {
+      "start": 6.1000000000000005,
+      "end": 6.578947368421052,
+      "end_closed": false,
+      "unused": 4688,
+      "frauds_forgone": 382
+    },
+    {
+      "start": 6.578947368421052,
+      "end": 7.5,
+      "end_closed": false,
+      "unused": 4563,
+      "frauds_forgone": 363
+    },
+    {
+      "start": 7.5,
+      "end": 7.523809523809525,
+      "end_closed": false,
+      "unused": 4533,
+      "frauds_forgone": 359
+    },
+    {
+      "start": 7.523809523809525,
+      "end": 8.0,
+      "end_closed": false,
+      "unused": 4375,
+      "frauds_forgone": 338
+    },
+    {
+      "start": 8.0,
+      "end": 9.0,
+      "end_closed": false,
+      "unused": 4295,
+      "frauds_forgone": 328
+    },
+    {
+      "start": 9.0,
+      "end": 11.46987951807229,
+      "end_closed": false,
+      "unused": 3170,
+      "frauds_forgone": 203
+    },
+    {
+      "start": 11.46987951807229,
+      "end": 13.4,
+      "end_closed": false,
+      "unused": 2218,
+      "frauds_forgone": 120
+    },
+    {
+      "start": 13.4,
+      "end": 16.827586206896555,
+      "end_closed": false,
+      "unused": 2151,
+      "frauds_forgone": 115
+    },
+    {
+      "start": 16.827586206896555,
+      "end": 16.894736842105264,
+      "end_closed": false,
+      "unused": 1668,
+      "frauds_forgone": 87
+    },
+    {
+      "start": 16.894736842105264,
+      "end": 19.0,
+      "end_closed": false,
+      "unused": 1372,
+      "frauds_forgone": 68
+    },
+    {
+      "start": 19.0,
+      "end": 19.42857142857143,
+      "end_closed": false,
+      "unused": 689,
+      "frauds_forgone": 31
+    },
+    {
+      "start": 19.42857142857143,
+      "end": 20.89108910891089,
+      "end_closed": false,
+      "unused": 483,
+      "frauds_forgone": 25
+    },
+    {
+      "start": 20.89108910891089,
+      "end": 28.86046511627907,
+      "end_closed": false,
+      "unused": 23,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 28.86046511627907,
+      "end": 1000.0,
+      "end_closed": true,
+      "unused": 0,
+      "frauds_forgone": 0
+    }
+  ],
+  "friction": [
+    {
+      "phi": 1.0,
+      "ratio": 45.0
+    },
+    {
+      "phi": 5.0,
+      "ratio": 133.0
+    }
+  ],
+  "grid": [
+    {
+      "ratio": 2.0,
+      "threshold": 0.5,
+      "reviews": 1340,
+      "unused": 6444,
+      "frauds_forgone": 838,
+      "days_with_unused": 28,
+      "utilisation": 0.1721479958890031,
+      "declined_fraud_rate": 0.13004345127250155,
+      "declined_mean_probability": 0.13013490424742413,
+      "cost_r3": 9344,
+      "cost_r4": 4576,
+      "cost_difference": -4768,
+      "relative_difference": -0.5102739726027398,
+      "cost_no_review": 5274,
+      "fixed_status": "finite",
+      "fixed_ratio": 7.689737470167064,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 297342.714,
+      "fraud_value_forgone": 169864.434,
+      "forgone_per_unused": 26.36009217877095,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.26174222120913054
+    },
+    {
+      "ratio": 5.0,
+      "threshold": 0.2,
+      "reviews": 2487,
+      "unused": 5297,
+      "frauds_forgone": 491,
+      "days_with_unused": 28,
+      "utilisation": 0.31950154162384375,
+      "declined_fraud_rate": 0.09269397772323958,
+      "declined_mean_probability": 0.09280523371161055,
+      "cost_r3": 11684,
+      "cost_r4": 8842,
+      "cost_difference": -2842,
+      "relative_difference": -0.24323861691201643,
+      "cost_no_review": 13185,
+      "fixed_status": "finite",
+      "fixed_ratio": 10.788187372708757,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 230386.627,
+      "fraud_value_forgone": 102908.347,
+      "forgone_per_unused": 19.427666037379648,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.42798423669415847
+    },
+    {
+      "ratio": 10.0,
+      "threshold": 0.1,
+      "reviews": 4614,
+      "unused": 3170,
+      "frauds_forgone": 203,
+      "days_with_unused": 28,
+      "utilisation": 0.5927543679342241,
+      "declined_fraud_rate": 0.0640378548895899,
+      "declined_mean_probability": 0.06422376118940097,
+      "cost_r3": 15584,
+      "cost_r4": 14444,
+      "cost_difference": -1140,
+      "relative_difference": -0.07315195071868583,
+      "cost_no_review": 26370,
+      "fixed_status": "finite",
+      "fixed_ratio": 15.61576354679803,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 164189.831,
+      "fraud_value_forgone": 36711.551,
+      "forgone_per_unused": 11.580930914826498,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.5923410454439175
+    },
+    {
+      "ratio": 20.0,
+      "threshold": 0.05,
+      "reviews": 7301,
+      "unused": 483,
+      "frauds_forgone": 25,
+      "days_with_unused": 14,
+      "utilisation": 0.9379496402877698,
+      "declined_fraud_rate": 0.051759834368530024,
+      "declined_mean_probability": 0.04723787846632518,
+      "cost_r3": 23384,
+      "cost_r4": 23401,
+      "cost_difference": 17,
+      "relative_difference": 0.0007269928156004105,
+      "cost_no_review": 52740,
+      "fixed_status": "finite",
+      "fixed_ratio": 19.32,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 132717.056,
+      "fraud_value_forgone": 5238.776,
+      "forgone_per_unused": 10.846327122153209,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.6704832694497319
+    },
+    {
+      "ratio": 50.0,
+      "threshold": 0.02,
+      "reviews": 7784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 46784,
+      "cost_r4": 46784,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 131850,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 127478.28,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.6834903718647012
+    },
+    {
+      "ratio": 100.0,
+      "threshold": 0.01,
+      "reviews": 7784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 85784,
+      "cost_r4": 85784,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 263700,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 127478.28,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.6834903718647012
+    },
+    {
+      "ratio": 200.0,
+      "threshold": 0.005,
+      "reviews": 7784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 163784,
+      "cost_r4": 163784,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 527400,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 127478.28,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.6834903718647012
+    },
+    {
+      "ratio": 500.0,
+      "threshold": 0.002,
+      "reviews": 7784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 397784,
+      "cost_r4": 397784,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 1318500,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 127478.28,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.6834903718647012
+    },
+    {
+      "ratio": 1000.0,
+      "threshold": 0.001,
+      "reviews": 7784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 787784,
+      "cost_r4": 787784,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 2637000,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 127478.28,
+      "fraud_value_exposed_r4": 127478.28,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.6834903718647012,
+      "amount_weighted_recall_r4": 0.6834903718647012
+    }
+  ]
+}
