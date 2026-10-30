@@ -57,6 +57,11 @@ class ProjectPaths:
         return self.config_dir / "training.yaml"
 
     @property
+    def evaluation_spec(self) -> Path:
+        """The evaluation declaration (confirmatory settings; Issue #187)."""
+        return self.config_dir / "evaluation.yaml"
+
+    @property
     def feature_catalog(self) -> Path:
         """The human-readable feature catalog, whose statistics ``profile-data`` checks."""
         return self.root / "docs" / "feature-catalog.md"

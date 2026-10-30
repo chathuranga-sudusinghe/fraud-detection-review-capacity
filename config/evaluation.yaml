@@ -1,0 +1,95 @@
+# The evaluation declaration: the machine-readable form of the scientific settings of the
+# confirmatory evaluation, read by review_capacity.evaluation.declaration (Issue #187). Each block
+# names its source document. A difference between this file and its source, or the code constant
+# it repeats, is a defect resolved through an issue; unit tests compare them. The code fixes which
+# keys exist and their types, so no value can fall back silently to a default.
+#
+# Not here: the training rules (config/training.yaml, DR-015), the device and numerical settings
+# (config/models.yaml, DR-013) and the partitions (config/dataset.yaml, DR-001). The H3
+# configuration is not named: its single source is the H3 selection record (DR-010). The
+# data-derived false-negative slice boundaries (amount-band edges, pooled categorical levels) are
+# frozen in this file by a later issue (Issue #187, decision 2); only their rules are here.
+
+# docs/decisions/DR-006-bootstrap-inference-strategy.md (Resampling conventions) and
+# docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md (block construction)
+resampling:
+  replicates: 10000             # B
+  root_seed: 42
+  bit_generator: PCG64          # numpy.random.default_rng, SeedSequence.spawn child streams
+  streams:                      # child streams, in this order
+    - pigeonhole_h1_h2          # 1: joint day x entity weights for all eight configurations
+    - naive_s1                  # 2: fraud-level iid bootstrap (V_naive)
+    - day_block_s2              # 3: S2, block length 3
+    - day_block_h3              # 4: H3, block lengths 3, 1, 7 in that order
+    - day_block_rq3             # 5: RQ3 intervals
+    - pigeonhole_rq3            # 6: RQ3 frauds-forgone sensitivity
+    - pigeonhole_false_negative # 7: false-negative slice miss rates
+    - day_block_secondary       # 8: secondary outcomes on resampled days
+  block_length: 3               # primary day-block length (ell)
+  block_length_sensitivity: [1, 7]
+  circular: false               # blocks are non-circular and truncated to the Test days
+
+# docs/protocol.md (Statistical Plan; Outcomes), docs/decisions/DR-005-sesoi-and-h1-h2-inference.md
+# and docs/decisions/DR-006-bootstrap-inference-strategy.md (Confidence intervals and replicates)
+levels:
+  difference: 0.95              # differences, secondary outcomes, false-negative slices
+  interpretation: 0.90          # H1 practical interpretation, H2 and H3 intervals
+
+# docs/protocol.md (Hypotheses; Statistical Plan), DR-003, DR-005
+inference:
+  sesoi: 0.02                   # Smallest Effect Size Of Interest, Recall@2%
+  sesoi_sensitivity: [0.01, 0.03, 0.05]
+  h3_target: 0.02               # target alert rate
+  h3_delta_relative: 0.20       # equivalence tolerance relative to the target
+  h3_delta: 0.004               # = h3_target * h3_delta_relative
+  h3_tolerance_sensitivity: [0.10, 0.25, 0.50]
+  alpha: 0.05                   # family-wise level of the Holm procedure
+  holm_family: [H1, H2, H3]
+
+# docs/decisions/DR-002-review-capacity-definition.md
+capacity:
+  shares: [0.01, 0.02, 0.05, 0.10]
+  primary: 0.02
+  budgets: [28, 56, 139, 278]   # K = round(share x mean daily V2 volume), half up
+
+# docs/decisions/DR-011-model-set-tree-based-and-neural-families.md and
+# docs/decisions/DR-010-h3-confirmatory-configuration.md (tie-break order)
+configurations:
+  order: [LGB-u, Cat-u, RES-u, FTT-u, LGB-b, Cat-b, RES-b, FTT-b]
+  tree: [LGB, Cat]
+  neural: [RES, FTT]
+  reference: logistic_regression
+
+# docs/decisions/DR-005-sesoi-and-h1-h2-inference.md (cell contrasts): [a, b] is a - b
+contrasts:
+  - [LGB-b, LGB-u]
+  - [Cat-b, Cat-u]
+  - [RES-b, RES-u]
+  - [FTT-b, FTT-u]
+  - [Cat-u, LGB-u]
+  - [Cat-b, LGB-b]
+  - [FTT-u, RES-u]
+  - [FTT-b, RES-b]
+
+# docs/protocol.md (Calibration) and docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md (§8)
+calibration_reporting:
+  reliability_bins: 20          # equal-count bins formed from the probabilities alone
+  epsilon: 1.0e-15              # clipping of the metric-only probability copy
+
+# docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md (§2 ratio grid; friction sensitivity)
+rq3:
+  ratio_grid: [2, 5, 10, 20, 50, 100, 200, 500, 1000]
+  ratio_max: 1000               # upper end of the continuous range (1, ratio_max]
+  friction: [1, 5]              # phi = C_FP / C_R
+
+# docs/protocol.md (False-Negative Analysis), Issue #185
+false_negative:
+  minimum_frauds: 100           # a slice below this has no interval
+  amount_quantiles: 5           # quintiles of TransactionAmt over Train, lower edge inclusive
+  score_band_multiples: [1, 2, 5]   # ranks K+1..2K, 2K+1..5K, above 5K
+  interval_level: 0.95
+  test_weeks:                   # [first day, last day], Test relative days
+    - [155, 161]
+    - [162, 168]
+    - [169, 175]
+    - [176, 182]
