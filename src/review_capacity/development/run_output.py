@@ -21,9 +21,10 @@ import os
 import re
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from review_capacity.development.records import (
     RECORD_CONTRACTS,
@@ -31,6 +32,7 @@ from review_capacity.development.records import (
     dump_record,
     read_record,
 )
+from review_capacity.development.schema import RecordContract
 from review_capacity.errors import FileAccessError, RecordContractError, SpecificationError
 from review_capacity.files import write_new_atomically
 from review_capacity.hashing import file_sha256
@@ -46,7 +48,61 @@ SOURCE_LINK = "source"  # the link of an analysis run to the development run it 
 END_KIND = "run_end"
 
 _PART = re.compile(r"[A-Za-z0-9_.-]+")
-_KIND_ORDER = {kind: index for index, kind in enumerate(RECORD_CONTRACTS)}
+
+
+class RecordSet(Protocol):
+    """The record contracts a run directory reads and writes: their kinds in production order,
+    the kind that opens a run and the kind that closes it, and the validating writer and reader.
+    The development pipeline uses ``DevelopmentRecords``; the confirmatory run has its own
+    (``confirmatory.records``)."""
+
+    @property
+    def contracts(self) -> Mapping[str, RecordContract]: ...
+
+    @property
+    def run_kind(self) -> str: ...
+
+    @property
+    def end_kind(self) -> str: ...
+
+    def dump(self, record: Mapping[str, Any]) -> str: ...
+
+    def read(self, path: Path, kind: str | None = None) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class DevelopmentRecords:
+    """The record set of the development pipeline, validated against the development
+    partitions."""
+
+    partitions: DevelopmentPartitions
+
+    @property
+    def contracts(self) -> Mapping[str, RecordContract]:
+        return RECORD_CONTRACTS
+
+    @property
+    def run_kind(self) -> str:
+        return RUN_KIND
+
+    @property
+    def end_kind(self) -> str:
+        return END_KIND
+
+    def dump(self, record: Mapping[str, Any]) -> str:
+        return dump_record(record, self.partitions)
+
+    def read(self, path: Path, kind: str | None = None) -> dict[str, Any]:
+        return read_record(path, self.partitions, kind)
+
+
+def _record_set(partitions: DevelopmentPartitions | None, records: RecordSet | None) -> RecordSet:
+    """``records`` if given, else the development record set of ``partitions``."""
+    if records is not None:
+        return records
+    if partitions is None:
+        raise SpecificationError("A run directory needs the development partitions or a record set")
+    return DevelopmentRecords(partitions)
 
 
 def source_file(reference: Mapping[str, str]) -> dict[str, str]:
@@ -98,10 +154,16 @@ class RunDirectory:
     """
 
     def __init__(
-        self, path: Path, partitions: DevelopmentPartitions, run_type: str, started: str
+        self,
+        path: Path,
+        partitions: DevelopmentPartitions | None,
+        run_type: str,
+        started: str,
+        records: RecordSet | None = None,
     ) -> None:
         self.path = path
-        self.partitions = partitions
+        self._partitions = partitions
+        self.records = _record_set(partitions, records)
         self.run_type = run_type
         self.started = started
         self._identity: dict[str, Any] | None = None
@@ -111,13 +173,14 @@ class RunDirectory:
     def create(
         cls,
         root: Path,
-        partitions: DevelopmentPartitions,
+        partitions: DevelopmentPartitions | None,
         run_type: str,
         started: str,
         output: Path | None = None,
         *,
         log_opened: bool = False,
         source: Path | None = None,
+        records: RecordSet | None = None,
     ) -> RunDirectory:
         """Create the run's directory (``output``, or by default the dated one) and its
         ``records/`` subdirectory; refuse any directory that is already in use. An analysis run
@@ -133,7 +196,14 @@ class RunDirectory:
         except OSError as error:
             raise FileAccessError(f"{path}: cannot be created ({error.strerror})") from error
         logger.info("Run directory %s", path)
-        return cls(path, partitions, run_type, started)
+        return cls(path, partitions, run_type, started, records)
+
+    @property
+    def partitions(self) -> DevelopmentPartitions:
+        """The development partitions of a development-pipeline run directory."""
+        if self._partitions is None:
+            raise SpecificationError("This run directory has no development partitions")
+        return self._partitions
 
     @property
     def records_dir(self) -> Path:
@@ -146,7 +216,7 @@ class RunDirectory:
     def record_path(self, kind: str, *parts: str | int) -> Path:
         """``records/<kind>[-<part>...].json``; a part is letters, digits, ``_``, ``.`` or ``-``."""
         names = [str(part) for part in parts]
-        if kind not in RECORD_CONTRACTS:
+        if kind not in self.records.contracts:
             raise SpecificationError(f"Unknown record kind {kind!r}")
         if not all(_PART.fullmatch(name) for name in names):
             raise SpecificationError(f"Record name parts {names} need letters, digits, _, . or -")
@@ -163,13 +233,14 @@ class RunDirectory:
         actually written.
         """
         kind = record.get("record")
+        run_kind, end_kind = self.records.run_kind, self.records.end_kind
         if self._closed:
             raise SpecificationError(f"{self.path} is closed; a rerun uses a new directory")
-        if kind == END_KIND:
-            raise SpecificationError(f"{END_KIND} is written by finish(), not as a record")
-        if kind == RUN_KIND and parts:
-            raise SpecificationError(f"The {RUN_KIND} record is {RUN_KIND}.json, with no name part")
-        text = dump_record(record, self.partitions)
+        if kind == end_kind:
+            raise SpecificationError(f"{end_kind} is written by finish(), not as a record")
+        if kind == run_kind and parts:
+            raise SpecificationError(f"The {run_kind} record is {run_kind}.json, with no name part")
+        text = self.records.dump(record)
         self._check_identity(record)
         path = self.record_path(str(kind), *parts)
         if path.exists():
@@ -183,8 +254,8 @@ class RunDirectory:
     def _check_identity(self, record: Mapping[str, Any]) -> None:
         identity = record["identity"]
         if self._identity is None:
-            if record["record"] != RUN_KIND:
-                raise SpecificationError(f"The first record of a run is {RUN_KIND}")
+            if record["record"] != self.records.run_kind:
+                raise SpecificationError(f"The first record of a run is {self.records.run_kind}")
             if identity["run_id"] != self.started or identity["run_type"] != self.run_type:
                 raise SpecificationError(
                     f"The run identity {identity['run_type']}/{identity['run_id']} differs from "
@@ -199,23 +270,26 @@ class RunDirectory:
         """Write ``run_end`` with the SHA-256 of every record, and close the run (once)."""
         if self._closed:
             raise SpecificationError(f"{self.path} is already closed")
+        end_kind = self.records.end_kind
         if self._identity is None:
-            raise SpecificationError(f"No {RUN_KIND} record was written; the run cannot close")
+            raise SpecificationError(
+                f"No {self.records.run_kind} record was written; the run cannot close"
+            )
         entries = [
             {"path": f"{RECORDS_DIR}/{path.name}", "sha256": file_sha256(path)}
-            for path in _record_files(self.path)
+            for path in _record_files(self.path, end_kind)
         ]
         end = {
-            "record": END_KIND,
-            "schema_version": RECORD_CONTRACTS[END_KIND].version,
+            "record": end_kind,
+            "schema_version": self.records.contracts[end_kind].version,
             "identity": self._identity,
             "finished": timestamp(finished),
             "outcome": outcome,
             "error": error,
             "records": entries,
         }
-        text = dump_record(end, self.partitions)
-        path = self.record_path(END_KIND)
+        text = self.records.dump(end)
+        path = self.record_path(end_kind)
         write_new_atomically(path, text)
         self._closed = True
         logger.info("Run closed: %s (%d records)", outcome, len(entries))
@@ -260,8 +334,8 @@ class RunDirectory:
             raise first
 
 
-def _record_files(directory: Path) -> list[Path]:
-    """The record files of a run directory, other than ``run_end``, in increasing name order.
+def _record_files(directory: Path, end_kind: str = END_KIND) -> list[Path]:
+    """The record files of a run directory, other than the closing one, in increasing name order.
     Hidden files (the temporary files of an interrupted write) are not records."""
     records = directory / RECORDS_DIR
     if records.is_symlink():
@@ -275,7 +349,7 @@ def _record_files(directory: Path) -> list[Path]:
     ]
     if unexpected:
         raise RecordContractError(f"{records}: unexpected entries {unexpected}")
-    return [p for p in entries if p.name != f"{END_KIND}.json"]
+    return [p for p in entries if p.name != f"{end_kind}.json"]
 
 
 class LoadedRun:
@@ -298,44 +372,54 @@ class LoadedRun:
         return identity
 
 
-def load_run(directory: Path, partitions: DevelopmentPartitions) -> LoadedRun:
-    """Read and validate every record of ``directory``.
+def load_run(
+    directory: Path,
+    partitions: DevelopmentPartitions | None = None,
+    records: RecordSet | None = None,
+) -> LoadedRun:
+    """Read and validate every record of ``directory`` (against the development contracts, or
+    the contracts of ``records``).
 
     Raises ``RecordContractError`` for a record that breaks its contract, a file whose name does
     not match its kind, records of different runs, a directory without a ``run`` record, and, for
     a closed run, any record that is missing, extra or changed since ``run_end`` listed it.
     """
-    files = _record_files(directory)
-    end_path = directory / RECORDS_DIR / f"{END_KIND}.json"
+    record_set = _record_set(partitions, records)
+    run_kind, end_kind = record_set.run_kind, record_set.end_kind
+    kind_order = {kind: index for index, kind in enumerate(record_set.contracts)}
+    files = _record_files(directory, end_kind)
+    end_path = directory / RECORDS_DIR / f"{end_kind}.json"
     loaded: list[tuple[str, dict[str, Any]]] = []
     for path in files:
-        record = read_record(path, partitions)
+        record = record_set.read(path)
         kind = record["record"]
         if path.stem != kind and not path.stem.startswith(f"{kind}-"):
             raise RecordContractError(f"{path}: the name does not match its {kind} record")
-        if kind in (RUN_KIND, END_KIND) and path.stem != kind:
+        if kind in (run_kind, end_kind) and path.stem != kind:
             raise RecordContractError(f"{path}: a {kind} record is named {kind}.json")
         loaded.append((path.name, record))
-    end = read_record(end_path, partitions, END_KIND) if end_path.exists() else None
-    if [record["record"] for _, record in loaded].count(RUN_KIND) != 1:
-        raise RecordContractError(f"{directory}: needs exactly one {RUN_KIND} record")
-    loaded.sort(key=lambda item: (_KIND_ORDER[item[1]["record"]], item[0]))
+    end = record_set.read(end_path, end_kind) if end_path.exists() else None
+    if [record["record"] for _, record in loaded].count(run_kind) != 1:
+        raise RecordContractError(f"{directory}: needs exactly one {run_kind} record")
+    loaded.sort(key=lambda item: (kind_order[item[1]["record"]], item[0]))
     identity = loaded[0][1]["identity"]
     others = [name for name, record in loaded if record["identity"] != identity]
     if others or (end is not None and end["identity"] != identity):
-        raise RecordContractError(f"{directory}: records of different runs: {others or END_KIND}")
+        raise RecordContractError(f"{directory}: records of different runs: {others or end_kind}")
     if end is not None:
-        _check_closed(directory, files, end)
+        _check_closed(directory, files, end, end_kind)
     return LoadedRun(directory, loaded, end)
 
 
-def _check_closed(directory: Path, files: list[Path], end: Mapping[str, Any]) -> None:
+def _check_closed(
+    directory: Path, files: list[Path], end: Mapping[str, Any], end_kind: str = END_KIND
+) -> None:
     listed = {entry["path"]: entry["sha256"] for entry in end["records"]}
     present = {f"{RECORDS_DIR}/{p.name}": file_sha256(p) for p in files}
     changes = sorted(
         [f"{name}: missing" for name in listed.keys() - present.keys()]
-        + [f"{name}: not listed in {END_KIND}" for name in present.keys() - listed.keys()]
+        + [f"{name}: not listed in {end_kind}" for name in present.keys() - listed.keys()]
         + [f"{n}: changed" for n in listed.keys() & present.keys() if listed[n] != present[n]]
     )
     if changes:
-        raise RecordContractError(f"{directory}: records differ from {END_KIND}: {changes}")
+        raise RecordContractError(f"{directory}: records differ from {end_kind}: {changes}")
