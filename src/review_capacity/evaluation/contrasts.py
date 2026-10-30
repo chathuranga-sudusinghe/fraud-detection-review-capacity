@@ -52,6 +52,8 @@ def estimands(declaration: EvaluationDeclaration) -> Estimands:
 
     * ``family``: delta_F, the mean of the neural configurations minus the mean of the tree-based
       ones (H1);
+    * ``family:<w>``: the family effect at one weighting w, N_w - T_w (the neural mean minus the
+      tree-based mean at that weighting), reported separately when the interaction qualifies;
     * ``weighting:<model>``: delta_W,m, balanced minus unweighted, for each model (H2);
     * ``within:<b>-<a>``: the second model of a family minus the first, averaged over weighting
       (descriptive);
@@ -83,6 +85,10 @@ def estimands(declaration: EvaluationDeclaration) -> Estimands:
             }
         )
     }
+    for weighting in WEIGHTINGS:
+        rows[f"family:{weighting}"] = vector(
+            {**family(neural, weighting, 0.5), **family(tree, weighting, -0.5)}
+        )
     for model in (*tree, *neural):
         rows[f"weighting:{model}"] = vector(
             {f"{model}-{balanced}": 1.0, f"{model}-{unweighted}": -1.0}

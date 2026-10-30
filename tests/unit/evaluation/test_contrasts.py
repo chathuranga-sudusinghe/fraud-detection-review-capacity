@@ -16,33 +16,7 @@ from support.synthetic import REPO_PATHS
 # Recall@2 % in the declared order: LGB-u, Cat-u, RES-u, FTT-u, LGB-b, Cat-b, RES-b, FTT-b
 RECALLS = np.array([0.40, 0.39, 0.35, 0.34, 0.41, 0.38, 0.33, 0.32])
 
-
-@pytest.fixture(scope="module")
-def declaration() -> EvaluationDeclaration:
-    return load_declaration(REPO_PATHS)[0]
-
-
-@pytest.fixture(scope="module")
-def table(declaration: EvaluationDeclaration) -> Estimands:
-    return estimands(declaration)
-
-
-def test_the_names_follow_the_estimand_list(table: Estimands) -> None:
-    assert table.names == (
-        "family",
-        "weighting:LGB",
-        "weighting:Cat",
-        "weighting:RES",
-        "weighting:FTT",
-        "within:Cat-LGB",
-        "within:FTT-RES",
-        "interaction",
-        *(f"cell:{a}-{b}" for a, b in LOAD_CELLS),
-    )
-    assert table.coefficients.shape == (len(table.names), 8)
-
-
-LOAD_CELLS = (
+CELLS = (
     ("LGB-b", "LGB-u"),
     ("Cat-b", "Cat-u"),
     ("RES-b", "RES-u"),
@@ -54,6 +28,38 @@ LOAD_CELLS = (
 )
 
 
+@pytest.fixture(scope="module")
+def declaration() -> EvaluationDeclaration:
+    return load_declaration(REPO_PATHS)[0]
+
+
+@pytest.fixture(scope="module")
+def table(declaration: EvaluationDeclaration) -> Estimands:
+    return estimands(declaration)
+
+
+def value(table: Estimands, name: str) -> float:
+    """The estimand ``name`` of the recall vector."""
+    return float(table.apply(RECALLS)[table.names.index(name)])
+
+
+def test_the_names_follow_the_estimand_list(table: Estimands) -> None:
+    assert table.names == (
+        "family",
+        "family:u",
+        "family:b",
+        "weighting:LGB",
+        "weighting:Cat",
+        "weighting:RES",
+        "weighting:FTT",
+        "within:Cat-LGB",
+        "within:FTT-RES",
+        "interaction",
+        *(f"cell:{a}-{b}" for a, b in CELLS),
+    )
+    assert table.coefficients.shape == (len(table.names), 8)
+
+
 def test_every_estimand_is_a_difference(table: Estimands) -> None:
     assert np.allclose(table.coefficients.sum(axis=1), 0.0)
     assert np.allclose(table.apply(np.full(8, 0.37)), 0.0)  # equal recalls give no effect
@@ -62,32 +68,48 @@ def test_every_estimand_is_a_difference(table: Estimands) -> None:
 def test_the_family_effect_is_neural_minus_tree(table: Estimands) -> None:
     row = table.row("family")
     assert row.tolist() == [-0.25, -0.25, 0.25, 0.25, -0.25, -0.25, 0.25, 0.25]
-    assert table.apply(RECALLS)[0] == pytest.approx(0.335 - 0.395)  # neural mean - tree mean
+    assert value(table, "family") == pytest.approx(0.335 - 0.395)  # neural mean - tree mean
+
+
+def test_the_family_effect_at_each_weighting_is_the_gap_of_the_family_means(
+    table: Estimands,
+) -> None:
+    assert table.row("family:u").tolist() == [-0.5, -0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
+    assert table.row("family:b").tolist() == [0.0, 0.0, 0.0, 0.0, -0.5, -0.5, 0.5, 0.5]
+    assert value(table, "family:u") == pytest.approx((0.35 + 0.34) / 2 - (0.40 + 0.39) / 2)
+    assert value(table, "family:b") == pytest.approx((0.33 + 0.32) / 2 - (0.41 + 0.38) / 2)
+    # delta_F is their mean, and the interaction is their difference
+    assert value(table, "family") == pytest.approx(
+        (value(table, "family:u") + value(table, "family:b")) / 2
+    )
+    assert value(table, "interaction") == pytest.approx(
+        value(table, "family:b") - value(table, "family:u")
+    )
 
 
 def test_the_weighting_effects_are_balanced_minus_unweighted(table: Estimands) -> None:
-    effects = table.apply(RECALLS)
-    assert effects[1:5] == pytest.approx([0.01, -0.01, -0.02, -0.02])  # LGB, Cat, RES, FTT
+    effects = [value(table, f"weighting:{model}") for model in ("LGB", "Cat", "RES", "FTT")]
+    assert effects == pytest.approx([0.01, -0.01, -0.02, -0.02])
 
 
 def test_the_within_family_contrasts_average_over_weighting(table: Estimands) -> None:
-    effects = table.apply(RECALLS)
-    assert effects[5] == pytest.approx((0.39 + 0.38) / 2 - (0.40 + 0.41) / 2)  # Cat - LGB
-    assert effects[6] == pytest.approx((0.34 + 0.32) / 2 - (0.35 + 0.33) / 2)  # FTT - RES
+    assert value(table, "within:Cat-LGB") == pytest.approx((0.39 + 0.38) / 2 - (0.40 + 0.41) / 2)
+    assert value(table, "within:FTT-RES") == pytest.approx((0.34 + 0.32) / 2 - (0.35 + 0.33) / 2)
 
 
 def test_the_interaction_compares_the_family_gap_across_weightings(table: Estimands) -> None:
     gap_balanced = (0.33 + 0.32) / 2 - (0.41 + 0.38) / 2
     gap_unweighted = (0.35 + 0.34) / 2 - (0.40 + 0.39) / 2
-    assert table.apply(RECALLS)[7] == pytest.approx(gap_balanced - gap_unweighted)
+    assert value(table, "interaction") == pytest.approx(gap_balanced - gap_unweighted)
 
 
 def test_the_cell_contrasts_are_the_declared_differences(table: Estimands) -> None:
     order = ["LGB-u", "Cat-u", "RES-u", "FTT-u", "LGB-b", "Cat-b", "RES-b", "FTT-b"]
     recall = dict(zip(order, RECALLS, strict=True))
-    effects = table.apply(RECALLS)
-    for index, (first, second) in enumerate(LOAD_CELLS, start=8):
-        assert effects[index] == pytest.approx(recall[first] - recall[second])
+    for first, second in CELLS:
+        assert value(table, f"cell:{first}-{second}") == pytest.approx(
+            recall[first] - recall[second]
+        )
 
 
 def test_apply_works_on_replicate_matrices_and_keeps_nan(table: Estimands) -> None:
