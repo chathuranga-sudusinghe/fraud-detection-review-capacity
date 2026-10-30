@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #29, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-26; revised 2026-10-09 (Issue #54: selection pool of eight configurations; Holm-level H3 decision) |
-| Evidence source | The protocol's hypothesis, policy and multiplicity definitions; [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and [DR-005](DR-005-sesoi-and-h1-h2-inference.md); the existing power projections of DR-005. No labels, model scores or new dataset computations were used, no models were trained, and no Test-period data were inspected for this record. |
+| Date | 2026-09-26; revised 2026-10-09 (Issue #54: selection pool of eight configurations; Holm-level H3 decision); selection result recorded 2026-10-30 (Issue #181) |
+| Evidence source | The protocol's hypothesis, policy and multiplicity definitions; [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and [DR-005](DR-005-sesoi-and-h1-h2-inference.md); the existing power projections of DR-005. The rule was fixed without labels, model scores or new dataset computations. The [selection result](#selection-result) applies the rule to the development-run scores on Train, Validation 1 and Validation 2 only; no Test-period data were inspected. |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-009](DR-009-overflow-handling-for-threshold-policies.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
 ## Context
@@ -126,6 +126,25 @@ The non-confirmatory H3 sensitivity analyses (ℓ = 1 and 7 days; tolerance boun
 - **Primary configuration.** The "primary configuration" of the rolling-origin supplement ([DR-001](DR-001-temporal-split-strategy.md), protocol) is the H3 configuration's model and weighting.
 - **Label-latency sensitivity.** Because the rule uses V2 labels, the label-latency sensitivity also reports which configuration the rule would select using only V2 days 127–147. This is descriptive and does not change the H3 configuration.
 
+## Selection result
+
+The rule was applied once to the frozen main-seed models of the development run, scored on V2 (relative days 127–154, 2,637 frauds) under R3 with K = 56. The binding record is [`h3_selection-primary.json`](../../evidence/analysis/2026-10-29T013124Z/records/h3_selection-primary.json) (rule version 1, analysis run `2026-10-29T013124Z`; [analysis evidence](../../evidence/analysis/README.md)); the repeat in analysis run `2026-10-29T013414Z` gives the same values and the same selection.
+
+| Configuration | V2 frauds captured | R^f,w_V2 (Recall@2%) | V2 PR-AUC |
+|---|---:|---:|---:|
+| **LGB-b** | **1,070** | **0.4058** | 0.5378 |
+| LGB-u | 1,062 | 0.4027 | 0.5326 |
+| Cat-u | 1,036 | 0.3929 | 0.5095 |
+| Cat-b | 1,000 | 0.3792 | 0.4923 |
+| RES-u | 924 | 0.3504 | 0.4324 |
+| FTT-u | 908 | 0.3443 | 0.4046 |
+| RES-b | 865 | 0.3280 | 0.3943 |
+| FTT-b | 856 | 0.3246 | 0.3924 |
+
+- **H3 configuration: (f*, w*) = LGB-b** (LightGBM, balanced class weighting). The fraud counts captured are all different, so no tie-break step was used.
+- **Label-latency sensitivity** (V2 days 127–147, 1,977 frauds; descriptive, [`h3_selection-latency.json`](../../evidence/analysis/2026-10-29T013124Z/records/h3_selection-latency.json)): the rule would select LGB-u (789 frauds captured, against 788 for LGB-b). The H3 configuration is unchanged.
+- The selection is final. It is a validation-selected deployment proxy, not evidence for H1 or H2, and LGB-b is not described as the "best" model.
+
 ## Evidence
 
 - **[I]** DR-003 already defines H3 conditionally on the trained model and the frozen τ₂, so a single configuration matches the existing estimand.
@@ -185,7 +204,7 @@ No new external references. REF-010, REF-029 and REF-038 are existing, verified 
 | Δ | H3 equivalence tolerance on r (0.004 = 20 % of the 2 % target) |
 | DR | Decision Record |
 | f, w | Model (LGB, Cat, RES or FTT); class weighting (u unweighted, b balanced) |
-| (f*, w*) | The H3 configuration selected by the rule |
+| (f*, w*) | The H3 configuration selected by the rule (LGB-b) |
 | LGB-u, Cat-u, RES-u, FTT-u, LGB-b, Cat-b, RES-b, FTT-b | The eight model × weighting configurations (model-weighting), in tie-break order |
 | MLP | Multilayer perceptron |
 | FT-Transformer | Feature Tokenizer + Transformer |

@@ -109,5 +109,5 @@ The ethics and governance status is documented in the [protocol](docs/protocol.m
 
 Next steps:
 
-1. Development runs on Train, Validation 1 (V1) and Validation 2 (V2) ([running the pipeline](docs/running-the-pipeline.md)), then the analysis run on the completed development run, including the rolling-origin supplement.
+1. Development run on Train, Validation 1 (V1) and Validation 2 (V2) and its analysis runs, including the rolling-origin supplement: completed and promoted to [`evidence/development/`](evidence/development/README.md) and [`evidence/analysis/`](evidence/analysis/README.md); H3 configuration selected: LGB-b, LightGBM with balanced class weighting ([DR-010](docs/decisions/DR-010-h3-confirmatory-configuration.md#selection-result)).
 2. Review of the development evidence; protocol freeze; single Test evaluation; statistical analysis and reporting.
