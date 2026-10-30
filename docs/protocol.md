@@ -712,9 +712,13 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
     $$
 
     where `SE` = corrected standard error, `V_pigeonhole` = variance across pigeonhole replicates and `V_naive` = variance from a fraud-level independent bootstrap;
-  - S2: a key-free day-level moving-block bootstrap (ℓ = 3 days) that preserves each day's top-K exactly [REF-037, REF-064].
+  - S2: a key-free day-level moving-block bootstrap (ℓ = 3 days, non-circular, built as for H3 below) that preserves each day's top-K exactly [REF-037, REF-064].
 
-  A different H1 or H2 conclusion under S1 or S2 is reported as sensitivity to dependence assumptions. Confirmatory decisions use the primary method only.
+  A different H1 or H2 conclusion under S1 or S2 is reported as sensitivity to dependence assumptions: p_H1, p_H2 and the H1 practical category are recomputed under each, Holm is re-applied with p_H3 held at its primary value, and a conclusion differs when a rejection decision or the H1 category differs ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)). Confirmatory decisions use the primary method only.
+- **Resampling conventions** ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md), Resampling conventions; Issue #183):
+  - every Test resampling draws from root seed 42 (NumPy PCG64), with independent `SeedSequence.spawn` child streams in a fixed order: H1/H2 pigeonhole (one joint weight set for all eight configurations), S1 fraud-level bootstrap, S2 day blocks, H3 day blocks (ℓ = 3, 1, 7), RQ3 day blocks, RQ3 pigeonhole sensitivity;
+  - a pigeonhole replicate whose fraud weights sum to zero counts as not rejecting in every one-sided tail, B stays 10,000 in every denominator, the replicate is excluded from the percentile intervals and the number of such replicates is reported;
+  - the Monte Carlo standard error of each unadjusted p-value is reported: √(q(1 − q)/B) for a one-sided tail proportion q, twice that of the smaller tail for p_H1, and that of the maximising component for p_H2 and p_H3.
 - **H1: two-sided difference test.** It is not a winner-selection test. p_H1 is the two-sided bootstrap p-value for δ_F = 0, in the add-one form bounded to (0, 1] ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)):
 
   $$
@@ -723,7 +727,7 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
 
   where `δ*_F` = δ_F in one bootstrap replicate and `#{ · }` = the number of replicates satisfying the condition.
 
-  The 90 % CI for δ_F is additionally interpreted against ±0.02 (±SESOI). This interpretation is pre-specified but not a separate confirmatory test, and has five possible outcomes:
+  The 90 % CI for δ_F is additionally interpreted against ±0.02 (±SESOI), with open bounds: an endpoint exactly at ±0.02 counts as crossing the bound ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)). This interpretation is pre-specified but not a separate confirmatory test, and has five possible outcomes:
   - a practically meaningful difference;
   - a difference of uncertain practical size;
   - a detectable but negligible difference;
@@ -733,13 +737,13 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
   The within-family model contrasts (CatBoost vs LightGBM; FT-Transformer vs ResNet-style MLP), the family × weighting interaction and the cell contrasts are reported descriptively.
 - **H2: intersection-union TOST** with SESOI = 0.02 [REF-061, REF-062]. p_H2 is the maximum of the eight one-sided p-values (two per model), each in the same add-one form. H2₁ is concluded only if the Holm-adjusted p-value of H2 is at most 0.05.
   - Equivalence is required for each model, rather than for an averaged effect, so that opposite effects cannot cancel.
-  - The 90 % CIs of the four δ_W,m and their position relative to (−0.02, +0.02) describe uncertainty only and do not determine rejection.
+  - The 90 % CIs of the four δ_W,m and their position relative to the open interval (−0.02, +0.02) describe uncertainty only and do not determine rejection.
   - The two-sided difference CIs are also reported descriptively.
 - **H3: TOST** with Δ = 0.004 (±20 % relative), on the H3 configuration only ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)) [REF-061, REF-062, REF-030]. p_H3 is the larger of the two one-sided bootstrap p-values, and H3₁ is concluded only if the Holm-adjusted p-value of H3 is at most 0.05 [REF-029] ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
-  - Uncertainty comes from a **moving-block bootstrap over Test days**, because the outcome does not depend on labels: block length 3 days, B = 10,000 bootstrap replicates, percentile interval [REF-037, REF-064]. Sensitivity block lengths are 1 and 7 days.
-  - The 90 % CI for r is reported in every case, with its position relative to (0.016, 0.024). It describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. A CI overlapping a bound is **inconclusive**.
+  - Uncertainty comes from a **moving-block bootstrap over Test days**, because the outcome does not depend on labels: block length 3 days, B = 10,000 bootstrap replicates, percentile interval [REF-037, REF-064]. Sensitivity block lengths are 1 and 7 days. The blocks are non-circular: block starts are drawn uniformly from Test days 1 … 28 − ℓ + 1, ⌈28 / ℓ⌉ blocks are concatenated and the series is truncated to its first 28 days; one resample set per block length is shared by the eight configurations ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
+  - The 90 % CI for r is reported in every case, with its position relative to (0.016, 0.024). It describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. A CI overlapping a bound is **inconclusive**. The interval position is labelled descriptively (CI inside the band, entirely outside it, or overlapping a bound); "rate preserved within ±20 %" is said only when H3₁ is concluded by the Holm-adjusted p-value ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
   - Inference is conditional on the H3 configuration's trained model and its τ₂.
-  - Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded.
+  - Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded, t_min = max(|L − 0.02|, |U − 0.02|) / 0.02 for the 90 % CI (L, U) of r: descriptive, interval-based, not Holm-adjusted ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
 - **Multiplicity:** **Holm** (sequentially rejective multiple-testing procedure) at family-wise α = 0.05 over the confirmatory family {H1, H2, H3} [REF-029]: three members, with H3 tested once, on the H3 configuration. Decisions use **Holm-adjusted p-values**:
 
   $$
@@ -753,7 +757,7 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
   - `p̃_(k)` = Holm-adjusted p-value of the hypothesis with the k-th smallest p-value.
 
   A hypothesis is rejected if and only if its adjusted p-value is at most 0.05. This applies Holm's step-down stopping rule: the ordered p-values are compared with 0.05 / 3 ≈ 0.0167, 0.05 / 2 = 0.025 and 0.05 in turn, and once one comparison fails, no later hypothesis is rejected. For example, p-values {0.020, 0.021, 0.040} give adjusted values {0.060, 0.060, 0.060}, so no hypothesis is rejected. The unadjusted and the Holm-adjusted p-value are both reported for H1, H2 and H3; only the adjusted value decides. H3 results for the other seven configurations are descriptive and outside the family (DR-010).
-- **Secondary:** exact McNemar tests on the cell-level paired contrasts [REF-035, REF-028]. They assume independent frauds, and under intracluster correlation their size can greatly exceed the nominal level [REF-071]. They are descriptive only, **not** in the Holm family.
+- **Secondary:** exact McNemar tests on the eight cell-level paired contrasts (the four weighting contrasts and the four within-family model contrasts per weighting; [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)) [REF-035, REF-028]. They assume independent frauds, and under intracluster correlation their size can greatly exceed the nominal level [REF-071]. They are descriptive only, **not** in the Holm family.
 - **Effect sizes** with CIs, in pp, frauds per 28 days and per day, Precision@K equivalent and normalised recall. Sensitivity: H1/H2 interpretations are also shown against SESOIs of 1, 3 and 5 pp (not confirmatory).
 - **Secondary outcomes** use estimation with confidence intervals, not additional hypothesis tests. Proportions use Wilson intervals [REF-034] where a bootstrap is not required.
 
@@ -985,7 +989,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | pp | Percentage points |
 | PII | Personally identifiable information |
 | Parquet | Column-oriented file format of the local processed development files ([`dataset.md`](dataset.md#data-access-after-the-parquet-build)) |
-| PCG64 | NumPy bit generator fixed for hyperparameter sampling |
+| PCG64 | NumPy bit generator fixed for hyperparameter sampling and for every Test resampling stream |
 | PR-AUC | Precision–Recall Area Under the Curve |
 | Precision@K | Share of reviewed transactions that are fraud |
 | r | Realised Test alert rate at τ₂, pooled over Test days; in confirmatory H3, r = r^f*,w* (H3 configuration only) |
@@ -1003,6 +1007,9 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | RQ1–RQ3 | Research questions 1–3 |
 | S1, S2 | Sensitivity analyses: Owen-corrected variance; day-level moving-block bootstrap |
 | SE | Standard error |
+| q | Add-one tail proportion of a one-sided bootstrap p-value (Monte Carlo standard error √(q(1 − q)/B)) |
+| t_min | Smallest relative tolerance whose open band contains the 90 % CI of r (H3 sensitivity) |
+| L, U | Lower and upper endpoints of the 90 % CI of r |
 | SESOI | Smallest Effect Size Of Interest (2 percentage points of Recall@2%) |
 | SHA-256 | Secure Hash Algorithm, 256-bit |
 | UTF-8 | Unicode Transformation Format, 8-bit |

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #14, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison) |
 | Evidence source | Development-period (V2, relative days 127–154) dependence diagnostics, computed for this decision with no Test labels and no model scores; `notebooks/01_dataset_feasibility_audit.ipynb` §15; bootstrap and clustered-inference literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -50,11 +50,12 @@ This record fixes that choice using development-period evidence only.
   - `z` = standard-normal quantile for the interval level (e.g. 1.96 for 95 %).
 
   This removes the known over-count and shows how far conclusions depend on the primary method's conservatism. If the corrected variance is ≤ 0, S1 is reported as not estimable.
-- **S2 — Day-level moving-block bootstrap, ℓ (block length) = 3 days.** Circular wrap is not used, to match H3 ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)). This is a key-free check that preserves each day's top-K exactly. The same B and interval type as the primary are used.
+- **S2 — Day-level moving-block bootstrap, ℓ (block length) = 3 days.** Circular wrap is not used, to match H3; the blocks are built as in [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) (non-circular start positions, series truncated to 28 days). This is a key-free check that preserves each day's top-K exactly. The same B and interval type as the primary are used.
 
 **Robustness rule.**
 - Confirmatory decisions (H1, H2) use the **primary method only**; there is no switching after results are seen.
 - If S1 or S2 would lead to a different H1 or H2 conclusion, this is reported explicitly as sensitivity of the conclusion to dependence assumptions.
+- **Comparison of conclusions.** For each of S1 and S2, p_H1 and p_H2 are recomputed (S1: Wald p-values from the corrected SE, with the H2 value the maximum of the eight one-sided Wald p-values; S2: the add-one bootstrap p-values of the primary formulas below) together with the H1 practical category of [DR-005](DR-005-sesoi-and-h1-h2-inference.md), and Holm is re-applied with p_H3 held at its primary value. A conclusion differs when a rejection decision for H1 or H2, or the H1 practical category, differs from the primary one. Where S1 is not estimable for a quantity, that comparison is reported as not estimable. Sensitivity results never replace the primary decisions.
 
 ### Exact paired resampling procedure (primary)
 
@@ -125,9 +126,37 @@ For each bootstrap replicate b = 1, …, B (B = number of replicates):
 | BCa (bias-corrected and accelerated interval) | **Not used** | Its acceleration constant is normally estimated by a jackknife, and no standard jackknife exists for crossed two-way data. Using BCa here would add an unvalidated component. |
 | Basic / studentized | Not used as primary | A studentized interval needs a per-replicate variance estimate, which would need a second-level two-way bootstrap. The added complexity is not justified for this confirmatory analysis. S1 provides a Wald-type check. |
 | Levels | 95 % for difference estimates; 90 % for H1's practical interpretation and for the H2 TOST (Two One-Sided Tests) contrasts, reported descriptively. Confirmatory decisions use the bootstrap p-values with Holm adjustment | As DR-005 |
-| Replicates | **B = 10,000**, fixed seed recorded | Holm adjustment compares the smallest p-value with 0.05 / 3 ≈ 0.0167, so tail proportions near 1.67 % must be estimated precisely: ≈ 167 replicates in the tail at B = 10,000, against ≈ 17 at B = 1,000, which is too few. Computation is negligible. Monte Carlo standard errors of reported p-values are also reported. |
+| Replicates | **B = 10,000**, fixed seeds and streams (see [Resampling conventions](#resampling-conventions)) | Holm adjustment compares the smallest p-value with 0.05 / 3 ≈ 0.0167, so tail proportions near 1.67 % must be estimated precisely: ≈ 167 replicates in the tail at B = 10,000, against ≈ 17 at B = 1,000, which is too few. Computation is negligible. Monte Carlo standard errors of reported p-values are also reported. |
 | Small-cluster corrections | **None applied**; limitation stated | Wild cluster bootstrap-t corrections [REF-069] are designed for regression coefficients with few clusters in one dimension. Here the entity dimension is large (≈ 1,350 clusters projected), the day dimension (28) carries the few-cluster risk, and the primary's conservatism partly offsets it. |
 | Day blocks | Primary: iid days inside the two-way scheme. Sensitivity S2: fixed ℓ = 3 | Within V2, lag-1 autocorrelation of daily prevalence is 0.01 [D]. Once entity recurrence is modelled explicitly, the remaining serial dependence is small. S2 keeps the H3 block length (DR-003; [REF-064]) for comparability. |
+
+### Resampling conventions
+
+Fixed by Issue #183 before any confirmatory code, so that no resampling rule is chosen in the implementation.
+
+- **Seeds and streams.** Every confirmatory and descriptive Test resampling draws from one root seed, **42**, with the NumPy PCG64 bit generator (`numpy.random.default_rng`). Independent child streams are created with `SeedSequence.spawn` in this fixed order:
+  1. H1/H2 two-way pigeonhole bootstrap: one joint set of day and entity multiplicities, applied to all eight configurations;
+  2. S1 fraud-level iid bootstrap (V_naive);
+  3. S2 day-level moving-block bootstrap, ℓ = 3;
+  4. H3 day-level moving-block bootstrap, ℓ = 3, 1 and 7 in that order ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)); one resample set per block length, shared by all eight configurations, because the Test days are common to them;
+  5. RQ3 day-level moving-block bootstrap, ℓ = 3 ([DR-007](DR-007-rq3-cost-ratio-and-break-even.md));
+  6. RQ3 two-way pigeonhole sensitivity for frauds forgone ([DR-007](DR-007-rq3-cost-ratio-and-break-even.md)).
+
+  The root seed, the stream order and the replicate count are recorded with every result.
+- **Replicates with zero total weight.** In a pigeonhole replicate whose fraud weights sum to zero (Σ_i w_i = 0), recall is undefined. B stays 10,000 in every p-value denominator: an undefined replicate counts as **not rejecting** in every one-sided tail (it is added to the counts #{δ* ≤ 0} and #{δ* ≥ 0} of H1 and to #{δ*_W,m ≤ −0.02} and #{δ*_W,m ≥ +0.02} of H2), which is conservative. It is excluded from the percentile intervals, and the number of undefined replicates is reported. With about 2,660 Test frauds over 28 days an undefined replicate is not expected; the rule makes the edge case deterministic.
+- **Monte Carlo standard errors of p-values.** For a one-sided tail proportion q:
+
+  $$
+  \mathrm{SE}_{\mathrm{MC}}(q) = \sqrt{\frac{q\,(1 - q)}{B}}
+  $$
+
+  where:
+
+  - `SE_MC(q)` = Monte Carlo standard error of the tail proportion q;
+  - `q` = the add-one tail proportion of a one-sided p-value;
+  - `B` = number of bootstrap replicates (10,000).
+
+  For p_H1 = 2 · min(q_lower, q_upper) (before the cap at 1) the standard error is 2 · SE_MC of the smaller tail; for p_H2 and p_H3, which are maxima of one-sided p-values, it is SE_MC of the component that attains the maximum. The standard errors are reported for the unadjusted p_H1, p_H2 and p_H3.
 
 
 ### Relationship to H1, H2, TOST and McNemar
@@ -311,11 +340,17 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | n_obs | Number of observations (in the variance approximation of Owen, REF-068) |
 | ν_A, ν_B | Owen's imbalance measures for factors A and B, as defined in REF-068 |
 | p_a,m, p_b,m | One-sided H2 p-values for the lower and upper bounds of model m |
-| p_H1, p_H2 | p-values of H1 and H2 |
+| p_H1, p_H2, p_H3 | p-values of H1, H2 and H3 |
+| PCG64 | NumPy permuted congruential bit generator used for every resampling stream |
+| q, q_lower, q_upper | Add-one tail proportion of a one-sided bootstrap p-value; the lower and upper tails of H1 |
 | R3 | Decision policy: daily top-K review |
 | Recall@2% | Share of frauds reviewed at the 2 % review capacity |
 | S1, S2 | Sensitivity analyses: Owen-corrected variance; day-level moving-block bootstrap |
 | SE | Standard error |
+| SE_MC | Monte Carlo standard error of a bootstrap tail proportion |
+| Holm | Holm's sequentially rejective multiple-testing procedure over {H1, H2, H3} |
+| RQ3 | Research question 3: cost-aware capacity use (DR-007) |
+| Σ_i | Sum over Test frauds |
 | SESOI | Smallest Effect Size Of Interest |
 | σ²_A, σ²_B, σ²_E | Variance components of factors A and B; residual variance |
 | TOST | Two One-Sided Tests |

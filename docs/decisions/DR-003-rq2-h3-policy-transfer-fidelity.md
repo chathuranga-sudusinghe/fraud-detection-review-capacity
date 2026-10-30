@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) and 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) |
+| Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) and 2026-10-30 (Issue #183: block construction, smallest equivalence tolerance, interval labels) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (H1/H2 bootstrap), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (H3 configuration), [protocol](../protocol.md) |
 
@@ -170,7 +170,19 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 
 **Sensitivity reporting (non-confirmatory).**
 - Report the 90 % CI for r against the alternative bounds ±10 %, ±25 % and ±50 %.
-- Report the smallest relative tolerance at which equivalence would be concluded, so readers can apply their own margin.
+- Report the smallest relative tolerance at which equivalence would be concluded, so readers can apply their own margin. It is descriptive, interval-based and continuous, computed from the 90 % CI (L, U) of r:
+
+  $$
+  t_{\min} = \frac{\max\left(\lvert L - 0.02 \rvert,\ \lvert U - 0.02 \rvert\right)}{0.02}
+  $$
+
+  where:
+
+  - `t_min` = smallest relative tolerance;
+  - `L`, `U` = lower and upper endpoints of the 90 % CI of r;
+  - `0.02` = the 2 % target rate.
+
+  The interval lies inside the open band (0.02 (1 − t), 0.02 (1 + t)) for every t > t_min. t_min is not a test and is not Holm-adjusted.
 - These do not change the confirmatory H3 decision, which uses ±20 % only.
 
 
@@ -183,9 +195,9 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 | **Null hypothesis H3₀** | r ≤ 0.016 **or** r ≥ 0.024 (\|r − 0.02\| ≥ 0.004) |
 | **Alternative H3₁** | 0.016 < r < 0.024 (\|r − 0.02\| < 0.004) |
 | **Test** | TOST: H0a: r ≤ 0.016 and H0b: r ≥ 0.024 (the two one-sided null hypotheses), with one-sided bootstrap p-values p_a = (1 + #{r* ≤ 0.016}) / (B + 1) and p_b = (1 + #{r* ≥ 0.024}) / (B + 1), where r* is r in one bootstrap replicate. p_H3 = max(p_a, p_b) enters Holm's procedure [REF-061, REF-062, REF-029]. H3₁ is concluded only if the **Holm-adjusted p-value of H3 is at most 0.05**. |
-| **CI interpretation** | The 90 % CI is reported in every case. The 90 % CI describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. The unadjusted and the Holm-adjusted p-value are both reported. Inside the band: rate preserved within ±20 %. Entirely outside: rate not preserved. Overlapping a bound: **inconclusive**, which must not be reported as "preserved". |
+| **CI interpretation** | The 90 % CI is reported in every case. The 90 % CI describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. The unadjusted and the Holm-adjusted p-value are both reported. The interval position is labelled descriptively: *CI inside the band*, *CI entirely outside the band*, or *CI overlapping a bound (inconclusive)*. The words "rate preserved within ±20 %" are used **only** when H3₁ is concluded by the Holm-adjusted p-value; a CI inside the band without that rejection is reported as "CI inside the band, H3₀ not rejected after multiplicity adjustment". |
 | **Analysis unit** | The **relative day**. Flags are deterministic given the score, but a day's scores share that day's transaction composition (e.g. identity coverage, product mix), so transactions within a day are not independent draws [D; DR-001]. A transaction-level binomial interval would be anti-conservative. |
-| **Dependence between days** | Days are autocorrelated (daily-volume lag-1 autocorrelation 0.75 over days 1–182; 0.27 within V2 [D]). The CI therefore uses a **moving-block bootstrap over days** [REF-037]: blocks of ℓ consecutive Test days are resampled with replacement to 28 days, the pooled ratio is recomputed, B = 10,000 bootstrap replicates, percentile intervals [REF-044]. |
+| **Dependence between days** | Days are autocorrelated (daily-volume lag-1 autocorrelation 0.75 over days 1–182; 0.27 within V2 [D]). The CI therefore uses a **moving-block bootstrap over days** [REF-037]: blocks of ℓ consecutive Test days are resampled with replacement to 28 days, the pooled ratio is recomputed, B = 10,000 bootstrap replicates, percentile intervals [REF-044]. **Construction (non-circular):** each block start is drawn uniformly from the Test days 1 … 28 − ℓ + 1 (counted within the Test period), ⌈28 / ℓ⌉ blocks are concatenated, and the series is truncated to its first 28 days (ℓ = 3: ten blocks, 30 days, the last two days dropped; ℓ = 7: four blocks; ℓ = 1: independent days). Each resampled day carries its own n_d and N_d. One resample set per block length is shared by the eight configurations; the seed and stream are those of [DR-006](DR-006-bootstrap-inference-strategy.md) (Resampling conventions). |
 | **Block length** | **ℓ (block length) = 3 days, primary.** This follows the n^(1/3) and n^(1/4) orders for variance and one-sided distribution estimation (≈ 3.0 and 2.3 for n = 28, where n = number of Test days) [REF-064]. Those are asymptotic orders with unknown constants, so ℓ is pre-specified rather than estimated from Test data. **Sensitivity:** ℓ = 1 (independent days) and ℓ = 7 (weekly). |
 | **Entity clustering** | Within-day entity clustering is absorbed by the day unit. Cross-day recurrence is partly absorbed by the blocks. Because H3 involves **no labels**, the label-propagation dependence that affects H1/H2 ([DR-001](DR-001-temporal-split-strategy.md); addressed by the two-way bootstrap of [DR-006](DR-006-bootstrap-inference-strategy.md)) does not apply to H3. |
 | **Threshold ties** | τ₂ is the score of the transaction ranked ⌈0.02 × N_V2⌉ in descending V2 order (N_V2 = number of V2 transactions; ⌈ · ⌉ = round up), and transactions are flagged if score ≥ τ₂. The realised V2 rate r_V2 (share of V2 transactions with score ≥ τ₂) is reported. If tied scores make r_V2 differ from 0.02 by more than 1 % relative, this is reported and discussed, but the H3 target remains 0.02. |
@@ -267,6 +279,8 @@ REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-037, REF-038,
 | R3 | Decision policy: daily top-K review |
 | RQ2 | Research question 2 (policy-transfer fidelity) |
 | SD | Standard deviation |
+| t, t_min | A relative tolerance on r; the smallest relative tolerance whose open band contains the 90 % CI of r |
+| L, U | Lower and upper endpoints of the 90 % CI of r |
 | SE | Standard error |
 | SESOI | Smallest Effect Size Of Interest |
 | τ, τ₂ | A score threshold; the V2-selected 2 % rate threshold |
