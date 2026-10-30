@@ -162,7 +162,7 @@ The study combines four analytic components. Each research question and hypothes
 - **Relative day:** the unit of the review queue, of the fixed daily budget K and of the day-level bootstrap used for H3.
 - **Fraud:** the unit of Recall@2% (H1, H2), resampled jointly by relative day and pseudo-entity ([Statistical Plan](#statistical-plan)).
 
-**Order of use of the data.** Models are fitted on Train and tuned and early-stopped on Validation 1. The quantities that depend on data are fixed on Validation 2: the R1 and R2 thresholds, the R4 calibrator, the daily budget K and the H3 configuration. The R0 threshold (0.5) and the R4 cost-threshold rule are pre-specified and are not selected on data. The Test period is scored once, after the protocol freeze ([Experimental Split Structure](#experimental-split-structure)).
+**Order of use of the data.** Models are fitted on Train and tuned and early-stopped on Validation 1. The quantities that depend on data are fixed on Validation 2: the R1 and R2 thresholds, the R4 calibrator, the daily budget K and the H3 configuration. The R0 threshold (0.5) and the R4 cost-threshold rule are pre-specified and are not selected on data. The Test period is scored once, after the protocol freeze, under the [authorised Test evaluation](#authorised-test-evaluation).
 
 ## Dataset
 
@@ -221,7 +221,7 @@ Chronological, day-aligned split, fixed from transaction volume only, before any
 | Validation 1 (V1) | 106–126 | 65,544 | Hyperparameter tuning and early stopping only |
 | Validation 2 (V2) | 127–154 | 77,822 | Probability calibration (for R4, the calibrated cost-aware policy); threshold selection (R1, the F1-optimal threshold; R2); daily budget K; selection of the H3 configuration ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md)) |
 | Gap | — | — | **None in the primary design** |
-| Final Test | 155–182 | 78,542 | **Sealed.** One confirmatory evaluation |
+| Final Test | 155–182 | 78,542 | **Sealed.** One confirmatory evaluation ([Authorised Test evaluation](#authorised-test-evaluation)) |
 
 Partition hashes and `TransactionDT` bounds are recorded in [DR-001](decisions/DR-001-temporal-split-strategy.md).
 
@@ -232,6 +232,16 @@ Partition hashes and `TransactionDT` bounds are recorded in [DR-001](decisions/D
   - **Refit.** The hyperparameters and the fixed length (the retained rounds or epochs) of the selected trial, the main seed, no search and no early stopping; the training procedure, devices and numerical settings are those of [DR-015](decisions/DR-015-common-training-rules.md) and [DR-013](decisions/DR-013-training-device-policy.md). Everything learned from data is fitted on the origin's training days only: the balanced class weights and, for a neural model, the shared preprocessing of [DR-012](decisions/DR-012-neural-network-input-representation.md) with its declared seed; the main-run artifact is not reused. The batch plan of the selected trial is reused, and a plan that would leave a last micro-batch below the architecture's minimum batch size on an origin's training rows (two rows for the ResNet-style MLP) stops the supplement before any fit. A fixed length chosen on the 105 training days is applied to shorter training sets, and the origins differ in calendar position, training history and refit; the results combine these.
   - **Threshold and budget.** R2 at 2 % capacity on the scores of the threshold window (no labels): the threshold is the score ranked ⌈0.02 N_window⌉ among the N_window transactions of that window, and a transaction is flagged when its score is at least the threshold. The origin's fixed daily budget is K = round(0.02 × the mean daily volume of the threshold window), rounded half up ([DR-002](decisions/DR-002-review-capacity-definition.md) §3), and is never recomputed from the transfer window.
   - **Reported.** For each origin: the training days and rows, the threshold, K, the realised rate of the threshold window, the pooled transfer rate r (alerts over transactions of the transfer window), r / 0.02 − 1, the days above and below K, the total overflow and unused capacity, and the rate and volume components of [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md) (with the window's mean daily volume). Across origins: the origins in chronological order and the number of origins whose r lies strictly inside the H3 band (0.016, 0.024), written "x of 3". No interval or test is given and no claim of equivalence or reliability is made: the origins share training days and their transfer windows overlap.
+
+### Authorised Test evaluation
+
+The single confirmatory evaluation runs under the following procedure, fixed before any confirmatory code ([DR-001](decisions/DR-001-temporal-split-strategy.md); Issue #185). A Boolean flag alone never opens the Test labels.
+
+- **Authorisation.** The command takes the name of the protocol freeze tag. It runs only from a clean working tree whose HEAD is the commit of that annotated tag, and records the tag, the commit and the source fingerprint. The training identity of the development run is recorded separately; it may differ from the frozen evaluator's source fingerprint.
+- **Inputs.** Only frozen artefacts: the closed development run (main-seed models and the neural preprocessing artifact), the V2 thresholds and calibrators of the closed analysis run ([analysis evidence](../evidence/analysis/README.md), run `2026-10-29T013124Z`), the H3 selection record and the dataset manifest. Each is verified by hash before any Test row is read.
+- **Two phases.** Phase 1 scores the Test features of the eight configurations and the logistic-regression reference once, without labels and with the timing instrumentation; the scores are written and hashed. Phase 2 reads the Test labels, verifies the Test `transaction_id_sha256` of the manifest, and computes every outcome from the saved scores.
+- **Consumption and repeats.** A lock prevents concurrent runs. Before the labels are read, a failed phase 1 may be repeated; the failure and its log are kept and reported. Once the labels are read the evaluation is consumed: a failure in phase 2 resumes from the saved, hashed scores (computation only, no rescoring), and the command refuses any new phase 1 for the same tag.
+- **Record.** The run record names the tag, both identities, the phase boundaries, every repeat of phase 1 and every resume of phase 2.
 
 ## Models
 
@@ -677,7 +687,7 @@ The computational-cost outcome above is measured on the development partitions u
 - **Session conditions.** The timings are taken under the machine's working conditions at the time and are valid descriptive measurements: no condition is required, and other local workloads may run during a timing. The conditions are recorded as context with the run: a **60-second settling interval** before each standalone scoring block, the one-minute load average, the visible and allowed CPUs, the kernel, the WSL2 memory and swap limits, and GPU temperature and clock data where the system exposes them. A timing is read together with its recorded context and reflects the machine's conditions as well as the model.
 - **GPU memory.** The absolute sampled whole-device maximum, the idle baseline and the increase above the baseline are stored separately and called a **sampled maximum**, not a true peak. The neural models also record the allocator's maximum allocated and reserved bytes after a reset at the start of the phase. The libraries of the tree-based models are invisible to those counters.
 - **Host memory.** The peak resident memory of each phase is the process high-water mark (`VmHWM`) read after resetting it by writing `5` to `/proc/self/clear_refs` (which resets it to the current resident size, not to zero; the check resets first, so that an earlier, higher mark cannot hide it). Whether the reset works on the project machine is checked with a synthetic allocation in the first run; where it does not, a sampler thread reads the resident size **every 100 ms** (the `timing` block) and the record names the method and the interval; a failed sampler or one that does not stop invalidates the phase's measurement instead of returning a peak. The scope (parent process, resident inputs, models, and whether warm-up lies inside the interval) is stated by the caller with each value.
-- **Test period.** Test scoring time is obtained only by instrumenting the single authorised Test scoring pass after the protocol freeze; no Test pass is repeated for timing.
+- **Test period.** Test scoring time is obtained only by instrumenting the single authorised Test scoring pass after the protocol freeze (phase 1 of the [authorised Test evaluation](#authorised-test-evaluation)); no Test pass is repeated for timing.
 - **Records.** One versioned `timing` record per measurement; a scoring record covers the whole partition and its throughput is the rows divided by the median seconds; an FT-Transformer timing names the efficient attention backend ([DR-013](decisions/DR-013-training-device-policy.md) §4); the free `settings` map holds the procedure version, the durations of every pass, the number of distinct rows and of timed calls, the percentile method, the memory method, baseline and maxima, and the session conditions.
 
 ### Daily-budget fidelity (RQ2)
@@ -759,7 +769,12 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
   A hypothesis is rejected if and only if its adjusted p-value is at most 0.05. This applies Holm's step-down stopping rule: the ordered p-values are compared with 0.05 / 3 ≈ 0.0167, 0.05 / 2 = 0.025 and 0.05 in turn, and once one comparison fails, no later hypothesis is rejected. For example, p-values {0.020, 0.021, 0.040} give adjusted values {0.060, 0.060, 0.060}, so no hypothesis is rejected. The unadjusted and the Holm-adjusted p-value are both reported for H1, H2 and H3; only the adjusted value decides. H3 results for the other seven configurations are descriptive and outside the family (DR-010).
 - **Secondary:** exact McNemar tests on the eight cell-level paired contrasts (the four weighting contrasts and the four within-family model contrasts per weighting; [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)) [REF-035, REF-028]. They assume independent frauds, and under intracluster correlation their size can greatly exceed the nominal level [REF-071]. They are descriptive only, **not** in the Holm family.
 - **Effect sizes** with CIs, in pp, frauds per 28 days and per day, Precision@K equivalent and normalised recall. Sensitivity: H1/H2 interpretations are also shown against SESOIs of 1, 3 and 5 pp (not confirmatory).
-- **Secondary outcomes** use estimation with confidence intervals, not additional hypothesis tests. Proportions use Wilson intervals [REF-034] where a bootstrap is not required.
+- **Secondary outcomes** use estimation with confidence intervals, not additional hypothesis tests. Every Test interval is a 95 % percentile bootstrap interval with B = 10,000, chosen by the outcome's dependence ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md) streams; Issue #185). Wilson intervals are not used for Test outcomes, because every Test proportion depends on day and entity clustering:
+  - **two-way pigeonhole** (the H1/H2 weights, shared by all eight configurations): Recall@1%, @5% and @10%; pooled normalised recall; false negatives at capacity; Precision@K; frauds per 1,000 reviews; lift over random review; amount-weighted recall (each fraud weighted by its amount);
+  - **day-level moving block** (ℓ = 3, non-circular, stream 8): Average Precision (PR-AUC), ROC-AUC, precision, recall and F1 of R0–R2, and the calibration metrics (Brier score, log loss, intercept, slope), recomputed on the resampled days;
+  - the pooled alert rate r of every configuration: the 90 % interval of H3 ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md));
+  - RQ3 outcomes: as fixed in [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md);
+  - point values only: the daily-budget fidelity measures, the utilisation of R3 and R4 and the computational cost.
 
 **Power (projection, not Test data).** About 2,660 Test frauds are projected from V2 prevalence. The minimum detectable paired difference in Recall@2% is roughly:
 - 1.2–2.8 percentage points if frauds are treated as independent;
@@ -779,24 +794,28 @@ Statistical significance will not be treated as equivalent to practical importan
 
 ## False-Negative Analysis
 
-Exploratory, descriptive and non-causal. False negatives are defined under **R3 at the primary capacity** (frauds outside the daily top-K, K = 56). Frauds among threshold alerts in excess of K under R0–R2 are not false negatives in this analysis ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)). Pre-declared slices:
+Exploratory, descriptive and non-causal. False negatives are defined under **R3 at the primary capacity** (frauds outside the daily top-K, K = 56). Frauds among threshold alerts in excess of K under R0–R2 are not false negatives in this analysis ([DR-009](decisions/DR-009-overflow-handling-for-threshold-policies.md)). The rules below were fixed before any confirmatory code (Issue #185).
 
-- identity information present / absent;
-- ProductCD;
-- card4 and card6;
-- DeviceType (including missing);
-- transaction-amount bands;
-- relative week within Test;
-- score band;
-- **recurring vs new pseudo-entity** (whether the transaction's heuristic entity already had a Train-period fraud label).
+**Scope.** All eight configurations; the summary presents the H3 configuration (LGB-b) first, then the other seven. The logistic-regression reference is not included.
 
-The analysis will report:
+**Pre-declared slices.**
+
+| Slice | Definition |
+|---|---|
+| Identity information | Present when the transaction has a matching row in `train_identity.csv` (the one-to-one identity join of data preparation), absent otherwise; not inferred from non-missing identity fields |
+| ProductCD, card4, card6, DeviceType | The canonical levels, with missing as its own level. A level with fewer than 100 **V2** frauds is pooled into "other" for that variable. The pooling is fixed from V2 before Test access, so no Test label decides a slice boundary |
+| Transaction-amount band | Quintiles of `TransactionAmt` over all Train transactions (relative days 1–105, no labels), lower edge inclusive; the edges are recorded in the evaluation declaration |
+| Relative week within Test | Test days 155–161, 162–168, 169–175 and 176–182 |
+| Score band | The within-day rank of the missed fraud under the configuration's own scores, relative to K: ranks K + 1 … 2K (near miss), 2K + 1 … 5K, and above 5K. Label-free and comparable across models with different score scales |
+| Recurring vs new pseudo-entity | Recurring when the fraud's fine pseudo-entity ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)) has at least one fraud label in Train (days 1–105); otherwise new. Train labels only |
+
+The analysis will report, per slice and configuration:
 - fraud count per slice;
 - miss rate (FN, false negatives, ÷ frauds in slice);
-- uncertainty interval;
+- uncertainty interval: the 95 % percentile interval of the slice miss rate from the two-way pigeonhole bootstrap of DR-006 (relative day × fine pseudo-entity), B = 10,000, with one joint weight set for all slices and configurations (stream 7 of DR-006). Wilson intervals are not used, because frauds cluster by day and entity;
 - share of total false negatives.
 
-**Interpretability rule:** slices with fewer than about 100 frauds are pooled or reported descriptively only.
+**Interpretability rule.** After the V2-based pooling, a Test slice with fewer than 100 frauds is reported with its fraud count, miss rate and share of false negatives but without an interval, and is marked "fewer than 100 frauds".
 
 Slice base rates differ strongly (e.g. identity present 9.4 % vs absent 2.1 % in V2 [D]), so raw false-negative counts are never interpreted alone. No causal claim will be made from subgroup associations.
 
