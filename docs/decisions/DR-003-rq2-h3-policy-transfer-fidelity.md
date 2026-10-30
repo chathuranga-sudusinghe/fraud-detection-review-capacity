@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) and 2026-10-30 (Issue #183: block construction, smallest equivalence tolerance, interval labels) |
+| Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) and 2026-10-30 (Issue #183: block construction, smallest equivalence tolerance, interval labels; Issue #185: interval wording of the daily-budget statistics) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (H1/H2 bootstrap), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (H3 configuration), [protocol](../protocol.md) |
 
@@ -107,7 +107,7 @@ The first term on the right is the *rate* component (model and data drift); the 
 
 **Days with no alerts.** On a day with n_d = 0 the logarithm is undefined. Such days are excluded from the logarithmic summary, counted and reported separately, and their deviation from K is attributed entirely to the rate component (r_d = 0). Every relative day has at least 2,048 transactions (feasibility notebook §3), so the volume term is always defined.
 
-These statistics are reported descriptively with bootstrap intervals where appropriate. Secondary descriptive consequences, as bounded by [DR-009](DR-009-overflow-handling-for-threshold-policies.md):
+These statistics are reported descriptively as point values; the pooled rate r of each configuration also has its day-level moving-block interval (below), and no further intervals are computed (protocol, Statistical Plan; Issue #185). Secondary descriptive consequences, as bounded by [DR-009](DR-009-overflow-handling-for-threshold-policies.md):
 - frauds below the threshold, which are false negatives of the threshold classifier;
 - descriptively and conditional on score-priority ordering, "flagged frauds in excess demand". Frauds among alerts in excess of K are **not** counted as missed, because the labels do not show what would happen to excess alerts;
 - review capacity left unused on underuse days.

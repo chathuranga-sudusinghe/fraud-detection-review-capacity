@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #14, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison; Issue #185: streams for false-negative and secondary-outcome intervals) |
 | Evidence source | Development-period (V2, relative days 127–154) dependence diagnostics, computed for this decision with no Test labels and no model scores; `notebooks/01_dataset_feasibility_audit.ipynb` §15; bootstrap and clustered-inference literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -140,7 +140,11 @@ Fixed by Issue #183 before any confirmatory code, so that no resampling rule is 
   3. S2 day-level moving-block bootstrap, ℓ = 3;
   4. H3 day-level moving-block bootstrap, ℓ = 3, 1 and 7 in that order ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)); one resample set per block length, shared by all eight configurations, because the Test days are common to them;
   5. RQ3 day-level moving-block bootstrap, ℓ = 3 ([DR-007](DR-007-rq3-cost-ratio-and-break-even.md));
-  6. RQ3 two-way pigeonhole sensitivity for frauds forgone ([DR-007](DR-007-rq3-cost-ratio-and-break-even.md)).
+  6. RQ3 two-way pigeonhole sensitivity for frauds forgone ([DR-007](DR-007-rq3-cost-ratio-and-break-even.md));
+  7. false-negative analysis: one two-way pigeonhole weight set (relative day × fine pseudo-entity) shared by all slices and all eight configurations, giving the 95 % percentile intervals of the slice miss rates (protocol, False-Negative Analysis; Issue #185);
+  8. secondary outcomes recomputed on resampled days: day-level moving-block bootstrap, ℓ = 3, non-circular, shared by all eight configurations (protocol, Statistical Plan; Issue #185).
+
+  The secondary outcomes that are fraud-based ratios at fixed K (Recall@1%, @5% and @10%, pooled normalised recall, false negatives at capacity, Precision@K, frauds per 1,000 reviews, lift, amount-weighted recall) use the stream-1 weights of H1/H2, so that they are paired with the primary analysis.
 
   The root seed, the stream order and the replicate count are recorded with every result.
 - **Replicates with zero total weight.** In a pigeonhole replicate whose fraud weights sum to zero (Σ_i w_i = 0), recall is undefined. B stays 10,000 in every p-value denominator: an undefined replicate counts as **not rejecting** in every one-sided tail (it is added to the counts #{δ* ≤ 0} and #{δ* ≥ 0} of H1 and to #{δ*_W,m ≤ −0.02} and #{δ*_W,m ≥ +0.02} of H2), which is conservative. It is excluded from the percentile intervals, and the number of undefined replicates is reported. With about 2,660 Test frauds over 28 days an undefined replicate is not expected; the rule makes the edge case deterministic.
