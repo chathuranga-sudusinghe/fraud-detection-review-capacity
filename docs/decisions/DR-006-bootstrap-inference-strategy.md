@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #14, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison; Issue #185: streams for false-negative and secondary-outcome intervals) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight-configuration model set; bounded bootstrap p-values); 2026-10-30 (Issue #183: seeds and streams, zero-weight replicates, Monte Carlo standard errors, sensitivity comparison; Issue #185: streams for false-negative and secondary-outcome intervals; Issue #189: draw conventions) |
 | Evidence source | Development-period (V2, relative days 127–154) dependence diagnostics, computed for this decision with no Test labels and no model scores; `notebooks/01_dataset_feasibility_audit.ipynb` §15; bootstrap and clustered-inference literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -147,6 +147,10 @@ Fixed by Issue #183 before any confirmatory code, so that no resampling rule is 
   The secondary outcomes that are fraud-based ratios at fixed K (Recall@1%, @5% and @10%, pooled normalised recall, false negatives at capacity, Precision@K, frauds per 1,000 reviews, lift, amount-weighted recall) use the stream-1 weights of H1/H2, so that they are paired with the primary analysis.
 
   The root seed, the stream order and the replicate count are recorded with every result.
+- **Draw conventions** (Issue #189). These fix the numbers that a seed produces, so they are written down. Each use of a stream starts at the beginning of that stream, so quantities computed at different times on one stream use identical weights or days and stay paired.
+  - *Pigeonhole bootstrap.* The day multiplicities of all B replicates are drawn first (`Generator.multinomial` over the D Test days with equal probabilities, one row per replicate), then the entity multiplicities over the G entities (one row per replicate, in order). The result does not depend on how many replicates are held in memory at once. The weight of a fraud is the product of its day's and its entity's multiplicity, and the same weights apply to every quantity.
+  - *Fraud-level bootstrap (S1).* The multiplicities of the F Test frauds are drawn with `multinomial(F, equal probabilities, size=B)`.
+  - *Day blocks (S2, H3, RQ3, secondary outcomes).* The block starts are drawn with `Generator.integers(0, D − ℓ + 1, size=(B, ⌈D / ℓ⌉))`; the blocks of ℓ consecutive days are concatenated and truncated to the first D days. The H3 stream draws its three sets one after the other, ℓ = 3, then 1, then 7.
 - **Replicates with zero total weight.** In a pigeonhole replicate whose fraud weights sum to zero (Σ_i w_i = 0), recall is undefined. B stays 10,000 in every p-value denominator: an undefined replicate counts as **not rejecting** in every one-sided tail (it is added to the counts #{δ* ≤ 0} and #{δ* ≥ 0} of H1 and to #{δ*_W,m ≤ −0.02} and #{δ*_W,m ≥ +0.02} of H2), which is conservative. It is excluded from the percentile intervals, and the number of undefined replicates is reported. With about 2,660 Test frauds over 28 days an undefined replicate is not expected; the rule makes the edge case deterministic.
 - **Monte Carlo standard errors of p-values.** For a one-sided tail proportion q:
 
@@ -323,6 +327,8 @@ REF-028, REF-035, REF-036, REF-037, REF-044, REF-061, REF-062, REF-064, REF-068,
 | Cat, LGB, RES, FTT; u, b (weighting) | CatBoost, LightGBM, ResNet-style MLP, FT-Transformer; unweighted, balanced weighting |
 | CI | Confidence interval |
 | d, d(i) | A Test relative day; the day of fraud i |
+| D | Number of Test relative days (28) |
+| F | Number of Test frauds |
 | DE | Design effect: variance inflation due to clustering |
 | δ̂ | Point estimate of a paired difference |
 | w | Class weighting, u or b (in the estimand formulas) |
