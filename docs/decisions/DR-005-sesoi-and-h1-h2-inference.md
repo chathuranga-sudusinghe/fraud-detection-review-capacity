@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #8, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24 (Issue #8: SESOI fixed at 2 percentage points of Recall@2%); revised 2026-10-09 (Issue #54: estimands for the eight-configuration model set; bootstrap p-value definition) |
+| Date | 2026-09-24 (Issue #8: SESOI fixed at 2 percentage points of Recall@2%); revised 2026-10-09 (Issue #54: estimands for the eight-configuration model set; bootstrap p-value definition) and 2026-10-30 (Issue #183: open bounds at ±SESOI; list of cell contrasts) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§6–7, 15; development-period (V2) projections; equivalence-testing and practical-significance literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-010](DR-010-h3-confirmatory-configuration.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -35,7 +35,7 @@ R^m,w is the pooled Test Recall@2% of model m ∈ {LGB, Cat, RES, FTT} with weig
 | δ_W,m (weighting simple effects) | R^m,b − R^m,u for each of the four models | H2 (confirmatory) |
 | Within-family model contrasts | Cat − LGB and FTT − RES, each averaged over weighting | Descriptive |
 | Family × weighting interaction | (N_b − T_b) − (N_u − T_u), where N_w and T_w are the family means at weighting w | Descriptive |
-| Cell contrasts | Every paired configuration difference used above, per weighting | Descriptive |
+| Cell contrasts | Every paired configuration difference used above, per weighting: LGB-b − LGB-u, Cat-b − Cat-u, RES-b − RES-u, FTT-b − FTT-u; Cat-u − LGB-u, Cat-b − LGB-b, FTT-u − RES-u, FTT-b − RES-b (eight contrasts) | Descriptive |
 
 The confirmatory estimands, displayed:
 
@@ -73,6 +73,8 @@ In addition, the magnitude of δ_F is interpreted against ±SESOI using its **90
 | Not significant | Entirely within (−0.02, +0.02) | Data compatible only with practically negligible differences |
 | Not significant | Extends beyond ±0.02 | Inconclusive: uncertainty too large to distinguish practically meaningful effects |
 
+**Bounds.** The bounds ±0.02 are **open**, as for H3 ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)): a CI endpoint exactly equal to −0.02 or +0.02 is neither "within" nor "beyond", so such an interval is classified as **crossing** ±0.02. The same rule applies to the position of the four 90 % CIs of δ_W,m relative to (−0.02, +0.02).
+
 **Qualification rules (descriptive).**
 - If the 95 % CI of the family × weighting interaction excludes 0 **and** its point estimate exceeds the SESOI in magnitude, the family effect is reported separately for each weighting condition.
 - The two within-family model contrasts are always reported, so that a family effect driven by one model is visible.
@@ -107,7 +109,7 @@ In addition, the magnitude of δ_F is interpreted against ±SESOI using its **90
 | **Clustering / resampling unit** | Two-way (pigeonhole) bootstrap over relative days × fine pseudo-entities, with an Owen-corrected variance and a day-level moving-block bootstrap as sensitivity analyses ([DR-006](DR-006-bootstrap-inference-strategy.md)). Transaction-level or fraud-level resampling that assumes independence is **not** acceptable. The SESOI decision does not depend on this choice: the power scenarios in [Resolution of the design](#resolution-of-the-design-approximate-planning-assumptions-i) bracket DE = 1–4. |
 | **CI types** | 95 % CI for difference estimates (H1, descriptive contrasts). 90 % CI for practical interpretation against ±SESOI (H1) and for the four δ_W,m against the H2 equivalence bounds (descriptive). Confirmatory decisions use the p-values. |
 | **p-values** | H1: two-sided bootstrap p-value p_H1 for δ_F = 0 (displayed below the table). H2: p_H2 = max of the eight one-sided bootstrap p-values (intersection-union). H3: as defined in [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md). |
-| **Role of McNemar** | **Secondary and descriptive only.** An exact McNemar test [REF-035, REF-028] is reported for the cell-level paired contrasts. It assumes independent frauds, which the clustering evidence contradicts, so it is **not** in the confirmatory family. |
+| **Role of McNemar** | **Secondary and descriptive only.** An exact McNemar test [REF-035, REF-028] is reported for each of the eight cell contrasts listed in the estimand table, alongside its pigeonhole 95 % CI. It assumes independent frauds, which the clustering evidence contradicts, so it is **not** in the confirmatory family. |
 | **Role of TOST** | Confirmatory for **H2** (intersection-union over all four models) and **H3** ([DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md)). Descriptive for H1's practical interpretation. |
 | **Multiplicity** | **Holm** [REF-029] at family-wise α = 0.05 over the confirmatory family {H1, H2, H3}, using p_H1, p_H2 and p_H3 (H3 is the alert-rate transfer hypothesis, tested once on the H3 configuration; [DR-010](DR-010-h3-confirmatory-configuration.md)). Decisions use the Holm-adjusted p-values defined below the table, so Holm's step-down stopping rule applies. Holm controls the family-wise error rate under arbitrary dependence and can combine difference and equivalence p-values, since each is a valid p-value for its own null. H2 is one family member because its intersection-union structure needs no internal split [REF-062]. |
 | **Is Holm appropriate?** | Yes. It is conservative, but the confirmatory claims are few and pre-specified, and conservatism suits a single-holdout study. The cost is lower power at the first Holm step (α = 0.0167); this is shown in the power table. |
@@ -260,6 +262,7 @@ REF-004, REF-005, REF-006, REF-019, REF-020, REF-028, REF-029, REF-030, REF-035,
 | B | Number of bootstrap replicates (10,000) |
 | b, u | Balanced and unweighted class weighting |
 | Cat, LGB, RES, FTT | CatBoost, LightGBM, ResNet-style MLP, FT-Transformer |
+| LGB-u, LGB-b, … , FTT-b | A configuration: model with weighting u (unweighted) or b (balanced) |
 | CI | Confidence interval |
 | δ | A true paired recall difference (in power calculations) |
 | δ_F | Model-family effect: neural mean minus tree mean of Recall@2% (H1 estimand) |

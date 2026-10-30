@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze), Issue #13, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight configurations; boundary cases; interpretation of R4 losses) and 2026-10-17 (Issue #91: calibration details; conditional bootstrap intervals) |
+| Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight configurations; boundary cases; interpretation of R4 losses) 2026-10-17 (Issue #91: calibration details; conditional bootstrap intervals) and 2026-10-30 (Issue #183: resampling construction and streams by reference) |
 | Evidence source | Decision-theoretic derivation (checked numerically on synthetic data only); cost-sensitive learning, cost-curve and decision-curve literature; `notebooks/01_dataset_feasibility_audit.ipynb` §§6, 11, 12; for the calibration details (§8), Kull et al. [REF-132], Lin, Lin and Weng [REF-133], the REF-018 supplement and the scikit-learn 1.9.1 source of isotonic regression [REF-134], with an independent review in Issue #91. **No Test labels, no model scores and no new dataset computations were used.** |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
 
@@ -306,10 +306,10 @@ Why [I]:
 
 Uncertainty reporting (descriptive):
 - **Grid-point intervals.** For each (c, m, ρ ∈ G): 95 % percentile confidence intervals (CIs) for ΔJ, relative ΔJ, u, f and the amount measures. Relative ΔJ = ΔJ / J_R3 is always defined, because J_R3 ≥ N_R3 = 28 · K_c > 0.
-  - Method: a **day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000)**, the same key-free machinery as H3 and sensitivity analysis S2 of DR-006 (the key-free day-block bootstrap).
+  - Method: a **day-level moving-block bootstrap (block length ℓ = 3 days, B = 10,000)**, the same key-free machinery as H3 and sensitivity analysis S2 of DR-006 (the key-free day-block bootstrap), with the non-circular block construction of [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and its own seed stream ([DR-006](DR-006-bootstrap-inference-strategy.md), Resampling conventions).
   - Whole days are resampled, so each day's R3 and R4 queues stay exactly intact. R3 and R4 are paired within each replicate.
   - **Conditional estimand.** The resampled days are Test days. The fitted models and the frozen V2 calibrators (§8) stay fixed, and with them R4's eligibility and the within-day queues. The intervals therefore describe Test-period variation for the fitted policy; they exclude uncertainty from model development, model selection and calibrator estimation, and do not quantify future calibration drift.
-  - **Limitation:** this does not capture cross-day entity dependence of frauds, so intervals for f may be too narrow ([DR-006](DR-006-bootstrap-inference-strategy.md) evidence). As a sensitivity check, the interval for frauds forgone f (a recall difference between R3 and R4) is also computed with the DR-006 two-way pigeonhole bootstrap.
+  - **Limitation:** this does not capture cross-day entity dependence of frauds, so intervals for f may be too narrow ([DR-006](DR-006-bootstrap-inference-strategy.md) evidence). As a sensitivity check, the interval for frauds forgone f (a recall difference between R3 and R4) is also computed with the DR-006 two-way pigeonhole bootstrap, on its own seed stream (DR-006, Resampling conventions).
 - **Regime map.** Each (c, m, ρ ∈ G) cell is labelled:
   - *identical* (u = 0);
   - *R4 cheaper* (95 % CI of ΔJ below 0);
