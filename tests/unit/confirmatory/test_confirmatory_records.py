@@ -66,12 +66,15 @@ def test_a_valid_record_of_each_kind_passes_and_round_trips(
     assert loads(dump_record(record, CTX), "text") == record
 
 
-def test_the_kinds_and_versions_are_the_five_of_this_issue() -> None:
+def test_the_kinds_and_versions_are_those_of_the_run() -> None:
     assert list(RECORD_CONTRACTS) == [
         "test_run",
         "test_phase",
         "test_scores",
         "test_inference",
+        "test_evaluation",
+        "test_workload",
+        "test_calibration",
         "test_run_end",
     ]
     assert contract_versions() == dict.fromkeys(RECORD_CONTRACTS, 1)
@@ -438,12 +441,21 @@ def test_the_phases_are_judged_in_the_order_of_their_start_not_of_their_position
     assert has(found, "follows a completed scoring")
 
 
+def first_scores(records: list[dict[str, Any]]) -> dict[str, Any]:
+    return next(x for x in records if x["record"] == "test_scores")
+
+
 def test_a_run_needs_every_score_record_once_and_the_frozen_model() -> None:
     assert has(run_with(lambda r: [*r[:-2], r[-1]]), "one test_scores record for every")
-    assert has(run_with(lambda r: [*r, r[4]]), "more than one test_scores")
+    assert has(
+        run_with(lambda r: [*r, next(x for x in r if x["record"] == "test_scores")]),
+        "more than one test_scores",
+    )
     other_model = c.file_ref("another-model")
     assert has(
-        run_with(lambda r: [*r[:4], c.mutated(r[4], "model", other_model), *r[5:]]),
+        run_with(
+            lambda r: [c.mutated(x, "model", other_model) if x is first_scores(r) else x for x in r]
+        ),
         "another model than the frozen one",
     )
 

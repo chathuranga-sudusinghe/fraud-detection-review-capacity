@@ -5,7 +5,9 @@ exactly what the production code would write."""
 from __future__ import annotations
 
 import copy
+import dataclasses
 import hashlib
+from functools import cache
 from typing import Any
 
 import numpy as np
@@ -23,11 +25,22 @@ from review_capacity.confirmatory.records import (
     to_json_value,
 )
 from review_capacity.development.records import ALL_CONFIGURATIONS
+from review_capacity.evaluation.calibration import fit_isotonic, fit_platt
 from review_capacity.evaluation.contrasts import estimands
 from review_capacity.evaluation.declaration import EvaluationDeclaration, load_declaration
+from review_capacity.evaluation.fidelity import fidelity
 from review_capacity.evaluation.hypotheses import analyse_h1, analyse_h2, analyse_h3, decide
 from review_capacity.evaluation.inference import effect_units
 from review_capacity.evaluation.mcnemar import cell_mcnemar
+from review_capacity.evaluation.outcomes import (
+    Partition,
+    Thresholds,
+    calibration_outcome,
+    confirmatory_outcomes,
+    secondary_resamples,
+)
+from review_capacity.evaluation.queue import DailyQueue
+from review_capacity.evaluation.ranking import Capacity, Truth
 from review_capacity.evaluation.resampling import Replicates
 from review_capacity.evaluation.sensitivity import analyse_s1, analyse_s2, sesoi_views
 from support.synthetic import REPO_PATHS
@@ -74,7 +87,12 @@ def frozen_inputs() -> dict[str, Any]:
         "model_records": {name: file_ref(f"model-run-{name}") for name in ALL_CONFIGURATIONS},
         "model_manifests": {name: file_ref(f"manifest-{name}") for name in ALL_CONFIGURATIONS},
         "thresholds": [file_ref("analysis-1/r1_selection-LGB-b"), file_ref("analysis-1/eval-R2")],
-        "calibrators": [file_ref("analysis-1/calibration-LGB-b"), file_ref("analysis-1/cal.bin")],
+        "calibrators": [
+            file_ref("analysis-1/calibration-LGB-b"),
+            file_ref("analysis-1/cal.bin"),
+            file_ref("calibrator-platt"),
+            file_ref("calibrator-isotonic"),
+        ],
     }
 
 
@@ -278,6 +296,7 @@ def run_records() -> list[dict[str, Any]]:
         phase("scoring", 1, "failed", started="2026-11-02T09:01:00.000000Z"),
         phase("scoring", 2, "completed", bundle, started="2026-11-02T09:10:00.000000Z"),
         phase("evaluation", 1, "completed", bundle, started="2026-11-02T09:20:00.000000Z"),
+        *outcome_records(),
         *(scores(name) for name in ALL_CONFIGURATIONS),
         inference(),
     ]
@@ -306,3 +325,165 @@ def without(record: dict[str, Any], path: str) -> dict[str, Any]:
         target = target[int(part)] if isinstance(target, list) else target[part]
     del target[last]
     return result
+
+
+# --- the outcome records on a Test-shaped synthetic partition -------------------------------------
+
+OUTCOME_B = 150  # replicates of the outcome records: the contract takes the declared count
+V2_VOLUME = 77_822 / 28  # the declared V2 volume; K = round(c x N) is 28, 56, 139 and 278
+THRESHOLDS = Thresholds(0.5, 0.3, {0.01: 0.45, 0.02: 0.35, 0.05: 0.25, 0.1: 0.15})
+
+
+@cache
+def outcome_declaration() -> EvaluationDeclaration:
+    base = declaration()
+    return dataclasses.replace(
+        base, resampling=dataclasses.replace(base.resampling, replicates=OUTCOME_B)
+    )
+
+
+@cache
+def outcome_context() -> ConfirmatoryContext:
+    return ConfirmatoryContext.from_specs(load_dataset_spec(REPO_PATHS), outcome_declaration())
+
+
+@cache
+def outcome_world() -> tuple[Partition, dict[str, np.ndarray]]:
+    """The 28 Test days and 78,542 rows with a few percent frauds, a pseudo-entity for each fraud,
+    and the scores of one configuration and of the reference (ties from rounding)."""
+    ctx = outcome_context()
+    days_count = ctx.test.last_day - ctx.test.first_day + 1
+    rng = np.random.default_rng(21)
+    sizes = np.full(days_count, ctx.test.rows // days_count)
+    sizes[: ctx.test.rows - sizes.sum()] += 1
+    days = np.repeat(np.arange(ctx.test.first_day, ctx.test.last_day + 1), sizes).astype(np.int64)
+    labels = (rng.random(len(days)) < 0.03).astype(np.int8)
+    amounts = np.round(rng.gamma(2.0, 60.0, len(days)), 2)
+    _, entities = np.unique(rng.integers(0, 400, int(labels.sum())), return_inverse=True)
+    partition = Partition(
+        Truth.build(days, labels, amounts),
+        DailyQueue.build(np.arange(len(days), dtype=np.int64), days),
+        entities.astype(np.intp),
+        V2_VOLUME,
+    )
+    scores = {
+        "LGB-b": np.round(np.clip(rng.normal(0.1 + 0.6 * labels, 0.2), 0, 1), 4),
+        "LR": np.round(np.clip(rng.normal(0.08 + 0.4 * labels, 0.2), 0, 1), 4),
+    }
+    return partition, scores
+
+
+@cache
+def outcome_capacities() -> tuple[Capacity, ...]:
+    decl = outcome_declaration()
+    return tuple(
+        Capacity(s, k) for s, k in zip(decl.capacity.shares, decl.capacity.budgets, strict=True)
+    )
+
+
+@cache
+def _outcomes() -> dict[str, dict[str, Any]]:
+    partition, scores = outcome_world()
+    return confirmatory_outcomes(
+        outcome_declaration(), partition, scores, {"LGB-b": THRESHOLDS}, outcome_capacities()
+    )
+
+
+def evaluation(configuration: str = "LGB-b") -> dict[str, Any]:
+    ctx = outcome_context()
+    outcome = copy.deepcopy(_outcomes()["LR" if configuration == "LR" else "LGB-b"])
+    record: dict[str, Any] = to_json_value(
+        {
+            **envelope("test_evaluation"),
+            "configuration": configuration,
+            "partition": "Test",
+            "days": {"first": ctx.test.first_day, "last": ctx.test.last_day},
+            "scores_sha256": scores(configuration)["file"]["sha256"],
+            "thresholds": (
+                None
+                if configuration == "LR"
+                else {
+                    "r0": THRESHOLDS.r0,
+                    "r1": THRESHOLDS.r1,
+                    "r2": [{"capacity": c, "threshold": t} for c, t in THRESHOLDS.r2.items()],
+                }
+            ),
+            "ranking": outcome["ranking"],
+            "r3": outcome["r3"],
+            "policies": outcome["thresholds"],
+        }
+    )
+    return record
+
+
+def workload(configuration: str = "LGB-b", reference_volume: float = V2_VOLUME) -> dict[str, Any]:
+    ctx = outcome_context()
+    entries = [
+        {
+            "capacity": entry["capacity"],
+            "k": entry["k"],
+            "threshold": entry["threshold"],
+            "fidelity": fidelity(entry["daily"], entry["capacity"], entry["k"], reference_volume),
+        }
+        for entry in _outcomes()["LGB-b"]["thresholds"]
+        if entry["policy"] == "R2"
+    ]
+    record: dict[str, Any] = to_json_value(
+        {
+            **envelope("test_workload"),
+            "configuration": configuration,
+            "partition": "Test",
+            "days": {"first": ctx.test.first_day, "last": ctx.test.last_day},
+            "entries": entries,
+        }
+    )
+    return record
+
+
+@cache
+def _calibrators() -> dict[str, Any]:
+    partition, scores_by = outcome_world()
+    labels, fitting = partition.truth.labels, scores_by["LGB-b"]
+    return {"platt": fit_platt(fitting, labels)[0], "isotonic": fit_isotonic(fitting, labels)}
+
+
+@cache
+def _calibration(method: str) -> dict[str, Any]:
+    partition, scores_by = outcome_world()
+    resamples = secondary_resamples(outcome_declaration(), len(partition.truth.day_values))
+    return calibration_outcome(
+        outcome_declaration(), partition, scores_by["LGB-b"], _calibrators()[method], resamples
+    )
+
+
+def calibration(method: str = "platt", configuration: str = "LGB-b") -> dict[str, Any]:
+    ctx = outcome_context()
+    result = copy.deepcopy(_calibration(method))
+    intervals = result.pop("intervals")
+    record: dict[str, Any] = to_json_value(
+        {
+            **envelope("test_calibration"),
+            "configuration": configuration,
+            "method": method,
+            "role": "primary" if method == "platt" else "sensitivity",
+            "partition": "Test",
+            "days": {"first": ctx.test.first_day, "last": ctx.test.last_day},
+            "calibrator": file_ref(f"calibrator-{method}"),
+            "diagnostic": result,
+            "intervals": intervals,
+        }
+    )
+    return record
+
+
+def outcome_records() -> list[dict[str, Any]]:
+    """The valid outcome records of a completed run: an evaluation for every configuration and the
+    reference, a workload for every configuration and both calibrations of every configuration.
+    The configurations other than the one computed share its numbers (the contracts name no
+    model)."""
+    study = ALL_CONFIGURATIONS[:-1]
+    return [
+        *(evaluation(name) for name in ALL_CONFIGURATIONS),
+        *(workload(name) for name in study),
+        *(calibration(method, name) for name in study for method in ("platt", "isotonic")),
+    ]
