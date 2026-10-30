@@ -9,8 +9,10 @@ a record that rests on replicates carries the number of undefined replicates.
 The kinds, in the order a run produces them: ``test_run`` (written first: the identity, the frozen
 inputs and the Test partition), ``test_phase`` (one per attempt of the scoring or the evaluation
 phase), ``test_scores`` (one per model, from the single scoring pass), ``test_inference`` (H1, H2,
-H3, Holm and the sensitivities) and ``test_run_end`` (closes the run). The outcome, RQ2, RQ3 and
-false-negative kinds are defined with the code that produces them.
+H3, Holm and the sensitivities), ``test_evaluation`` (R0 to R3 and the ranking measures of one
+configuration or the reference, with intervals), ``test_workload`` (the daily-budget fidelity of
+RQ2) and ``test_calibration`` (the diagnostics of one frozen calibrator), and ``test_run_end``
+(closes the run). The RQ3 and false-negative kinds are defined with the code that produces them.
 
 These contracts own the structure of the records and the rules that hold between their fields, not
 the values of the study. Redundant values must agree: the Holm decisions, interval positions,
@@ -45,10 +47,16 @@ from review_capacity.development.records import (
     ALL_CONFIGURATIONS,
     CONFIGURATION,
     COUNT,
+    COUNTS,
+    CUTOFF_TIES,
+    DAY_ROW,
     DEVICE,
+    DIAGNOSTIC,
     GIT_COMMIT,
+    METRICS,
     POSITIVE,
     PROJECT_FILE,
+    REFERENCE,
     RUN_FILE,
     RUN_ID,
     SECONDS,
@@ -56,6 +64,8 @@ from review_capacity.development.records import (
     SHA256,
     STUDY_CONFIGURATION,
     TIMESTAMP,
+    _daily,
+    _reliability,
 )
 from review_capacity.development.schema import (
     AnyJSON,
@@ -99,16 +109,23 @@ PHASES = ("scoring", "evaluation")
 @dataclass(frozen=True)
 class ConfirmatoryContext:
     """What the cross-field rules need besides the record: the Test partition of DR-001 and the
-    evaluation declaration."""
+    evaluation declaration; the V2 partition gives the reference volume of the fidelity
+    decomposition."""
 
     test: PartitionSpec
+    v2: PartitionSpec
     declaration: EvaluationDeclaration
 
     @classmethod
     def from_specs(
         cls, dataset: DatasetSpec, declaration: EvaluationDeclaration
     ) -> ConfirmatoryContext:
-        return cls(dataset.partition("test"), declaration)
+        return cls(dataset.partition("test"), dataset.partition("v2"), declaration)
+
+    @property
+    def reference_volume(self) -> float:
+        """The mean daily V2 volume N̄_V2 that fixed the budgets K: V2 rows over V2 days."""
+        return self.v2.rows / (self.v2.last_day - self.v2.first_day + 1)
 
 
 type ContextCheck = Callable[[Mapping[str, Any], ConfirmatoryContext], list[str]]
@@ -1434,9 +1451,734 @@ TEST_RUN_END = _contract(
     _run_end_rules,
 )
 
+# --- test_evaluation, test_workload and test_calibration ------------------------------------------
+
+THRESHOLD_POLICY = Choice(("R0", "R1", "R2"))
+R3_MEASURES = (
+    "recall",
+    "precision",
+    "frauds_per_1000_reviews",
+    "normalised_recall",
+    "lift",
+    "amount_weighted_recall",
+    "false_negatives",
+)
+THRESHOLD_MEASURES = ("recall", "precision", "f1")
+RANKING_MEASURES = ("average_precision", "roc_auc")
+CALIBRATION_MEASURES = ("brier", "log_loss", "intercept", "slope")
+CALIBRATION_METHODS = ("platt", "isotonic")
+CALIBRATION_ROLES = {"platt": "primary", "isotonic": "sensitivity"}
+CAPACITY_SHARE = Number(0, 1, exclusive_minimum=True)
+METRIC_MAP = MapOf(Number(), keys=Choice(tuple(METRICS)), nullable_values=True)
+
+
+def _intervals(names: tuple[str, ...], meaning: str) -> Field:
+    return Field(
+        "intervals",
+        MapOf(INTERVAL, keys=Choice(names), nullable_values=True),
+        f"{meaning} (null: the measure is not estimable)",
+    )
+
+
+R3_ENTRY = Object(
+    (
+        Field("capacity", CAPACITY_SHARE, "Review-capacity share c"),
+        Field("k", POSITIVE, "Fixed daily review budget K"),
+        Field("counts", COUNTS, "Pooled counts"),
+        Field("daily", ListOf(DAY_ROW, min_items=1), "Per-day values, one entry per Test day"),
+        Field("cutoff_ties", CUTOFF_TIES, "Score ties crossing the daily cutoff"),
+        Field("metrics", METRIC_MAP, "Outcome measures"),
+        _intervals(R3_MEASURES, "95 % intervals: pigeonhole recall-based ratios"),
+    )
+)
+POLICY_ENTRY = Object(
+    (
+        Field("policy", THRESHOLD_POLICY, "Threshold policy"),
+        Field(
+            "capacity", CAPACITY_SHARE, "Review-capacity share c the workload is measured against"
+        ),
+        Field("k", POSITIVE, "Fixed daily review budget K"),
+        Field("threshold", Number(0, 1), "The frozen threshold (R0: 0.5)"),
+        Field("counts", COUNTS, "Pooled counts of the uncapped alerts"),
+        Field("daily", ListOf(DAY_ROW, min_items=1), "Per-day values, one entry per Test day"),
+        Field("metrics", METRIC_MAP, "Outcome measures"),
+        _intervals(THRESHOLD_MEASURES, "95 % day-block intervals"),
+    )
+)
+RANKING_ENTRY = Object(
+    (
+        Field("metrics", METRIC_MAP, "Average Precision and ROC-AUC, score ties intact"),
+        _intervals(RANKING_MEASURES, "95 % day-block intervals"),
+    )
+)
+THRESHOLDS = Object(
+    (
+        Field("r0", Number(0.5, 0.5), "R0: the default 0.5 threshold"),
+        Field("r1", Number(0, 1), "R1: the frozen F1-optimal threshold"),
+        Field(
+            "r2",
+            ListOf(
+                Object(
+                    (
+                        Field("capacity", CAPACITY_SHARE, "Review-capacity share c"),
+                        Field("threshold", Number(0, 1), "The frozen threshold tau_c at c"),
+                    )
+                ),
+                min_items=1,
+            ),
+            "R2: the frozen capacity-rate threshold of every capacity",
+        ),
+    )
+)
+RECORD_DAYS = Object(
+    (
+        Field("first", POSITIVE, "First relative day evaluated"),
+        Field("last", POSITIVE, "Last relative day evaluated"),
+    )
+)
+
+
+WORKLOAD_FIELDS = ("oracle_reviewable", "overflow", "unused", "load_ratio")
+R3_METRIC_KEYS = frozenset(
+    (
+        "recall",
+        "precision",
+        "frauds_per_1000_reviews",
+        "oracle_ceiling",
+        "normalised_recall",
+        "random_review_recall",
+        "lift",
+        "utilisation",
+        "capacity_to_prevalence",
+        "amount_weighted_recall",
+        "fraud_value_exposed",
+    )
+)
+POLICY_METRIC_KEYS = frozenset(
+    (
+        "recall",
+        "precision",
+        "f1",
+        "capacity_to_prevalence",
+        "total_overflow",
+        "total_unused",
+        "mean_load_ratio",
+        "days_above_budget",
+        "days_below_budget",
+        "zero_alert_days",
+    )
+)
+RANKING_METRIC_KEYS = frozenset(RANKING_MEASURES)
+UNIT_METRICS = frozenset(
+    (
+        "recall",
+        "precision",
+        "f1",
+        "oracle_ceiling",
+        "normalised_recall",
+        "random_review_recall",
+        "amount_weighted_recall",
+        "average_precision",
+        "roc_auc",
+    )
+)
+
+
+def _count_problems(where: str, counts: Mapping[str, Any]) -> list[str]:
+    problems = []
+    if counts["true_positives"] + counts["false_negatives"] != counts["frauds"]:
+        problems.append(f"{where}.counts: true_positives + false_negatives ≠ frauds")
+    if counts["true_positives"] + counts["false_positives"] != counts["selected"]:
+        problems.append(f"{where}.counts: true_positives + false_positives ≠ selected")
+    if max(counts["selected"], counts["frauds"]) > counts["transactions"]:
+        problems.append(f"{where}.counts: selected and frauds are at most the transactions")
+    return problems
+
+
+def _expected(
+    where: str, metrics: Mapping[str, Any], expected: Mapping[str, float | None]
+) -> list[str]:
+    problems = []
+    for name, value in expected.items():
+        actual = metrics.get(name)
+        if value is None or actual is None:
+            same = value is None and actual is None
+        else:
+            same = _near(actual, value)
+        if not same:
+            problems.append(f"{where}.metrics.{name}: must be {value!r}, not {actual!r}")
+    return problems
+
+
+def _metric_set_problems(
+    where: str, metrics: Mapping[str, Any], required: frozenset[str]
+) -> list[str]:
+    """Exactly the metrics of the entry's kind, each share inside [0, 1]."""
+    problems = []
+    if set(metrics) != required:
+        missing, extra = sorted(required - set(metrics)), sorted(set(metrics) - required)
+        problems.append(f"{where}.metrics: missing {missing}, unexpected {extra}")
+    problems += [
+        f"{where}.metrics.{name}: a share lies in [0, 1]"
+        for name in UNIT_METRICS & set(metrics)
+        if metrics[name] is not None and not 0 <= metrics[name] <= 1
+    ]
+    if required == RANKING_METRIC_KEYS:
+        problems += [
+            f"{where}.metrics.{name}: required"
+            for name in sorted(required & set(metrics))
+            if metrics[name] is None
+        ]
+    return problems
+
+
+def _entry_frame(
+    record: Mapping[str, Any], entry: Mapping[str, Any], policy: str
+) -> dict[str, Any]:
+    """The entry as a development ``evaluation`` record, for the per-day rules they share."""
+    return {
+        "policy": policy,
+        "days": record["days"],
+        "k": entry["k"],
+        "counts": entry["counts"],
+        "daily": entry["daily"],
+        "cutoff_ties": entry.get("cutoff_ties"),
+    }
+
+
+def _workload_given(daily: Sequence[Mapping[str, Any]]) -> bool:
+    """Whether every day states its workload; ``_daily`` reports the days that do not."""
+    return all(row[name] is not None for row in daily for name in WORKLOAD_FIELDS)
+
+
+def _r3_problems(where: str, entry: Mapping[str, Any]) -> list[str]:
+    counts, metrics, daily = entry["counts"], entry["metrics"], entry["daily"]
+    problems = _count_problems(where, counts)
+    problems += _metric_set_problems(where, metrics, R3_METRIC_KEYS)
+    frauds, selected, hits = counts["frauds"], counts["selected"], counts["true_positives"]
+    if counts["selected"] > entry["k"] * counts["days"]:
+        problems.append(f"{where}.counts.selected: R3 reviews at most K a day")
+    if not _workload_given(daily):
+        return problems
+    achievable = sum(row["oracle_reviewable"] for row in daily)
+    if frauds and selected and achievable:
+        problems += _expected(
+            where,
+            metrics,
+            {
+                "recall": hits / frauds,
+                "precision": hits / selected,
+                "frauds_per_1000_reviews": 1000 * hits / selected,
+                "oracle_ceiling": achievable / frauds,
+                "normalised_recall": hits / achievable,
+                "random_review_recall": selected / counts["transactions"],
+                "lift": hits * counts["transactions"] / (frauds * selected),
+                "utilisation": selected / (entry["k"] * counts["days"]),
+                "capacity_to_prevalence": entry["capacity"] * counts["transactions"] / frauds,
+            },
+        )
+    return problems
+
+
+def _policy_problems(where: str, entry: Mapping[str, Any]) -> list[str]:
+    counts, daily = entry["counts"], entry["daily"]
+    problems = _count_problems(where, counts)
+    problems += _metric_set_problems(where, entry["metrics"], POLICY_METRIC_KEYS)
+    alerts, frauds, hits = counts["selected"], counts["frauds"], counts["true_positives"]
+    if frauds and _workload_given(daily):
+        problems += _expected(
+            where,
+            entry["metrics"],
+            {
+                "recall": hits / frauds,
+                "precision": hits / alerts if alerts else None,
+                "f1": 2 * hits / (frauds + alerts),
+                "capacity_to_prevalence": entry["capacity"] * counts["transactions"] / frauds,
+                "total_overflow": sum(row["overflow"] for row in daily),
+                "total_unused": sum(row["unused"] for row in daily),
+                "mean_load_ratio": math.fsum(row["load_ratio"] for row in daily) / len(daily),
+                "days_above_budget": sum(row["overflow"] > 0 for row in daily),
+                "days_below_budget": sum(row["unused"] > 0 for row in daily),
+                "zero_alert_days": sum(row["selected"] == 0 for row in daily),
+            },
+        )
+    return problems
+
+
+def _population_problems(label: str, entries: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Every entry of a record describes the same transactions and frauds, day by day."""
+    if not entries:
+        return []
+    first = [(row["day"], row["transactions"], row["frauds"]) for row in entries[0]["daily"]]
+    return [
+        f"{label}[{i}]: the days, transactions and frauds must be those of the first entry"
+        for i, entry in enumerate(entries[1:], start=1)
+        if [(row["day"], row["transactions"], row["frauds"]) for row in entry["daily"]] != first
+        or any(entry["counts"][n] != entries[0]["counts"][n] for n in ("transactions", "frauds"))
+    ]
+
+
+def _interval_set_problems(
+    where: str,
+    entry: Mapping[str, Any],
+    names: tuple[str, ...],
+    declaration: EvaluationDeclaration,
+) -> list[str]:
+    intervals, metrics = entry["intervals"], entry["metrics"]
+    if sorted(intervals) != sorted(names):
+        return [f"{where}.intervals: must hold exactly {list(names)}"]
+    problems = []
+    for name, interval in intervals.items():
+        point_missing = name in metrics and metrics[name] is None
+        if (interval is None) != point_missing:
+            problems.append(f"{where}.intervals.{name}: null exactly when the measure is null")
+        if interval is None:
+            continue
+        label = f"{where}.intervals.{name}"
+        if interval["lower"] > interval["upper"]:
+            problems.append(f"{label}: lower exceeds upper")
+        if not _close(interval["level"], declaration.levels.difference):
+            problems.append(f"{label}.level: must be the declared {declaration.levels.difference}")
+        if interval["replicates"] != declaration.resampling.replicates:
+            problems.append(f"{label}.replicates: must be the declared B")
+        if interval["undefined"] >= interval["replicates"]:
+            problems.append(f"{label}.undefined: fewer than the replicates")
+    return problems
+
+
+def _derived_problems(where: str, entry: Mapping[str, Any]) -> list[str]:
+    """The intervals of precision, per-1,000, lift, normalised recall and false negatives are
+    fixed linear maps of the recall interval at fixed review counts (outcomes.py), over the same
+    replicates: their endpoints follow the recall interval's and so do their undefined counts."""
+    counts, intervals, daily = entry["counts"], entry["intervals"], entry["daily"]
+    recall = intervals.get("recall")  # a missing interval is reported by the interval-set rule
+    if recall is None or not _workload_given(daily):
+        return []
+    achievable = sum(row["oracle_reviewable"] for row in daily)
+    if not counts["selected"] or not achievable:
+        return []
+    frauds, selected = counts["frauds"], counts["selected"]
+    scale = {
+        "precision": frauds / selected,
+        "frauds_per_1000_reviews": 1000 * frauds / selected,
+        "normalised_recall": frauds / achievable,
+        "lift": counts["transactions"] / selected,
+    }
+    problems = []
+    for name, factor in scale.items():
+        got = intervals.get(name)
+        if got is None or not (
+            _near(got["lower"], factor * recall["lower"])
+            and _near(got["upper"], factor * recall["upper"])
+        ):
+            problems.append(f"{where}.intervals.{name}: must be {factor!r} × the recall interval")
+    misses = intervals.get("false_negatives")
+    if misses is None or not (
+        _near(misses["lower"], frauds * (1 - recall["upper"]))
+        and _near(misses["upper"], frauds * (1 - recall["lower"]))
+    ):
+        problems.append(
+            f"{where}.intervals.false_negatives: must be F (1 − recall) with swapped ends"
+        )
+    problems += [
+        f"{where}.intervals.{name}.undefined: must be the recall interval's"
+        for name in (*scale, "false_negatives")
+        if intervals.get(name) is not None and intervals[name]["undefined"] != recall["undefined"]
+    ]
+    return problems
+
+
+def _evaluation_rules(record: Mapping[str, Any]) -> list[str]:
+    problems: list[str] = []
+    reference = record["configuration"] == REFERENCE
+    if reference != (record["thresholds"] is None):
+        problems.append(
+            "test_evaluation.thresholds: given for the configurations, not the reference"
+        )
+    if reference != (not record["policies"]):
+        problems.append("test_evaluation.policies: the reference has R3 and the ranking only")
+    first = record["days"]["first"]
+    entries = record["r3"]
+    capacities = [entry["capacity"] for entry in entries]
+    if len(set(capacities)) != len(capacities):
+        problems.append("test_evaluation.r3: a capacity is evaluated once")
+    for i, entry in enumerate(entries):
+        where = f"test_evaluation.r3[{i}]"
+        problems += _daily(_entry_frame(record, entry, "R3"))
+        problems += _r3_problems(where, entry)
+        problems += _derived_problems(where, entry)
+    problems += _metric_set_problems(
+        "test_evaluation.ranking", record["ranking"]["metrics"], RANKING_METRIC_KEYS
+    )
+    thresholds = record["thresholds"]
+    expected = [(p, c) for p in ("R0", "R1", "R2") for c in capacities] if thresholds else []
+    if [(e["policy"], e["capacity"]) for e in record["policies"]] != expected:
+        problems.append(
+            "test_evaluation.policies: R0, R1 and R2 at every R3 capacity, in that order"
+        )
+    if thresholds:
+        r2 = [(t["capacity"], t["threshold"]) for t in thresholds["r2"]]
+        if [c for c, _ in r2] != capacities:
+            problems.append("test_evaluation.thresholds.r2: one threshold for every R3 capacity")
+    for i, entry in enumerate(record["policies"]):
+        where = f"test_evaluation.policies[{i}]"
+        problems += _daily(_entry_frame(record, entry, entry["policy"]))
+        problems += _policy_problems(where, entry)
+        if thresholds and entry["threshold"] != _frozen_threshold(thresholds, entry):
+            problems.append(f"{where}.threshold: must be the record's {entry['policy']} threshold")
+    problems += _population_problems("test_evaluation.r3", entries)
+    problems += _population_problems("test_evaluation.policies", record["policies"])
+    if entries and record["policies"]:
+        problems += _population_problems("test_evaluation", [entries[0], record["policies"][0]])
+    if not all(e["counts"]["days"] == len(e["daily"]) for e in (*entries, *record["policies"])):
+        problems.append("test_evaluation: counts.days must count the daily entries")
+    if entries and entries[0]["daily"] and entries[0]["daily"][0]["day"] != first:
+        problems.append("test_evaluation.days: the daily entries start at days.first")
+    return problems
+
+
+def _frozen_threshold(thresholds: Mapping[str, Any], entry: Mapping[str, Any]) -> float | None:
+    """The threshold the record freezes for the policy (and, for R2, the capacity) of ``entry``."""
+    if entry["policy"] != "R2":
+        return float(thresholds[entry["policy"].lower()])
+    for item in thresholds["r2"]:
+        if _close(item["capacity"], entry["capacity"]):
+            return float(item["threshold"])
+    return None
+
+
+def _declared_pair(declaration: EvaluationDeclaration, capacity: float, k: int) -> bool:
+    budgets = zip(declaration.capacity.shares, declaration.capacity.budgets, strict=True)
+    return any(_close(float(share), capacity) and budget == k for share, budget in budgets)
+
+
+def _declared_capacities(declaration: EvaluationDeclaration, capacities: Sequence[float]) -> bool:
+    shares = declaration.capacity.shares
+    return len(capacities) == len(shares) and all(
+        _close(float(share), value) for share, value in zip(shares, capacities, strict=True)
+    )
+
+
+def _evaluation_context(record: Mapping[str, Any], context: ConfirmatoryContext) -> list[str]:
+    declaration, test = context.declaration, context.test
+    problems = [
+        f"test_evaluation.days.{name}: must be {expected} (the Test partition)"
+        for name, expected in (("first", test.first_day), ("last", test.last_day))
+        if record["days"][name] != expected
+    ]
+    if not _declared_capacities(declaration, [e["capacity"] for e in record["r3"]]):
+        problems.append("test_evaluation.r3: every declared capacity, in the declared order")
+    for kind in ("r3", "policies"):
+        for i, entry in enumerate(record[kind]):
+            where = f"test_evaluation.{kind}[{i}]"
+            if not _declared_pair(declaration, entry["capacity"], entry["k"]):
+                problems.append(f"{where}: capacity and K must be a declared pair")
+            if entry["counts"]["transactions"] != test.rows:
+                problems.append(f"{where}.counts.transactions: must be the {test.rows} Test rows")
+            names = R3_MEASURES if kind == "r3" else THRESHOLD_MEASURES
+            problems += _interval_set_problems(where, entry, names, declaration)
+    problems += _interval_set_problems(
+        "test_evaluation.ranking", record["ranking"], RANKING_MEASURES, declaration
+    )
+    return problems
+
+
+TEST_EVALUATION = _contract(
+    "test_evaluation",
+    1,
+    "The Test outcomes of one configuration (or the logistic-regression reference) from the single "
+    "scoring pass: R3 at the four V2-derived budgets, the uncapped R0, R1 and R2 against each "
+    "budget, and the ranking measures, with the 95 % bootstrap intervals chosen by each outcome's "
+    "dependence (protocol, Statistical Plan; DR-006).",
+    (
+        Field(
+            "configuration", CONFIGURATION, "Configuration (or the logistic-regression reference)"
+        ),
+        Field("partition", Choice(("Test",)), "The partition evaluated"),
+        Field("days", RECORD_DAYS, "Relative days evaluated"),
+        Field("scores_sha256", SHA256, "SHA-256 of the score file of the single scoring pass"),
+        Field(
+            "thresholds",
+            THRESHOLDS,
+            "The thresholds of R0, R1 and R2 (null for the reference)",
+            nullable=True,
+        ),
+        Field("ranking", RANKING_ENTRY, "Whole-ranking measures"),
+        Field("r3", ListOf(R3_ENTRY, min_items=1), "R3 at each declared capacity"),
+        Field(
+            "policies",
+            ListOf(POLICY_ENTRY),
+            "R0, R1 and R2 at each declared capacity (empty for the reference)",
+        ),
+    ),
+    _evaluation_rules,
+)
+
+FIDELITY_TERM = Object(
+    (
+        Field("day", POSITIVE, "Relative day d"),
+        Field("alerts", COUNT, "Threshold-generated alerts n_d"),
+        Field("transactions", POSITIVE, "Transactions N_d"),
+        Field("rate", Number(), "ln((n_d / N_d) / c); null without an alert", nullable=True),
+        Field("volume", Number(), "ln(N_d / N̄_V2); null without an alert", nullable=True),
+        Field(
+            "budget",
+            Number(),
+            "ln(c N̄_V2 / K), the rounding of K; null without an alert",
+            nullable=True,
+        ),
+        Field("total", Number(), "ln(n_d / K); null without an alert", nullable=True),
+    )
+)
+FIDELITY = Object(
+    (
+        Field("days", POSITIVE, "Days evaluated"),
+        Field("mean_alerts", Number(minimum=0), "Mean daily alerts"),
+        Field("mean_deviation", Number(), "Mean of n_d − K"),
+        Field("mean_absolute_deviation", Number(minimum=0), "Mean of |n_d − K|"),
+        Field("max_absolute_deviation", COUNT, "Largest |n_d − K|"),
+        Field("mean_relative_deviation", Number(), "Mean of (n_d − K) / K"),
+        Field("days_above_budget", COUNT, "Days with n_d > K"),
+        Field("days_below_budget", COUNT, "Days with n_d < K"),
+        Field("share_above_budget", UNIT_P, "Share of days above K"),
+        Field("share_below_budget", UNIT_P, "Share of days below K"),
+        Field("total_overflow", COUNT, "Sum of max(n_d − K, 0)"),
+        Field("total_unused", COUNT, "Sum of max(K − n_d, 0)"),
+        Field("mean_load_ratio", Number(minimum=0), "Mean of n_d / K"),
+        Field("zero_alert_days", COUNT, "Days without an alert"),
+        Field("reference_volume", Number(0, exclusive_minimum=True), "Mean daily V2 volume N̄_V2"),
+        Field(
+            "mean_rate", Number(), "Mean rate component over the days with an alert", nullable=True
+        ),
+        Field("mean_volume", Number(), "Mean volume component", nullable=True),
+        Field("mean_budget", Number(), "Mean budget component", nullable=True),
+        Field("mean_total", Number(), "Mean of ln(n_d / K)", nullable=True),
+        Field("terms", ListOf(FIDELITY_TERM, min_items=1), "The decomposition of each day"),
+    )
+)
+WORKLOAD_ENTRY = Object(
+    (
+        Field("capacity", CAPACITY_SHARE, "Review-capacity share c"),
+        Field("k", POSITIVE, "Fixed daily review budget K"),
+        Field("threshold", Number(0, 1), "The frozen R2 threshold"),
+        Field("fidelity", FIDELITY, "Daily-budget fidelity of R2 against K"),
+    )
+)
+
+
+def _mean_close(values: Sequence[float], stated: float | None) -> bool:
+    return (
+        (stated is None)
+        if not values
+        else (stated is not None and _near(math.fsum(values) / len(values), stated))
+    )
+
+
+def _fidelity_problems(where: str, entry: Mapping[str, Any]) -> list[str]:
+    fidelity, k, capacity = entry["fidelity"], entry["k"], entry["capacity"]
+    terms = fidelity["terms"]
+    days = len(terms)
+    alerts = [t["alerts"] for t in terms]
+    deviation = [n - k for n in alerts]
+    problems = []
+    checks = {
+        "days": days,
+        "mean_alerts": math.fsum(alerts) / days,
+        "mean_deviation": math.fsum(deviation) / days,
+        "mean_absolute_deviation": math.fsum(abs(d) for d in deviation) / days,
+        "max_absolute_deviation": max(abs(d) for d in deviation),
+        "mean_relative_deviation": math.fsum(deviation) / days / k,
+        "days_above_budget": sum(d > 0 for d in deviation),
+        "days_below_budget": sum(d < 0 for d in deviation),
+        "share_above_budget": sum(d > 0 for d in deviation) / days,
+        "share_below_budget": sum(d < 0 for d in deviation) / days,
+        "total_overflow": sum(max(d, 0) for d in deviation),
+        "total_unused": sum(max(-d, 0) for d in deviation),
+        "mean_load_ratio": math.fsum(n / k for n in alerts) / days,
+        "zero_alert_days": sum(n == 0 for n in alerts),
+    }
+    problems += [
+        f"{where}.fidelity.{name}: must be {value!r}"
+        for name, value in checks.items()
+        if not _near(fidelity[name], value)
+    ]
+    reference = fidelity["reference_volume"]
+    parts: dict[str, list[float]] = {"rate": [], "volume": [], "budget": [], "total": []}
+    for i, term in enumerate(terms):
+        label = f"{where}.fidelity.terms[{i}]"
+        values = [term[name] for name in parts]
+        if term["alerts"] == 0:
+            if any(v is not None for v in values):
+                problems.append(f"{label}: a day without an alert has no logarithm")
+            continue
+        if any(v is None for v in values):
+            problems.append(f"{label}: a day with an alert has all four terms")
+            continue
+        expected = {
+            "rate": math.log(term["alerts"] / term["transactions"] / capacity),
+            "volume": math.log(term["transactions"] / reference),
+            "budget": math.log(capacity * reference / k),
+            "total": math.log(term["alerts"] / k),
+        }
+        problems += [
+            f"{label}.{name}: must be {value!r}"
+            for name, value in expected.items()
+            if not _near(term[name], value)
+        ]
+        if not _near(term["rate"] + term["volume"] + term["budget"], term["total"]):
+            problems.append(f"{label}: rate + volume + budget must equal ln(n_d / K)")
+        for name in parts:
+            parts[name].append(term[name])
+    problems += [
+        f"{where}.fidelity.mean_{name}: must be the mean over the days with an alert"
+        for name, values in parts.items()
+        if not _mean_close(values, fidelity[f"mean_{name}"])
+    ]
+    return problems
+
+
+def _workload_rules(record: Mapping[str, Any]) -> list[str]:
+    problems = []
+    entries = record["entries"]
+    capacities = [e["capacity"] for e in entries]
+    if len(set(capacities)) != len(capacities):
+        problems.append("test_workload.entries: a capacity is evaluated once")
+    days = list(range(record["days"]["first"], record["days"]["last"] + 1))
+    for i, entry in enumerate(entries):
+        where = f"test_workload.entries[{i}]"
+        if [t["day"] for t in entry["fidelity"]["terms"]] != days:
+            problems.append(f"{where}.fidelity.terms: one entry per evaluated day, in day order")
+            continue
+        problems += _fidelity_problems(where, entry)
+    return problems
+
+
+def _workload_context(record: Mapping[str, Any], context: ConfirmatoryContext) -> list[str]:
+    declaration, test = context.declaration, context.test
+    problems = [
+        f"test_workload.days.{name}: must be {expected} (the Test partition)"
+        for name, expected in (("first", test.first_day), ("last", test.last_day))
+        if record["days"][name] != expected
+    ]
+    entries = record["entries"]
+    if not _declared_capacities(declaration, [e["capacity"] for e in entries]):
+        problems.append("test_workload.entries: every declared capacity, in the declared order")
+    for i, entry in enumerate(entries):
+        where = f"test_workload.entries[{i}]"
+        if not _declared_pair(declaration, entry["capacity"], entry["k"]):
+            problems.append(f"{where}: capacity and K must be a declared pair")
+        if not _near(entry["fidelity"]["reference_volume"], context.reference_volume):
+            problems.append(
+                f"{where}.fidelity.reference_volume: must be the V2 mean daily volume "
+                f"{context.reference_volume!r} (V2 rows over V2 days)"
+            )
+    return problems
+
+
+TEST_WORKLOAD = _contract(
+    "test_workload",
+    1,
+    "The daily-budget fidelity of R2 for one configuration on the Test period (RQ2): daily "
+    "alerts against K, the deviation statistics and the rate/volume decomposition against the V2 "
+    "reference volume, at each declared capacity. Point values only (DR-003, DR-009).",
+    (
+        Field("configuration", STUDY_CONFIGURATION, "Configuration"),
+        Field("partition", Choice(("Test",)), "The partition evaluated"),
+        Field("days", RECORD_DAYS, "Relative days evaluated"),
+        Field("entries", ListOf(WORKLOAD_ENTRY, min_items=1), "Fidelity at each declared capacity"),
+    ),
+    _workload_rules,
+)
+
+CALIBRATION_FILE = Object(
+    (
+        Field("path", Text(), "Path of the frozen calibrator, relative to the project root"),
+        Field("sha256", SHA256, "SHA-256 of the calibrator file"),
+    )
+)
+
+
+def _calibration_rules(record: Mapping[str, Any]) -> list[str]:
+    diagnostic = record["diagnostic"]
+    problems = _reliability(diagnostic, "test_calibration.diagnostic.reliability")
+    if diagnostic["rows_used"] != "held_out":
+        problems.append("test_calibration.diagnostic.rows_used: the Test rows are held out")
+    if diagnostic["frauds"] > diagnostic["rows"]:
+        problems.append("test_calibration.diagnostic.frauds: exceed the rows")
+    if record["days"] != diagnostic["days"]:
+        problems.append("test_calibration.diagnostic.days: must be the record's days")
+    if record["role"] != CALIBRATION_ROLES[record["method"]]:
+        problems.append(
+            "test_calibration.role: Platt is the primary method, isotonic a sensitivity"
+        )
+    if sorted(record["intervals"]) != sorted(CALIBRATION_MEASURES):
+        problems.append(
+            f"test_calibration.intervals: must hold exactly {list(CALIBRATION_MEASURES)}"
+        )
+    return problems
+
+
+def _calibration_context(record: Mapping[str, Any], context: ConfirmatoryContext) -> list[str]:
+    declaration, test = context.declaration, context.test
+    problems = [
+        f"test_calibration.days.{name}: must be {expected} (the Test partition)"
+        for name, expected in (("first", test.first_day), ("last", test.last_day))
+        if record["days"][name] != expected
+    ]
+    if record["diagnostic"]["rows"] != test.rows:
+        problems.append(f"test_calibration.diagnostic.rows: must be the {test.rows} Test rows")
+    for name, interval in record["intervals"].items():
+        label = f"test_calibration.intervals.{name}"
+        if interval["lower"] > interval["upper"]:
+            problems.append(f"{label}: lower exceeds upper")
+        if not _close(interval["level"], declaration.levels.difference):
+            problems.append(f"{label}.level: must be the declared {declaration.levels.difference}")
+        if interval["replicates"] != declaration.resampling.replicates:
+            problems.append(f"{label}.replicates: must be the declared B")
+        if interval["undefined"] >= interval["replicates"]:
+            problems.append(f"{label}.undefined: fewer than the replicates")
+    return problems
+
+
+TEST_CALIBRATION = _contract(
+    "test_calibration",
+    1,
+    "The calibration diagnostics of one configuration and one frozen calibrator (Platt, "
+    "primary; isotonic, sensitivity) on the Test period: Brier score, clipped log loss, "
+    "calibration intercept and slope, the reliability table, with 95 % day-block intervals "
+    "(protocol, Calibration; DR-006).",
+    (
+        Field("configuration", STUDY_CONFIGURATION, "Configuration"),
+        Field("method", Choice(CALIBRATION_METHODS), "Calibration method"),
+        Field(
+            "role", Choice(("primary", "sensitivity")), "Platt is primary, isotonic a sensitivity"
+        ),
+        Field("partition", Choice(("Test",)), "The partition evaluated"),
+        Field("days", RECORD_DAYS, "Relative days evaluated"),
+        Field("calibrator", CALIBRATION_FILE, "The frozen calibrator that was applied"),
+        Field("diagnostic", DIAGNOSTIC, "The diagnostics on the Test rows (held out)"),
+        Field(
+            "intervals",
+            MapOf(INTERVAL, keys=Choice(CALIBRATION_MEASURES)),
+            "95 % day-block intervals; a measure undefined on every resample stops the run",
+        ),
+    ),
+    _calibration_rules,
+)
+
+
 RECORD_CONTRACTS: dict[str, RecordContract] = {
     contract.kind: contract
-    for contract in (TEST_RUN, TEST_PHASE, TEST_SCORES, TEST_INFERENCE, TEST_RUN_END)
+    for contract in (
+        TEST_RUN,
+        TEST_PHASE,
+        TEST_SCORES,
+        TEST_INFERENCE,
+        TEST_EVALUATION,
+        TEST_WORKLOAD,
+        TEST_CALIBRATION,
+        TEST_RUN_END,
+    )
 }
 
 # The rules that need the Test partition or the evaluation declaration, by record kind.
@@ -1445,6 +2187,9 @@ CONTEXT_CHECKS: dict[str, tuple[ContextCheck, ...]] = {
     "test_phase": (_seed_rule,),
     "test_scores": (_scores_partition, _seed_rule),
     "test_inference": (_inference_rules, _seed_rule),
+    "test_evaluation": (_evaluation_context, _seed_rule),
+    "test_workload": (_workload_context, _seed_rule),
+    "test_calibration": (_calibration_context, _seed_rule),
     "test_run_end": (_seed_rule,),
 }
 
@@ -1520,6 +2265,88 @@ def run_problems(records: Sequence[Mapping[str, Any]], *, complete: bool = True)
             problems.append("run: the inference follows a completed evaluation")
         if inference["h3"]["configuration"] != frozen["h3_configuration"]:
             problems.append("run: the inference is not of the frozen H3 configuration")
+    problems += _outcome_problems(records, evaluated, scores, frozen, complete=complete)
+    return problems
+
+
+def _outcome_problems(
+    records: Sequence[Mapping[str, Any]],
+    evaluated: bool,
+    scores: Sequence[Mapping[str, Any]],
+    frozen: Mapping[str, Any],
+    *,
+    complete: bool,
+) -> list[str]:
+    """The rules between the outcome records and the rest of the run: one record per
+    configuration (the reference only in ``test_evaluation``) or per configuration and method, each
+    after a completed evaluation, the evaluations naming the score file of their configuration, the
+    workload records agreeing with the R2 evaluation of their configuration and the calibration
+    records naming a frozen calibrator. A complete run with a completed evaluation holds the whole
+    set of every kind."""
+    study = tuple(ALL_CONFIGURATIONS[:-1])
+    kinds: dict[
+        str, tuple[Callable[[Mapping[str, Any]], tuple[str, ...]], set[tuple[str, ...]]]
+    ] = {
+        "test_evaluation": (
+            lambda r: (r["configuration"],),
+            {(name,) for name in ALL_CONFIGURATIONS},
+        ),
+        "test_workload": (lambda r: (r["configuration"],), {(name,) for name in study}),
+        "test_calibration": (
+            lambda r: (r["configuration"], r["method"]),
+            {(name, method) for name in study for method in CALIBRATION_METHODS},
+        ),
+    }
+    problems: list[str] = []
+    score_hash = {r["configuration"]: r["file"]["sha256"] for r in scores}
+    for kind, (key, wanted) in kinds.items():
+        found = [record for record in records if record["record"] == kind]
+        keys = [key(record) for record in found]
+        if len(set(keys)) != len(keys):
+            problems.append(f"run: a {kind} record is written once for each of its subjects")
+        if found and not evaluated:
+            problems.append(f"run: the {kind} records follow a completed evaluation")
+        if complete and evaluated and set(keys) != wanted:
+            problems.append(f"run: needs a {kind} record for every subject ({len(wanted)})")
+    problems += [
+        f"run: test_evaluation of {record['configuration']} names another score file"
+        for record in records
+        if record["record"] == "test_evaluation"
+        and record["scores_sha256"] != score_hash.get(record["configuration"])
+    ]
+    problems += [
+        f"run: test_calibration of {record['configuration']} ({record['method']}) names "
+        "a calibrator that is not a frozen input"
+        for record in records
+        if record["record"] == "test_calibration"
+        and record["calibrator"] not in frozen["calibrators"]
+    ]
+    evaluations = {r["configuration"]: r for r in records if r["record"] == "test_evaluation"}
+    for workload in (r for r in records if r["record"] == "test_workload"):
+        problems += _workload_agreement(workload, evaluations.get(workload["configuration"]))
+    return problems
+
+
+def _workload_agreement(
+    workload: Mapping[str, Any], evaluation: Mapping[str, Any] | None
+) -> list[str]:
+    """The workload record describes the R2 alerts of the evaluation record of its configuration."""
+    if evaluation is None:
+        return []
+    name = workload["configuration"]
+    r2 = {e["capacity"]: e for e in evaluation["policies"] if e["policy"] == "R2"}
+    problems = []
+    for entry in workload["entries"]:
+        match = r2.get(entry["capacity"])
+        terms = entry["fidelity"]["terms"]
+        if match is None or (match["k"], match["threshold"]) != (entry["k"], entry["threshold"]):
+            problems.append(f"run: test_workload of {name} names another R2 threshold or K")
+        elif [(t["day"], t["alerts"], t["transactions"]) for t in terms] != [
+            (row["day"], row["selected"], row["transactions"]) for row in match["daily"]
+        ]:
+            problems.append(
+                f"run: test_workload of {name} counts other R2 alerts than the evaluation"
+            )
     return problems
 
 
