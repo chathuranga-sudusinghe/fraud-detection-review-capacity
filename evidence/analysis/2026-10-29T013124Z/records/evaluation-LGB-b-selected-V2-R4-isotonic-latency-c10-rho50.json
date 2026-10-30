@@ -1,0 +1,159 @@
+{
+  "record": "evaluation",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-29T013124Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "LGB-b",
+  "model_role": "selected",
+  "seed": 42,
+  "score": {
+    "path": "source/records/score-LGB-b-selected-V2.json",
+    "sha256": "2361a606a8efcc7a06aa710fca8d2981651b6c18290176e0a9bf41c6067e3b48"
+  },
+  "partition": "V2",
+  "period": "latency",
+  "days": {
+    "first": 148,
+    "last": 154
+  },
+  "policy": "R4",
+  "capacity": 0.1,
+  "k": 278,
+  "threshold": 0.02,
+  "cost_ratio": 50.0,
+  "calibrator": "isotonic",
+  "calibration": {
+    "path": "records/calibration-LGB-b-isotonic-latency.json",
+    "sha256": "9b2f2144ecdc7017b3d42f3914a84e9bf36cfafd1a67a8a48cd2162e1a80905a"
+  },
+  "counts": {
+    "days": 7,
+    "transactions": 21443,
+    "frauds": 660,
+    "selected": 1946,
+    "true_positives": 455,
+    "false_positives": 1491,
+    "false_negatives": 205
+  },
+  "metrics": {
+    "recall": 0.6893939393939394,
+    "precision": 0.23381294964028776,
+    "frauds_per_1000_reviews": 233.81294964028777,
+    "oracle_ceiling": 1.0,
+    "normalised_recall": 0.6893939393939394,
+    "random_review_recall": 0.09075222683393182,
+    "lift": 7.5964410289949855,
+    "utilisation": 1.0,
+    "capacity_to_prevalence": 3.248939393939394,
+    "amount_weighted_recall": 0.5920876427581457,
+    "fraud_value_exposed": 35833.163,
+    "scenario_cost": 12196.0
+  },
+  "daily": [
+    {
+      "day": 148,
+      "transactions": 3060,
+      "frauds": 86,
+      "selected": 278,
+      "true_positives": 49,
+      "oracle_reviewable": 86,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 149,
+      "transactions": 2289,
+      "frauds": 66,
+      "selected": 278,
+      "true_positives": 47,
+      "oracle_reviewable": 66,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 150,
+      "transactions": 2209,
+      "frauds": 69,
+      "selected": 278,
+      "true_positives": 38,
+      "oracle_reviewable": 69,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 151,
+      "transactions": 3101,
+      "frauds": 99,
+      "selected": 278,
+      "true_positives": 80,
+      "oracle_reviewable": 99,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 152,
+      "transactions": 3896,
+      "frauds": 120,
+      "selected": 278,
+      "true_positives": 80,
+      "oracle_reviewable": 120,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 153,
+      "transactions": 3105,
+      "frauds": 126,
+      "selected": 278,
+      "true_positives": 97,
+      "oracle_reviewable": 126,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 154,
+      "transactions": 3783,
+      "frauds": 94,
+      "selected": 278,
+      "true_positives": 64,
+      "oracle_reviewable": 94,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    }
+  ],
+  "cutoff_ties": {
+    "days": 0,
+    "group_sizes": []
+  }
+}

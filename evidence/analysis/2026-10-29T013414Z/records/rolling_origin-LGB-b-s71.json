@@ -1,0 +1,307 @@
+{
+  "record": "rolling_origin",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-29T013414Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "LGB-b",
+  "seed": 42,
+  "origin": 71,
+  "training": {
+    "first_day": 1,
+    "last_day": 49,
+    "rows": 192688,
+    "frauds": 5629,
+    "preprocessing_sha256": null
+  },
+  "fit": {
+    "selected_trial": 2,
+    "length": 353,
+    "device": "cpu",
+    "seconds": 18.768546506995335,
+    "model": {
+      "path": "models/LGB-b/rolling-s71/model.txt",
+      "sha256": "e2593d48f4cc9e18b2fb19b7105d6b950f1ecc33dba551dd3655632dcfd9a5bf"
+    },
+    "source_fit": {
+      "path": "source/records/fit-LGB-b-trial2.json",
+      "sha256": "6128abcd98e0d1f56511b27829ccf82d8d228bc5d38dee894253ccfa96d51209"
+    }
+  },
+  "scores": {
+    "path": "scores/LGB-b-rolling-s71.parquet",
+    "sha256": "e5a0fa0dcf4fd560c3f5baf09f46362c47529cd047c22c5769f99b88c2326fb4"
+  },
+  "window": {
+    "first_day": 71,
+    "last_day": 98,
+    "transactions": 90948,
+    "alerts": 1819,
+    "rate": 0.020000439811760567
+  },
+  "threshold": {
+    "capacity": 0.02,
+    "rank": 1819,
+    "value": 0.12836593422241163,
+    "k": 65
+  },
+  "transfer": {
+    "first_day": 99,
+    "last_day": 126,
+    "transactions": 86813,
+    "alerts": 1900,
+    "rate": 0.021886123046087568,
+    "relative_deviation": 0.09430615230437844,
+    "total_overflow": 332,
+    "total_unused": 252,
+    "days_above_budget": 12,
+    "days_below_budget": 16,
+    "zero_alert_days": 0,
+    "inside_band": true,
+    "rate_component": 0.0333789149767933,
+    "volume_component": -0.054475670999658964,
+    "total_component": -0.021668347921823216,
+    "daily": [
+      {
+        "day": 99,
+        "transactions": 3301,
+        "selected": 43,
+        "overflow": 0,
+        "unused": 22,
+        "load_ratio": 0.6615384615384615
+      },
+      {
+        "day": 100,
+        "transactions": 3052,
+        "selected": 35,
+        "overflow": 0,
+        "unused": 30,
+        "load_ratio": 0.5384615384615384
+      },
+      {
+        "day": 101,
+        "transactions": 2500,
+        "selected": 44,
+        "overflow": 0,
+        "unused": 21,
+        "load_ratio": 0.676923076923077
+      },
+      {
+        "day": 102,
+        "transactions": 3166,
+        "selected": 46,
+        "overflow": 0,
+        "unused": 19,
+        "load_ratio": 0.7076923076923077
+      },
+      {
+        "day": 103,
+        "transactions": 3101,
+        "selected": 52,
+        "overflow": 0,
+        "unused": 13,
+        "load_ratio": 0.8
+      },
+      {
+        "day": 104,
+        "transactions": 3115,
+        "selected": 48,
+        "overflow": 0,
+        "unused": 17,
+        "load_ratio": 0.7384615384615385
+      },
+      {
+        "day": 105,
+        "transactions": 3034,
+        "selected": 51,
+        "overflow": 0,
+        "unused": 14,
+        "load_ratio": 0.7846153846153846
+      },
+      {
+        "day": 106,
+        "transactions": 3221,
+        "selected": 91,
+        "overflow": 26,
+        "unused": 0,
+        "load_ratio": 1.4
+      },
+      {
+        "day": 107,
+        "transactions": 2809,
+        "selected": 104,
+        "overflow": 39,
+        "unused": 0,
+        "load_ratio": 1.6
+      },
+      {
+        "day": 108,
+        "transactions": 2287,
+        "selected": 32,
+        "overflow": 0,
+        "unused": 33,
+        "load_ratio": 0.49230769230769234
+      },
+      {
+        "day": 109,
+        "transactions": 3151,
+        "selected": 61,
+        "overflow": 0,
+        "unused": 4,
+        "load_ratio": 0.9384615384615385
+      },
+      {
+        "day": 110,
+        "transactions": 3018,
+        "selected": 60,
+        "overflow": 0,
+        "unused": 5,
+        "load_ratio": 0.9230769230769231
+      },
+      {
+        "day": 111,
+        "transactions": 3180,
+        "selected": 44,
+        "overflow": 0,
+        "unused": 21,
+        "load_ratio": 0.676923076923077
+      },
+      {
+        "day": 112,
+        "transactions": 3225,
+        "selected": 88,
+        "overflow": 23,
+        "unused": 0,
+        "load_ratio": 1.353846153846154
+      },
+      {
+        "day": 113,
+        "transactions": 3227,
+        "selected": 96,
+        "overflow": 31,
+        "unused": 0,
+        "load_ratio": 1.476923076923077
+      },
+      {
+        "day": 114,
+        "transactions": 2758,
+        "selected": 76,
+        "overflow": 11,
+        "unused": 0,
+        "load_ratio": 1.1692307692307693
+      },
+      {
+        "day": 115,
+        "transactions": 2461,
+        "selected": 78,
+        "overflow": 13,
+        "unused": 0,
+        "load_ratio": 1.2
+      },
+      {
+        "day": 116,
+        "transactions": 3111,
+        "selected": 86,
+        "overflow": 21,
+        "unused": 0,
+        "load_ratio": 1.323076923076923
+      },
+      {
+        "day": 117,
+        "transactions": 3042,
+        "selected": 133,
+        "overflow": 68,
+        "unused": 0,
+        "load_ratio": 2.046153846153846
+      },
+      {
+        "day": 118,
+        "transactions": 3179,
+        "selected": 52,
+        "overflow": 0,
+        "unused": 13,
+        "load_ratio": 0.8
+      },
+      {
+        "day": 119,
+        "transactions": 3300,
+        "selected": 85,
+        "overflow": 20,
+        "unused": 0,
+        "load_ratio": 1.3076923076923077
+      },
+      {
+        "day": 120,
+        "transactions": 3941,
+        "selected": 109,
+        "overflow": 44,
+        "unused": 0,
+        "load_ratio": 1.676923076923077
+      },
+      {
+        "day": 121,
+        "transactions": 3017,
+        "selected": 60,
+        "overflow": 0,
+        "unused": 5,
+        "load_ratio": 0.9230769230769231
+      },
+      {
+        "day": 122,
+        "transactions": 2507,
+        "selected": 43,
+        "overflow": 0,
+        "unused": 22,
+        "load_ratio": 0.6615384615384615
+      },
+      {
+        "day": 123,
+        "transactions": 3390,
+        "selected": 79,
+        "overflow": 14,
+        "unused": 0,
+        "load_ratio": 1.2153846153846153
+      },
+      {
+        "day": 124,
+        "transactions": 4202,
+        "selected": 54,
+        "overflow": 0,
+        "unused": 11,
+        "load_ratio": 0.8307692307692308
+      },
+      {
+        "day": 125,
+        "transactions": 3467,
+        "selected": 87,
+        "overflow": 22,
+        "unused": 0,
+        "load_ratio": 1.3384615384615384
+      },
+      {
+        "day": 126,
+        "transactions": 3051,
+        "selected": 63,
+        "overflow": 0,
+        "unused": 2,
+        "load_ratio": 0.9692307692307692
+      }
+    ]
+  }
+}

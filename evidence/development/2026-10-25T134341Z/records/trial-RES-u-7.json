@@ -1,0 +1,146 @@
+{
+  "record": "trial",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "RES-u",
+  "trial": 7,
+  "candidate_list": {
+    "path": "candidates/resnet.json",
+    "sha256": "36fc54fab4899fa2266ccb07227168291b3876d2f0fade90c1031285d07330a7"
+  },
+  "hyperparameters": {
+    "n_layers": 8,
+    "d": 281,
+    "d_hidden_factor": 2.775774866284327,
+    "hidden_dropout": 0.1627882647085166,
+    "residual_dropout": 0.17412297427337764,
+    "d_embedding": 174,
+    "lr": 0.00045716906599527603,
+    "weight_decay": 0.0
+  },
+  "seed": 42,
+  "device": "gpu",
+  "unit": "epoch",
+  "objective_k": 62,
+  "patience": 5,
+  "maximum": 15,
+  "best_checkpoint": 6,
+  "best_objective": 0.37391618497109824,
+  "stopped_at": 12,
+  "stopping_reason": "early_stopping",
+  "runtime_seconds": 102.2697475889945,
+  "checkpoints": [
+    {
+      "checkpoint": 1,
+      "objective": 0.36054913294797686,
+      "improved": true,
+      "best_checkpoint": 1,
+      "seconds": 8.403888408996863
+    },
+    {
+      "checkpoint": 2,
+      "objective": 0.3663294797687861,
+      "improved": true,
+      "best_checkpoint": 2,
+      "seconds": 16.91869358599797
+    },
+    {
+      "checkpoint": 3,
+      "objective": 0.3695809248554913,
+      "improved": true,
+      "best_checkpoint": 3,
+      "seconds": 25.259242104002624
+    },
+    {
+      "checkpoint": 4,
+      "objective": 0.36596820809248554,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 33.68997574700188
+    },
+    {
+      "checkpoint": 5,
+      "objective": 0.3666907514450867,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 42.00278207199881
+    },
+    {
+      "checkpoint": 6,
+      "objective": 0.37391618497109824,
+      "improved": true,
+      "best_checkpoint": 6,
+      "seconds": 51.47419654300029
+    },
+    {
+      "checkpoint": 7,
+      "objective": 0.35874277456647397,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 60.17601564100187
+    },
+    {
+      "checkpoint": 8,
+      "objective": 0.36416184971098264,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 68.64146037500177
+    },
+    {
+      "checkpoint": 9,
+      "objective": 0.3684971098265896,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 77.05192203399929
+    },
+    {
+      "checkpoint": 10,
+      "objective": 0.37102601156069365,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 85.37005847399996
+    },
+    {
+      "checkpoint": 11,
+      "objective": 0.3706647398843931,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 93.66903449300298
+    },
+    {
+      "checkpoint": 12,
+      "objective": 0.3703034682080925,
+      "improved": false,
+      "best_checkpoint": 6,
+      "seconds": 102.05171268100094
+    }
+  ],
+  "fit": {
+    "path": "records/fit-RES-u-trial7.json",
+    "sha256": "2173e96aacb8e573ba193a0d3bb2e9d4a7a9ba191ed2ddebe60f7f38b7ab6267"
+  },
+  "checkpoint": {
+    "path": "records/checkpoint-RES-u-trial7.json",
+    "sha256": "ce5016f1fe212c6c17690fa795ca541d57d82076596fd9927e4ba69ae11d6230"
+  },
+  "status": "completed",
+  "error": null
+}

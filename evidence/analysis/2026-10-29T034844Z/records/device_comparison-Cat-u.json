@@ -1,0 +1,122 @@
+{
+  "record": "device_comparison",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-29T034844Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "Cat-u",
+  "seed": 42,
+  "gpu_score": {
+    "path": "source/records/score-Cat-u-selected-V2.json",
+    "sha256": "a6f0ac75ca0ca7cfda36c28cdebf96c563a5097eb7b77a115e72fd9f8b224ec6"
+  },
+  "cpu_score": {
+    "path": "records/score-Cat-u-cpu_refit-V2.json",
+    "sha256": "8ce42219fb29b80860b13ce61a1b0e1313d8c5a87086763242fa5b43f9156be3"
+  },
+  "refit": {
+    "path": "records/refit-Cat-u-cpu_refit.json",
+    "sha256": "8e2a042dbd2e5c201048fb995dfcf562845b00fe1678944f0a645a3312f30ca3"
+  },
+  "capacities": [
+    {
+      "capacity": 0.01,
+      "k": 28,
+      "differences": {
+        "recall": -0.0011376564277588153,
+        "precision": -0.003826530612244916,
+        "frauds_per_1000_reviews": -3.8265306122449374,
+        "oracle_ceiling": 0.0,
+        "normalised_recall": -0.003826530612244916,
+        "random_review_recall": 0.0,
+        "lift": -0.11292691137888511,
+        "utilisation": 0.0,
+        "capacity_to_prevalence": 0.0,
+        "amount_weighted_recall": -0.00032262916167982714,
+        "fraud_value_exposed": 129.9430000000284
+      }
+    },
+    {
+      "capacity": 0.02,
+      "k": 56,
+      "differences": {
+        "recall": -0.004171406901782304,
+        "precision": -0.007015306122448939,
+        "frauds_per_1000_reviews": -7.015306122448919,
+        "oracle_ceiling": 0.0,
+        "normalised_recall": -0.007015306122448939,
+        "random_review_recall": 0.0,
+        "lift": -0.20703267086129173,
+        "utilisation": 0.0,
+        "capacity_to_prevalence": 0.0,
+        "amount_weighted_recall": -0.006544796335223868,
+        "fraud_value_exposed": 2636.0
+      }
+    },
+    {
+      "capacity": 0.05,
+      "k": 139,
+      "differences": {
+        "recall": 0.008722032612817565,
+        "precision": 0.005909558067831444,
+        "frauds_per_1000_reviews": 5.909558067831426,
+        "oracle_ceiling": 0.0,
+        "normalised_recall": 0.008722032612817565,
+        "random_review_recall": 0.0,
+        "lift": 0.17440031397602418,
+        "utilisation": 0.0,
+        "capacity_to_prevalence": 0.0,
+        "amount_weighted_recall": -0.016545865848300367,
+        "fraud_value_exposed": 6664.05799999999
+      }
+    },
+    {
+      "capacity": 0.1,
+      "k": 278,
+      "differences": {
+        "recall": -0.0068259385665528916,
+        "precision": -0.0023124357656731653,
+        "frauds_per_1000_reviews": -2.3124357656732,
+        "oracle_ceiling": 0.0,
+        "normalised_recall": -0.0068259385665528916,
+        "random_review_recall": 0.0,
+        "lift": -0.06824360112105321,
+        "utilisation": 0.0,
+        "capacity_to_prevalence": 0.0,
+        "amount_weighted_recall": -0.014690018831037599,
+        "fraud_value_exposed": 5916.592000000004
+      }
+    }
+  ],
+  "bootstrap": {
+    "capacity": 0.02,
+    "k": 56,
+    "entity_key": "fine",
+    "estimate": -0.004171406901782328,
+    "lower": -0.020524653721691113,
+    "upper": 0.011077514009556387,
+    "level": 0.95,
+    "replicates": 10000,
+    "undefined_replicates": 0,
+    "seed": 42,
+    "days": 28,
+    "entities": 1353,
+    "frauds": 2637
+  }
+}

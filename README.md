@@ -71,7 +71,7 @@ fraud-detection-review-capacity/
 │   └── probe/                           # GPU and batching acceptance probes
 ├── tests/                               # unit tests on synthetic data; opt-in integration tests
 ├── notebooks/                           # data-understanding notebooks 01-04
-├── evidence/                            # engineering evidence: probes, acceptance records, duplicate audit
+├── evidence/                            # probes, acceptance records, duplicate audit; development and analysis run records
 ├── scripts/                             # engineering scripts (GPU memory feasibility probe)
 ├── data/                                # dataset manifest and local data
 │   ├── datapackage.json                 # dataset manifest (committed)

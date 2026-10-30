@@ -1,0 +1,124 @@
+{
+  "record": "h3_selection",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-29T013414Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "period": "primary",
+  "selection_days": {
+    "first": 127,
+    "last": 154
+  },
+  "binding": true,
+  "capacity": 0.02,
+  "k": 56,
+  "candidates": [
+    {
+      "configuration": "LGB-u",
+      "frauds_captured": 1062,
+      "frauds": 2637,
+      "recall": 0.40273037542662116,
+      "average_precision": 0.5325595999956817,
+      "evaluation": {
+        "path": "source/records/evaluation-LGB-u-selected-V2-R3-c02.json",
+        "sha256": "159bb216da339400c76aa97391970d19be392f3b3ee52201e81299e6af596972"
+      }
+    },
+    {
+      "configuration": "Cat-u",
+      "frauds_captured": 1036,
+      "frauds": 2637,
+      "recall": 0.3928706863860447,
+      "average_precision": 0.5095493793276263,
+      "evaluation": {
+        "path": "source/records/evaluation-Cat-u-selected-V2-R3-c02.json",
+        "sha256": "972a7285499d4632e36900810eafc59b169d7336a1bf02908c24f995f3e9f75b"
+      }
+    },
+    {
+      "configuration": "RES-u",
+      "frauds_captured": 924,
+      "frauds": 2637,
+      "recall": 0.3503981797497156,
+      "average_precision": 0.4323964899300774,
+      "evaluation": {
+        "path": "source/records/evaluation-RES-u-selected-V2-R3-c02.json",
+        "sha256": "245598a1c6abcd9cc6dbb49589e699f1660417543e9e29d142802661d8ca7107"
+      }
+    },
+    {
+      "configuration": "FTT-u",
+      "frauds_captured": 908,
+      "frauds": 2637,
+      "recall": 0.34433067880166857,
+      "average_precision": 0.4045981211423912,
+      "evaluation": {
+        "path": "source/records/evaluation-FTT-u-selected-V2-R3-c02.json",
+        "sha256": "744b991a8e427e7061cacd796cb63fb3b81a9acd02e6fedefd841e2d1a4ccea8"
+      }
+    },
+    {
+      "configuration": "LGB-b",
+      "frauds_captured": 1070,
+      "frauds": 2637,
+      "recall": 0.40576412590064465,
+      "average_precision": 0.5378443915588387,
+      "evaluation": {
+        "path": "source/records/evaluation-LGB-b-selected-V2-R3-c02.json",
+        "sha256": "106f655e054b19137f1f4cbeea19c86e9d1ab274ddfa13b00067c972322fe2a4"
+      }
+    },
+    {
+      "configuration": "Cat-b",
+      "frauds_captured": 1000,
+      "frauds": 2637,
+      "recall": 0.37921880925293894,
+      "average_precision": 0.49231660278458866,
+      "evaluation": {
+        "path": "source/records/evaluation-Cat-b-selected-V2-R3-c02.json",
+        "sha256": "756d4d43291f81f94c0ed6b3726b6f935eaf8a59438c8921cd98ed34d0b4caa6"
+      }
+    },
+    {
+      "configuration": "RES-b",
+      "frauds_captured": 865,
+      "frauds": 2637,
+      "recall": 0.3280242700037922,
+      "average_precision": 0.3942972163464609,
+      "evaluation": {
+        "path": "source/records/evaluation-RES-b-selected-V2-R3-c02.json",
+        "sha256": "792e87ca3e890cbfa2a96c4fefd8d51c1b3d92909c72ae95c2328c8a3dac8c3a"
+      }
+    },
+    {
+      "configuration": "FTT-b",
+      "frauds_captured": 856,
+      "frauds": 2637,
+      "recall": 0.32461130072051575,
+      "average_precision": 0.39239203726278626,
+      "evaluation": {
+        "path": "source/records/evaluation-FTT-b-selected-V2-R3-c02.json",
+        "sha256": "73b1df6f2c9ed63a98c3f62191e038288b61594aa89a3a6cc70c990d1b66ef19"
+      }
+    }
+  ],
+  "selected": "LGB-b",
+  "tie_break_steps": [],
+  "rule_version": "1"
+}

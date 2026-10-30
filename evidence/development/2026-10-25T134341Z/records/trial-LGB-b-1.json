@@ -1,0 +1,4568 @@
+{
+  "record": "trial",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "LGB-b",
+  "trial": 1,
+  "candidate_list": {
+    "path": "candidates/lightgbm.json",
+    "sha256": "1ad8f6dbb48ab346dc9d0c1d2cf49afbbd197338fca8344dcd549b9613fc3deb"
+  },
+  "hyperparameters": {
+    "learning_rate": 0.1,
+    "num_leaves": 31,
+    "min_data_in_leaf": 20,
+    "feature_fraction": 1.0,
+    "bagging_fraction": 1.0,
+    "lambda_l2": 0.0
+  },
+  "seed": 42,
+  "device": "cpu",
+  "unit": "round",
+  "objective_k": 62,
+  "patience": 50,
+  "maximum": 2000,
+  "best_checkpoint": 594,
+  "best_objective": 0.3995664739884393,
+  "stopped_at": 644,
+  "stopping_reason": "early_stopping",
+  "runtime_seconds": 60.51887794100912,
+  "checkpoints": [
+    {
+      "checkpoint": 1,
+      "objective": 0.26553468208092484,
+      "improved": true,
+      "best_checkpoint": 1,
+      "seconds": 1.979304148000665
+    },
+    {
+      "checkpoint": 2,
+      "objective": 0.2727601156069364,
+      "improved": true,
+      "best_checkpoint": 2,
+      "seconds": 2.36916905399994
+    },
+    {
+      "checkpoint": 3,
+      "objective": 0.27420520231213874,
+      "improved": true,
+      "best_checkpoint": 3,
+      "seconds": 2.5596472920151427
+    },
+    {
+      "checkpoint": 4,
+      "objective": 0.30852601156069365,
+      "improved": true,
+      "best_checkpoint": 4,
+      "seconds": 2.7323098220222164
+    },
+    {
+      "checkpoint": 5,
+      "objective": 0.31213872832369943,
+      "improved": true,
+      "best_checkpoint": 5,
+      "seconds": 2.8312586800020654
+    },
+    {
+      "checkpoint": 6,
+      "objective": 0.31177745664739887,
+      "improved": false,
+      "best_checkpoint": 5,
+      "seconds": 2.907846297021024
+    },
+    {
+      "checkpoint": 7,
+      "objective": 0.31213872832369943,
+      "improved": false,
+      "best_checkpoint": 5,
+      "seconds": 2.98499524500221
+    },
+    {
+      "checkpoint": 8,
+      "objective": 0.31286127167630057,
+      "improved": true,
+      "best_checkpoint": 8,
+      "seconds": 3.297628700005589
+    },
+    {
+      "checkpoint": 9,
+      "objective": 0.3229768786127168,
+      "improved": true,
+      "best_checkpoint": 9,
+      "seconds": 3.6896871170029044
+    },
+    {
+      "checkpoint": 10,
+      "objective": 0.32514450867052025,
+      "improved": true,
+      "best_checkpoint": 10,
+      "seconds": 4.010996593016898
+    },
+    {
+      "checkpoint": 11,
+      "objective": 0.3265895953757225,
+      "improved": true,
+      "best_checkpoint": 11,
+      "seconds": 4.462877696001669
+    },
+    {
+      "checkpoint": 12,
+      "objective": 0.32695086705202314,
+      "improved": true,
+      "best_checkpoint": 12,
+      "seconds": 4.560661285009701
+    },
+    {
+      "checkpoint": 13,
+      "objective": 0.33128612716763006,
+      "improved": true,
+      "best_checkpoint": 13,
+      "seconds": 4.691676932998234
+    },
+    {
+      "checkpoint": 14,
+      "objective": 0.3327312138728324,
+      "improved": true,
+      "best_checkpoint": 14,
+      "seconds": 4.769374246010557
+    },
+    {
+      "checkpoint": 15,
+      "objective": 0.3345375722543353,
+      "improved": true,
+      "best_checkpoint": 15,
+      "seconds": 4.83341299201129
+    },
+    {
+      "checkpoint": 16,
+      "objective": 0.3345375722543353,
+      "improved": false,
+      "best_checkpoint": 15,
+      "seconds": 4.892924029001733
+    },
+    {
+      "checkpoint": 17,
+      "objective": 0.335621387283237,
+      "improved": true,
+      "best_checkpoint": 17,
+      "seconds": 5.159733795007924
+    },
+    {
+      "checkpoint": 18,
+      "objective": 0.33598265895953755,
+      "improved": true,
+      "best_checkpoint": 18,
+      "seconds": 5.468556898005772
+    },
+    {
+      "checkpoint": 19,
+      "objective": 0.33815028901734107,
+      "improved": true,
+      "best_checkpoint": 19,
+      "seconds": 5.662552510009846
+    },
+    {
+      "checkpoint": 20,
+      "objective": 0.33815028901734107,
+      "improved": false,
+      "best_checkpoint": 19,
+      "seconds": 5.894282832014142
+    },
+    {
+      "checkpoint": 21,
+      "objective": 0.33959537572254334,
+      "improved": true,
+      "best_checkpoint": 21,
+      "seconds": 5.973564107000129
+    },
+    {
+      "checkpoint": 22,
+      "objective": 0.3403179190751445,
+      "improved": true,
+      "best_checkpoint": 22,
+      "seconds": 6.040162047022022
+    },
+    {
+      "checkpoint": 23,
+      "objective": 0.3388728323699422,
+      "improved": false,
+      "best_checkpoint": 22,
+      "seconds": 6.099051565019181
+    },
+    {
+      "checkpoint": 24,
+      "objective": 0.3403179190751445,
+      "improved": false,
+      "best_checkpoint": 22,
+      "seconds": 6.160251648019766
+    },
+    {
+      "checkpoint": 25,
+      "objective": 0.3403179190751445,
+      "improved": false,
+      "best_checkpoint": 22,
+      "seconds": 6.28224799601594
+    },
+    {
+      "checkpoint": 26,
+      "objective": 0.3399566473988439,
+      "improved": false,
+      "best_checkpoint": 22,
+      "seconds": 6.368569343001582
+    },
+    {
+      "checkpoint": 27,
+      "objective": 0.3399566473988439,
+      "improved": false,
+      "best_checkpoint": 22,
+      "seconds": 6.494123587996
+    },
+    {
+      "checkpoint": 28,
+      "objective": 0.3406791907514451,
+      "improved": true,
+      "best_checkpoint": 28,
+      "seconds": 6.578099424019456
+    },
+    {
+      "checkpoint": 29,
+      "objective": 0.34140173410404623,
+      "improved": true,
+      "best_checkpoint": 29,
+      "seconds": 6.642398730007699
+    },
+    {
+      "checkpoint": 30,
+      "objective": 0.34284682080924855,
+      "improved": true,
+      "best_checkpoint": 30,
+      "seconds": 6.7259561530081555
+    },
+    {
+      "checkpoint": 31,
+      "objective": 0.34465317919075145,
+      "improved": true,
+      "best_checkpoint": 31,
+      "seconds": 6.807693643000675
+    },
+    {
+      "checkpoint": 32,
+      "objective": 0.3439306358381503,
+      "improved": false,
+      "best_checkpoint": 31,
+      "seconds": 6.873658911004895
+    },
+    {
+      "checkpoint": 33,
+      "objective": 0.34645953757225434,
+      "improved": true,
+      "best_checkpoint": 33,
+      "seconds": 6.947679845005041
+    },
+    {
+      "checkpoint": 34,
+      "objective": 0.34645953757225434,
+      "improved": false,
+      "best_checkpoint": 33,
+      "seconds": 7.018219297024189
+    },
+    {
+      "checkpoint": 35,
+      "objective": 0.3471820809248555,
+      "improved": true,
+      "best_checkpoint": 35,
+      "seconds": 7.122876805020496
+    },
+    {
+      "checkpoint": 36,
+      "objective": 0.3522398843930636,
+      "improved": true,
+      "best_checkpoint": 36,
+      "seconds": 7.182016017002752
+    },
+    {
+      "checkpoint": 37,
+      "objective": 0.35260115606936415,
+      "improved": true,
+      "best_checkpoint": 37,
+      "seconds": 7.355653271020856
+    },
+    {
+      "checkpoint": 38,
+      "objective": 0.35585260115606937,
+      "improved": true,
+      "best_checkpoint": 38,
+      "seconds": 7.467910575011047
+    },
+    {
+      "checkpoint": 39,
+      "objective": 0.3554913294797688,
+      "improved": false,
+      "best_checkpoint": 38,
+      "seconds": 7.534173223015387
+    },
+    {
+      "checkpoint": 40,
+      "objective": 0.3572976878612717,
+      "improved": true,
+      "best_checkpoint": 40,
+      "seconds": 7.613481624022825
+    },
+    {
+      "checkpoint": 41,
+      "objective": 0.3601878612716763,
+      "improved": true,
+      "best_checkpoint": 41,
+      "seconds": 7.680212653998751
+    },
+    {
+      "checkpoint": 42,
+      "objective": 0.3598265895953757,
+      "improved": false,
+      "best_checkpoint": 41,
+      "seconds": 7.748835856007645
+    },
+    {
+      "checkpoint": 43,
+      "objective": 0.36127167630057805,
+      "improved": true,
+      "best_checkpoint": 43,
+      "seconds": 7.81442558101844
+    },
+    {
+      "checkpoint": 44,
+      "objective": 0.3634393063583815,
+      "improved": true,
+      "best_checkpoint": 44,
+      "seconds": 7.873549751995597
+    },
+    {
+      "checkpoint": 45,
+      "objective": 0.3638005780346821,
+      "improved": true,
+      "best_checkpoint": 45,
+      "seconds": 7.960532440018142
+    },
+    {
+      "checkpoint": 46,
+      "objective": 0.36416184971098264,
+      "improved": true,
+      "best_checkpoint": 46,
+      "seconds": 8.03897651200532
+    },
+    {
+      "checkpoint": 47,
+      "objective": 0.3638005780346821,
+      "improved": false,
+      "best_checkpoint": 46,
+      "seconds": 8.17189316501026
+    },
+    {
+      "checkpoint": 48,
+      "objective": 0.3645231213872832,
+      "improved": true,
+      "best_checkpoint": 48,
+      "seconds": 8.288964514998952
+    },
+    {
+      "checkpoint": 49,
+      "objective": 0.3627167630057804,
+      "improved": false,
+      "best_checkpoint": 48,
+      "seconds": 8.352137152018258
+    },
+    {
+      "checkpoint": 50,
+      "objective": 0.36235549132947975,
+      "improved": false,
+      "best_checkpoint": 48,
+      "seconds": 8.430940878024558
+    },
+    {
+      "checkpoint": 51,
+      "objective": 0.36307803468208094,
+      "improved": false,
+      "best_checkpoint": 48,
+      "seconds": 8.490168862015707
+    },
+    {
+      "checkpoint": 52,
+      "objective": 0.3634393063583815,
+      "improved": false,
+      "best_checkpoint": 48,
+      "seconds": 8.560149395023473
+    },
+    {
+      "checkpoint": 53,
+      "objective": 0.36307803468208094,
+      "improved": false,
+      "best_checkpoint": 48,
+      "seconds": 8.63272713799961
+    },
+    {
+      "checkpoint": 54,
+      "objective": 0.3652456647398844,
+      "improved": true,
+      "best_checkpoint": 54,
+      "seconds": 8.68971287200111
+    },
+    {
+      "checkpoint": 55,
+      "objective": 0.36488439306358383,
+      "improved": false,
+      "best_checkpoint": 54,
+      "seconds": 8.7686631079996
+    },
+    {
+      "checkpoint": 56,
+      "objective": 0.36596820809248554,
+      "improved": true,
+      "best_checkpoint": 56,
+      "seconds": 8.835537786013447
+    },
+    {
+      "checkpoint": 57,
+      "objective": 0.3652456647398844,
+      "improved": false,
+      "best_checkpoint": 56,
+      "seconds": 8.906576021021465
+    },
+    {
+      "checkpoint": 58,
+      "objective": 0.36741329479768786,
+      "improved": true,
+      "best_checkpoint": 58,
+      "seconds": 8.973303933016723
+    },
+    {
+      "checkpoint": 59,
+      "objective": 0.36741329479768786,
+      "improved": false,
+      "best_checkpoint": 58,
+      "seconds": 9.036330208007712
+    },
+    {
+      "checkpoint": 60,
+      "objective": 0.3684971098265896,
+      "improved": true,
+      "best_checkpoint": 60,
+      "seconds": 9.093482807016699
+    },
+    {
+      "checkpoint": 61,
+      "objective": 0.36596820809248554,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.182315237005241
+    },
+    {
+      "checkpoint": 62,
+      "objective": 0.36560693641618497,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.28919170901645
+    },
+    {
+      "checkpoint": 63,
+      "objective": 0.36596820809248554,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.347593931015581
+    },
+    {
+      "checkpoint": 64,
+      "objective": 0.36488439306358383,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.509576701995684
+    },
+    {
+      "checkpoint": 65,
+      "objective": 0.36560693641618497,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.56875167202088
+    },
+    {
+      "checkpoint": 66,
+      "objective": 0.3670520231213873,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.637280454015126
+    },
+    {
+      "checkpoint": 67,
+      "objective": 0.3652456647398844,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.702596971997991
+    },
+    {
+      "checkpoint": 68,
+      "objective": 0.36488439306358383,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.760591168014798
+    },
+    {
+      "checkpoint": 69,
+      "objective": 0.36416184971098264,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.819137094018515
+    },
+    {
+      "checkpoint": 70,
+      "objective": 0.36488439306358383,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.894092194997938
+    },
+    {
+      "checkpoint": 71,
+      "objective": 0.3645231213872832,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 9.953992877010023
+    },
+    {
+      "checkpoint": 72,
+      "objective": 0.36596820809248554,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.01095851699938
+    },
+    {
+      "checkpoint": 73,
+      "objective": 0.3663294797687861,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.06302761900588
+    },
+    {
+      "checkpoint": 74,
+      "objective": 0.3670520231213873,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.123934283008566
+    },
+    {
+      "checkpoint": 75,
+      "objective": 0.3666907514450867,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.180593080003746
+    },
+    {
+      "checkpoint": 76,
+      "objective": 0.3670520231213873,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.259688665013527
+    },
+    {
+      "checkpoint": 77,
+      "objective": 0.3666907514450867,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.31369834401994
+    },
+    {
+      "checkpoint": 78,
+      "objective": 0.3684971098265896,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.383369016024517
+    },
+    {
+      "checkpoint": 79,
+      "objective": 0.36596820809248554,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.44140489801066
+    },
+    {
+      "checkpoint": 80,
+      "objective": 0.3663294797687861,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.504691369016655
+    },
+    {
+      "checkpoint": 81,
+      "objective": 0.36596820809248554,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.608819343004143
+    },
+    {
+      "checkpoint": 82,
+      "objective": 0.36741329479768786,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.672236373997293
+    },
+    {
+      "checkpoint": 83,
+      "objective": 0.36777456647398843,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.736302757024532
+    },
+    {
+      "checkpoint": 84,
+      "objective": 0.3663294797687861,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.802159570012009
+    },
+    {
+      "checkpoint": 85,
+      "objective": 0.36777456647398843,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.866371495008934
+    },
+    {
+      "checkpoint": 86,
+      "objective": 0.36741329479768786,
+      "improved": false,
+      "best_checkpoint": 60,
+      "seconds": 10.92398906001472
+    },
+    {
+      "checkpoint": 87,
+      "objective": 0.3695809248554913,
+      "improved": true,
+      "best_checkpoint": 87,
+      "seconds": 10.978201792022446
+    },
+    {
+      "checkpoint": 88,
+      "objective": 0.3699421965317919,
+      "improved": true,
+      "best_checkpoint": 88,
+      "seconds": 11.040305200003786
+    },
+    {
+      "checkpoint": 89,
+      "objective": 0.3703034682080925,
+      "improved": true,
+      "best_checkpoint": 89,
+      "seconds": 11.096462668996537
+    },
+    {
+      "checkpoint": 90,
+      "objective": 0.3703034682080925,
+      "improved": false,
+      "best_checkpoint": 89,
+      "seconds": 11.163791964005213
+    },
+    {
+      "checkpoint": 91,
+      "objective": 0.3706647398843931,
+      "improved": true,
+      "best_checkpoint": 91,
+      "seconds": 11.334330748999491
+    },
+    {
+      "checkpoint": 92,
+      "objective": 0.3699421965317919,
+      "improved": false,
+      "best_checkpoint": 91,
+      "seconds": 11.537207954010228
+    },
+    {
+      "checkpoint": 93,
+      "objective": 0.3695809248554913,
+      "improved": false,
+      "best_checkpoint": 91,
+      "seconds": 11.645488084002864
+    },
+    {
+      "checkpoint": 94,
+      "objective": 0.3695809248554913,
+      "improved": false,
+      "best_checkpoint": 91,
+      "seconds": 11.704835490003461
+    },
+    {
+      "checkpoint": 95,
+      "objective": 0.3695809248554913,
+      "improved": false,
+      "best_checkpoint": 91,
+      "seconds": 11.773497631016653
+    },
+    {
+      "checkpoint": 96,
+      "objective": 0.3703034682080925,
+      "improved": false,
+      "best_checkpoint": 91,
+      "seconds": 11.834798399009742
+    },
+    {
+      "checkpoint": 97,
+      "objective": 0.3717485549132948,
+      "improved": true,
+      "best_checkpoint": 97,
+      "seconds": 11.924145961005706
+    },
+    {
+      "checkpoint": 98,
+      "objective": 0.3713872832369942,
+      "improved": false,
+      "best_checkpoint": 97,
+      "seconds": 12.136089492007159
+    },
+    {
+      "checkpoint": 99,
+      "objective": 0.37102601156069365,
+      "improved": false,
+      "best_checkpoint": 97,
+      "seconds": 12.251676603016676
+    },
+    {
+      "checkpoint": 100,
+      "objective": 0.3699421965317919,
+      "improved": false,
+      "best_checkpoint": 97,
+      "seconds": 12.318640031007817
+    },
+    {
+      "checkpoint": 101,
+      "objective": 0.3699421965317919,
+      "improved": false,
+      "best_checkpoint": 97,
+      "seconds": 12.397530321002705
+    },
+    {
+      "checkpoint": 102,
+      "objective": 0.37102601156069365,
+      "improved": false,
+      "best_checkpoint": 97,
+      "seconds": 12.506656492012553
+    },
+    {
+      "checkpoint": 103,
+      "objective": 0.3706647398843931,
+      "improved": false,
+      "best_checkpoint": 97,
+      "seconds": 12.948951437021606
+    },
+    {
+      "checkpoint": 104,
+      "objective": 0.3713872832369942,
+      "improved": false,
+      "best_checkpoint": 97,
+      "seconds": 13.220505058008712
+    },
+    {
+      "checkpoint": 105,
+      "objective": 0.3717485549132948,
+      "improved": false,
+      "best_checkpoint": 97,
+      "seconds": 13.325897292001173
+    },
+    {
+      "checkpoint": 106,
+      "objective": 0.37283236994219654,
+      "improved": true,
+      "best_checkpoint": 106,
+      "seconds": 13.397341505013173
+    },
+    {
+      "checkpoint": 107,
+      "objective": 0.3713872832369942,
+      "improved": false,
+      "best_checkpoint": 106,
+      "seconds": 13.461009178019594
+    },
+    {
+      "checkpoint": 108,
+      "objective": 0.37210982658959535,
+      "improved": false,
+      "best_checkpoint": 106,
+      "seconds": 13.520987288007746
+    },
+    {
+      "checkpoint": 109,
+      "objective": 0.37283236994219654,
+      "improved": false,
+      "best_checkpoint": 106,
+      "seconds": 13.647470153024187
+    },
+    {
+      "checkpoint": 110,
+      "objective": 0.3731936416184971,
+      "improved": true,
+      "best_checkpoint": 110,
+      "seconds": 13.739080176019343
+    },
+    {
+      "checkpoint": 111,
+      "objective": 0.37427745664739887,
+      "improved": true,
+      "best_checkpoint": 111,
+      "seconds": 13.835947076004231
+    },
+    {
+      "checkpoint": 112,
+      "objective": 0.3731936416184971,
+      "improved": false,
+      "best_checkpoint": 111,
+      "seconds": 13.928266721020918
+    },
+    {
+      "checkpoint": 113,
+      "objective": 0.37427745664739887,
+      "improved": false,
+      "best_checkpoint": 111,
+      "seconds": 13.999420030013425
+    },
+    {
+      "checkpoint": 114,
+      "objective": 0.37463872832369943,
+      "improved": true,
+      "best_checkpoint": 114,
+      "seconds": 14.423782058001962
+    },
+    {
+      "checkpoint": 115,
+      "objective": 0.37391618497109824,
+      "improved": false,
+      "best_checkpoint": 114,
+      "seconds": 14.700214223004878
+    },
+    {
+      "checkpoint": 116,
+      "objective": 0.3731936416184971,
+      "improved": false,
+      "best_checkpoint": 114,
+      "seconds": 14.779801933007548
+    },
+    {
+      "checkpoint": 117,
+      "objective": 0.3735549132947977,
+      "improved": false,
+      "best_checkpoint": 114,
+      "seconds": 14.86313551402418
+    },
+    {
+      "checkpoint": 118,
+      "objective": 0.37391618497109824,
+      "improved": false,
+      "best_checkpoint": 114,
+      "seconds": 14.922258867009077
+    },
+    {
+      "checkpoint": 119,
+      "objective": 0.37536127167630057,
+      "improved": true,
+      "best_checkpoint": 119,
+      "seconds": 14.981941433012253
+    },
+    {
+      "checkpoint": 120,
+      "objective": 0.375,
+      "improved": false,
+      "best_checkpoint": 119,
+      "seconds": 15.090942509996239
+    },
+    {
+      "checkpoint": 121,
+      "objective": 0.37427745664739887,
+      "improved": false,
+      "best_checkpoint": 119,
+      "seconds": 15.146890875999816
+    },
+    {
+      "checkpoint": 122,
+      "objective": 0.37427745664739887,
+      "improved": false,
+      "best_checkpoint": 119,
+      "seconds": 15.244870889000595
+    },
+    {
+      "checkpoint": 123,
+      "objective": 0.37572254335260113,
+      "improved": true,
+      "best_checkpoint": 123,
+      "seconds": 15.332116987003246
+    },
+    {
+      "checkpoint": 124,
+      "objective": 0.377528901734104,
+      "improved": true,
+      "best_checkpoint": 124,
+      "seconds": 15.38233919601771
+    },
+    {
+      "checkpoint": 125,
+      "objective": 0.3764450867052023,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 15.512393022014294
+    },
+    {
+      "checkpoint": 126,
+      "objective": 0.3768063583815029,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 15.560228609014302
+    },
+    {
+      "checkpoint": 127,
+      "objective": 0.37716763005780346,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 15.64936829500948
+    },
+    {
+      "checkpoint": 128,
+      "objective": 0.37716763005780346,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 15.707852880004793
+    },
+    {
+      "checkpoint": 129,
+      "objective": 0.3768063583815029,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 15.789559516997542
+    },
+    {
+      "checkpoint": 130,
+      "objective": 0.3768063583815029,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 15.858773526997538
+    },
+    {
+      "checkpoint": 131,
+      "objective": 0.3764450867052023,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 15.914240404003067
+    },
+    {
+      "checkpoint": 132,
+      "objective": 0.377528901734104,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 15.989142144011566
+    },
+    {
+      "checkpoint": 133,
+      "objective": 0.37716763005780346,
+      "improved": false,
+      "best_checkpoint": 124,
+      "seconds": 16.067612544022268
+    },
+    {
+      "checkpoint": 134,
+      "objective": 0.3782514450867052,
+      "improved": true,
+      "best_checkpoint": 134,
+      "seconds": 16.147435544000473
+    },
+    {
+      "checkpoint": 135,
+      "objective": 0.3786127167630058,
+      "improved": true,
+      "best_checkpoint": 135,
+      "seconds": 16.21548384500784
+    },
+    {
+      "checkpoint": 136,
+      "objective": 0.3796965317919075,
+      "improved": true,
+      "best_checkpoint": 136,
+      "seconds": 16.299240841995925
+    },
+    {
+      "checkpoint": 137,
+      "objective": 0.3793352601156069,
+      "improved": false,
+      "best_checkpoint": 136,
+      "seconds": 16.33886782202171
+    },
+    {
+      "checkpoint": 138,
+      "objective": 0.38078034682080925,
+      "improved": true,
+      "best_checkpoint": 138,
+      "seconds": 16.390110703010578
+    },
+    {
+      "checkpoint": 139,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 16.652508201019373
+    },
+    {
+      "checkpoint": 140,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 16.71230619601556
+    },
+    {
+      "checkpoint": 141,
+      "objective": 0.3793352601156069,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 16.77536741300719
+    },
+    {
+      "checkpoint": 142,
+      "objective": 0.37897398843930635,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 16.927616808010498
+    },
+    {
+      "checkpoint": 143,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 16.999982470006216
+    },
+    {
+      "checkpoint": 144,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.061374343000352
+    },
+    {
+      "checkpoint": 145,
+      "objective": 0.3796965317919075,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.122241163015133
+    },
+    {
+      "checkpoint": 146,
+      "objective": 0.37897398843930635,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.185832891002065
+    },
+    {
+      "checkpoint": 147,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.30477957901894
+    },
+    {
+      "checkpoint": 148,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.365426575008314
+    },
+    {
+      "checkpoint": 149,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.43359099200461
+    },
+    {
+      "checkpoint": 150,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.48686989201815
+    },
+    {
+      "checkpoint": 151,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.574850296019576
+    },
+    {
+      "checkpoint": 152,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.67689827902359
+    },
+    {
+      "checkpoint": 153,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.767986149003264
+    },
+    {
+      "checkpoint": 154,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.831033045018557
+    },
+    {
+      "checkpoint": 155,
+      "objective": 0.3796965317919075,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.893932992999908
+    },
+    {
+      "checkpoint": 156,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 17.946393149002688
+    },
+    {
+      "checkpoint": 157,
+      "objective": 0.3796965317919075,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 18.013303507003002
+    },
+    {
+      "checkpoint": 158,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 18.113268191023963
+    },
+    {
+      "checkpoint": 159,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 18.16239982401021
+    },
+    {
+      "checkpoint": 160,
+      "objective": 0.3793352601156069,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 18.216289470001357
+    },
+    {
+      "checkpoint": 161,
+      "objective": 0.3793352601156069,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 18.315343816007953
+    },
+    {
+      "checkpoint": 162,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 18.388777482003206
+    },
+    {
+      "checkpoint": 163,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 18.435004266997566
+    },
+    {
+      "checkpoint": 164,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 138,
+      "seconds": 18.508076202007942
+    },
+    {
+      "checkpoint": 165,
+      "objective": 0.381864161849711,
+      "improved": true,
+      "best_checkpoint": 165,
+      "seconds": 18.631647135014646
+    },
+    {
+      "checkpoint": 166,
+      "objective": 0.3815028901734104,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 18.69673667900497
+    },
+    {
+      "checkpoint": 167,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 18.78226688900031
+    },
+    {
+      "checkpoint": 168,
+      "objective": 0.3811416184971098,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 18.846118818008108
+    },
+    {
+      "checkpoint": 169,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 18.935567489010282
+    },
+    {
+      "checkpoint": 170,
+      "objective": 0.3793352601156069,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 19.132483724009944
+    },
+    {
+      "checkpoint": 171,
+      "objective": 0.3796965317919075,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 19.2320741120202
+    },
+    {
+      "checkpoint": 172,
+      "objective": 0.3796965317919075,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 19.40508034400409
+    },
+    {
+      "checkpoint": 173,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 19.602256848011166
+    },
+    {
+      "checkpoint": 174,
+      "objective": 0.3796965317919075,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 19.682635389006464
+    },
+    {
+      "checkpoint": 175,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 19.730325608019484
+    },
+    {
+      "checkpoint": 176,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 19.77591040401603
+    },
+    {
+      "checkpoint": 177,
+      "objective": 0.3796965317919075,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 19.843171467015054
+    },
+    {
+      "checkpoint": 178,
+      "objective": 0.3796965317919075,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.110171476000687
+    },
+    {
+      "checkpoint": 179,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.322107771004084
+    },
+    {
+      "checkpoint": 180,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.477343652019044
+    },
+    {
+      "checkpoint": 181,
+      "objective": 0.3811416184971098,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.548459912010003
+    },
+    {
+      "checkpoint": 182,
+      "objective": 0.3815028901734104,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.602605038002366
+    },
+    {
+      "checkpoint": 183,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.649412538012257
+    },
+    {
+      "checkpoint": 184,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.694397394021507
+    },
+    {
+      "checkpoint": 185,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.754984605999198
+    },
+    {
+      "checkpoint": 186,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.82594897900708
+    },
+    {
+      "checkpoint": 187,
+      "objective": 0.37897398843930635,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.873219433997292
+    },
+    {
+      "checkpoint": 188,
+      "objective": 0.3793352601156069,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.922037694021128
+    },
+    {
+      "checkpoint": 189,
+      "objective": 0.3782514450867052,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 20.99643761801417
+    },
+    {
+      "checkpoint": 190,
+      "objective": 0.37897398843930635,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.117999511014204
+    },
+    {
+      "checkpoint": 191,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.170026934007183
+    },
+    {
+      "checkpoint": 192,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.227083157020388
+    },
+    {
+      "checkpoint": 193,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.283146010013297
+    },
+    {
+      "checkpoint": 194,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.36190066000563
+    },
+    {
+      "checkpoint": 195,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.41768282101839
+    },
+    {
+      "checkpoint": 196,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.494244122004602
+    },
+    {
+      "checkpoint": 197,
+      "objective": 0.3811416184971098,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.543972104002023
+    },
+    {
+      "checkpoint": 198,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.650157024996588
+    },
+    {
+      "checkpoint": 199,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.695485919015482
+    },
+    {
+      "checkpoint": 200,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.744890703004785
+    },
+    {
+      "checkpoint": 201,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.834345117997145
+    },
+    {
+      "checkpoint": 202,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.911265540024033
+    },
+    {
+      "checkpoint": 203,
+      "objective": 0.3811416184971098,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 21.96316505401046
+    },
+    {
+      "checkpoint": 204,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 22.031967137998436
+    },
+    {
+      "checkpoint": 205,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 22.074358345998917
+    },
+    {
+      "checkpoint": 206,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 165,
+      "seconds": 22.171215782000218
+    },
+    {
+      "checkpoint": 207,
+      "objective": 0.38258670520231214,
+      "improved": true,
+      "best_checkpoint": 207,
+      "seconds": 22.249148474016692
+    },
+    {
+      "checkpoint": 208,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.35087016702164
+    },
+    {
+      "checkpoint": 209,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.412128602998564
+    },
+    {
+      "checkpoint": 210,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.459303096024087
+    },
+    {
+      "checkpoint": 211,
+      "objective": 0.3815028901734104,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.51483526400989
+    },
+    {
+      "checkpoint": 212,
+      "objective": 0.3815028901734104,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.558055582019733
+    },
+    {
+      "checkpoint": 213,
+      "objective": 0.3811416184971098,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.626152671000455
+    },
+    {
+      "checkpoint": 214,
+      "objective": 0.3815028901734104,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.673620171000948
+    },
+    {
+      "checkpoint": 215,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.748077012016438
+    },
+    {
+      "checkpoint": 216,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.818772910017287
+    },
+    {
+      "checkpoint": 217,
+      "objective": 0.3815028901734104,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.921211640001275
+    },
+    {
+      "checkpoint": 218,
+      "objective": 0.3811416184971098,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 22.981499083020026
+    },
+    {
+      "checkpoint": 219,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.078835139021976
+    },
+    {
+      "checkpoint": 220,
+      "objective": 0.3804190751445087,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.13932616999955
+    },
+    {
+      "checkpoint": 221,
+      "objective": 0.3811416184971098,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.236034936009673
+    },
+    {
+      "checkpoint": 222,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.308557637006743
+    },
+    {
+      "checkpoint": 223,
+      "objective": 0.3800578034682081,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.366015139006777
+    },
+    {
+      "checkpoint": 224,
+      "objective": 0.38078034682080925,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.436612585006515
+    },
+    {
+      "checkpoint": 225,
+      "objective": 0.3811416184971098,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.48596201100736
+    },
+    {
+      "checkpoint": 226,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.54841978001059
+    },
+    {
+      "checkpoint": 227,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.60836254901369
+    },
+    {
+      "checkpoint": 228,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.660725125024328
+    },
+    {
+      "checkpoint": 229,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.724541978008347
+    },
+    {
+      "checkpoint": 230,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.80587196201668
+    },
+    {
+      "checkpoint": 231,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.867152243008604
+    },
+    {
+      "checkpoint": 232,
+      "objective": 0.3815028901734104,
+      "improved": false,
+      "best_checkpoint": 207,
+      "seconds": 23.94454050299828
+    },
+    {
+      "checkpoint": 233,
+      "objective": 0.3829479768786127,
+      "improved": true,
+      "best_checkpoint": 233,
+      "seconds": 23.986938003014075
+    },
+    {
+      "checkpoint": 234,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 24.241445961000863
+    },
+    {
+      "checkpoint": 235,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 24.362415695009986
+    },
+    {
+      "checkpoint": 236,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 24.48799920702004
+    },
+    {
+      "checkpoint": 237,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 24.68549377200543
+    },
+    {
+      "checkpoint": 238,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 24.80737256500288
+    },
+    {
+      "checkpoint": 239,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 24.947276872000657
+    },
+    {
+      "checkpoint": 240,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 24.99449302299763
+    },
+    {
+      "checkpoint": 241,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 25.04303672601236
+    },
+    {
+      "checkpoint": 242,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 25.107870061998256
+    },
+    {
+      "checkpoint": 243,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 25.154532067012042
+    },
+    {
+      "checkpoint": 244,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 25.276915295020444
+    },
+    {
+      "checkpoint": 245,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 25.372670060023665
+    },
+    {
+      "checkpoint": 246,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 233,
+      "seconds": 25.441544110013638
+    },
+    {
+      "checkpoint": 247,
+      "objective": 0.3833092485549133,
+      "improved": true,
+      "best_checkpoint": 247,
+      "seconds": 25.517605298024137
+    },
+    {
+      "checkpoint": 248,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 247,
+      "seconds": 25.58267257400439
+    },
+    {
+      "checkpoint": 249,
+      "objective": 0.3836705202312139,
+      "improved": true,
+      "best_checkpoint": 249,
+      "seconds": 25.67313892900711
+    },
+    {
+      "checkpoint": 250,
+      "objective": 0.3836705202312139,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 25.731558514002245
+    },
+    {
+      "checkpoint": 251,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 25.776373775996035
+    },
+    {
+      "checkpoint": 252,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 25.873446915007662
+    },
+    {
+      "checkpoint": 253,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 25.94533313100692
+    },
+    {
+      "checkpoint": 254,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 26.002529195015086
+    },
+    {
+      "checkpoint": 255,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 26.045954683999298
+    },
+    {
+      "checkpoint": 256,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 26.10072695001145
+    },
+    {
+      "checkpoint": 257,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 26.183166057016933
+    },
+    {
+      "checkpoint": 258,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 26.25220793101471
+    },
+    {
+      "checkpoint": 259,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 26.36499830300454
+    },
+    {
+      "checkpoint": 260,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 26.426073923998047
+    },
+    {
+      "checkpoint": 261,
+      "objective": 0.3833092485549133,
+      "improved": false,
+      "best_checkpoint": 249,
+      "seconds": 26.467036995018134
+    },
+    {
+      "checkpoint": 262,
+      "objective": 0.38403179190751446,
+      "improved": true,
+      "best_checkpoint": 262,
+      "seconds": 26.5286098170036
+    },
+    {
+      "checkpoint": 263,
+      "objective": 0.3833092485549133,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 26.577078377013095
+    },
+    {
+      "checkpoint": 264,
+      "objective": 0.3833092485549133,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 26.67911120899953
+    },
+    {
+      "checkpoint": 265,
+      "objective": 0.3833092485549133,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 26.73955169299734
+    },
+    {
+      "checkpoint": 266,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 26.799402204022044
+    },
+    {
+      "checkpoint": 267,
+      "objective": 0.3833092485549133,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 26.87668916399707
+    },
+    {
+      "checkpoint": 268,
+      "objective": 0.3833092485549133,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 26.925986900023418
+    },
+    {
+      "checkpoint": 269,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 26.985089391004294
+    },
+    {
+      "checkpoint": 270,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.028871511021862
+    },
+    {
+      "checkpoint": 271,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.07755656100926
+    },
+    {
+      "checkpoint": 272,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.136833243013825
+    },
+    {
+      "checkpoint": 273,
+      "objective": 0.38222543352601157,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.18975279200822
+    },
+    {
+      "checkpoint": 274,
+      "objective": 0.381864161849711,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.250150352017954
+    },
+    {
+      "checkpoint": 275,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.31140821200097
+    },
+    {
+      "checkpoint": 276,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.397988036012975
+    },
+    {
+      "checkpoint": 277,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.497742842009757
+    },
+    {
+      "checkpoint": 278,
+      "objective": 0.3836705202312139,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 27.8080328470096
+    },
+    {
+      "checkpoint": 279,
+      "objective": 0.38403179190751446,
+      "improved": false,
+      "best_checkpoint": 262,
+      "seconds": 28.12926520901965
+    },
+    {
+      "checkpoint": 280,
+      "objective": 0.3847543352601156,
+      "improved": true,
+      "best_checkpoint": 280,
+      "seconds": 28.540442961995723
+    },
+    {
+      "checkpoint": 281,
+      "objective": 0.3847543352601156,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 28.793492815020727
+    },
+    {
+      "checkpoint": 282,
+      "objective": 0.3847543352601156,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 29.086161596002057
+    },
+    {
+      "checkpoint": 283,
+      "objective": 0.38439306358381503,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 29.39749929201207
+    },
+    {
+      "checkpoint": 284,
+      "objective": 0.3836705202312139,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 29.713138275023084
+    },
+    {
+      "checkpoint": 285,
+      "objective": 0.38403179190751446,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 30.10946449902258
+    },
+    {
+      "checkpoint": 286,
+      "objective": 0.3833092485549133,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 30.40200427401578
+    },
+    {
+      "checkpoint": 287,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 30.69421236802009
+    },
+    {
+      "checkpoint": 288,
+      "objective": 0.38258670520231214,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 30.971195592021104
+    },
+    {
+      "checkpoint": 289,
+      "objective": 0.3829479768786127,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 31.29021974801435
+    },
+    {
+      "checkpoint": 290,
+      "objective": 0.3833092485549133,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 31.587040569022065
+    },
+    {
+      "checkpoint": 291,
+      "objective": 0.38439306358381503,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 31.911717066017445
+    },
+    {
+      "checkpoint": 292,
+      "objective": 0.38439306358381503,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 32.054141606000485
+    },
+    {
+      "checkpoint": 293,
+      "objective": 0.38439306358381503,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 32.11715521902079
+    },
+    {
+      "checkpoint": 294,
+      "objective": 0.38403179190751446,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 32.16279818300973
+    },
+    {
+      "checkpoint": 295,
+      "objective": 0.38439306358381503,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 32.21826292501646
+    },
+    {
+      "checkpoint": 296,
+      "objective": 0.3847543352601156,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 32.33794434700394
+    },
+    {
+      "checkpoint": 297,
+      "objective": 0.38439306358381503,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 32.42524101599702
+    },
+    {
+      "checkpoint": 298,
+      "objective": 0.3847543352601156,
+      "improved": false,
+      "best_checkpoint": 280,
+      "seconds": 32.49860058701597
+    },
+    {
+      "checkpoint": 299,
+      "objective": 0.38511560693641617,
+      "improved": true,
+      "best_checkpoint": 299,
+      "seconds": 32.54728235001676
+    },
+    {
+      "checkpoint": 300,
+      "objective": 0.3854768786127168,
+      "improved": true,
+      "best_checkpoint": 300,
+      "seconds": 32.61189511002158
+    },
+    {
+      "checkpoint": 301,
+      "objective": 0.38511560693641617,
+      "improved": false,
+      "best_checkpoint": 300,
+      "seconds": 32.65703940601088
+    },
+    {
+      "checkpoint": 302,
+      "objective": 0.38511560693641617,
+      "improved": false,
+      "best_checkpoint": 300,
+      "seconds": 32.75092872499954
+    },
+    {
+      "checkpoint": 303,
+      "objective": 0.3854768786127168,
+      "improved": false,
+      "best_checkpoint": 300,
+      "seconds": 32.7992307820241
+    },
+    {
+      "checkpoint": 304,
+      "objective": 0.38583815028901736,
+      "improved": true,
+      "best_checkpoint": 304,
+      "seconds": 32.84468755600392
+    },
+    {
+      "checkpoint": 305,
+      "objective": 0.3861994219653179,
+      "improved": true,
+      "best_checkpoint": 305,
+      "seconds": 32.937912474008044
+    },
+    {
+      "checkpoint": 306,
+      "objective": 0.3854768786127168,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 32.993031560996315
+    },
+    {
+      "checkpoint": 307,
+      "objective": 0.38511560693641617,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.08356634801021
+    },
+    {
+      "checkpoint": 308,
+      "objective": 0.3854768786127168,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.13254616400809
+    },
+    {
+      "checkpoint": 309,
+      "objective": 0.3854768786127168,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.17830899200635
+    },
+    {
+      "checkpoint": 310,
+      "objective": 0.38583815028901736,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.24803616502322
+    },
+    {
+      "checkpoint": 311,
+      "objective": 0.38583815028901736,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.323644183023134
+    },
+    {
+      "checkpoint": 312,
+      "objective": 0.3861994219653179,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.382208395021735
+    },
+    {
+      "checkpoint": 313,
+      "objective": 0.3861994219653179,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.436788154009264
+    },
+    {
+      "checkpoint": 314,
+      "objective": 0.3861994219653179,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.48008789200685
+    },
+    {
+      "checkpoint": 315,
+      "objective": 0.38583815028901736,
+      "improved": false,
+      "best_checkpoint": 305,
+      "seconds": 33.56780670801527
+    },
+    {
+      "checkpoint": 316,
+      "objective": 0.3865606936416185,
+      "improved": true,
+      "best_checkpoint": 316,
+      "seconds": 33.68709688799572
+    },
+    {
+      "checkpoint": 317,
+      "objective": 0.38692196531791906,
+      "improved": true,
+      "best_checkpoint": 317,
+      "seconds": 33.75115242099855
+    },
+    {
+      "checkpoint": 318,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 317,
+      "seconds": 33.79643904900877
+    },
+    {
+      "checkpoint": 319,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 317,
+      "seconds": 33.858467769023264
+    },
+    {
+      "checkpoint": 320,
+      "objective": 0.3872832369942196,
+      "improved": true,
+      "best_checkpoint": 320,
+      "seconds": 33.919928408024134
+    },
+    {
+      "checkpoint": 321,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 320,
+      "seconds": 34.03950881000492
+    },
+    {
+      "checkpoint": 322,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 320,
+      "seconds": 34.08342464000452
+    },
+    {
+      "checkpoint": 323,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 320,
+      "seconds": 34.128196853009285
+    },
+    {
+      "checkpoint": 324,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 320,
+      "seconds": 34.177015073015355
+    },
+    {
+      "checkpoint": 325,
+      "objective": 0.38764450867052025,
+      "improved": true,
+      "best_checkpoint": 325,
+      "seconds": 34.23505880701123
+    },
+    {
+      "checkpoint": 326,
+      "objective": 0.38692196531791906,
+      "improved": false,
+      "best_checkpoint": 325,
+      "seconds": 34.27981785600423
+    },
+    {
+      "checkpoint": 327,
+      "objective": 0.38764450867052025,
+      "improved": false,
+      "best_checkpoint": 325,
+      "seconds": 34.41916178300744
+    },
+    {
+      "checkpoint": 328,
+      "objective": 0.3880057803468208,
+      "improved": true,
+      "best_checkpoint": 328,
+      "seconds": 34.4596608139982
+    },
+    {
+      "checkpoint": 329,
+      "objective": 0.3872832369942196,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 34.50561354201636
+    },
+    {
+      "checkpoint": 330,
+      "objective": 0.3872832369942196,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 34.55552385401097
+    },
+    {
+      "checkpoint": 331,
+      "objective": 0.38692196531791906,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 34.6042952700227
+    },
+    {
+      "checkpoint": 332,
+      "objective": 0.38692196531791906,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 34.67236265100655
+    },
+    {
+      "checkpoint": 333,
+      "objective": 0.38764450867052025,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 34.71849975400255
+    },
+    {
+      "checkpoint": 334,
+      "objective": 0.3861994219653179,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 34.85346568800742
+    },
+    {
+      "checkpoint": 335,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 34.953613471996505
+    },
+    {
+      "checkpoint": 336,
+      "objective": 0.3861994219653179,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.00539357299567
+    },
+    {
+      "checkpoint": 337,
+      "objective": 0.38692196531791906,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.13191579299746
+    },
+    {
+      "checkpoint": 338,
+      "objective": 0.38692196531791906,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.19415781099815
+    },
+    {
+      "checkpoint": 339,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.256094395008404
+    },
+    {
+      "checkpoint": 340,
+      "objective": 0.3872832369942196,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.38073799200356
+    },
+    {
+      "checkpoint": 341,
+      "objective": 0.3872832369942196,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.43977701300173
+    },
+    {
+      "checkpoint": 342,
+      "objective": 0.38692196531791906,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.53891915202257
+    },
+    {
+      "checkpoint": 343,
+      "objective": 0.3865606936416185,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.58501039200928
+    },
+    {
+      "checkpoint": 344,
+      "objective": 0.3880057803468208,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.64456319299643
+    },
+    {
+      "checkpoint": 345,
+      "objective": 0.38764450867052025,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.722833669016836
+    },
+    {
+      "checkpoint": 346,
+      "objective": 0.3880057803468208,
+      "improved": false,
+      "best_checkpoint": 328,
+      "seconds": 35.91674711302039
+    },
+    {
+      "checkpoint": 347,
+      "objective": 0.3883670520231214,
+      "improved": true,
+      "best_checkpoint": 347,
+      "seconds": 35.96160197802237
+    },
+    {
+      "checkpoint": 348,
+      "objective": 0.3901734104046243,
+      "improved": true,
+      "best_checkpoint": 348,
+      "seconds": 36.01287277499796
+    },
+    {
+      "checkpoint": 349,
+      "objective": 0.3901734104046243,
+      "improved": false,
+      "best_checkpoint": 348,
+      "seconds": 36.05317510702298
+    },
+    {
+      "checkpoint": 350,
+      "objective": 0.3898121387283237,
+      "improved": false,
+      "best_checkpoint": 348,
+      "seconds": 36.23921449901536
+    },
+    {
+      "checkpoint": 351,
+      "objective": 0.3901734104046243,
+      "improved": false,
+      "best_checkpoint": 348,
+      "seconds": 36.483726049016695
+    },
+    {
+      "checkpoint": 352,
+      "objective": 0.39053468208092484,
+      "improved": true,
+      "best_checkpoint": 352,
+      "seconds": 36.549282817024505
+    },
+    {
+      "checkpoint": 353,
+      "objective": 0.39053468208092484,
+      "improved": false,
+      "best_checkpoint": 352,
+      "seconds": 36.62961348402314
+    },
+    {
+      "checkpoint": 354,
+      "objective": 0.39125722543352603,
+      "improved": true,
+      "best_checkpoint": 354,
+      "seconds": 36.67043134701089
+    },
+    {
+      "checkpoint": 355,
+      "objective": 0.3916184971098266,
+      "improved": true,
+      "best_checkpoint": 355,
+      "seconds": 36.82589135001763
+    },
+    {
+      "checkpoint": 356,
+      "objective": 0.39125722543352603,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 36.87242518400308
+    },
+    {
+      "checkpoint": 357,
+      "objective": 0.39125722543352603,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 37.02188677401864
+    },
+    {
+      "checkpoint": 358,
+      "objective": 0.39125722543352603,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 37.16360255802283
+    },
+    {
+      "checkpoint": 359,
+      "objective": 0.3916184971098266,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 37.242950455023674
+    },
+    {
+      "checkpoint": 360,
+      "objective": 0.3908959537572254,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 37.44395773601718
+    },
+    {
+      "checkpoint": 361,
+      "objective": 0.39125722543352603,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 37.48685322800884
+    },
+    {
+      "checkpoint": 362,
+      "objective": 0.3908959537572254,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 37.53463160901447
+    },
+    {
+      "checkpoint": 363,
+      "objective": 0.39053468208092484,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 37.662342115014326
+    },
+    {
+      "checkpoint": 364,
+      "objective": 0.39053468208092484,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 37.78731714299647
+    },
+    {
+      "checkpoint": 365,
+      "objective": 0.39053468208092484,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 38.15150511500542
+    },
+    {
+      "checkpoint": 366,
+      "objective": 0.3901734104046243,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 38.42516524801613
+    },
+    {
+      "checkpoint": 367,
+      "objective": 0.39053468208092484,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 38.47222065599635
+    },
+    {
+      "checkpoint": 368,
+      "objective": 0.3908959537572254,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 38.65696740700514
+    },
+    {
+      "checkpoint": 369,
+      "objective": 0.39125722543352603,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 38.75605368401739
+    },
+    {
+      "checkpoint": 370,
+      "objective": 0.39125722543352603,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 38.86977516399929
+    },
+    {
+      "checkpoint": 371,
+      "objective": 0.39125722543352603,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 38.90637473302195
+    },
+    {
+      "checkpoint": 372,
+      "objective": 0.3908959537572254,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 38.965396206011064
+    },
+    {
+      "checkpoint": 373,
+      "objective": 0.3908959537572254,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 39.01431698500528
+    },
+    {
+      "checkpoint": 374,
+      "objective": 0.39125722543352603,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 39.06423230501241
+    },
+    {
+      "checkpoint": 375,
+      "objective": 0.3916184971098266,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 39.11077079700772
+    },
+    {
+      "checkpoint": 376,
+      "objective": 0.3916184971098266,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 39.17815423200955
+    },
+    {
+      "checkpoint": 377,
+      "objective": 0.3916184971098266,
+      "improved": false,
+      "best_checkpoint": 355,
+      "seconds": 39.21730597500573
+    },
+    {
+      "checkpoint": 378,
+      "objective": 0.3927023121387283,
+      "improved": true,
+      "best_checkpoint": 378,
+      "seconds": 39.32520633700187
+    },
+    {
+      "checkpoint": 379,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 39.39005543899839
+    },
+    {
+      "checkpoint": 380,
+      "objective": 0.39197976878612717,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 39.501007544022286
+    },
+    {
+      "checkpoint": 381,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 39.64545824402012
+    },
+    {
+      "checkpoint": 382,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 39.72187607001979
+    },
+    {
+      "checkpoint": 383,
+      "objective": 0.39197976878612717,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 39.917153824004345
+    },
+    {
+      "checkpoint": 384,
+      "objective": 0.39197976878612717,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 39.986623258999316
+    },
+    {
+      "checkpoint": 385,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 40.08114284402109
+    },
+    {
+      "checkpoint": 386,
+      "objective": 0.39197976878612717,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 40.124409233016195
+    },
+    {
+      "checkpoint": 387,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 40.23818903800566
+    },
+    {
+      "checkpoint": 388,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 40.32484489300987
+    },
+    {
+      "checkpoint": 389,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 40.372955250000814
+    },
+    {
+      "checkpoint": 390,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 40.4173205330153
+    },
+    {
+      "checkpoint": 391,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 378,
+      "seconds": 40.46003760502208
+    },
+    {
+      "checkpoint": 392,
+      "objective": 0.3930635838150289,
+      "improved": true,
+      "best_checkpoint": 392,
+      "seconds": 40.51462481499766
+    },
+    {
+      "checkpoint": 393,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 392,
+      "seconds": 40.56154265801888
+    },
+    {
+      "checkpoint": 394,
+      "objective": 0.3934248554913295,
+      "improved": true,
+      "best_checkpoint": 394,
+      "seconds": 40.618286003998946
+    },
+    {
+      "checkpoint": 395,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 40.66483037400758
+    },
+    {
+      "checkpoint": 396,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 40.707511372020235
+    },
+    {
+      "checkpoint": 397,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 40.75634601499769
+    },
+    {
+      "checkpoint": 398,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 40.82701985500171
+    },
+    {
+      "checkpoint": 399,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 40.86459825001657
+    },
+    {
+      "checkpoint": 400,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 40.92133711001952
+    },
+    {
+      "checkpoint": 401,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 40.969126595009584
+    },
+    {
+      "checkpoint": 402,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.021026080998126
+    },
+    {
+      "checkpoint": 403,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.067774763010675
+    },
+    {
+      "checkpoint": 404,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.1165886480012
+    },
+    {
+      "checkpoint": 405,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.16844766802387
+    },
+    {
+      "checkpoint": 406,
+      "objective": 0.39197976878612717,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.21513966601924
+    },
+    {
+      "checkpoint": 407,
+      "objective": 0.39234104046242774,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.25596875100746
+    },
+    {
+      "checkpoint": 408,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.33655691501917
+    },
+    {
+      "checkpoint": 409,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.3927489000198
+    },
+    {
+      "checkpoint": 410,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.45592070001294
+    },
+    {
+      "checkpoint": 411,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.493605062016286
+    },
+    {
+      "checkpoint": 412,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.552918952016626
+    },
+    {
+      "checkpoint": 413,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.59288461902179
+    },
+    {
+      "checkpoint": 414,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.644684757018695
+    },
+    {
+      "checkpoint": 415,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.69103747201734
+    },
+    {
+      "checkpoint": 416,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.73189228301635
+    },
+    {
+      "checkpoint": 417,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.78362390899565
+    },
+    {
+      "checkpoint": 418,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.832151606999105
+    },
+    {
+      "checkpoint": 419,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 394,
+      "seconds": 41.87588640101603
+    },
+    {
+      "checkpoint": 420,
+      "objective": 0.39378612716763006,
+      "improved": true,
+      "best_checkpoint": 420,
+      "seconds": 41.92818849100149
+    },
+    {
+      "checkpoint": 421,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 41.979755306005245
+    },
+    {
+      "checkpoint": 422,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.04478959500557
+    },
+    {
+      "checkpoint": 423,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.105560237017926
+    },
+    {
+      "checkpoint": 424,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.177802335005254
+    },
+    {
+      "checkpoint": 425,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.22485831100494
+    },
+    {
+      "checkpoint": 426,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.28083242001594
+    },
+    {
+      "checkpoint": 427,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.33788440201897
+    },
+    {
+      "checkpoint": 428,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.42652661501779
+    },
+    {
+      "checkpoint": 429,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.47114949801471
+    },
+    {
+      "checkpoint": 430,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.508790246007266
+    },
+    {
+      "checkpoint": 431,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.5681419710163
+    },
+    {
+      "checkpoint": 432,
+      "objective": 0.39378612716763006,
+      "improved": false,
+      "best_checkpoint": 420,
+      "seconds": 42.641817192023154
+    },
+    {
+      "checkpoint": 433,
+      "objective": 0.39414739884393063,
+      "improved": true,
+      "best_checkpoint": 433,
+      "seconds": 42.69471918200725
+    },
+    {
+      "checkpoint": 434,
+      "objective": 0.39378612716763006,
+      "improved": false,
+      "best_checkpoint": 433,
+      "seconds": 42.7414865650062
+    },
+    {
+      "checkpoint": 435,
+      "objective": 0.3945086705202312,
+      "improved": true,
+      "best_checkpoint": 435,
+      "seconds": 42.78772827601642
+    },
+    {
+      "checkpoint": 436,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 42.839359702018555
+    },
+    {
+      "checkpoint": 437,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 42.886585073021706
+    },
+    {
+      "checkpoint": 438,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 42.92705305799609
+    },
+    {
+      "checkpoint": 439,
+      "objective": 0.39378612716763006,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 42.980629713012604
+    },
+    {
+      "checkpoint": 440,
+      "objective": 0.39378612716763006,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.04285698401509
+    },
+    {
+      "checkpoint": 441,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.116779022006085
+    },
+    {
+      "checkpoint": 442,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.15800065701478
+    },
+    {
+      "checkpoint": 443,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.20862022001529
+    },
+    {
+      "checkpoint": 444,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.26160378102213
+    },
+    {
+      "checkpoint": 445,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.3141482740175
+    },
+    {
+      "checkpoint": 446,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.36372448201291
+    },
+    {
+      "checkpoint": 447,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.407252394012176
+    },
+    {
+      "checkpoint": 448,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.467262527003186
+    },
+    {
+      "checkpoint": 449,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.51753669101163
+    },
+    {
+      "checkpoint": 450,
+      "objective": 0.39378612716763006,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.5727876330202
+    },
+    {
+      "checkpoint": 451,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.61196779602324
+    },
+    {
+      "checkpoint": 452,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.65740184701281
+    },
+    {
+      "checkpoint": 453,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.705333090998465
+    },
+    {
+      "checkpoint": 454,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.741134078998584
+    },
+    {
+      "checkpoint": 455,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.79417655800353
+    },
+    {
+      "checkpoint": 456,
+      "objective": 0.3927023121387283,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.84606072201859
+    },
+    {
+      "checkpoint": 457,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.89013184900978
+    },
+    {
+      "checkpoint": 458,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.945055964024505
+    },
+    {
+      "checkpoint": 459,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 43.99151403500582
+    },
+    {
+      "checkpoint": 460,
+      "objective": 0.3934248554913295,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.03413797801477
+    },
+    {
+      "checkpoint": 461,
+      "objective": 0.3945086705202312,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.11954533701646
+    },
+    {
+      "checkpoint": 462,
+      "objective": 0.3945086705202312,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.160746359004406
+    },
+    {
+      "checkpoint": 463,
+      "objective": 0.3945086705202312,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.21084285300458
+    },
+    {
+      "checkpoint": 464,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.286411486013094
+    },
+    {
+      "checkpoint": 465,
+      "objective": 0.3945086705202312,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.333181615016656
+    },
+    {
+      "checkpoint": 466,
+      "objective": 0.3945086705202312,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.37604701099917
+    },
+    {
+      "checkpoint": 467,
+      "objective": 0.3945086705202312,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.415571504010586
+    },
+    {
+      "checkpoint": 468,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.46570223700837
+    },
+    {
+      "checkpoint": 469,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.51300911800354
+    },
+    {
+      "checkpoint": 470,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.60884463399998
+    },
+    {
+      "checkpoint": 471,
+      "objective": 0.3945086705202312,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.66546340700006
+    },
+    {
+      "checkpoint": 472,
+      "objective": 0.3945086705202312,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.706138567999005
+    },
+    {
+      "checkpoint": 473,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.744507355004316
+    },
+    {
+      "checkpoint": 474,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.80044170402107
+    },
+    {
+      "checkpoint": 475,
+      "objective": 0.3930635838150289,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 44.845247174002
+    },
+    {
+      "checkpoint": 476,
+      "objective": 0.39378612716763006,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 45.01194340700749
+    },
+    {
+      "checkpoint": 477,
+      "objective": 0.39378612716763006,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 45.05765122800949
+    },
+    {
+      "checkpoint": 478,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 45.09350260702195
+    },
+    {
+      "checkpoint": 479,
+      "objective": 0.39414739884393063,
+      "improved": false,
+      "best_checkpoint": 435,
+      "seconds": 45.14551743800985
+    },
+    {
+      "checkpoint": 480,
+      "objective": 0.39486994219653176,
+      "improved": true,
+      "best_checkpoint": 480,
+      "seconds": 45.18526596602169
+    },
+    {
+      "checkpoint": 481,
+      "objective": 0.3952312138728324,
+      "improved": true,
+      "best_checkpoint": 481,
+      "seconds": 45.226889308018144
+    },
+    {
+      "checkpoint": 482,
+      "objective": 0.39559248554913296,
+      "improved": true,
+      "best_checkpoint": 482,
+      "seconds": 45.2762212039961
+    },
+    {
+      "checkpoint": 483,
+      "objective": 0.39559248554913296,
+      "improved": false,
+      "best_checkpoint": 482,
+      "seconds": 45.32924221100984
+    },
+    {
+      "checkpoint": 484,
+      "objective": 0.39559248554913296,
+      "improved": false,
+      "best_checkpoint": 482,
+      "seconds": 45.428425518010044
+    },
+    {
+      "checkpoint": 485,
+      "objective": 0.3959537572254335,
+      "improved": true,
+      "best_checkpoint": 485,
+      "seconds": 45.479210791003425
+    },
+    {
+      "checkpoint": 486,
+      "objective": 0.3963150289017341,
+      "improved": true,
+      "best_checkpoint": 486,
+      "seconds": 45.546875752013875
+    },
+    {
+      "checkpoint": 487,
+      "objective": 0.39559248554913296,
+      "improved": false,
+      "best_checkpoint": 486,
+      "seconds": 45.59211239000433
+    },
+    {
+      "checkpoint": 488,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 486,
+      "seconds": 45.643481437000446
+    },
+    {
+      "checkpoint": 489,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 486,
+      "seconds": 45.67923716001678
+    },
+    {
+      "checkpoint": 490,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 486,
+      "seconds": 45.71820288701565
+    },
+    {
+      "checkpoint": 491,
+      "objective": 0.3970375722543353,
+      "improved": true,
+      "best_checkpoint": 491,
+      "seconds": 45.807061188010266
+    },
+    {
+      "checkpoint": 492,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 45.86588919500355
+    },
+    {
+      "checkpoint": 493,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 45.91267648601206
+    },
+    {
+      "checkpoint": 494,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 45.95347050201963
+    },
+    {
+      "checkpoint": 495,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.003313185996376
+    },
+    {
+      "checkpoint": 496,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.0428715160233
+    },
+    {
+      "checkpoint": 497,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.17808153500664
+    },
+    {
+      "checkpoint": 498,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.27444028100581
+    },
+    {
+      "checkpoint": 499,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.317785665014526
+    },
+    {
+      "checkpoint": 500,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.40772032600944
+    },
+    {
+      "checkpoint": 501,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.499382553010946
+    },
+    {
+      "checkpoint": 502,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.63418190801167
+    },
+    {
+      "checkpoint": 503,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.794185803999426
+    },
+    {
+      "checkpoint": 504,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.83166954800254
+    },
+    {
+      "checkpoint": 505,
+      "objective": 0.39559248554913296,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.87612810000428
+    },
+    {
+      "checkpoint": 506,
+      "objective": 0.39559248554913296,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 46.996987207006896
+    },
+    {
+      "checkpoint": 507,
+      "objective": 0.39559248554913296,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.03864615102066
+    },
+    {
+      "checkpoint": 508,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.09093682499952
+    },
+    {
+      "checkpoint": 509,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.13106899600825
+    },
+    {
+      "checkpoint": 510,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.171176845004084
+    },
+    {
+      "checkpoint": 511,
+      "objective": 0.39559248554913296,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.260571390012046
+    },
+    {
+      "checkpoint": 512,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.35185808502138
+    },
+    {
+      "checkpoint": 513,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.39077837302466
+    },
+    {
+      "checkpoint": 514,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.43016167799942
+    },
+    {
+      "checkpoint": 515,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.465627947996836
+    },
+    {
+      "checkpoint": 516,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.510916753002675
+    },
+    {
+      "checkpoint": 517,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 491,
+      "seconds": 47.55586158699589
+    },
+    {
+      "checkpoint": 518,
+      "objective": 0.39739884393063585,
+      "improved": true,
+      "best_checkpoint": 518,
+      "seconds": 47.64393899199786
+    },
+    {
+      "checkpoint": 519,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 47.72159905699664
+    },
+    {
+      "checkpoint": 520,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 47.77284609901835
+    },
+    {
+      "checkpoint": 521,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 47.82670278000296
+    },
+    {
+      "checkpoint": 522,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 47.88011578499572
+    },
+    {
+      "checkpoint": 523,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 47.94464353600051
+    },
+    {
+      "checkpoint": 524,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 47.99531441400177
+    },
+    {
+      "checkpoint": 525,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 48.037460993014975
+    },
+    {
+      "checkpoint": 526,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 48.087076349009294
+    },
+    {
+      "checkpoint": 527,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 48.13521192202461
+    },
+    {
+      "checkpoint": 528,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 48.19598753700848
+    },
+    {
+      "checkpoint": 529,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 518,
+      "seconds": 48.272145031020045
+    },
+    {
+      "checkpoint": 530,
+      "objective": 0.3977601156069364,
+      "improved": true,
+      "best_checkpoint": 530,
+      "seconds": 48.33772242302075
+    },
+    {
+      "checkpoint": 531,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.38030536501901
+    },
+    {
+      "checkpoint": 532,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.43160956402426
+    },
+    {
+      "checkpoint": 533,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.471800202009035
+    },
+    {
+      "checkpoint": 534,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.513768903008895
+    },
+    {
+      "checkpoint": 535,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.553526239003986
+    },
+    {
+      "checkpoint": 536,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.5982015900081
+    },
+    {
+      "checkpoint": 537,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.64060014000279
+    },
+    {
+      "checkpoint": 538,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.68467352099833
+    },
+    {
+      "checkpoint": 539,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.72502247101511
+    },
+    {
+      "checkpoint": 540,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.78285089600831
+    },
+    {
+      "checkpoint": 541,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.83842271802132
+    },
+    {
+      "checkpoint": 542,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.889736239012564
+    },
+    {
+      "checkpoint": 543,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.931394181010546
+    },
+    {
+      "checkpoint": 544,
+      "objective": 0.3959537572254335,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 48.97397351000109
+    },
+    {
+      "checkpoint": 545,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.03377944501699
+    },
+    {
+      "checkpoint": 546,
+      "objective": 0.3963150289017341,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.08496927600936
+    },
+    {
+      "checkpoint": 547,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.12404428800801
+    },
+    {
+      "checkpoint": 548,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.17547585701686
+    },
+    {
+      "checkpoint": 549,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.26289160200395
+    },
+    {
+      "checkpoint": 550,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.32035751899821
+    },
+    {
+      "checkpoint": 551,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.37496940299752
+    },
+    {
+      "checkpoint": 552,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.417933759017615
+    },
+    {
+      "checkpoint": 553,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.45728499101824
+    },
+    {
+      "checkpoint": 554,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.50189208300435
+    },
+    {
+      "checkpoint": 555,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.5450964080228
+    },
+    {
+      "checkpoint": 556,
+      "objective": 0.39667630057803466,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.59304854902439
+    },
+    {
+      "checkpoint": 557,
+      "objective": 0.3970375722543353,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.636073332017986
+    },
+    {
+      "checkpoint": 558,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.69042566901771
+    },
+    {
+      "checkpoint": 559,
+      "objective": 0.3977601156069364,
+      "improved": false,
+      "best_checkpoint": 530,
+      "seconds": 49.73541191100958
+    },
+    {
+      "checkpoint": 560,
+      "objective": 0.3988439306358382,
+      "improved": true,
+      "best_checkpoint": 560,
+      "seconds": 49.776432088023284
+    },
+    {
+      "checkpoint": 561,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 49.8187760800065
+    },
+    {
+      "checkpoint": 562,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 49.86550549801905
+    },
+    {
+      "checkpoint": 563,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 49.91362844000105
+    },
+    {
+      "checkpoint": 564,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.052043225005036
+    },
+    {
+      "checkpoint": 565,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.09825515199918
+    },
+    {
+      "checkpoint": 566,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.1448047440208
+    },
+    {
+      "checkpoint": 567,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.21009378801682
+    },
+    {
+      "checkpoint": 568,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.28529270901345
+    },
+    {
+      "checkpoint": 569,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.33827097801259
+    },
+    {
+      "checkpoint": 570,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.40106309900875
+    },
+    {
+      "checkpoint": 571,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.44207188099972
+    },
+    {
+      "checkpoint": 572,
+      "objective": 0.39739884393063585,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.48820679800701
+    },
+    {
+      "checkpoint": 573,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.528578782017576
+    },
+    {
+      "checkpoint": 574,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.5883510360145
+    },
+    {
+      "checkpoint": 575,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.64093802601565
+    },
+    {
+      "checkpoint": 576,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.677135428995825
+    },
+    {
+      "checkpoint": 577,
+      "objective": 0.3977601156069364,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.73838174701086
+    },
+    {
+      "checkpoint": 578,
+      "objective": 0.3977601156069364,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.774452536017634
+    },
+    {
+      "checkpoint": 579,
+      "objective": 0.3977601156069364,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.81713069000398
+    },
+    {
+      "checkpoint": 580,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.860009366006125
+    },
+    {
+      "checkpoint": 581,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.91088851200766
+    },
+    {
+      "checkpoint": 582,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 50.956615842005704
+    },
+    {
+      "checkpoint": 583,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 51.00034019400482
+    },
+    {
+      "checkpoint": 584,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 51.038280398002826
+    },
+    {
+      "checkpoint": 585,
+      "objective": 0.3977601156069364,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 51.09986108800513
+    },
+    {
+      "checkpoint": 586,
+      "objective": 0.3977601156069364,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 51.14246219600318
+    },
+    {
+      "checkpoint": 587,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 51.19175148900831
+    },
+    {
+      "checkpoint": 588,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 51.30800798902055
+    },
+    {
+      "checkpoint": 589,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 51.46413061901694
+    },
+    {
+      "checkpoint": 590,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 560,
+      "seconds": 51.528619742020965
+    },
+    {
+      "checkpoint": 591,
+      "objective": 0.39920520231213874,
+      "improved": true,
+      "best_checkpoint": 591,
+      "seconds": 51.61577388399746
+    },
+    {
+      "checkpoint": 592,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 591,
+      "seconds": 51.678500561014516
+    },
+    {
+      "checkpoint": 593,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 591,
+      "seconds": 51.74501358400448
+    },
+    {
+      "checkpoint": 594,
+      "objective": 0.3995664739884393,
+      "improved": true,
+      "best_checkpoint": 594,
+      "seconds": 52.01400487302453
+    },
+    {
+      "checkpoint": 595,
+      "objective": 0.3995664739884393,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.248823757021455
+    },
+    {
+      "checkpoint": 596,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.48764012599713
+    },
+    {
+      "checkpoint": 597,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.64462982700206
+    },
+    {
+      "checkpoint": 598,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.68216687699896
+    },
+    {
+      "checkpoint": 599,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.723742934002075
+    },
+    {
+      "checkpoint": 600,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.78993962801178
+    },
+    {
+      "checkpoint": 601,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.839514127001166
+    },
+    {
+      "checkpoint": 602,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.88153404701734
+    },
+    {
+      "checkpoint": 603,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.92334485301399
+    },
+    {
+      "checkpoint": 604,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 52.96322596500977
+    },
+    {
+      "checkpoint": 605,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.04139400101849
+    },
+    {
+      "checkpoint": 606,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.08532488302444
+    },
+    {
+      "checkpoint": 607,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.13278609601548
+    },
+    {
+      "checkpoint": 608,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.19997424201574
+    },
+    {
+      "checkpoint": 609,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.24631146201864
+    },
+    {
+      "checkpoint": 610,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.3070513010025
+    },
+    {
+      "checkpoint": 611,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.35021689502173
+    },
+    {
+      "checkpoint": 612,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.39910236001015
+    },
+    {
+      "checkpoint": 613,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.43788314901758
+    },
+    {
+      "checkpoint": 614,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.50092079400201
+    },
+    {
+      "checkpoint": 615,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.54482239802019
+    },
+    {
+      "checkpoint": 616,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.5998457740061
+    },
+    {
+      "checkpoint": 617,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.648948976013344
+    },
+    {
+      "checkpoint": 618,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.69409668899607
+    },
+    {
+      "checkpoint": 619,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.74600135002402
+    },
+    {
+      "checkpoint": 620,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.79329706900171
+    },
+    {
+      "checkpoint": 621,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.86617903702427
+    },
+    {
+      "checkpoint": 622,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.93089512499864
+    },
+    {
+      "checkpoint": 623,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 53.97353275201749
+    },
+    {
+      "checkpoint": 624,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.02631762702367
+    },
+    {
+      "checkpoint": 625,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.08581298601348
+    },
+    {
+      "checkpoint": 626,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.12291497801198
+    },
+    {
+      "checkpoint": 627,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.17864813801134
+    },
+    {
+      "checkpoint": 628,
+      "objective": 0.398121387283237,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.23798215700663
+    },
+    {
+      "checkpoint": 629,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.30244338500779
+    },
+    {
+      "checkpoint": 630,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.3502065220091
+    },
+    {
+      "checkpoint": 631,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.39715465801419
+    },
+    {
+      "checkpoint": 632,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.49303578300169
+    },
+    {
+      "checkpoint": 633,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.542222778021824
+    },
+    {
+      "checkpoint": 634,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.58216300001368
+    },
+    {
+      "checkpoint": 635,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.6221981170238
+    },
+    {
+      "checkpoint": 636,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.67077550300746
+    },
+    {
+      "checkpoint": 637,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.719029731000774
+    },
+    {
+      "checkpoint": 638,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.76776896399679
+    },
+    {
+      "checkpoint": 639,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.885764510021545
+    },
+    {
+      "checkpoint": 640,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.93102283202461
+    },
+    {
+      "checkpoint": 641,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 54.97417584102368
+    },
+    {
+      "checkpoint": 642,
+      "objective": 0.39848265895953755,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 55.04867435002234
+    },
+    {
+      "checkpoint": 643,
+      "objective": 0.39920520231213874,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 55.17321271201945
+    },
+    {
+      "checkpoint": 644,
+      "objective": 0.3988439306358382,
+      "improved": false,
+      "best_checkpoint": 594,
+      "seconds": 55.2135157790035
+    }
+  ],
+  "fit": {
+    "path": "records/fit-LGB-b-trial1.json",
+    "sha256": "094268a2f78160e20cee5d04ba713ec81e6c38e15119879b55afd341cc0d3870"
+  },
+  "checkpoint": {
+    "path": "records/checkpoint-LGB-b-trial1.json",
+    "sha256": "ca3982746a6090d82eb8f55f0899711377a78da35c07425fa8023b3866a65935"
+  },
+  "status": "completed",
+  "error": null
+}

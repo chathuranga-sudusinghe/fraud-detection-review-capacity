@@ -1,0 +1,125 @@
+{
+  "record": "trial",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-25T134341Z",
+    "run_type": "development",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "RES-u",
+  "trial": 3,
+  "candidate_list": {
+    "path": "candidates/resnet.json",
+    "sha256": "36fc54fab4899fa2266ccb07227168291b3876d2f0fade90c1031285d07330a7"
+  },
+  "hyperparameters": {
+    "n_layers": 3,
+    "d": 106,
+    "d_hidden_factor": 3.683930287822232,
+    "hidden_dropout": 0.14484206202702843,
+    "residual_dropout": 0.061376951616281816,
+    "d_embedding": 302,
+    "lr": 0.0028772798749728107,
+    "weight_decay": 1.77418272366918e-05
+  },
+  "seed": 42,
+  "device": "gpu",
+  "unit": "epoch",
+  "objective_k": 62,
+  "patience": 5,
+  "maximum": 15,
+  "best_checkpoint": 3,
+  "best_objective": 0.36127167630057805,
+  "stopped_at": 9,
+  "stopping_reason": "early_stopping",
+  "runtime_seconds": 56.71444895600143,
+  "checkpoints": [
+    {
+      "checkpoint": 1,
+      "objective": 0.3511560693641618,
+      "improved": true,
+      "best_checkpoint": 1,
+      "seconds": 6.629757108996273
+    },
+    {
+      "checkpoint": 2,
+      "objective": 0.3540462427745665,
+      "improved": true,
+      "best_checkpoint": 2,
+      "seconds": 13.01819377799984
+    },
+    {
+      "checkpoint": 3,
+      "objective": 0.36127167630057805,
+      "improved": true,
+      "best_checkpoint": 3,
+      "seconds": 18.9420664079953
+    },
+    {
+      "checkpoint": 4,
+      "objective": 0.3486271676300578,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 24.90542672299489
+    },
+    {
+      "checkpoint": 5,
+      "objective": 0.35440751445086704,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 32.00916565999796
+    },
+    {
+      "checkpoint": 6,
+      "objective": 0.3522398843930636,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 38.10850453099556
+    },
+    {
+      "checkpoint": 7,
+      "objective": 0.3442919075144509,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 44.41945661800128
+    },
+    {
+      "checkpoint": 8,
+      "objective": 0.3609104046242775,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 50.42998320799961
+    },
+    {
+      "checkpoint": 9,
+      "objective": 0.35260115606936415,
+      "improved": false,
+      "best_checkpoint": 3,
+      "seconds": 56.46875652599556
+    }
+  ],
+  "fit": {
+    "path": "records/fit-RES-u-trial3.json",
+    "sha256": "b004174945be72f4acb8ff5a47a9233668398a0644ccc8b31d4f35483a3f8f45"
+  },
+  "checkpoint": {
+    "path": "records/checkpoint-RES-u-trial3.json",
+    "sha256": "002a325968d95084bec343e71a5468b0918ca3ddd530cb724e4d3b49c732f253"
+  },
+  "status": "completed",
+  "error": null
+}

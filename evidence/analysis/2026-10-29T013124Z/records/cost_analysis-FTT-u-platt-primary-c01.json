@@ -1,0 +1,5815 @@
+{
+  "record": "cost_analysis",
+  "schema_version": 2,
+  "identity": {
+    "run_id": "2026-10-29T013124Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "FTT-u",
+  "calibrator": "platt",
+  "period": "primary",
+  "capacity": 0.01,
+  "k": 28,
+  "days": {
+    "first": 127,
+    "last": 154
+  },
+  "score": {
+    "path": "source/records/score-FTT-u-selected-V2.json",
+    "sha256": "ae97811465ca59a489fb9fab5b294757ee29a15bf810b2bf731951326df83ab8"
+  },
+  "calibration": {
+    "path": "records/calibration-FTT-u-platt-primary.json",
+    "sha256": "c5dd3dcb2a6eff83623c79d99db2c384753e593608cd15ed3a4f0b245d2fd586"
+  },
+  "queue": {
+    "reviews": 784,
+    "frauds": 2637,
+    "captured": 572
+  },
+  "saturation": {
+    "ratio": 4.240976892870247,
+    "infinite": false
+  },
+  "break_even": {
+    "classification": "coincidence",
+    "ratio": 4.240976892870247,
+    "single_interval": false,
+    "intervals": [
+      {
+        "start": 1.0,
+        "end": 2.4586886906135392,
+        "end_closed": false
+      },
+      {
+        "start": 2.729296359879324,
+        "end": 2.8162780898671933,
+        "end_closed": false
+      },
+      {
+        "start": 2.826362914830203,
+        "end": 2.8461538461538463,
+        "end_closed": false
+      },
+      {
+        "start": 2.8511093376406222,
+        "end": 2.9166666666666665,
+        "end_closed": false
+      },
+      {
+        "start": 2.9540274543956513,
+        "end": 2.960375759687105,
+        "end_closed": false
+      },
+      {
+        "start": 2.9690078114152394,
+        "end": 4.240976892870247,
+        "end_closed": false
+      }
+    ],
+    "zero_crossings": [
+      2.8461538461538463,
+      2.9166666666666665
+    ]
+  },
+  "curve": [
+    {
+      "start": 1.0,
+      "end": 1.0938344970901457,
+      "end_closed": false,
+      "unused": 784,
+      "frauds_forgone": 572
+    },
+    {
+      "start": 1.0938344970901457,
+      "end": 1.0947309318782594,
+      "end_closed": false,
+      "unused": 783,
+      "frauds_forgone": 571
+    },
+    {
+      "start": 1.0947309318782594,
+      "end": 1.0953584658296713,
+      "end_closed": false,
+      "unused": 782,
+      "frauds_forgone": 570
+    },
+    {
+      "start": 1.0953584658296713,
+      "end": 1.0959131442694714,
+      "end_closed": false,
+      "unused": 781,
+      "frauds_forgone": 569
+    },
+    {
+      "start": 1.0959131442694714,
+      "end": 1.0961422935920044,
+      "end_closed": false,
+      "unused": 780,
+      "frauds_forgone": 568
+    },
+    {
+      "start": 1.0961422935920044,
+      "end": 1.096210826550302,
+      "end_closed": false,
+      "unused": 779,
+      "frauds_forgone": 567
+    },
+    {
+      "start": 1.096210826550302,
+      "end": 1.096759250059689,
+      "end_closed": false,
+      "unused": 778,
+      "frauds_forgone": 567
+    },
+    {
+      "start": 1.096759250059689,
+      "end": 1.0970378456807515,
+      "end_closed": false,
+      "unused": 777,
+      "frauds_forgone": 566
+    },
+    {
+      "start": 1.0970378456807515,
+      "end": 1.0970600939456876,
+      "end_closed": false,
+      "unused": 776,
+      "frauds_forgone": 565
+    },
+    {
+      "start": 1.0970600939456876,
+      "end": 1.097296766511257,
+      "end_closed": false,
+      "unused": 775,
+      "frauds_forgone": 564
+    },
+    {
+      "start": 1.097296766511257,
+      "end": 1.0973914993379799,
+      "end_closed": false,
+      "unused": 774,
+      "frauds_forgone": 563
+    },
+    {
+      "start": 1.0973914993379799,
+      "end": 1.0974086978580866,
+      "end_closed": false,
+      "unused": 773,
+      "frauds_forgone": 563
+    },
+    {
+      "start": 1.0974086978580866,
+      "end": 1.0974642473385086,
+      "end_closed": false,
+      "unused": 772,
+      "frauds_forgone": 562
+    },
+    {
+      "start": 1.0974642473385086,
+      "end": 1.0975066700414333,
+      "end_closed": false,
+      "unused": 771,
+      "frauds_forgone": 561
+    },
+    {
+      "start": 1.0975066700414333,
+      "end": 1.0975567207715893,
+      "end_closed": false,
+      "unused": 770,
+      "frauds_forgone": 560
+    },
+    {
+      "start": 1.0975567207715893,
+      "end": 1.0976073602705765,
+      "end_closed": false,
+      "unused": 769,
+      "frauds_forgone": 559
+    },
+    {
+      "start": 1.0976073602705765,
+      "end": 1.0981471017829165,
+      "end_closed": false,
+      "unused": 768,
+      "frauds_forgone": 558
+    },
+    {
+      "start": 1.0981471017829165,
+      "end": 1.0985643100471114,
+      "end_closed": false,
+      "unused": 767,
+      "frauds_forgone": 557
+    },
+    {
+      "start": 1.0985643100471114,
+      "end": 1.0986057276302514,
+      "end_closed": false,
+      "unused": 766,
+      "frauds_forgone": 556
+    },
+    {
+      "start": 1.0986057276302514,
+      "end": 1.098778608059543,
+      "end_closed": false,
+      "unused": 765,
+      "frauds_forgone": 555
+    },
+    {
+      "start": 1.098778608059543,
+      "end": 1.0987843809130544,
+      "end_closed": false,
+      "unused": 764,
+      "frauds_forgone": 554
+    },
+    {
+      "start": 1.0987843809130544,
+      "end": 1.0994086921034945,
+      "end_closed": false,
+      "unused": 763,
+      "frauds_forgone": 553
+    },
+    {
+      "start": 1.0994086921034945,
+      "end": 1.0994603178655846,
+      "end_closed": false,
+      "unused": 762,
+      "frauds_forgone": 552
+    },
+    {
+      "start": 1.0994603178655846,
+      "end": 1.0995307416864384,
+      "end_closed": false,
+      "unused": 761,
+      "frauds_forgone": 551
+    },
+    {
+      "start": 1.0995307416864384,
+      "end": 1.0997590753988218,
+      "end_closed": false,
+      "unused": 760,
+      "frauds_forgone": 550
+    },
+    {
+      "start": 1.0997590753988218,
+      "end": 1.0999651890548634,
+      "end_closed": false,
+      "unused": 759,
+      "frauds_forgone": 549
+    },
+    {
+      "start": 1.0999651890548634,
+      "end": 1.1000908590760954,
+      "end_closed": false,
+      "unused": 758,
+      "frauds_forgone": 548
+    },
+    {
+      "start": 1.1000908590760954,
+      "end": 1.100119532644548,
+      "end_closed": false,
+      "unused": 757,
+      "frauds_forgone": 547
+    },
+    {
+      "start": 1.100119532644548,
+      "end": 1.1002535686248218,
+      "end_closed": false,
+      "unused": 756,
+      "frauds_forgone": 546
+    },
+    {
+      "start": 1.1002535686248218,
+      "end": 1.1002676761969963,
+      "end_closed": false,
+      "unused": 755,
+      "frauds_forgone": 545
+    },
+    {
+      "start": 1.1002676761969963,
+      "end": 1.1005424774970984,
+      "end_closed": false,
+      "unused": 754,
+      "frauds_forgone": 544
+    },
+    {
+      "start": 1.1005424774970984,
+      "end": 1.1007663585658958,
+      "end_closed": false,
+      "unused": 753,
+      "frauds_forgone": 543
+    },
+    {
+      "start": 1.1007663585658958,
+      "end": 1.1009759210111276,
+      "end_closed": false,
+      "unused": 752,
+      "frauds_forgone": 542
+    },
+    {
+      "start": 1.1009759210111276,
+      "end": 1.101028462038832,
+      "end_closed": false,
+      "unused": 751,
+      "frauds_forgone": 541
+    },
+    {
+      "start": 1.101028462038832,
+      "end": 1.101082019175637,
+      "end_closed": false,
+      "unused": 750,
+      "frauds_forgone": 541
+    },
+    {
+      "start": 1.101082019175637,
+      "end": 1.1013882417812857,
+      "end_closed": false,
+      "unused": 749,
+      "frauds_forgone": 540
+    },
+    {
+      "start": 1.1013882417812857,
+      "end": 1.1014380714215701,
+      "end_closed": false,
+      "unused": 748,
+      "frauds_forgone": 539
+    },
+    {
+      "start": 1.1014380714215701,
+      "end": 1.1015662808727285,
+      "end_closed": false,
+      "unused": 747,
+      "frauds_forgone": 538
+    },
+    {
+      "start": 1.1015662808727285,
+      "end": 1.1017509616122634,
+      "end_closed": false,
+      "unused": 746,
+      "frauds_forgone": 537
+    },
+    {
+      "start": 1.1017509616122634,
+      "end": 1.1017838890181881,
+      "end_closed": false,
+      "unused": 745,
+      "frauds_forgone": 536
+    },
+    {
+      "start": 1.1017838890181881,
+      "end": 1.1019767918962207,
+      "end_closed": false,
+      "unused": 744,
+      "frauds_forgone": 535
+    },
+    {
+      "start": 1.1019767918962207,
+      "end": 1.1022351201386167,
+      "end_closed": false,
+      "unused": 743,
+      "frauds_forgone": 534
+    },
+    {
+      "start": 1.1022351201386167,
+      "end": 1.1022516608422563,
+      "end_closed": false,
+      "unused": 742,
+      "frauds_forgone": 534
+    },
+    {
+      "start": 1.1022516608422563,
+      "end": 1.1024068633562523,
+      "end_closed": false,
+      "unused": 741,
+      "frauds_forgone": 533
+    },
+    {
+      "start": 1.1024068633562523,
+      "end": 1.1024597120695612,
+      "end_closed": false,
+      "unused": 740,
+      "frauds_forgone": 532
+    },
+    {
+      "start": 1.1024597120695612,
+      "end": 1.1024608942193046,
+      "end_closed": false,
+      "unused": 739,
+      "frauds_forgone": 532
+    },
+    {
+      "start": 1.1024608942193046,
+      "end": 1.1025873344278447,
+      "end_closed": false,
+      "unused": 738,
+      "frauds_forgone": 531
+    },
+    {
+      "start": 1.1025873344278447,
+      "end": 1.1026922409148752,
+      "end_closed": false,
+      "unused": 737,
+      "frauds_forgone": 530
+    },
+    {
+      "start": 1.1026922409148752,
+      "end": 1.1028383874636554,
+      "end_closed": false,
+      "unused": 736,
+      "frauds_forgone": 529
+    },
+    {
+      "start": 1.1028383874636554,
+      "end": 1.1030539908686774,
+      "end_closed": false,
+      "unused": 735,
+      "frauds_forgone": 528
+    },
+    {
+      "start": 1.1030539908686774,
+      "end": 1.1031454810265617,
+      "end_closed": false,
+      "unused": 734,
+      "frauds_forgone": 528
+    },
+    {
+      "start": 1.1031454810265617,
+      "end": 1.1036343255311571,
+      "end_closed": false,
+      "unused": 733,
+      "frauds_forgone": 527
+    },
+    {
+      "start": 1.1036343255311571,
+      "end": 1.1039797018650115,
+      "end_closed": false,
+      "unused": 732,
+      "frauds_forgone": 526
+    },
+    {
+      "start": 1.1039797018650115,
+      "end": 1.1040679157441016,
+      "end_closed": false,
+      "unused": 731,
+      "frauds_forgone": 525
+    },
+    {
+      "start": 1.1040679157441016,
+      "end": 1.104159626797364,
+      "end_closed": false,
+      "unused": 730,
+      "frauds_forgone": 524
+    },
+    {
+      "start": 1.104159626797364,
+      "end": 1.104364754026465,
+      "end_closed": false,
+      "unused": 729,
+      "frauds_forgone": 523
+    },
+    {
+      "start": 1.104364754026465,
+      "end": 1.104389755653029,
+      "end_closed": false,
+      "unused": 728,
+      "frauds_forgone": 522
+    },
+    {
+      "start": 1.104389755653029,
+      "end": 1.1044650060883843,
+      "end_closed": false,
+      "unused": 727,
+      "frauds_forgone": 521
+    },
+    {
+      "start": 1.1044650060883843,
+      "end": 1.1046176114753075,
+      "end_closed": false,
+      "unused": 726,
+      "frauds_forgone": 520
+    },
+    {
+      "start": 1.1046176114753075,
+      "end": 1.10486355900079,
+      "end_closed": false,
+      "unused": 725,
+      "frauds_forgone": 519
+    },
+    {
+      "start": 1.10486355900079,
+      "end": 1.104969424092691,
+      "end_closed": false,
+      "unused": 724,
+      "frauds_forgone": 518
+    },
+    {
+      "start": 1.104969424092691,
+      "end": 1.1049996269289803,
+      "end_closed": false,
+      "unused": 723,
+      "frauds_forgone": 517
+    },
+    {
+      "start": 1.1049996269289803,
+      "end": 1.1050496769042883,
+      "end_closed": false,
+      "unused": 722,
+      "frauds_forgone": 516
+    },
+    {
+      "start": 1.1050496769042883,
+      "end": 1.105169551283933,
+      "end_closed": false,
+      "unused": 721,
+      "frauds_forgone": 515
+    },
+    {
+      "start": 1.105169551283933,
+      "end": 1.1054033919194688,
+      "end_closed": false,
+      "unused": 720,
+      "frauds_forgone": 514
+    },
+    {
+      "start": 1.1054033919194688,
+      "end": 1.1055176885004814,
+      "end_closed": false,
+      "unused": 719,
+      "frauds_forgone": 513
+    },
+    {
+      "start": 1.1055176885004814,
+      "end": 1.1055655759149854,
+      "end_closed": false,
+      "unused": 718,
+      "frauds_forgone": 512
+    },
+    {
+      "start": 1.1055655759149854,
+      "end": 1.1056713811010246,
+      "end_closed": false,
+      "unused": 717,
+      "frauds_forgone": 511
+    },
+    {
+      "start": 1.1056713811010246,
+      "end": 1.1057707394108225,
+      "end_closed": false,
+      "unused": 716,
+      "frauds_forgone": 510
+    },
+    {
+      "start": 1.1057707394108225,
+      "end": 1.105872448271481,
+      "end_closed": false,
+      "unused": 715,
+      "frauds_forgone": 509
+    },
+    {
+      "start": 1.105872448271481,
+      "end": 1.1059203372870936,
+      "end_closed": false,
+      "unused": 714,
+      "frauds_forgone": 509
+    },
+    {
+      "start": 1.1059203372870936,
+      "end": 1.105950521411593,
+      "end_closed": false,
+      "unused": 713,
+      "frauds_forgone": 508
+    },
+    {
+      "start": 1.105950521411593,
+      "end": 1.1059632246969335,
+      "end_closed": false,
+      "unused": 712,
+      "frauds_forgone": 507
+    },
+    {
+      "start": 1.1059632246969335,
+      "end": 1.1059654040746643,
+      "end_closed": false,
+      "unused": 711,
+      "frauds_forgone": 506
+    },
+    {
+      "start": 1.1059654040746643,
+      "end": 1.1062017601023535,
+      "end_closed": false,
+      "unused": 710,
+      "frauds_forgone": 505
+    },
+    {
+      "start": 1.1062017601023535,
+      "end": 1.1063936688074434,
+      "end_closed": false,
+      "unused": 709,
+      "frauds_forgone": 504
+    },
+    {
+      "start": 1.1063936688074434,
+      "end": 1.106814849756722,
+      "end_closed": false,
+      "unused": 708,
+      "frauds_forgone": 503
+    },
+    {
+      "start": 1.106814849756722,
+      "end": 1.1068873979092437,
+      "end_closed": false,
+      "unused": 707,
+      "frauds_forgone": 502
+    },
+    {
+      "start": 1.1068873979092437,
+      "end": 1.1069713439757702,
+      "end_closed": false,
+      "unused": 706,
+      "frauds_forgone": 501
+    },
+    {
+      "start": 1.1069713439757702,
+      "end": 1.1070047529881681,
+      "end_closed": false,
+      "unused": 705,
+      "frauds_forgone": 500
+    },
+    {
+      "start": 1.1070047529881681,
+      "end": 1.1071613104097946,
+      "end_closed": false,
+      "unused": 704,
+      "frauds_forgone": 499
+    },
+    {
+      "start": 1.1071613104097946,
+      "end": 1.1073025936263412,
+      "end_closed": false,
+      "unused": 703,
+      "frauds_forgone": 498
+    },
+    {
+      "start": 1.1073025936263412,
+      "end": 1.107638405667988,
+      "end_closed": false,
+      "unused": 702,
+      "frauds_forgone": 497
+    },
+    {
+      "start": 1.107638405667988,
+      "end": 1.1077395053952475,
+      "end_closed": false,
+      "unused": 701,
+      "frauds_forgone": 496
+    },
+    {
+      "start": 1.1077395053952475,
+      "end": 1.1078147367341789,
+      "end_closed": false,
+      "unused": 700,
+      "frauds_forgone": 495
+    },
+    {
+      "start": 1.1078147367341789,
+      "end": 1.107863828950237,
+      "end_closed": false,
+      "unused": 699,
+      "frauds_forgone": 494
+    },
+    {
+      "start": 1.107863828950237,
+      "end": 1.1080354348968373,
+      "end_closed": false,
+      "unused": 698,
+      "frauds_forgone": 493
+    },
+    {
+      "start": 1.1080354348968373,
+      "end": 1.1081093272638454,
+      "end_closed": false,
+      "unused": 697,
+      "frauds_forgone": 492
+    },
+    {
+      "start": 1.1081093272638454,
+      "end": 1.108237823927576,
+      "end_closed": false,
+      "unused": 696,
+      "frauds_forgone": 491
+    },
+    {
+      "start": 1.108237823927576,
+      "end": 1.1084714400138171,
+      "end_closed": false,
+      "unused": 695,
+      "frauds_forgone": 490
+    },
+    {
+      "start": 1.1084714400138171,
+      "end": 1.1086333312057355,
+      "end_closed": false,
+      "unused": 694,
+      "frauds_forgone": 489
+    },
+    {
+      "start": 1.1086333312057355,
+      "end": 1.1087029428871384,
+      "end_closed": false,
+      "unused": 693,
+      "frauds_forgone": 488
+    },
+    {
+      "start": 1.1087029428871384,
+      "end": 1.1089296393338866,
+      "end_closed": false,
+      "unused": 692,
+      "frauds_forgone": 487
+    },
+    {
+      "start": 1.1089296393338866,
+      "end": 1.1089366338713056,
+      "end_closed": false,
+      "unused": 691,
+      "frauds_forgone": 486
+    },
+    {
+      "start": 1.1089366338713056,
+      "end": 1.1090624755996803,
+      "end_closed": false,
+      "unused": 690,
+      "frauds_forgone": 485
+    },
+    {
+      "start": 1.1090624755996803,
+      "end": 1.1092325089951376,
+      "end_closed": false,
+      "unused": 689,
+      "frauds_forgone": 484
+    },
+    {
+      "start": 1.1092325089951376,
+      "end": 1.109477635081317,
+      "end_closed": false,
+      "unused": 688,
+      "frauds_forgone": 483
+    },
+    {
+      "start": 1.109477635081317,
+      "end": 1.1095784009722869,
+      "end_closed": false,
+      "unused": 687,
+      "frauds_forgone": 482
+    },
+    {
+      "start": 1.1095784009722869,
+      "end": 1.109693950695778,
+      "end_closed": false,
+      "unused": 686,
+      "frauds_forgone": 481
+    },
+    {
+      "start": 1.109693950695778,
+      "end": 1.110097264013095,
+      "end_closed": false,
+      "unused": 685,
+      "frauds_forgone": 480
+    },
+    {
+      "start": 1.110097264013095,
+      "end": 1.1101774025280808,
+      "end_closed": false,
+      "unused": 684,
+      "frauds_forgone": 479
+    },
+    {
+      "start": 1.1101774025280808,
+      "end": 1.110493108316657,
+      "end_closed": false,
+      "unused": 683,
+      "frauds_forgone": 478
+    },
+    {
+      "start": 1.110493108316657,
+      "end": 1.111275339195457,
+      "end_closed": false,
+      "unused": 682,
+      "frauds_forgone": 477
+    },
+    {
+      "start": 1.111275339195457,
+      "end": 1.1113460294529272,
+      "end_closed": false,
+      "unused": 681,
+      "frauds_forgone": 477
+    },
+    {
+      "start": 1.1113460294529272,
+      "end": 1.111509581822811,
+      "end_closed": false,
+      "unused": 680,
+      "frauds_forgone": 476
+    },
+    {
+      "start": 1.111509581822811,
+      "end": 1.111610062421226,
+      "end_closed": false,
+      "unused": 679,
+      "frauds_forgone": 475
+    },
+    {
+      "start": 1.111610062421226,
+      "end": 1.111665223900048,
+      "end_closed": false,
+      "unused": 678,
+      "frauds_forgone": 474
+    },
+    {
+      "start": 1.111665223900048,
+      "end": 1.1119641851429782,
+      "end_closed": false,
+      "unused": 677,
+      "frauds_forgone": 473
+    },
+    {
+      "start": 1.1119641851429782,
+      "end": 1.1123656989957567,
+      "end_closed": false,
+      "unused": 676,
+      "frauds_forgone": 472
+    },
+    {
+      "start": 1.1123656989957567,
+      "end": 1.1126414163333156,
+      "end_closed": false,
+      "unused": 675,
+      "frauds_forgone": 471
+    },
+    {
+      "start": 1.1126414163333156,
+      "end": 1.1129926896530369,
+      "end_closed": false,
+      "unused": 674,
+      "frauds_forgone": 470
+    },
+    {
+      "start": 1.1129926896530369,
+      "end": 1.113080579744265,
+      "end_closed": false,
+      "unused": 673,
+      "frauds_forgone": 469
+    },
+    {
+      "start": 1.113080579744265,
+      "end": 1.1132224252382314,
+      "end_closed": false,
+      "unused": 672,
+      "frauds_forgone": 468
+    },
+    {
+      "start": 1.1132224252382314,
+      "end": 1.1133610082141827,
+      "end_closed": false,
+      "unused": 671,
+      "frauds_forgone": 467
+    },
+    {
+      "start": 1.1133610082141827,
+      "end": 1.113462502575086,
+      "end_closed": false,
+      "unused": 670,
+      "frauds_forgone": 466
+    },
+    {
+      "start": 1.113462502575086,
+      "end": 1.1140589604843774,
+      "end_closed": false,
+      "unused": 669,
+      "frauds_forgone": 465
+    },
+    {
+      "start": 1.1140589604843774,
+      "end": 1.114097130023874,
+      "end_closed": false,
+      "unused": 668,
+      "frauds_forgone": 464
+    },
+    {
+      "start": 1.114097130023874,
+      "end": 1.1146856187926553,
+      "end_closed": false,
+      "unused": 667,
+      "frauds_forgone": 463
+    },
+    {
+      "start": 1.1146856187926553,
+      "end": 1.1149861772135636,
+      "end_closed": false,
+      "unused": 666,
+      "frauds_forgone": 462
+    },
+    {
+      "start": 1.1149861772135636,
+      "end": 1.115675594345386,
+      "end_closed": false,
+      "unused": 665,
+      "frauds_forgone": 461
+    },
+    {
+      "start": 1.115675594345386,
+      "end": 1.1157464090568605,
+      "end_closed": false,
+      "unused": 664,
+      "frauds_forgone": 460
+    },
+    {
+      "start": 1.1157464090568605,
+      "end": 1.1157536961436534,
+      "end_closed": false,
+      "unused": 663,
+      "frauds_forgone": 459
+    },
+    {
+      "start": 1.1157536961436534,
+      "end": 1.1162660712280044,
+      "end_closed": false,
+      "unused": 662,
+      "frauds_forgone": 459
+    },
+    {
+      "start": 1.1162660712280044,
+      "end": 1.1163006037431749,
+      "end_closed": false,
+      "unused": 661,
+      "frauds_forgone": 458
+    },
+    {
+      "start": 1.1163006037431749,
+      "end": 1.1172225198164256,
+      "end_closed": false,
+      "unused": 660,
+      "frauds_forgone": 457
+    },
+    {
+      "start": 1.1172225198164256,
+      "end": 1.117606189587577,
+      "end_closed": false,
+      "unused": 659,
+      "frauds_forgone": 456
+    },
+    {
+      "start": 1.117606189587577,
+      "end": 1.1179887475897579,
+      "end_closed": false,
+      "unused": 658,
+      "frauds_forgone": 455
+    },
+    {
+      "start": 1.1179887475897579,
+      "end": 1.118055233818608,
+      "end_closed": false,
+      "unused": 657,
+      "frauds_forgone": 454
+    },
+    {
+      "start": 1.118055233818608,
+      "end": 1.1180860326510633,
+      "end_closed": false,
+      "unused": 656,
+      "frauds_forgone": 453
+    },
+    {
+      "start": 1.1180860326510633,
+      "end": 1.11810090188569,
+      "end_closed": false,
+      "unused": 655,
+      "frauds_forgone": 452
+    },
+    {
+      "start": 1.11810090188569,
+      "end": 1.1181358904771876,
+      "end_closed": false,
+      "unused": 654,
+      "frauds_forgone": 451
+    },
+    {
+      "start": 1.1181358904771876,
+      "end": 1.1181955816408635,
+      "end_closed": false,
+      "unused": 653,
+      "frauds_forgone": 450
+    },
+    {
+      "start": 1.1181955816408635,
+      "end": 1.1187252570742854,
+      "end_closed": false,
+      "unused": 652,
+      "frauds_forgone": 449
+    },
+    {
+      "start": 1.1187252570742854,
+      "end": 1.1187832498826968,
+      "end_closed": false,
+      "unused": 651,
+      "frauds_forgone": 448
+    },
+    {
+      "start": 1.1187832498826968,
+      "end": 1.1189623811568161,
+      "end_closed": false,
+      "unused": 650,
+      "frauds_forgone": 447
+    },
+    {
+      "start": 1.1189623811568161,
+      "end": 1.1190013558748495,
+      "end_closed": false,
+      "unused": 649,
+      "frauds_forgone": 446
+    },
+    {
+      "start": 1.1190013558748495,
+      "end": 1.1192877902900853,
+      "end_closed": false,
+      "unused": 648,
+      "frauds_forgone": 445
+    },
+    {
+      "start": 1.1192877902900853,
+      "end": 1.1193332766720845,
+      "end_closed": false,
+      "unused": 647,
+      "frauds_forgone": 444
+    },
+    {
+      "start": 1.1193332766720845,
+      "end": 1.1195860115418066,
+      "end_closed": false,
+      "unused": 646,
+      "frauds_forgone": 443
+    },
+    {
+      "start": 1.1195860115418066,
+      "end": 1.1198485699185994,
+      "end_closed": false,
+      "unused": 645,
+      "frauds_forgone": 442
+    },
+    {
+      "start": 1.1198485699185994,
+      "end": 1.1199020890224636,
+      "end_closed": false,
+      "unused": 644,
+      "frauds_forgone": 441
+    },
+    {
+      "start": 1.1199020890224636,
+      "end": 1.119975430940966,
+      "end_closed": false,
+      "unused": 643,
+      "frauds_forgone": 440
+    },
+    {
+      "start": 1.119975430940966,
+      "end": 1.1203540732319721,
+      "end_closed": false,
+      "unused": 642,
+      "frauds_forgone": 439
+    },
+    {
+      "start": 1.1203540732319721,
+      "end": 1.1205681986859175,
+      "end_closed": false,
+      "unused": 641,
+      "frauds_forgone": 438
+    },
+    {
+      "start": 1.1205681986859175,
+      "end": 1.1206945802685953,
+      "end_closed": false,
+      "unused": 640,
+      "frauds_forgone": 437
+    },
+    {
+      "start": 1.1206945802685953,
+      "end": 1.1207863404913248,
+      "end_closed": false,
+      "unused": 639,
+      "frauds_forgone": 436
+    },
+    {
+      "start": 1.1207863404913248,
+      "end": 1.1208875089177226,
+      "end_closed": false,
+      "unused": 638,
+      "frauds_forgone": 435
+    },
+    {
+      "start": 1.1208875089177226,
+      "end": 1.1212021319324041,
+      "end_closed": false,
+      "unused": 637,
+      "frauds_forgone": 434
+    },
+    {
+      "start": 1.1212021319324041,
+      "end": 1.1215838223105088,
+      "end_closed": false,
+      "unused": 636,
+      "frauds_forgone": 433
+    },
+    {
+      "start": 1.1215838223105088,
+      "end": 1.1215987354922003,
+      "end_closed": false,
+      "unused": 635,
+      "frauds_forgone": 432
+    },
+    {
+      "start": 1.1215987354922003,
+      "end": 1.121684804108737,
+      "end_closed": false,
+      "unused": 634,
+      "frauds_forgone": 431
+    },
+    {
+      "start": 1.121684804108737,
+      "end": 1.121749403181839,
+      "end_closed": false,
+      "unused": 633,
+      "frauds_forgone": 430
+    },
+    {
+      "start": 1.121749403181839,
+      "end": 1.1219278697298727,
+      "end_closed": false,
+      "unused": 632,
+      "frauds_forgone": 429
+    },
+    {
+      "start": 1.1219278697298727,
+      "end": 1.1219658581517593,
+      "end_closed": false,
+      "unused": 631,
+      "frauds_forgone": 428
+    },
+    {
+      "start": 1.1219658581517593,
+      "end": 1.121997983199954,
+      "end_closed": false,
+      "unused": 630,
+      "frauds_forgone": 427
+    },
+    {
+      "start": 1.121997983199954,
+      "end": 1.122344184528848,
+      "end_closed": false,
+      "unused": 629,
+      "frauds_forgone": 426
+    },
+    {
+      "start": 1.122344184528848,
+      "end": 1.1223705774612873,
+      "end_closed": false,
+      "unused": 628,
+      "frauds_forgone": 425
+    },
+    {
+      "start": 1.1223705774612873,
+      "end": 1.1223887796253553,
+      "end_closed": false,
+      "unused": 627,
+      "frauds_forgone": 424
+    },
+    {
+      "start": 1.1223887796253553,
+      "end": 1.1230465428313416,
+      "end_closed": false,
+      "unused": 626,
+      "frauds_forgone": 423
+    },
+    {
+      "start": 1.1230465428313416,
+      "end": 1.123083150976564,
+      "end_closed": false,
+      "unused": 625,
+      "frauds_forgone": 422
+    },
+    {
+      "start": 1.123083150976564,
+      "end": 1.1231900745003551,
+      "end_closed": false,
+      "unused": 624,
+      "frauds_forgone": 421
+    },
+    {
+      "start": 1.1231900745003551,
+      "end": 1.1233274322171463,
+      "end_closed": false,
+      "unused": 623,
+      "frauds_forgone": 420
+    },
+    {
+      "start": 1.1233274322171463,
+      "end": 1.1235832326906707,
+      "end_closed": false,
+      "unused": 622,
+      "frauds_forgone": 419
+    },
+    {
+      "start": 1.1235832326906707,
+      "end": 1.1236430712329215,
+      "end_closed": false,
+      "unused": 621,
+      "frauds_forgone": 418
+    },
+    {
+      "start": 1.1236430712329215,
+      "end": 1.1236642231788778,
+      "end_closed": false,
+      "unused": 620,
+      "frauds_forgone": 417
+    },
+    {
+      "start": 1.1236642231788778,
+      "end": 1.124036181837094,
+      "end_closed": false,
+      "unused": 619,
+      "frauds_forgone": 416
+    },
+    {
+      "start": 1.124036181837094,
+      "end": 1.124271133031094,
+      "end_closed": false,
+      "unused": 618,
+      "frauds_forgone": 415
+    },
+    {
+      "start": 1.124271133031094,
+      "end": 1.1247282614718017,
+      "end_closed": false,
+      "unused": 617,
+      "frauds_forgone": 414
+    },
+    {
+      "start": 1.1247282614718017,
+      "end": 1.124752289987401,
+      "end_closed": false,
+      "unused": 616,
+      "frauds_forgone": 413
+    },
+    {
+      "start": 1.124752289987401,
+      "end": 1.1260541031677087,
+      "end_closed": false,
+      "unused": 615,
+      "frauds_forgone": 412
+    },
+    {
+      "start": 1.1260541031677087,
+      "end": 1.1262057962603926,
+      "end_closed": false,
+      "unused": 614,
+      "frauds_forgone": 411
+    },
+    {
+      "start": 1.1262057962603926,
+      "end": 1.1262924332676012,
+      "end_closed": false,
+      "unused": 613,
+      "frauds_forgone": 410
+    },
+    {
+      "start": 1.1262924332676012,
+      "end": 1.1263984671204776,
+      "end_closed": false,
+      "unused": 612,
+      "frauds_forgone": 409
+    },
+    {
+      "start": 1.1263984671204776,
+      "end": 1.1264569410371037,
+      "end_closed": false,
+      "unused": 611,
+      "frauds_forgone": 408
+    },
+    {
+      "start": 1.1264569410371037,
+      "end": 1.1265895905499226,
+      "end_closed": false,
+      "unused": 610,
+      "frauds_forgone": 407
+    },
+    {
+      "start": 1.1265895905499226,
+      "end": 1.1269316287557603,
+      "end_closed": false,
+      "unused": 609,
+      "frauds_forgone": 406
+    },
+    {
+      "start": 1.1269316287557603,
+      "end": 1.1271114107967135,
+      "end_closed": false,
+      "unused": 608,
+      "frauds_forgone": 405
+    },
+    {
+      "start": 1.1271114107967135,
+      "end": 1.1271163525800798,
+      "end_closed": false,
+      "unused": 607,
+      "frauds_forgone": 404
+    },
+    {
+      "start": 1.1271163525800798,
+      "end": 1.1273933034402432,
+      "end_closed": false,
+      "unused": 606,
+      "frauds_forgone": 403
+    },
+    {
+      "start": 1.1273933034402432,
+      "end": 1.127402985433033,
+      "end_closed": false,
+      "unused": 605,
+      "frauds_forgone": 402
+    },
+    {
+      "start": 1.127402985433033,
+      "end": 1.1278649634066273,
+      "end_closed": false,
+      "unused": 604,
+      "frauds_forgone": 401
+    },
+    {
+      "start": 1.1278649634066273,
+      "end": 1.1280470308860664,
+      "end_closed": false,
+      "unused": 603,
+      "frauds_forgone": 400
+    },
+    {
+      "start": 1.1280470308860664,
+      "end": 1.1283401400832151,
+      "end_closed": false,
+      "unused": 602,
+      "frauds_forgone": 399
+    },
+    {
+      "start": 1.1283401400832151,
+      "end": 1.1288057101288016,
+      "end_closed": false,
+      "unused": 601,
+      "frauds_forgone": 398
+    },
+    {
+      "start": 1.1288057101288016,
+      "end": 1.1288390227617533,
+      "end_closed": false,
+      "unused": 600,
+      "frauds_forgone": 397
+    },
+    {
+      "start": 1.1288390227617533,
+      "end": 1.1288978497972268,
+      "end_closed": false,
+      "unused": 599,
+      "frauds_forgone": 396
+    },
+    {
+      "start": 1.1288978497972268,
+      "end": 1.129146577270516,
+      "end_closed": false,
+      "unused": 598,
+      "frauds_forgone": 395
+    },
+    {
+      "start": 1.129146577270516,
+      "end": 1.1291683143398685,
+      "end_closed": false,
+      "unused": 597,
+      "frauds_forgone": 394
+    },
+    {
+      "start": 1.1291683143398685,
+      "end": 1.129619266603019,
+      "end_closed": false,
+      "unused": 596,
+      "frauds_forgone": 393
+    },
+    {
+      "start": 1.129619266603019,
+      "end": 1.129992964021286,
+      "end_closed": false,
+      "unused": 595,
+      "frauds_forgone": 392
+    },
+    {
+      "start": 1.129992964021286,
+      "end": 1.1300360744487916,
+      "end_closed": false,
+      "unused": 594,
+      "frauds_forgone": 392
+    },
+    {
+      "start": 1.1300360744487916,
+      "end": 1.1308111648864207,
+      "end_closed": false,
+      "unused": 593,
+      "frauds_forgone": 391
+    },
+    {
+      "start": 1.1308111648864207,
+      "end": 1.1308324273771093,
+      "end_closed": false,
+      "unused": 592,
+      "frauds_forgone": 390
+    },
+    {
+      "start": 1.1308324273771093,
+      "end": 1.1309746270226353,
+      "end_closed": false,
+      "unused": 591,
+      "frauds_forgone": 390
+    },
+    {
+      "start": 1.1309746270226353,
+      "end": 1.1310300909445694,
+      "end_closed": false,
+      "unused": 590,
+      "frauds_forgone": 389
+    },
+    {
+      "start": 1.1310300909445694,
+      "end": 1.131259918135314,
+      "end_closed": false,
+      "unused": 589,
+      "frauds_forgone": 388
+    },
+    {
+      "start": 1.131259918135314,
+      "end": 1.131288596656129,
+      "end_closed": false,
+      "unused": 588,
+      "frauds_forgone": 387
+    },
+    {
+      "start": 1.131288596656129,
+      "end": 1.1322607686845547,
+      "end_closed": false,
+      "unused": 587,
+      "frauds_forgone": 386
+    },
+    {
+      "start": 1.1322607686845547,
+      "end": 1.1327149275951796,
+      "end_closed": false,
+      "unused": 586,
+      "frauds_forgone": 385
+    },
+    {
+      "start": 1.1327149275951796,
+      "end": 1.1327445566146483,
+      "end_closed": false,
+      "unused": 585,
+      "frauds_forgone": 384
+    },
+    {
+      "start": 1.1327445566146483,
+      "end": 1.1333021128258114,
+      "end_closed": false,
+      "unused": 584,
+      "frauds_forgone": 383
+    },
+    {
+      "start": 1.1333021128258114,
+      "end": 1.1335142902707003,
+      "end_closed": false,
+      "unused": 583,
+      "frauds_forgone": 382
+    },
+    {
+      "start": 1.1335142902707003,
+      "end": 1.1354580384946722,
+      "end_closed": false,
+      "unused": 582,
+      "frauds_forgone": 382
+    },
+    {
+      "start": 1.1354580384946722,
+      "end": 1.136160663818061,
+      "end_closed": false,
+      "unused": 581,
+      "frauds_forgone": 381
+    },
+    {
+      "start": 1.136160663818061,
+      "end": 1.136352320586682,
+      "end_closed": false,
+      "unused": 580,
+      "frauds_forgone": 381
+    },
+    {
+      "start": 1.136352320586682,
+      "end": 1.136875893770413,
+      "end_closed": false,
+      "unused": 579,
+      "frauds_forgone": 380
+    },
+    {
+      "start": 1.136875893770413,
+      "end": 1.1370736111294146,
+      "end_closed": false,
+      "unused": 578,
+      "frauds_forgone": 379
+    },
+    {
+      "start": 1.1370736111294146,
+      "end": 1.1372553984167957,
+      "end_closed": false,
+      "unused": 577,
+      "frauds_forgone": 378
+    },
+    {
+      "start": 1.1372553984167957,
+      "end": 1.1373022604051974,
+      "end_closed": false,
+      "unused": 576,
+      "frauds_forgone": 377
+    },
+    {
+      "start": 1.1373022604051974,
+      "end": 1.1373345669593422,
+      "end_closed": false,
+      "unused": 575,
+      "frauds_forgone": 376
+    },
+    {
+      "start": 1.1373345669593422,
+      "end": 1.1378060446578941,
+      "end_closed": false,
+      "unused": 574,
+      "frauds_forgone": 375
+    },
+    {
+      "start": 1.1378060446578941,
+      "end": 1.1381056618464795,
+      "end_closed": false,
+      "unused": 573,
+      "frauds_forgone": 374
+    },
+    {
+      "start": 1.1381056618464795,
+      "end": 1.1385174095982964,
+      "end_closed": false,
+      "unused": 572,
+      "frauds_forgone": 373
+    },
+    {
+      "start": 1.1385174095982964,
+      "end": 1.1387204555540678,
+      "end_closed": false,
+      "unused": 571,
+      "frauds_forgone": 373
+    },
+    {
+      "start": 1.1387204555540678,
+      "end": 1.1388829672575418,
+      "end_closed": false,
+      "unused": 570,
+      "frauds_forgone": 372
+    },
+    {
+      "start": 1.1388829672575418,
+      "end": 1.1398261962341842,
+      "end_closed": false,
+      "unused": 569,
+      "frauds_forgone": 371
+    },
+    {
+      "start": 1.1398261962341842,
+      "end": 1.1399824193234247,
+      "end_closed": false,
+      "unused": 568,
+      "frauds_forgone": 370
+    },
+    {
+      "start": 1.1399824193234247,
+      "end": 1.1405069620164308,
+      "end_closed": false,
+      "unused": 567,
+      "frauds_forgone": 369
+    },
+    {
+      "start": 1.1405069620164308,
+      "end": 1.141482475159163,
+      "end_closed": false,
+      "unused": 566,
+      "frauds_forgone": 368
+    },
+    {
+      "start": 1.141482475159163,
+      "end": 1.1419665549041544,
+      "end_closed": false,
+      "unused": 565,
+      "frauds_forgone": 367
+    },
+    {
+      "start": 1.1419665549041544,
+      "end": 1.143140169602344,
+      "end_closed": false,
+      "unused": 564,
+      "frauds_forgone": 366
+    },
+    {
+      "start": 1.143140169602344,
+      "end": 1.1439473995219127,
+      "end_closed": false,
+      "unused": 563,
+      "frauds_forgone": 365
+    },
+    {
+      "start": 1.1439473995219127,
+      "end": 1.144469478162882,
+      "end_closed": false,
+      "unused": 562,
+      "frauds_forgone": 364
+    },
+    {
+      "start": 1.144469478162882,
+      "end": 1.144508364164658,
+      "end_closed": false,
+      "unused": 561,
+      "frauds_forgone": 363
+    },
+    {
+      "start": 1.144508364164658,
+      "end": 1.1459346513374329,
+      "end_closed": false,
+      "unused": 560,
+      "frauds_forgone": 362
+    },
+    {
+      "start": 1.1459346513374329,
+      "end": 1.1463445580141562,
+      "end_closed": false,
+      "unused": 559,
+      "frauds_forgone": 361
+    },
+    {
+      "start": 1.1463445580141562,
+      "end": 1.1468698050929331,
+      "end_closed": false,
+      "unused": 558,
+      "frauds_forgone": 360
+    },
+    {
+      "start": 1.1468698050929331,
+      "end": 1.1472641276333329,
+      "end_closed": false,
+      "unused": 557,
+      "frauds_forgone": 360
+    },
+    {
+      "start": 1.1472641276333329,
+      "end": 1.1481951623608921,
+      "end_closed": false,
+      "unused": 556,
+      "frauds_forgone": 359
+    },
+    {
+      "start": 1.1481951623608921,
+      "end": 1.1482811988029622,
+      "end_closed": false,
+      "unused": 555,
+      "frauds_forgone": 359
+    },
+    {
+      "start": 1.1482811988029622,
+      "end": 1.148459826091353,
+      "end_closed": false,
+      "unused": 554,
+      "frauds_forgone": 358
+    },
+    {
+      "start": 1.148459826091353,
+      "end": 1.148843633110838,
+      "end_closed": false,
+      "unused": 553,
+      "frauds_forgone": 357
+    },
+    {
+      "start": 1.148843633110838,
+      "end": 1.149387553836902,
+      "end_closed": false,
+      "unused": 552,
+      "frauds_forgone": 356
+    },
+    {
+      "start": 1.149387553836902,
+      "end": 1.149759747816251,
+      "end_closed": false,
+      "unused": 551,
+      "frauds_forgone": 356
+    },
+    {
+      "start": 1.149759747816251,
+      "end": 1.1510069531300928,
+      "end_closed": false,
+      "unused": 550,
+      "frauds_forgone": 355
+    },
+    {
+      "start": 1.1510069531300928,
+      "end": 1.151935925510487,
+      "end_closed": false,
+      "unused": 549,
+      "frauds_forgone": 354
+    },
+    {
+      "start": 1.151935925510487,
+      "end": 1.1527181614787372,
+      "end_closed": false,
+      "unused": 548,
+      "frauds_forgone": 353
+    },
+    {
+      "start": 1.1527181614787372,
+      "end": 1.152745360090015,
+      "end_closed": false,
+      "unused": 547,
+      "frauds_forgone": 352
+    },
+    {
+      "start": 1.152745360090015,
+      "end": 1.1532046740432793,
+      "end_closed": false,
+      "unused": 546,
+      "frauds_forgone": 351
+    },
+    {
+      "start": 1.1532046740432793,
+      "end": 1.1539063688158493,
+      "end_closed": false,
+      "unused": 545,
+      "frauds_forgone": 350
+    },
+    {
+      "start": 1.1539063688158493,
+      "end": 1.1541920219806623,
+      "end_closed": false,
+      "unused": 544,
+      "frauds_forgone": 349
+    },
+    {
+      "start": 1.1541920219806623,
+      "end": 1.154200607883967,
+      "end_closed": false,
+      "unused": 543,
+      "frauds_forgone": 348
+    },
+    {
+      "start": 1.154200607883967,
+      "end": 1.15474787972664,
+      "end_closed": false,
+      "unused": 542,
+      "frauds_forgone": 347
+    },
+    {
+      "start": 1.15474787972664,
+      "end": 1.1550602946822635,
+      "end_closed": false,
+      "unused": 541,
+      "frauds_forgone": 347
+    },
+    {
+      "start": 1.1550602946822635,
+      "end": 1.1554607367021568,
+      "end_closed": false,
+      "unused": 540,
+      "frauds_forgone": 346
+    },
+    {
+      "start": 1.1554607367021568,
+      "end": 1.155822577520216,
+      "end_closed": false,
+      "unused": 539,
+      "frauds_forgone": 345
+    },
+    {
+      "start": 1.155822577520216,
+      "end": 1.1565198911305867,
+      "end_closed": false,
+      "unused": 538,
+      "frauds_forgone": 344
+    },
+    {
+      "start": 1.1565198911305867,
+      "end": 1.157236375595265,
+      "end_closed": false,
+      "unused": 537,
+      "frauds_forgone": 343
+    },
+    {
+      "start": 1.157236375595265,
+      "end": 1.157573258227951,
+      "end_closed": false,
+      "unused": 536,
+      "frauds_forgone": 342
+    },
+    {
+      "start": 1.157573258227951,
+      "end": 1.1575896212844081,
+      "end_closed": false,
+      "unused": 535,
+      "frauds_forgone": 341
+    },
+    {
+      "start": 1.1575896212844081,
+      "end": 1.157640341743044,
+      "end_closed": false,
+      "unused": 534,
+      "frauds_forgone": 340
+    },
+    {
+      "start": 1.157640341743044,
+      "end": 1.1586916566352392,
+      "end_closed": false,
+      "unused": 533,
+      "frauds_forgone": 339
+    },
+    {
+      "start": 1.1586916566352392,
+      "end": 1.1600681201540082,
+      "end_closed": false,
+      "unused": 532,
+      "frauds_forgone": 338
+    },
+    {
+      "start": 1.1600681201540082,
+      "end": 1.1602406085168475,
+      "end_closed": false,
+      "unused": 531,
+      "frauds_forgone": 337
+    },
+    {
+      "start": 1.1602406085168475,
+      "end": 1.160611359020576,
+      "end_closed": false,
+      "unused": 530,
+      "frauds_forgone": 337
+    },
+    {
+      "start": 1.160611359020576,
+      "end": 1.1607727381780302,
+      "end_closed": false,
+      "unused": 529,
+      "frauds_forgone": 336
+    },
+    {
+      "start": 1.1607727381780302,
+      "end": 1.161175723484556,
+      "end_closed": false,
+      "unused": 528,
+      "frauds_forgone": 335
+    },
+    {
+      "start": 1.161175723484556,
+      "end": 1.1618020414432737,
+      "end_closed": false,
+      "unused": 527,
+      "frauds_forgone": 335
+    },
+    {
+      "start": 1.1618020414432737,
+      "end": 1.1630958561220714,
+      "end_closed": false,
+      "unused": 526,
+      "frauds_forgone": 334
+    },
+    {
+      "start": 1.1630958561220714,
+      "end": 1.1634469326398977,
+      "end_closed": false,
+      "unused": 525,
+      "frauds_forgone": 333
+    },
+    {
+      "start": 1.1634469326398977,
+      "end": 1.1635165577618012,
+      "end_closed": false,
+      "unused": 524,
+      "frauds_forgone": 332
+    },
+    {
+      "start": 1.1635165577618012,
+      "end": 1.1639827588218563,
+      "end_closed": false,
+      "unused": 523,
+      "frauds_forgone": 331
+    },
+    {
+      "start": 1.1639827588218563,
+      "end": 1.164431151513319,
+      "end_closed": false,
+      "unused": 522,
+      "frauds_forgone": 330
+    },
+    {
+      "start": 1.164431151513319,
+      "end": 1.16610797821321,
+      "end_closed": false,
+      "unused": 521,
+      "frauds_forgone": 329
+    },
+    {
+      "start": 1.16610797821321,
+      "end": 1.1673780279652877,
+      "end_closed": false,
+      "unused": 520,
+      "frauds_forgone": 328
+    },
+    {
+      "start": 1.1673780279652877,
+      "end": 1.1690231267014575,
+      "end_closed": false,
+      "unused": 519,
+      "frauds_forgone": 328
+    },
+    {
+      "start": 1.1690231267014575,
+      "end": 1.1692719509178555,
+      "end_closed": false,
+      "unused": 518,
+      "frauds_forgone": 327
+    },
+    {
+      "start": 1.1692719509178555,
+      "end": 1.1693884916091053,
+      "end_closed": false,
+      "unused": 517,
+      "frauds_forgone": 326
+    },
+    {
+      "start": 1.1693884916091053,
+      "end": 1.1695856550095232,
+      "end_closed": false,
+      "unused": 516,
+      "frauds_forgone": 325
+    },
+    {
+      "start": 1.1695856550095232,
+      "end": 1.169923891228074,
+      "end_closed": false,
+      "unused": 515,
+      "frauds_forgone": 324
+    },
+    {
+      "start": 1.169923891228074,
+      "end": 1.1705338527317977,
+      "end_closed": false,
+      "unused": 514,
+      "frauds_forgone": 323
+    },
+    {
+      "start": 1.1705338527317977,
+      "end": 1.1705840328324766,
+      "end_closed": false,
+      "unused": 513,
+      "frauds_forgone": 322
+    },
+    {
+      "start": 1.1705840328324766,
+      "end": 1.1707872997656665,
+      "end_closed": false,
+      "unused": 512,
+      "frauds_forgone": 321
+    },
+    {
+      "start": 1.1707872997656665,
+      "end": 1.1708755658819814,
+      "end_closed": false,
+      "unused": 511,
+      "frauds_forgone": 320
+    },
+    {
+      "start": 1.1708755658819814,
+      "end": 1.1712302892896513,
+      "end_closed": false,
+      "unused": 510,
+      "frauds_forgone": 320
+    },
+    {
+      "start": 1.1712302892896513,
+      "end": 1.1717409239205756,
+      "end_closed": false,
+      "unused": 509,
+      "frauds_forgone": 319
+    },
+    {
+      "start": 1.1717409239205756,
+      "end": 1.1721171713520298,
+      "end_closed": false,
+      "unused": 508,
+      "frauds_forgone": 318
+    },
+    {
+      "start": 1.1721171713520298,
+      "end": 1.1729540663107068,
+      "end_closed": false,
+      "unused": 507,
+      "frauds_forgone": 318
+    },
+    {
+      "start": 1.1729540663107068,
+      "end": 1.1730402839036016,
+      "end_closed": false,
+      "unused": 506,
+      "frauds_forgone": 318
+    },
+    {
+      "start": 1.1730402839036016,
+      "end": 1.173153034706847,
+      "end_closed": false,
+      "unused": 505,
+      "frauds_forgone": 317
+    },
+    {
+      "start": 1.173153034706847,
+      "end": 1.1731787905708133,
+      "end_closed": false,
+      "unused": 504,
+      "frauds_forgone": 316
+    },
+    {
+      "start": 1.1731787905708133,
+      "end": 1.1731795289910198,
+      "end_closed": false,
+      "unused": 503,
+      "frauds_forgone": 316
+    },
+    {
+      "start": 1.1731795289910198,
+      "end": 1.1735723363892936,
+      "end_closed": false,
+      "unused": 502,
+      "frauds_forgone": 315
+    },
+    {
+      "start": 1.1735723363892936,
+      "end": 1.1738678426927311,
+      "end_closed": false,
+      "unused": 501,
+      "frauds_forgone": 314
+    },
+    {
+      "start": 1.1738678426927311,
+      "end": 1.1749624638350542,
+      "end_closed": false,
+      "unused": 500,
+      "frauds_forgone": 313
+    },
+    {
+      "start": 1.1749624638350542,
+      "end": 1.1758799252623644,
+      "end_closed": false,
+      "unused": 499,
+      "frauds_forgone": 312
+    },
+    {
+      "start": 1.1758799252623644,
+      "end": 1.1759160141214762,
+      "end_closed": false,
+      "unused": 498,
+      "frauds_forgone": 311
+    },
+    {
+      "start": 1.1759160141214762,
+      "end": 1.1770019525175754,
+      "end_closed": false,
+      "unused": 497,
+      "frauds_forgone": 311
+    },
+    {
+      "start": 1.1770019525175754,
+      "end": 1.1800144843392135,
+      "end_closed": false,
+      "unused": 496,
+      "frauds_forgone": 310
+    },
+    {
+      "start": 1.1800144843392135,
+      "end": 1.1813546509428177,
+      "end_closed": false,
+      "unused": 495,
+      "frauds_forgone": 309
+    },
+    {
+      "start": 1.1813546509428177,
+      "end": 1.1817591172351016,
+      "end_closed": false,
+      "unused": 494,
+      "frauds_forgone": 308
+    },
+    {
+      "start": 1.1817591172351016,
+      "end": 1.182745584192281,
+      "end_closed": false,
+      "unused": 493,
+      "frauds_forgone": 307
+    },
+    {
+      "start": 1.182745584192281,
+      "end": 1.1851762431605481,
+      "end_closed": false,
+      "unused": 492,
+      "frauds_forgone": 306
+    },
+    {
+      "start": 1.1851762431605481,
+      "end": 1.1857793435154926,
+      "end_closed": false,
+      "unused": 491,
+      "frauds_forgone": 305
+    },
+    {
+      "start": 1.1857793435154926,
+      "end": 1.185932104124664,
+      "end_closed": false,
+      "unused": 490,
+      "frauds_forgone": 304
+    },
+    {
+      "start": 1.185932104124664,
+      "end": 1.1871100932225396,
+      "end_closed": false,
+      "unused": 489,
+      "frauds_forgone": 303
+    },
+    {
+      "start": 1.1871100932225396,
+      "end": 1.188440496679237,
+      "end_closed": false,
+      "unused": 488,
+      "frauds_forgone": 302
+    },
+    {
+      "start": 1.188440496679237,
+      "end": 1.1887339053422026,
+      "end_closed": false,
+      "unused": 487,
+      "frauds_forgone": 301
+    },
+    {
+      "start": 1.1887339053422026,
+      "end": 1.1905250012403727,
+      "end_closed": false,
+      "unused": 486,
+      "frauds_forgone": 301
+    },
+    {
+      "start": 1.1905250012403727,
+      "end": 1.1943438306825886,
+      "end_closed": false,
+      "unused": 485,
+      "frauds_forgone": 300
+    },
+    {
+      "start": 1.1943438306825886,
+      "end": 1.1956714293183905,
+      "end_closed": false,
+      "unused": 484,
+      "frauds_forgone": 300
+    },
+    {
+      "start": 1.1956714293183905,
+      "end": 1.1957677439589287,
+      "end_closed": false,
+      "unused": 483,
+      "frauds_forgone": 299
+    },
+    {
+      "start": 1.1957677439589287,
+      "end": 1.1961592331915771,
+      "end_closed": false,
+      "unused": 482,
+      "frauds_forgone": 298
+    },
+    {
+      "start": 1.1961592331915771,
+      "end": 1.1962345733202524,
+      "end_closed": false,
+      "unused": 481,
+      "frauds_forgone": 297
+    },
+    {
+      "start": 1.1962345733202524,
+      "end": 1.1965254280320745,
+      "end_closed": false,
+      "unused": 480,
+      "frauds_forgone": 296
+    },
+    {
+      "start": 1.1965254280320745,
+      "end": 1.196613631478718,
+      "end_closed": false,
+      "unused": 479,
+      "frauds_forgone": 296
+    },
+    {
+      "start": 1.196613631478718,
+      "end": 1.1971917526656641,
+      "end_closed": false,
+      "unused": 478,
+      "frauds_forgone": 295
+    },
+    {
+      "start": 1.1971917526656641,
+      "end": 1.198381111292729,
+      "end_closed": false,
+      "unused": 477,
+      "frauds_forgone": 295
+    },
+    {
+      "start": 1.198381111292729,
+      "end": 1.1996747290073557,
+      "end_closed": false,
+      "unused": 476,
+      "frauds_forgone": 295
+    },
+    {
+      "start": 1.1996747290073557,
+      "end": 1.2000578732692166,
+      "end_closed": false,
+      "unused": 475,
+      "frauds_forgone": 294
+    },
+    {
+      "start": 1.2000578732692166,
+      "end": 1.2026372593231227,
+      "end_closed": false,
+      "unused": 474,
+      "frauds_forgone": 294
+    },
+    {
+      "start": 1.2026372593231227,
+      "end": 1.2027083761284894,
+      "end_closed": false,
+      "unused": 473,
+      "frauds_forgone": 293
+    },
+    {
+      "start": 1.2027083761284894,
+      "end": 1.2039850293114749,
+      "end_closed": false,
+      "unused": 472,
+      "frauds_forgone": 292
+    },
+    {
+      "start": 1.2039850293114749,
+      "end": 1.2040413677239312,
+      "end_closed": false,
+      "unused": 471,
+      "frauds_forgone": 291
+    },
+    {
+      "start": 1.2040413677239312,
+      "end": 1.2040828767243903,
+      "end_closed": false,
+      "unused": 470,
+      "frauds_forgone": 290
+    },
+    {
+      "start": 1.2040828767243903,
+      "end": 1.206383220222093,
+      "end_closed": false,
+      "unused": 469,
+      "frauds_forgone": 289
+    },
+    {
+      "start": 1.206383220222093,
+      "end": 1.2065792425112893,
+      "end_closed": false,
+      "unused": 468,
+      "frauds_forgone": 288
+    },
+    {
+      "start": 1.2065792425112893,
+      "end": 1.2078712542802752,
+      "end_closed": false,
+      "unused": 467,
+      "frauds_forgone": 287
+    },
+    {
+      "start": 1.2078712542802752,
+      "end": 1.2082645369952192,
+      "end_closed": false,
+      "unused": 466,
+      "frauds_forgone": 286
+    },
+    {
+      "start": 1.2082645369952192,
+      "end": 1.2096140859307427,
+      "end_closed": false,
+      "unused": 465,
+      "frauds_forgone": 286
+    },
+    {
+      "start": 1.2096140859307427,
+      "end": 1.2096538890032125,
+      "end_closed": false,
+      "unused": 464,
+      "frauds_forgone": 285
+    },
+    {
+      "start": 1.2096538890032125,
+      "end": 1.2101449762183087,
+      "end_closed": false,
+      "unused": 463,
+      "frauds_forgone": 284
+    },
+    {
+      "start": 1.2101449762183087,
+      "end": 1.2120818071684374,
+      "end_closed": false,
+      "unused": 462,
+      "frauds_forgone": 284
+    },
+    {
+      "start": 1.2120818071684374,
+      "end": 1.212284945792663,
+      "end_closed": false,
+      "unused": 461,
+      "frauds_forgone": 283
+    },
+    {
+      "start": 1.212284945792663,
+      "end": 1.213598498723656,
+      "end_closed": false,
+      "unused": 460,
+      "frauds_forgone": 282
+    },
+    {
+      "start": 1.213598498723656,
+      "end": 1.2140062134232463,
+      "end_closed": false,
+      "unused": 459,
+      "frauds_forgone": 281
+    },
+    {
+      "start": 1.2140062134232463,
+      "end": 1.2140550647499402,
+      "end_closed": false,
+      "unused": 458,
+      "frauds_forgone": 280
+    },
+    {
+      "start": 1.2140550647499402,
+      "end": 1.2141951312156496,
+      "end_closed": false,
+      "unused": 457,
+      "frauds_forgone": 279
+    },
+    {
+      "start": 1.2141951312156496,
+      "end": 1.216382911643443,
+      "end_closed": false,
+      "unused": 456,
+      "frauds_forgone": 278
+    },
+    {
+      "start": 1.216382911643443,
+      "end": 1.2170897180634712,
+      "end_closed": false,
+      "unused": 455,
+      "frauds_forgone": 278
+    },
+    {
+      "start": 1.2170897180634712,
+      "end": 1.2182539762251476,
+      "end_closed": false,
+      "unused": 454,
+      "frauds_forgone": 277
+    },
+    {
+      "start": 1.2182539762251476,
+      "end": 1.218611296162166,
+      "end_closed": false,
+      "unused": 453,
+      "frauds_forgone": 276
+    },
+    {
+      "start": 1.218611296162166,
+      "end": 1.2190565436276095,
+      "end_closed": false,
+      "unused": 452,
+      "frauds_forgone": 275
+    },
+    {
+      "start": 1.2190565436276095,
+      "end": 1.2197371933781382,
+      "end_closed": false,
+      "unused": 451,
+      "frauds_forgone": 275
+    },
+    {
+      "start": 1.2197371933781382,
+      "end": 1.2239462686360798,
+      "end_closed": false,
+      "unused": 450,
+      "frauds_forgone": 274
+    },
+    {
+      "start": 1.2239462686360798,
+      "end": 1.227982968612209,
+      "end_closed": false,
+      "unused": 449,
+      "frauds_forgone": 274
+    },
+    {
+      "start": 1.227982968612209,
+      "end": 1.233066685809415,
+      "end_closed": false,
+      "unused": 448,
+      "frauds_forgone": 273
+    },
+    {
+      "start": 1.233066685809415,
+      "end": 1.2349641189888358,
+      "end_closed": false,
+      "unused": 447,
+      "frauds_forgone": 272
+    },
+    {
+      "start": 1.2349641189888358,
+      "end": 1.235359303884114,
+      "end_closed": false,
+      "unused": 446,
+      "frauds_forgone": 271
+    },
+    {
+      "start": 1.235359303884114,
+      "end": 1.2357943018610376,
+      "end_closed": false,
+      "unused": 445,
+      "frauds_forgone": 270
+    },
+    {
+      "start": 1.2357943018610376,
+      "end": 1.2367319572076239,
+      "end_closed": false,
+      "unused": 444,
+      "frauds_forgone": 269
+    },
+    {
+      "start": 1.2367319572076239,
+      "end": 1.2384088469659624,
+      "end_closed": false,
+      "unused": 443,
+      "frauds_forgone": 268
+    },
+    {
+      "start": 1.2384088469659624,
+      "end": 1.2390144643083523,
+      "end_closed": false,
+      "unused": 442,
+      "frauds_forgone": 267
+    },
+    {
+      "start": 1.2390144643083523,
+      "end": 1.2393755708981857,
+      "end_closed": false,
+      "unused": 441,
+      "frauds_forgone": 266
+    },
+    {
+      "start": 1.2393755708981857,
+      "end": 1.2395495692519751,
+      "end_closed": false,
+      "unused": 440,
+      "frauds_forgone": 265
+    },
+    {
+      "start": 1.2395495692519751,
+      "end": 1.2420412388930897,
+      "end_closed": false,
+      "unused": 439,
+      "frauds_forgone": 264
+    },
+    {
+      "start": 1.2420412388930897,
+      "end": 1.2425990618910432,
+      "end_closed": false,
+      "unused": 438,
+      "frauds_forgone": 264
+    },
+    {
+      "start": 1.2425990618910432,
+      "end": 1.2462123455308878,
+      "end_closed": false,
+      "unused": 437,
+      "frauds_forgone": 263
+    },
+    {
+      "start": 1.2462123455308878,
+      "end": 1.2464271597014276,
+      "end_closed": false,
+      "unused": 436,
+      "frauds_forgone": 262
+    },
+    {
+      "start": 1.2464271597014276,
+      "end": 1.247036477401938,
+      "end_closed": false,
+      "unused": 435,
+      "frauds_forgone": 261
+    },
+    {
+      "start": 1.247036477401938,
+      "end": 1.2485289046947692,
+      "end_closed": false,
+      "unused": 434,
+      "frauds_forgone": 260
+    },
+    {
+      "start": 1.2485289046947692,
+      "end": 1.2485547129603622,
+      "end_closed": false,
+      "unused": 433,
+      "frauds_forgone": 259
+    },
+    {
+      "start": 1.2485547129603622,
+      "end": 1.249396318294274,
+      "end_closed": false,
+      "unused": 432,
+      "frauds_forgone": 258
+    },
+    {
+      "start": 1.249396318294274,
+      "end": 1.2499086535491544,
+      "end_closed": false,
+      "unused": 431,
+      "frauds_forgone": 257
+    },
+    {
+      "start": 1.2499086535491544,
+      "end": 1.2504886920001343,
+      "end_closed": false,
+      "unused": 430,
+      "frauds_forgone": 256
+    },
+    {
+      "start": 1.2504886920001343,
+      "end": 1.2506446774586817,
+      "end_closed": false,
+      "unused": 429,
+      "frauds_forgone": 256
+    },
+    {
+      "start": 1.2506446774586817,
+      "end": 1.250958702298187,
+      "end_closed": false,
+      "unused": 428,
+      "frauds_forgone": 255
+    },
+    {
+      "start": 1.250958702298187,
+      "end": 1.2532809735793566,
+      "end_closed": false,
+      "unused": 427,
+      "frauds_forgone": 254
+    },
+    {
+      "start": 1.2532809735793566,
+      "end": 1.2545839587585883,
+      "end_closed": false,
+      "unused": 426,
+      "frauds_forgone": 253
+    },
+    {
+      "start": 1.2545839587585883,
+      "end": 1.255601781970025,
+      "end_closed": false,
+      "unused": 425,
+      "frauds_forgone": 252
+    },
+    {
+      "start": 1.255601781970025,
+      "end": 1.2558616218450576,
+      "end_closed": false,
+      "unused": 424,
+      "frauds_forgone": 251
+    },
+    {
+      "start": 1.2558616218450576,
+      "end": 1.2580728292549581,
+      "end_closed": false,
+      "unused": 423,
+      "frauds_forgone": 251
+    },
+    {
+      "start": 1.2580728292549581,
+      "end": 1.2590176613727118,
+      "end_closed": false,
+      "unused": 422,
+      "frauds_forgone": 251
+    },
+    {
+      "start": 1.2590176613727118,
+      "end": 1.2599360908182045,
+      "end_closed": false,
+      "unused": 421,
+      "frauds_forgone": 251
+    },
+    {
+      "start": 1.2599360908182045,
+      "end": 1.2600465574924997,
+      "end_closed": false,
+      "unused": 420,
+      "frauds_forgone": 250
+    },
+    {
+      "start": 1.2600465574924997,
+      "end": 1.2610650692456362,
+      "end_closed": false,
+      "unused": 419,
+      "frauds_forgone": 249
+    },
+    {
+      "start": 1.2610650692456362,
+      "end": 1.2638413408179892,
+      "end_closed": false,
+      "unused": 418,
+      "frauds_forgone": 248
+    },
+    {
+      "start": 1.2638413408179892,
+      "end": 1.264123932097104,
+      "end_closed": false,
+      "unused": 417,
+      "frauds_forgone": 247
+    },
+    {
+      "start": 1.264123932097104,
+      "end": 1.2670311698290637,
+      "end_closed": false,
+      "unused": 416,
+      "frauds_forgone": 247
+    },
+    {
+      "start": 1.2670311698290637,
+      "end": 1.2670942689329627,
+      "end_closed": false,
+      "unused": 415,
+      "frauds_forgone": 246
+    },
+    {
+      "start": 1.2670942689329627,
+      "end": 1.2676664575501948,
+      "end_closed": false,
+      "unused": 414,
+      "frauds_forgone": 245
+    },
+    {
+      "start": 1.2676664575501948,
+      "end": 1.2699135344700285,
+      "end_closed": false,
+      "unused": 413,
+      "frauds_forgone": 244
+    },
+    {
+      "start": 1.2699135344700285,
+      "end": 1.2709539050525915,
+      "end_closed": false,
+      "unused": 412,
+      "frauds_forgone": 243
+    },
+    {
+      "start": 1.2709539050525915,
+      "end": 1.2709788475819108,
+      "end_closed": false,
+      "unused": 411,
+      "frauds_forgone": 242
+    },
+    {
+      "start": 1.2709788475819108,
+      "end": 1.271550980373903,
+      "end_closed": false,
+      "unused": 410,
+      "frauds_forgone": 241
+    },
+    {
+      "start": 1.271550980373903,
+      "end": 1.2715823127466592,
+      "end_closed": false,
+      "unused": 409,
+      "frauds_forgone": 241
+    },
+    {
+      "start": 1.2715823127466592,
+      "end": 1.2731179256403222,
+      "end_closed": false,
+      "unused": 408,
+      "frauds_forgone": 240
+    },
+    {
+      "start": 1.2731179256403222,
+      "end": 1.2743459216949615,
+      "end_closed": false,
+      "unused": 407,
+      "frauds_forgone": 239
+    },
+    {
+      "start": 1.2743459216949615,
+      "end": 1.2761583069243987,
+      "end_closed": false,
+      "unused": 406,
+      "frauds_forgone": 238
+    },
+    {
+      "start": 1.2761583069243987,
+      "end": 1.2762721336353737,
+      "end_closed": false,
+      "unused": 405,
+      "frauds_forgone": 237
+    },
+    {
+      "start": 1.2762721336353737,
+      "end": 1.2765538189694083,
+      "end_closed": false,
+      "unused": 404,
+      "frauds_forgone": 236
+    },
+    {
+      "start": 1.2765538189694083,
+      "end": 1.2765864223129801,
+      "end_closed": false,
+      "unused": 403,
+      "frauds_forgone": 235
+    },
+    {
+      "start": 1.2765864223129801,
+      "end": 1.2766209027958022,
+      "end_closed": false,
+      "unused": 402,
+      "frauds_forgone": 234
+    },
+    {
+      "start": 1.2766209027958022,
+      "end": 1.2766936936207034,
+      "end_closed": false,
+      "unused": 401,
+      "frauds_forgone": 233
+    },
+    {
+      "start": 1.2766936936207034,
+      "end": 1.2767508155602245,
+      "end_closed": false,
+      "unused": 400,
+      "frauds_forgone": 232
+    },
+    {
+      "start": 1.2767508155602245,
+      "end": 1.2786057806608366,
+      "end_closed": false,
+      "unused": 399,
+      "frauds_forgone": 231
+    },
+    {
+      "start": 1.2786057806608366,
+      "end": 1.278838016755028,
+      "end_closed": false,
+      "unused": 398,
+      "frauds_forgone": 230
+    },
+    {
+      "start": 1.278838016755028,
+      "end": 1.2803721777380355,
+      "end_closed": false,
+      "unused": 397,
+      "frauds_forgone": 229
+    },
+    {
+      "start": 1.2803721777380355,
+      "end": 1.2816117409231105,
+      "end_closed": false,
+      "unused": 396,
+      "frauds_forgone": 228
+    },
+    {
+      "start": 1.2816117409231105,
+      "end": 1.2817720535989048,
+      "end_closed": false,
+      "unused": 395,
+      "frauds_forgone": 227
+    },
+    {
+      "start": 1.2817720535989048,
+      "end": 1.2823111718601694,
+      "end_closed": false,
+      "unused": 394,
+      "frauds_forgone": 226
+    },
+    {
+      "start": 1.2823111718601694,
+      "end": 1.2867792864453877,
+      "end_closed": false,
+      "unused": 393,
+      "frauds_forgone": 225
+    },
+    {
+      "start": 1.2867792864453877,
+      "end": 1.2873850679128562,
+      "end_closed": false,
+      "unused": 392,
+      "frauds_forgone": 225
+    },
+    {
+      "start": 1.2873850679128562,
+      "end": 1.2885702165735629,
+      "end_closed": false,
+      "unused": 391,
+      "frauds_forgone": 224
+    },
+    {
+      "start": 1.2885702165735629,
+      "end": 1.292323545494531,
+      "end_closed": false,
+      "unused": 390,
+      "frauds_forgone": 224
+    },
+    {
+      "start": 1.292323545494531,
+      "end": 1.2954656532399724,
+      "end_closed": false,
+      "unused": 389,
+      "frauds_forgone": 223
+    },
+    {
+      "start": 1.2954656532399724,
+      "end": 1.296353912209193,
+      "end_closed": false,
+      "unused": 388,
+      "frauds_forgone": 222
+    },
+    {
+      "start": 1.296353912209193,
+      "end": 1.2974795196027817,
+      "end_closed": false,
+      "unused": 387,
+      "frauds_forgone": 222
+    },
+    {
+      "start": 1.2974795196027817,
+      "end": 1.2978487858532786,
+      "end_closed": false,
+      "unused": 386,
+      "frauds_forgone": 221
+    },
+    {
+      "start": 1.2978487858532786,
+      "end": 1.3032283629201886,
+      "end_closed": false,
+      "unused": 385,
+      "frauds_forgone": 220
+    },
+    {
+      "start": 1.3032283629201886,
+      "end": 1.3044689200348318,
+      "end_closed": false,
+      "unused": 384,
+      "frauds_forgone": 220
+    },
+    {
+      "start": 1.3044689200348318,
+      "end": 1.3051093134166054,
+      "end_closed": false,
+      "unused": 383,
+      "frauds_forgone": 219
+    },
+    {
+      "start": 1.3051093134166054,
+      "end": 1.3077966917530186,
+      "end_closed": false,
+      "unused": 382,
+      "frauds_forgone": 219
+    },
+    {
+      "start": 1.3077966917530186,
+      "end": 1.3080337901205494,
+      "end_closed": false,
+      "unused": 381,
+      "frauds_forgone": 218
+    },
+    {
+      "start": 1.3080337901205494,
+      "end": 1.3113534313049051,
+      "end_closed": false,
+      "unused": 380,
+      "frauds_forgone": 217
+    },
+    {
+      "start": 1.3113534313049051,
+      "end": 1.3128882954702574,
+      "end_closed": false,
+      "unused": 379,
+      "frauds_forgone": 216
+    },
+    {
+      "start": 1.3128882954702574,
+      "end": 1.3132543349595895,
+      "end_closed": false,
+      "unused": 378,
+      "frauds_forgone": 215
+    },
+    {
+      "start": 1.3132543349595895,
+      "end": 1.3156804124906039,
+      "end_closed": false,
+      "unused": 377,
+      "frauds_forgone": 215
+    },
+    {
+      "start": 1.3156804124906039,
+      "end": 1.3170986650236016,
+      "end_closed": false,
+      "unused": 376,
+      "frauds_forgone": 214
+    },
+    {
+      "start": 1.3170986650236016,
+      "end": 1.3175695380952432,
+      "end_closed": false,
+      "unused": 375,
+      "frauds_forgone": 213
+    },
+    {
+      "start": 1.3175695380952432,
+      "end": 1.317599887039514,
+      "end_closed": false,
+      "unused": 374,
+      "frauds_forgone": 212
+    },
+    {
+      "start": 1.317599887039514,
+      "end": 1.3180878194402414,
+      "end_closed": false,
+      "unused": 373,
+      "frauds_forgone": 211
+    },
+    {
+      "start": 1.3180878194402414,
+      "end": 1.3224380636067161,
+      "end_closed": false,
+      "unused": 372,
+      "frauds_forgone": 211
+    },
+    {
+      "start": 1.3224380636067161,
+      "end": 1.3230393101416718,
+      "end_closed": false,
+      "unused": 371,
+      "frauds_forgone": 210
+    },
+    {
+      "start": 1.3230393101416718,
+      "end": 1.3236390802175224,
+      "end_closed": false,
+      "unused": 370,
+      "frauds_forgone": 210
+    },
+    {
+      "start": 1.3236390802175224,
+      "end": 1.3238014700790148,
+      "end_closed": false,
+      "unused": 369,
+      "frauds_forgone": 209
+    },
+    {
+      "start": 1.3238014700790148,
+      "end": 1.325331311180658,
+      "end_closed": false,
+      "unused": 368,
+      "frauds_forgone": 208
+    },
+    {
+      "start": 1.325331311180658,
+      "end": 1.3261479164389922,
+      "end_closed": false,
+      "unused": 367,
+      "frauds_forgone": 207
+    },
+    {
+      "start": 1.3261479164389922,
+      "end": 1.326246832265115,
+      "end_closed": false,
+      "unused": 366,
+      "frauds_forgone": 206
+    },
+    {
+      "start": 1.326246832265115,
+      "end": 1.3289245155283567,
+      "end_closed": false,
+      "unused": 365,
+      "frauds_forgone": 205
+    },
+    {
+      "start": 1.3289245155283567,
+      "end": 1.3295396756702789,
+      "end_closed": false,
+      "unused": 364,
+      "frauds_forgone": 205
+    },
+    {
+      "start": 1.3295396756702789,
+      "end": 1.3330703644719395,
+      "end_closed": false,
+      "unused": 363,
+      "frauds_forgone": 205
+    },
+    {
+      "start": 1.3330703644719395,
+      "end": 1.3338422072682536,
+      "end_closed": false,
+      "unused": 362,
+      "frauds_forgone": 204
+    },
+    {
+      "start": 1.3338422072682536,
+      "end": 1.3347298319802552,
+      "end_closed": false,
+      "unused": 361,
+      "frauds_forgone": 203
+    },
+    {
+      "start": 1.3347298319802552,
+      "end": 1.3366542908493424,
+      "end_closed": false,
+      "unused": 360,
+      "frauds_forgone": 202
+    },
+    {
+      "start": 1.3366542908493424,
+      "end": 1.3403388772829945,
+      "end_closed": false,
+      "unused": 359,
+      "frauds_forgone": 201
+    },
+    {
+      "start": 1.3403388772829945,
+      "end": 1.3433331532617732,
+      "end_closed": false,
+      "unused": 358,
+      "frauds_forgone": 200
+    },
+    {
+      "start": 1.3433331532617732,
+      "end": 1.3440782887559042,
+      "end_closed": false,
+      "unused": 357,
+      "frauds_forgone": 199
+    },
+    {
+      "start": 1.3440782887559042,
+      "end": 1.3478093631089771,
+      "end_closed": false,
+      "unused": 356,
+      "frauds_forgone": 198
+    },
+    {
+      "start": 1.3478093631089771,
+      "end": 1.3482727687024336,
+      "end_closed": false,
+      "unused": 355,
+      "frauds_forgone": 198
+    },
+    {
+      "start": 1.3482727687024336,
+      "end": 1.3488495581685735,
+      "end_closed": false,
+      "unused": 354,
+      "frauds_forgone": 197
+    },
+    {
+      "start": 1.3488495581685735,
+      "end": 1.3516073518931018,
+      "end_closed": false,
+      "unused": 353,
+      "frauds_forgone": 196
+    },
+    {
+      "start": 1.3516073518931018,
+      "end": 1.3541734167036035,
+      "end_closed": false,
+      "unused": 352,
+      "frauds_forgone": 195
+    },
+    {
+      "start": 1.3541734167036035,
+      "end": 1.3550403770414563,
+      "end_closed": false,
+      "unused": 351,
+      "frauds_forgone": 194
+    },
+    {
+      "start": 1.3550403770414563,
+      "end": 1.357817179742489,
+      "end_closed": false,
+      "unused": 350,
+      "frauds_forgone": 194
+    },
+    {
+      "start": 1.357817179742489,
+      "end": 1.3588594915249663,
+      "end_closed": false,
+      "unused": 349,
+      "frauds_forgone": 193
+    },
+    {
+      "start": 1.3588594915249663,
+      "end": 1.3590239747145991,
+      "end_closed": false,
+      "unused": 348,
+      "frauds_forgone": 192
+    },
+    {
+      "start": 1.3590239747145991,
+      "end": 1.36515110134749,
+      "end_closed": false,
+      "unused": 347,
+      "frauds_forgone": 191
+    },
+    {
+      "start": 1.36515110134749,
+      "end": 1.365534821447382,
+      "end_closed": false,
+      "unused": 346,
+      "frauds_forgone": 190
+    },
+    {
+      "start": 1.365534821447382,
+      "end": 1.365725846577088,
+      "end_closed": false,
+      "unused": 345,
+      "frauds_forgone": 190
+    },
+    {
+      "start": 1.365725846577088,
+      "end": 1.366286658927133,
+      "end_closed": false,
+      "unused": 344,
+      "frauds_forgone": 189
+    },
+    {
+      "start": 1.366286658927133,
+      "end": 1.3664439305063123,
+      "end_closed": false,
+      "unused": 343,
+      "frauds_forgone": 189
+    },
+    {
+      "start": 1.3664439305063123,
+      "end": 1.3702962134254746,
+      "end_closed": false,
+      "unused": 342,
+      "frauds_forgone": 188
+    },
+    {
+      "start": 1.3702962134254746,
+      "end": 1.3703009966231454,
+      "end_closed": false,
+      "unused": 341,
+      "frauds_forgone": 187
+    },
+    {
+      "start": 1.3703009966231454,
+      "end": 1.3703036901014545,
+      "end_closed": false,
+      "unused": 340,
+      "frauds_forgone": 186
+    },
+    {
+      "start": 1.3703036901014545,
+      "end": 1.3705716032802733,
+      "end_closed": false,
+      "unused": 339,
+      "frauds_forgone": 185
+    },
+    {
+      "start": 1.3705716032802733,
+      "end": 1.370606041409554,
+      "end_closed": false,
+      "unused": 338,
+      "frauds_forgone": 184
+    },
+    {
+      "start": 1.370606041409554,
+      "end": 1.3729498857097604,
+      "end_closed": false,
+      "unused": 337,
+      "frauds_forgone": 183
+    },
+    {
+      "start": 1.3729498857097604,
+      "end": 1.375502614076948,
+      "end_closed": false,
+      "unused": 336,
+      "frauds_forgone": 182
+    },
+    {
+      "start": 1.375502614076948,
+      "end": 1.3764598354414512,
+      "end_closed": false,
+      "unused": 335,
+      "frauds_forgone": 181
+    },
+    {
+      "start": 1.3764598354414512,
+      "end": 1.3781433733636845,
+      "end_closed": false,
+      "unused": 334,
+      "frauds_forgone": 181
+    },
+    {
+      "start": 1.3781433733636845,
+      "end": 1.3789988001944404,
+      "end_closed": false,
+      "unused": 333,
+      "frauds_forgone": 180
+    },
+    {
+      "start": 1.3789988001944404,
+      "end": 1.3804614962484856,
+      "end_closed": false,
+      "unused": 332,
+      "frauds_forgone": 179
+    },
+    {
+      "start": 1.3804614962484856,
+      "end": 1.3907530586921037,
+      "end_closed": false,
+      "unused": 331,
+      "frauds_forgone": 179
+    },
+    {
+      "start": 1.3907530586921037,
+      "end": 1.3914273957027312,
+      "end_closed": false,
+      "unused": 330,
+      "frauds_forgone": 178
+    },
+    {
+      "start": 1.3914273957027312,
+      "end": 1.3922152734614148,
+      "end_closed": false,
+      "unused": 329,
+      "frauds_forgone": 177
+    },
+    {
+      "start": 1.3922152734614148,
+      "end": 1.3953011664567323,
+      "end_closed": false,
+      "unused": 328,
+      "frauds_forgone": 176
+    },
+    {
+      "start": 1.3953011664567323,
+      "end": 1.400115361166617,
+      "end_closed": false,
+      "unused": 327,
+      "frauds_forgone": 176
+    },
+    {
+      "start": 1.400115361166617,
+      "end": 1.4025953910974773,
+      "end_closed": false,
+      "unused": 326,
+      "frauds_forgone": 176
+    },
+    {
+      "start": 1.4025953910974773,
+      "end": 1.4033912288758312,
+      "end_closed": false,
+      "unused": 325,
+      "frauds_forgone": 175
+    },
+    {
+      "start": 1.4033912288758312,
+      "end": 1.403674980747862,
+      "end_closed": false,
+      "unused": 324,
+      "frauds_forgone": 174
+    },
+    {
+      "start": 1.403674980747862,
+      "end": 1.4042842504712199,
+      "end_closed": false,
+      "unused": 323,
+      "frauds_forgone": 174
+    },
+    {
+      "start": 1.4042842504712199,
+      "end": 1.4049098764074288,
+      "end_closed": false,
+      "unused": 322,
+      "frauds_forgone": 173
+    },
+    {
+      "start": 1.4049098764074288,
+      "end": 1.4068021091193985,
+      "end_closed": false,
+      "unused": 321,
+      "frauds_forgone": 173
+    },
+    {
+      "start": 1.4068021091193985,
+      "end": 1.4069905063271895,
+      "end_closed": false,
+      "unused": 320,
+      "frauds_forgone": 173
+    },
+    {
+      "start": 1.4069905063271895,
+      "end": 1.4076901551061587,
+      "end_closed": false,
+      "unused": 319,
+      "frauds_forgone": 173
+    },
+    {
+      "start": 1.4076901551061587,
+      "end": 1.4083239704658757,
+      "end_closed": false,
+      "unused": 318,
+      "frauds_forgone": 172
+    },
+    {
+      "start": 1.4083239704658757,
+      "end": 1.4088144233435436,
+      "end_closed": false,
+      "unused": 317,
+      "frauds_forgone": 171
+    },
+    {
+      "start": 1.4088144233435436,
+      "end": 1.4121929409439453,
+      "end_closed": false,
+      "unused": 316,
+      "frauds_forgone": 170
+    },
+    {
+      "start": 1.4121929409439453,
+      "end": 1.4133753994037264,
+      "end_closed": false,
+      "unused": 315,
+      "frauds_forgone": 169
+    },
+    {
+      "start": 1.4133753994037264,
+      "end": 1.4152180363266114,
+      "end_closed": false,
+      "unused": 314,
+      "frauds_forgone": 168
+    },
+    {
+      "start": 1.4152180363266114,
+      "end": 1.4153884512565984,
+      "end_closed": false,
+      "unused": 313,
+      "frauds_forgone": 167
+    },
+    {
+      "start": 1.4153884512565984,
+      "end": 1.4185914633739003,
+      "end_closed": false,
+      "unused": 312,
+      "frauds_forgone": 167
+    },
+    {
+      "start": 1.4185914633739003,
+      "end": 1.4190154189834057,
+      "end_closed": false,
+      "unused": 311,
+      "frauds_forgone": 166
+    },
+    {
+      "start": 1.4190154189834057,
+      "end": 1.42115537868462,
+      "end_closed": false,
+      "unused": 310,
+      "frauds_forgone": 166
+    },
+    {
+      "start": 1.42115537868462,
+      "end": 1.4219252513016294,
+      "end_closed": false,
+      "unused": 309,
+      "frauds_forgone": 165
+    },
+    {
+      "start": 1.4219252513016294,
+      "end": 1.4225515207969375,
+      "end_closed": false,
+      "unused": 308,
+      "frauds_forgone": 164
+    },
+    {
+      "start": 1.4225515207969375,
+      "end": 1.4230587445738567,
+      "end_closed": false,
+      "unused": 307,
+      "frauds_forgone": 163
+    },
+    {
+      "start": 1.4230587445738567,
+      "end": 1.424420103828877,
+      "end_closed": false,
+      "unused": 306,
+      "frauds_forgone": 162
+    },
+    {
+      "start": 1.424420103828877,
+      "end": 1.4258350256580674,
+      "end_closed": false,
+      "unused": 305,
+      "frauds_forgone": 161
+    },
+    {
+      "start": 1.4258350256580674,
+      "end": 1.4262396965647386,
+      "end_closed": false,
+      "unused": 304,
+      "frauds_forgone": 160
+    },
+    {
+      "start": 1.4262396965647386,
+      "end": 1.427462611794864,
+      "end_closed": false,
+      "unused": 303,
+      "frauds_forgone": 160
+    },
+    {
+      "start": 1.427462611794864,
+      "end": 1.4298036679206911,
+      "end_closed": false,
+      "unused": 302,
+      "frauds_forgone": 160
+    },
+    {
+      "start": 1.4298036679206911,
+      "end": 1.4305964236569557,
+      "end_closed": false,
+      "unused": 301,
+      "frauds_forgone": 160
+    },
+    {
+      "start": 1.4305964236569557,
+      "end": 1.4325692550614963,
+      "end_closed": false,
+      "unused": 300,
+      "frauds_forgone": 159
+    },
+    {
+      "start": 1.4325692550614963,
+      "end": 1.4331446131668284,
+      "end_closed": false,
+      "unused": 299,
+      "frauds_forgone": 158
+    },
+    {
+      "start": 1.4331446131668284,
+      "end": 1.4400124264833056,
+      "end_closed": false,
+      "unused": 298,
+      "frauds_forgone": 158
+    },
+    {
+      "start": 1.4400124264833056,
+      "end": 1.4409939856150409,
+      "end_closed": false,
+      "unused": 297,
+      "frauds_forgone": 158
+    },
+    {
+      "start": 1.4409939856150409,
+      "end": 1.4418337003952164,
+      "end_closed": false,
+      "unused": 296,
+      "frauds_forgone": 158
+    },
+    {
+      "start": 1.4418337003952164,
+      "end": 1.4450790651532222,
+      "end_closed": false,
+      "unused": 295,
+      "frauds_forgone": 157
+    },
+    {
+      "start": 1.4450790651532222,
+      "end": 1.4458131605804192,
+      "end_closed": false,
+      "unused": 294,
+      "frauds_forgone": 156
+    },
+    {
+      "start": 1.4458131605804192,
+      "end": 1.4505430435381899,
+      "end_closed": false,
+      "unused": 293,
+      "frauds_forgone": 155
+    },
+    {
+      "start": 1.4505430435381899,
+      "end": 1.4531801740462704,
+      "end_closed": false,
+      "unused": 292,
+      "frauds_forgone": 155
+    },
+    {
+      "start": 1.4531801740462704,
+      "end": 1.453626020102623,
+      "end_closed": false,
+      "unused": 291,
+      "frauds_forgone": 155
+    },
+    {
+      "start": 1.453626020102623,
+      "end": 1.4548534613206348,
+      "end_closed": false,
+      "unused": 290,
+      "frauds_forgone": 155
+    },
+    {
+      "start": 1.4548534613206348,
+      "end": 1.454899440109093,
+      "end_closed": false,
+      "unused": 289,
+      "frauds_forgone": 154
+    },
+    {
+      "start": 1.454899440109093,
+      "end": 1.45538581042637,
+      "end_closed": false,
+      "unused": 288,
+      "frauds_forgone": 153
+    },
+    {
+      "start": 1.45538581042637,
+      "end": 1.456550618548312,
+      "end_closed": false,
+      "unused": 287,
+      "frauds_forgone": 152
+    },
+    {
+      "start": 1.456550618548312,
+      "end": 1.4581095384596803,
+      "end_closed": false,
+      "unused": 286,
+      "frauds_forgone": 151
+    },
+    {
+      "start": 1.4581095384596803,
+      "end": 1.4604077553502068,
+      "end_closed": false,
+      "unused": 285,
+      "frauds_forgone": 150
+    },
+    {
+      "start": 1.4604077553502068,
+      "end": 1.4609840654532484,
+      "end_closed": false,
+      "unused": 284,
+      "frauds_forgone": 150
+    },
+    {
+      "start": 1.4609840654532484,
+      "end": 1.4624599828325635,
+      "end_closed": false,
+      "unused": 283,
+      "frauds_forgone": 149
+    },
+    {
+      "start": 1.4624599828325635,
+      "end": 1.463782105728258,
+      "end_closed": false,
+      "unused": 282,
+      "frauds_forgone": 149
+    },
+    {
+      "start": 1.463782105728258,
+      "end": 1.466595900476088,
+      "end_closed": false,
+      "unused": 281,
+      "frauds_forgone": 148
+    },
+    {
+      "start": 1.466595900476088,
+      "end": 1.4690261481535942,
+      "end_closed": false,
+      "unused": 280,
+      "frauds_forgone": 147
+    },
+    {
+      "start": 1.4690261481535942,
+      "end": 1.4714702953454946,
+      "end_closed": false,
+      "unused": 279,
+      "frauds_forgone": 147
+    },
+    {
+      "start": 1.4714702953454946,
+      "end": 1.471887559357537,
+      "end_closed": false,
+      "unused": 278,
+      "frauds_forgone": 147
+    },
+    {
+      "start": 1.471887559357537,
+      "end": 1.4836758614597099,
+      "end_closed": false,
+      "unused": 277,
+      "frauds_forgone": 146
+    },
+    {
+      "start": 1.4836758614597099,
+      "end": 1.484739989756278,
+      "end_closed": false,
+      "unused": 276,
+      "frauds_forgone": 146
+    },
+    {
+      "start": 1.484739989756278,
+      "end": 1.4857362183011988,
+      "end_closed": false,
+      "unused": 275,
+      "frauds_forgone": 145
+    },
+    {
+      "start": 1.4857362183011988,
+      "end": 1.4863425862349855,
+      "end_closed": false,
+      "unused": 274,
+      "frauds_forgone": 145
+    },
+    {
+      "start": 1.4863425862349855,
+      "end": 1.4890766361805565,
+      "end_closed": false,
+      "unused": 273,
+      "frauds_forgone": 144
+    },
+    {
+      "start": 1.4890766361805565,
+      "end": 1.4906290830296631,
+      "end_closed": false,
+      "unused": 272,
+      "frauds_forgone": 143
+    },
+    {
+      "start": 1.4906290830296631,
+      "end": 1.492557995143196,
+      "end_closed": false,
+      "unused": 271,
+      "frauds_forgone": 143
+    },
+    {
+      "start": 1.492557995143196,
+      "end": 1.496631885969719,
+      "end_closed": false,
+      "unused": 270,
+      "frauds_forgone": 142
+    },
+    {
+      "start": 1.496631885969719,
+      "end": 1.4970855694356806,
+      "end_closed": false,
+      "unused": 269,
+      "frauds_forgone": 141
+    },
+    {
+      "start": 1.4970855694356806,
+      "end": 1.4985003064043514,
+      "end_closed": false,
+      "unused": 268,
+      "frauds_forgone": 141
+    },
+    {
+      "start": 1.4985003064043514,
+      "end": 1.503639084263281,
+      "end_closed": false,
+      "unused": 267,
+      "frauds_forgone": 140
+    },
+    {
+      "start": 1.503639084263281,
+      "end": 1.5042575564692529,
+      "end_closed": false,
+      "unused": 266,
+      "frauds_forgone": 139
+    },
+    {
+      "start": 1.5042575564692529,
+      "end": 1.5083960144803785,
+      "end_closed": false,
+      "unused": 265,
+      "frauds_forgone": 138
+    },
+    {
+      "start": 1.5083960144803785,
+      "end": 1.5099471088658882,
+      "end_closed": false,
+      "unused": 264,
+      "frauds_forgone": 138
+    },
+    {
+      "start": 1.5099471088658882,
+      "end": 1.5101287009317501,
+      "end_closed": false,
+      "unused": 263,
+      "frauds_forgone": 138
+    },
+    {
+      "start": 1.5101287009317501,
+      "end": 1.510692438061056,
+      "end_closed": false,
+      "unused": 262,
+      "frauds_forgone": 137
+    },
+    {
+      "start": 1.510692438061056,
+      "end": 1.511944394001545,
+      "end_closed": false,
+      "unused": 261,
+      "frauds_forgone": 136
+    },
+    {
+      "start": 1.511944394001545,
+      "end": 1.516471694472427,
+      "end_closed": false,
+      "unused": 260,
+      "frauds_forgone": 135
+    },
+    {
+      "start": 1.516471694472427,
+      "end": 1.5175712370979433,
+      "end_closed": false,
+      "unused": 259,
+      "frauds_forgone": 134
+    },
+    {
+      "start": 1.5175712370979433,
+      "end": 1.519577662069286,
+      "end_closed": false,
+      "unused": 258,
+      "frauds_forgone": 133
+    },
+    {
+      "start": 1.519577662069286,
+      "end": 1.5223395405551585,
+      "end_closed": false,
+      "unused": 257,
+      "frauds_forgone": 133
+    },
+    {
+      "start": 1.5223395405551585,
+      "end": 1.5248289879117434,
+      "end_closed": false,
+      "unused": 256,
+      "frauds_forgone": 133
+    },
+    {
+      "start": 1.5248289879117434,
+      "end": 1.52806812138435,
+      "end_closed": false,
+      "unused": 255,
+      "frauds_forgone": 133
+    },
+    {
+      "start": 1.52806812138435,
+      "end": 1.5282209897550985,
+      "end_closed": false,
+      "unused": 254,
+      "frauds_forgone": 133
+    },
+    {
+      "start": 1.5282209897550985,
+      "end": 1.5299477988720156,
+      "end_closed": false,
+      "unused": 253,
+      "frauds_forgone": 132
+    },
+    {
+      "start": 1.5299477988720156,
+      "end": 1.5313111877284564,
+      "end_closed": false,
+      "unused": 252,
+      "frauds_forgone": 131
+    },
+    {
+      "start": 1.5313111877284564,
+      "end": 1.531988259160252,
+      "end_closed": false,
+      "unused": 251,
+      "frauds_forgone": 130
+    },
+    {
+      "start": 1.531988259160252,
+      "end": 1.5329349355458064,
+      "end_closed": false,
+      "unused": 250,
+      "frauds_forgone": 130
+    },
+    {
+      "start": 1.5329349355458064,
+      "end": 1.543324883949227,
+      "end_closed": false,
+      "unused": 249,
+      "frauds_forgone": 130
+    },
+    {
+      "start": 1.543324883949227,
+      "end": 1.5436473399136013,
+      "end_closed": false,
+      "unused": 248,
+      "frauds_forgone": 129
+    },
+    {
+      "start": 1.5436473399136013,
+      "end": 1.5462002528261438,
+      "end_closed": false,
+      "unused": 247,
+      "frauds_forgone": 129
+    },
+    {
+      "start": 1.5462002528261438,
+      "end": 1.5471486832606294,
+      "end_closed": false,
+      "unused": 246,
+      "frauds_forgone": 129
+    },
+    {
+      "start": 1.5471486832606294,
+      "end": 1.5519449437759327,
+      "end_closed": false,
+      "unused": 245,
+      "frauds_forgone": 128
+    },
+    {
+      "start": 1.5519449437759327,
+      "end": 1.5526014600117626,
+      "end_closed": false,
+      "unused": 244,
+      "frauds_forgone": 128
+    },
+    {
+      "start": 1.5526014600117626,
+      "end": 1.556619181741588,
+      "end_closed": false,
+      "unused": 243,
+      "frauds_forgone": 127
+    },
+    {
+      "start": 1.556619181741588,
+      "end": 1.5570391480063537,
+      "end_closed": false,
+      "unused": 242,
+      "frauds_forgone": 127
+    },
+    {
+      "start": 1.5570391480063537,
+      "end": 1.5579449610166667,
+      "end_closed": false,
+      "unused": 241,
+      "frauds_forgone": 127
+    },
+    {
+      "start": 1.5579449610166667,
+      "end": 1.5609972441579285,
+      "end_closed": false,
+      "unused": 240,
+      "frauds_forgone": 127
+    },
+    {
+      "start": 1.5609972441579285,
+      "end": 1.5628768014532208,
+      "end_closed": false,
+      "unused": 239,
+      "frauds_forgone": 127
+    },
+    {
+      "start": 1.5628768014532208,
+      "end": 1.563230991628329,
+      "end_closed": false,
+      "unused": 238,
+      "frauds_forgone": 126
+    },
+    {
+      "start": 1.563230991628329,
+      "end": 1.5645601996883896,
+      "end_closed": false,
+      "unused": 237,
+      "frauds_forgone": 125
+    },
+    {
+      "start": 1.5645601996883896,
+      "end": 1.5653238086344734,
+      "end_closed": false,
+      "unused": 236,
+      "frauds_forgone": 124
+    },
+    {
+      "start": 1.5653238086344734,
+      "end": 1.5657095475790492,
+      "end_closed": false,
+      "unused": 235,
+      "frauds_forgone": 123
+    },
+    {
+      "start": 1.5657095475790492,
+      "end": 1.5702514993849828,
+      "end_closed": false,
+      "unused": 234,
+      "frauds_forgone": 122
+    },
+    {
+      "start": 1.5702514993849828,
+      "end": 1.5874903189030654,
+      "end_closed": false,
+      "unused": 233,
+      "frauds_forgone": 122
+    },
+    {
+      "start": 1.5874903189030654,
+      "end": 1.5893496850948945,
+      "end_closed": false,
+      "unused": 232,
+      "frauds_forgone": 121
+    },
+    {
+      "start": 1.5893496850948945,
+      "end": 1.5913756273469224,
+      "end_closed": false,
+      "unused": 231,
+      "frauds_forgone": 120
+    },
+    {
+      "start": 1.5913756273469224,
+      "end": 1.5923825908910376,
+      "end_closed": false,
+      "unused": 230,
+      "frauds_forgone": 119
+    },
+    {
+      "start": 1.5923825908910376,
+      "end": 1.6016609113562619,
+      "end_closed": false,
+      "unused": 229,
+      "frauds_forgone": 118
+    },
+    {
+      "start": 1.6016609113562619,
+      "end": 1.6018739550005925,
+      "end_closed": false,
+      "unused": 228,
+      "frauds_forgone": 118
+    },
+    {
+      "start": 1.6018739550005925,
+      "end": 1.604825283063927,
+      "end_closed": false,
+      "unused": 227,
+      "frauds_forgone": 117
+    },
+    {
+      "start": 1.604825283063927,
+      "end": 1.6095719587185797,
+      "end_closed": false,
+      "unused": 226,
+      "frauds_forgone": 116
+    },
+    {
+      "start": 1.6095719587185797,
+      "end": 1.6115359523377841,
+      "end_closed": false,
+      "unused": 225,
+      "frauds_forgone": 115
+    },
+    {
+      "start": 1.6115359523377841,
+      "end": 1.6192380062622094,
+      "end_closed": false,
+      "unused": 224,
+      "frauds_forgone": 115
+    },
+    {
+      "start": 1.6192380062622094,
+      "end": 1.6197094925345157,
+      "end_closed": false,
+      "unused": 223,
+      "frauds_forgone": 115
+    },
+    {
+      "start": 1.6197094925345157,
+      "end": 1.6198732643231168,
+      "end_closed": false,
+      "unused": 222,
+      "frauds_forgone": 115
+    },
+    {
+      "start": 1.6198732643231168,
+      "end": 1.620490731604828,
+      "end_closed": false,
+      "unused": 221,
+      "frauds_forgone": 114
+    },
+    {
+      "start": 1.620490731604828,
+      "end": 1.6266576026856145,
+      "end_closed": false,
+      "unused": 220,
+      "frauds_forgone": 113
+    },
+    {
+      "start": 1.6266576026856145,
+      "end": 1.6330042743983073,
+      "end_closed": false,
+      "unused": 219,
+      "frauds_forgone": 113
+    },
+    {
+      "start": 1.6330042743983073,
+      "end": 1.647733248586515,
+      "end_closed": false,
+      "unused": 218,
+      "frauds_forgone": 112
+    },
+    {
+      "start": 1.647733248586515,
+      "end": 1.6506499191453499,
+      "end_closed": false,
+      "unused": 217,
+      "frauds_forgone": 111
+    },
+    {
+      "start": 1.6506499191453499,
+      "end": 1.651982543838381,
+      "end_closed": false,
+      "unused": 216,
+      "frauds_forgone": 111
+    },
+    {
+      "start": 1.651982543838381,
+      "end": 1.6558676687408007,
+      "end_closed": false,
+      "unused": 215,
+      "frauds_forgone": 110
+    },
+    {
+      "start": 1.6558676687408007,
+      "end": 1.6561801353708507,
+      "end_closed": false,
+      "unused": 214,
+      "frauds_forgone": 109
+    },
+    {
+      "start": 1.6561801353708507,
+      "end": 1.6574827758312545,
+      "end_closed": false,
+      "unused": 213,
+      "frauds_forgone": 108
+    },
+    {
+      "start": 1.6574827758312545,
+      "end": 1.6586213002355912,
+      "end_closed": false,
+      "unused": 212,
+      "frauds_forgone": 107
+    },
+    {
+      "start": 1.6586213002355912,
+      "end": 1.6594913741103607,
+      "end_closed": false,
+      "unused": 211,
+      "frauds_forgone": 107
+    },
+    {
+      "start": 1.6594913741103607,
+      "end": 1.664632728370948,
+      "end_closed": false,
+      "unused": 210,
+      "frauds_forgone": 106
+    },
+    {
+      "start": 1.664632728370948,
+      "end": 1.6689591624566686,
+      "end_closed": false,
+      "unused": 209,
+      "frauds_forgone": 105
+    },
+    {
+      "start": 1.6689591624566686,
+      "end": 1.6711941207800276,
+      "end_closed": false,
+      "unused": 208,
+      "frauds_forgone": 104
+    },
+    {
+      "start": 1.6711941207800276,
+      "end": 1.678773692617725,
+      "end_closed": false,
+      "unused": 207,
+      "frauds_forgone": 103
+    },
+    {
+      "start": 1.678773692617725,
+      "end": 1.683220366278228,
+      "end_closed": false,
+      "unused": 206,
+      "frauds_forgone": 103
+    },
+    {
+      "start": 1.683220366278228,
+      "end": 1.689828386123657,
+      "end_closed": false,
+      "unused": 205,
+      "frauds_forgone": 103
+    },
+    {
+      "start": 1.689828386123657,
+      "end": 1.693798150911661,
+      "end_closed": false,
+      "unused": 204,
+      "frauds_forgone": 103
+    },
+    {
+      "start": 1.693798150911661,
+      "end": 1.6939875944869276,
+      "end_closed": false,
+      "unused": 203,
+      "frauds_forgone": 102
+    },
+    {
+      "start": 1.6939875944869276,
+      "end": 1.6979584485361667,
+      "end_closed": false,
+      "unused": 202,
+      "frauds_forgone": 101
+    },
+    {
+      "start": 1.6979584485361667,
+      "end": 1.7033989840457602,
+      "end_closed": false,
+      "unused": 201,
+      "frauds_forgone": 101
+    },
+    {
+      "start": 1.7033989840457602,
+      "end": 1.7042156009508185,
+      "end_closed": false,
+      "unused": 200,
+      "frauds_forgone": 101
+    },
+    {
+      "start": 1.7042156009508185,
+      "end": 1.7101264669931429,
+      "end_closed": false,
+      "unused": 199,
+      "frauds_forgone": 101
+    },
+    {
+      "start": 1.7101264669931429,
+      "end": 1.7149891286734726,
+      "end_closed": false,
+      "unused": 198,
+      "frauds_forgone": 101
+    },
+    {
+      "start": 1.7149891286734726,
+      "end": 1.718524769771062,
+      "end_closed": false,
+      "unused": 197,
+      "frauds_forgone": 100
+    },
+    {
+      "start": 1.718524769771062,
+      "end": 1.7187308798448355,
+      "end_closed": false,
+      "unused": 196,
+      "frauds_forgone": 99
+    },
+    {
+      "start": 1.7187308798448355,
+      "end": 1.7189856475944099,
+      "end_closed": false,
+      "unused": 195,
+      "frauds_forgone": 99
+    },
+    {
+      "start": 1.7189856475944099,
+      "end": 1.7206042573466391,
+      "end_closed": false,
+      "unused": 194,
+      "frauds_forgone": 99
+    },
+    {
+      "start": 1.7206042573466391,
+      "end": 1.721808000309592,
+      "end_closed": false,
+      "unused": 193,
+      "frauds_forgone": 99
+    },
+    {
+      "start": 1.721808000309592,
+      "end": 1.7236921210713412,
+      "end_closed": false,
+      "unused": 192,
+      "frauds_forgone": 98
+    },
+    {
+      "start": 1.7236921210713412,
+      "end": 1.7261195919159247,
+      "end_closed": false,
+      "unused": 191,
+      "frauds_forgone": 97
+    },
+    {
+      "start": 1.7261195919159247,
+      "end": 1.7277483295629952,
+      "end_closed": false,
+      "unused": 190,
+      "frauds_forgone": 96
+    },
+    {
+      "start": 1.7277483295629952,
+      "end": 1.728884202266666,
+      "end_closed": false,
+      "unused": 189,
+      "frauds_forgone": 95
+    },
+    {
+      "start": 1.728884202266666,
+      "end": 1.7306519015064639,
+      "end_closed": false,
+      "unused": 188,
+      "frauds_forgone": 94
+    },
+    {
+      "start": 1.7306519015064639,
+      "end": 1.7374281355752734,
+      "end_closed": false,
+      "unused": 187,
+      "frauds_forgone": 93
+    },
+    {
+      "start": 1.7374281355752734,
+      "end": 1.738283981144405,
+      "end_closed": false,
+      "unused": 186,
+      "frauds_forgone": 92
+    },
+    {
+      "start": 1.738283981144405,
+      "end": 1.740452132670055,
+      "end_closed": false,
+      "unused": 185,
+      "frauds_forgone": 92
+    },
+    {
+      "start": 1.740452132670055,
+      "end": 1.7416718232883013,
+      "end_closed": false,
+      "unused": 184,
+      "frauds_forgone": 91
+    },
+    {
+      "start": 1.7416718232883013,
+      "end": 1.7426235781489805,
+      "end_closed": false,
+      "unused": 183,
+      "frauds_forgone": 90
+    },
+    {
+      "start": 1.7426235781489805,
+      "end": 1.7466733318980527,
+      "end_closed": false,
+      "unused": 182,
+      "frauds_forgone": 89
+    },
+    {
+      "start": 1.7466733318980527,
+      "end": 1.7482239263965587,
+      "end_closed": false,
+      "unused": 181,
+      "frauds_forgone": 88
+    },
+    {
+      "start": 1.7482239263965587,
+      "end": 1.7519422085451155,
+      "end_closed": false,
+      "unused": 180,
+      "frauds_forgone": 87
+    },
+    {
+      "start": 1.7519422085451155,
+      "end": 1.7527513637441028,
+      "end_closed": false,
+      "unused": 179,
+      "frauds_forgone": 87
+    },
+    {
+      "start": 1.7527513637441028,
+      "end": 1.7528552129596369,
+      "end_closed": false,
+      "unused": 178,
+      "frauds_forgone": 86
+    },
+    {
+      "start": 1.7528552129596369,
+      "end": 1.7605652571594241,
+      "end_closed": false,
+      "unused": 177,
+      "frauds_forgone": 85
+    },
+    {
+      "start": 1.7605652571594241,
+      "end": 1.7608954452194472,
+      "end_closed": false,
+      "unused": 176,
+      "frauds_forgone": 85
+    },
+    {
+      "start": 1.7608954452194472,
+      "end": 1.7620867814056964,
+      "end_closed": false,
+      "unused": 175,
+      "frauds_forgone": 84
+    },
+    {
+      "start": 1.7620867814056964,
+      "end": 1.7643616442250882,
+      "end_closed": false,
+      "unused": 174,
+      "frauds_forgone": 83
+    },
+    {
+      "start": 1.7643616442250882,
+      "end": 1.772441641208918,
+      "end_closed": false,
+      "unused": 173,
+      "frauds_forgone": 82
+    },
+    {
+      "start": 1.772441641208918,
+      "end": 1.7747464421406682,
+      "end_closed": false,
+      "unused": 172,
+      "frauds_forgone": 81
+    },
+    {
+      "start": 1.7747464421406682,
+      "end": 1.78146381043992,
+      "end_closed": false,
+      "unused": 171,
+      "frauds_forgone": 81
+    },
+    {
+      "start": 1.78146381043992,
+      "end": 1.7918850003829425,
+      "end_closed": false,
+      "unused": 170,
+      "frauds_forgone": 80
+    },
+    {
+      "start": 1.7918850003829425,
+      "end": 1.7979839282836385,
+      "end_closed": false,
+      "unused": 169,
+      "frauds_forgone": 79
+    },
+    {
+      "start": 1.7979839282836385,
+      "end": 1.8002829413722394,
+      "end_closed": false,
+      "unused": 168,
+      "frauds_forgone": 79
+    },
+    {
+      "start": 1.8002829413722394,
+      "end": 1.8070159412147573,
+      "end_closed": false,
+      "unused": 167,
+      "frauds_forgone": 78
+    },
+    {
+      "start": 1.8070159412147573,
+      "end": 1.811078771357291,
+      "end_closed": false,
+      "unused": 166,
+      "frauds_forgone": 78
+    },
+    {
+      "start": 1.811078771357291,
+      "end": 1.812811531921057,
+      "end_closed": false,
+      "unused": 165,
+      "frauds_forgone": 77
+    },
+    {
+      "start": 1.812811531921057,
+      "end": 1.8177043510135753,
+      "end_closed": false,
+      "unused": 164,
+      "frauds_forgone": 77
+    },
+    {
+      "start": 1.8177043510135753,
+      "end": 1.8315660057928183,
+      "end_closed": false,
+      "unused": 163,
+      "frauds_forgone": 76
+    },
+    {
+      "start": 1.8315660057928183,
+      "end": 1.8328630819800855,
+      "end_closed": false,
+      "unused": 162,
+      "frauds_forgone": 75
+    },
+    {
+      "start": 1.8328630819800855,
+      "end": 1.8451242724885657,
+      "end_closed": false,
+      "unused": 161,
+      "frauds_forgone": 75
+    },
+    {
+      "start": 1.8451242724885657,
+      "end": 1.8497536676225665,
+      "end_closed": false,
+      "unused": 160,
+      "frauds_forgone": 74
+    },
+    {
+      "start": 1.8497536676225665,
+      "end": 1.8587203974031297,
+      "end_closed": false,
+      "unused": 159,
+      "frauds_forgone": 74
+    },
+    {
+      "start": 1.8587203974031297,
+      "end": 1.8625419030607326,
+      "end_closed": false,
+      "unused": 158,
+      "frauds_forgone": 73
+    },
+    {
+      "start": 1.8625419030607326,
+      "end": 1.862593393802271,
+      "end_closed": false,
+      "unused": 157,
+      "frauds_forgone": 72
+    },
+    {
+      "start": 1.862593393802271,
+      "end": 1.8660747225723413,
+      "end_closed": false,
+      "unused": 156,
+      "frauds_forgone": 71
+    },
+    {
+      "start": 1.8660747225723413,
+      "end": 1.8790998696188848,
+      "end_closed": false,
+      "unused": 155,
+      "frauds_forgone": 71
+    },
+    {
+      "start": 1.8790998696188848,
+      "end": 1.889668562670955,
+      "end_closed": false,
+      "unused": 154,
+      "frauds_forgone": 71
+    },
+    {
+      "start": 1.889668562670955,
+      "end": 1.894144470434369,
+      "end_closed": false,
+      "unused": 153,
+      "frauds_forgone": 70
+    },
+    {
+      "start": 1.894144470434369,
+      "end": 1.8949747582964347,
+      "end_closed": false,
+      "unused": 152,
+      "frauds_forgone": 69
+    },
+    {
+      "start": 1.8949747582964347,
+      "end": 1.8968518839116026,
+      "end_closed": false,
+      "unused": 151,
+      "frauds_forgone": 68
+    },
+    {
+      "start": 1.8968518839116026,
+      "end": 1.9011689592571956,
+      "end_closed": false,
+      "unused": 150,
+      "frauds_forgone": 67
+    },
+    {
+      "start": 1.9011689592571956,
+      "end": 1.9076888603741735,
+      "end_closed": false,
+      "unused": 149,
+      "frauds_forgone": 66
+    },
+    {
+      "start": 1.9076888603741735,
+      "end": 1.9147576902376353,
+      "end_closed": false,
+      "unused": 148,
+      "frauds_forgone": 66
+    },
+    {
+      "start": 1.9147576902376353,
+      "end": 1.9177842680725485,
+      "end_closed": false,
+      "unused": 147,
+      "frauds_forgone": 65
+    },
+    {
+      "start": 1.9177842680725485,
+      "end": 1.9181100546164132,
+      "end_closed": false,
+      "unused": 146,
+      "frauds_forgone": 64
+    },
+    {
+      "start": 1.9181100546164132,
+      "end": 1.9198216977744362,
+      "end_closed": false,
+      "unused": 145,
+      "frauds_forgone": 63
+    },
+    {
+      "start": 1.9198216977744362,
+      "end": 1.9204952656029657,
+      "end_closed": false,
+      "unused": 144,
+      "frauds_forgone": 63
+    },
+    {
+      "start": 1.9204952656029657,
+      "end": 1.9211635505399316,
+      "end_closed": false,
+      "unused": 143,
+      "frauds_forgone": 63
+    },
+    {
+      "start": 1.9211635505399316,
+      "end": 1.9267419630254476,
+      "end_closed": false,
+      "unused": 142,
+      "frauds_forgone": 63
+    },
+    {
+      "start": 1.9267419630254476,
+      "end": 1.940093964600971,
+      "end_closed": false,
+      "unused": 141,
+      "frauds_forgone": 63
+    },
+    {
+      "start": 1.940093964600971,
+      "end": 1.9428000357967654,
+      "end_closed": false,
+      "unused": 140,
+      "frauds_forgone": 63
+    },
+    {
+      "start": 1.9428000357967654,
+      "end": 1.9473477910432495,
+      "end_closed": false,
+      "unused": 139,
+      "frauds_forgone": 63
+    },
+    {
+      "start": 1.9473477910432495,
+      "end": 1.9489530308864575,
+      "end_closed": false,
+      "unused": 138,
+      "frauds_forgone": 63
+    },
+    {
+      "start": 1.9489530308864575,
+      "end": 1.9510889947458216,
+      "end_closed": false,
+      "unused": 137,
+      "frauds_forgone": 62
+    },
+    {
+      "start": 1.9510889947458216,
+      "end": 1.9682913148627552,
+      "end_closed": false,
+      "unused": 136,
+      "frauds_forgone": 62
+    },
+    {
+      "start": 1.9682913148627552,
+      "end": 1.9775655342251728,
+      "end_closed": false,
+      "unused": 135,
+      "frauds_forgone": 62
+    },
+    {
+      "start": 1.9775655342251728,
+      "end": 1.9825702723169187,
+      "end_closed": false,
+      "unused": 134,
+      "frauds_forgone": 62
+    },
+    {
+      "start": 1.9825702723169187,
+      "end": 1.9920649814984532,
+      "end_closed": false,
+      "unused": 133,
+      "frauds_forgone": 61
+    },
+    {
+      "start": 1.9920649814984532,
+      "end": 2.0037573444842036,
+      "end_closed": false,
+      "unused": 132,
+      "frauds_forgone": 61
+    },
+    {
+      "start": 2.0037573444842036,
+      "end": 2.0110824832668674,
+      "end_closed": false,
+      "unused": 131,
+      "frauds_forgone": 60
+    },
+    {
+      "start": 2.0110824832668674,
+      "end": 2.0143916330210248,
+      "end_closed": false,
+      "unused": 130,
+      "frauds_forgone": 59
+    },
+    {
+      "start": 2.0143916330210248,
+      "end": 2.0238191075583254,
+      "end_closed": false,
+      "unused": 129,
+      "frauds_forgone": 58
+    },
+    {
+      "start": 2.0238191075583254,
+      "end": 2.0278236365071356,
+      "end_closed": false,
+      "unused": 128,
+      "frauds_forgone": 57
+    },
+    {
+      "start": 2.0278236365071356,
+      "end": 2.035712955784473,
+      "end_closed": false,
+      "unused": 127,
+      "frauds_forgone": 56
+    },
+    {
+      "start": 2.035712955784473,
+      "end": 2.049303185489113,
+      "end_closed": false,
+      "unused": 126,
+      "frauds_forgone": 55
+    },
+    {
+      "start": 2.049303185489113,
+      "end": 2.0525584191853454,
+      "end_closed": false,
+      "unused": 125,
+      "frauds_forgone": 55
+    },
+    {
+      "start": 2.0525584191853454,
+      "end": 2.0620387553684947,
+      "end_closed": false,
+      "unused": 124,
+      "frauds_forgone": 54
+    },
+    {
+      "start": 2.0620387553684947,
+      "end": 2.069366154443394,
+      "end_closed": false,
+      "unused": 123,
+      "frauds_forgone": 54
+    },
+    {
+      "start": 2.069366154443394,
+      "end": 2.0854580525246886,
+      "end_closed": false,
+      "unused": 122,
+      "frauds_forgone": 54
+    },
+    {
+      "start": 2.0854580525246886,
+      "end": 2.09046759054252,
+      "end_closed": false,
+      "unused": 121,
+      "frauds_forgone": 54
+    },
+    {
+      "start": 2.09046759054252,
+      "end": 2.100982281839461,
+      "end_closed": false,
+      "unused": 120,
+      "frauds_forgone": 54
+    },
+    {
+      "start": 2.100982281839461,
+      "end": 2.107537274550302,
+      "end_closed": false,
+      "unused": 119,
+      "frauds_forgone": 53
+    },
+    {
+      "start": 2.107537274550302,
+      "end": 2.1162103417385367,
+      "end_closed": false,
+      "unused": 118,
+      "frauds_forgone": 52
+    },
+    {
+      "start": 2.1162103417385367,
+      "end": 2.124797843650027,
+      "end_closed": false,
+      "unused": 117,
+      "frauds_forgone": 51
+    },
+    {
+      "start": 2.124797843650027,
+      "end": 2.125725836007213,
+      "end_closed": false,
+      "unused": 116,
+      "frauds_forgone": 51
+    },
+    {
+      "start": 2.125725836007213,
+      "end": 2.1297834781009723,
+      "end_closed": false,
+      "unused": 115,
+      "frauds_forgone": 50
+    },
+    {
+      "start": 2.1297834781009723,
+      "end": 2.1403736102189965,
+      "end_closed": false,
+      "unused": 114,
+      "frauds_forgone": 49
+    },
+    {
+      "start": 2.1403736102189965,
+      "end": 2.1425506306481292,
+      "end_closed": false,
+      "unused": 113,
+      "frauds_forgone": 48
+    },
+    {
+      "start": 2.1425506306481292,
+      "end": 2.1475133498467747,
+      "end_closed": false,
+      "unused": 112,
+      "frauds_forgone": 47
+    },
+    {
+      "start": 2.1475133498467747,
+      "end": 2.1512024641277954,
+      "end_closed": false,
+      "unused": 111,
+      "frauds_forgone": 46
+    },
+    {
+      "start": 2.1512024641277954,
+      "end": 2.1572010722668984,
+      "end_closed": false,
+      "unused": 110,
+      "frauds_forgone": 46
+    },
+    {
+      "start": 2.1572010722668984,
+      "end": 2.1653007680310807,
+      "end_closed": false,
+      "unused": 109,
+      "frauds_forgone": 46
+    },
+    {
+      "start": 2.1653007680310807,
+      "end": 2.1661554117032216,
+      "end_closed": false,
+      "unused": 108,
+      "frauds_forgone": 45
+    },
+    {
+      "start": 2.1661554117032216,
+      "end": 2.167604590423246,
+      "end_closed": false,
+      "unused": 107,
+      "frauds_forgone": 45
+    },
+    {
+      "start": 2.167604590423246,
+      "end": 2.1740201871210516,
+      "end_closed": false,
+      "unused": 106,
+      "frauds_forgone": 44
+    },
+    {
+      "start": 2.1740201871210516,
+      "end": 2.176623642590226,
+      "end_closed": false,
+      "unused": 105,
+      "frauds_forgone": 43
+    },
+    {
+      "start": 2.176623642590226,
+      "end": 2.1784763787711063,
+      "end_closed": false,
+      "unused": 104,
+      "frauds_forgone": 43
+    },
+    {
+      "start": 2.1784763787711063,
+      "end": 2.188181996899803,
+      "end_closed": false,
+      "unused": 103,
+      "frauds_forgone": 42
+    },
+    {
+      "start": 2.188181996899803,
+      "end": 2.1892064269284726,
+      "end_closed": false,
+      "unused": 102,
+      "frauds_forgone": 42
+    },
+    {
+      "start": 2.1892064269284726,
+      "end": 2.189645269816055,
+      "end_closed": false,
+      "unused": 101,
+      "frauds_forgone": 42
+    },
+    {
+      "start": 2.189645269816055,
+      "end": 2.199580364675156,
+      "end_closed": false,
+      "unused": 100,
+      "frauds_forgone": 42
+    },
+    {
+      "start": 2.199580364675156,
+      "end": 2.199640391053066,
+      "end_closed": false,
+      "unused": 99,
+      "frauds_forgone": 41
+    },
+    {
+      "start": 2.199640391053066,
+      "end": 2.2278966395705018,
+      "end_closed": false,
+      "unused": 98,
+      "frauds_forgone": 40
+    },
+    {
+      "start": 2.2278966395705018,
+      "end": 2.2332371772343844,
+      "end_closed": false,
+      "unused": 97,
+      "frauds_forgone": 40
+    },
+    {
+      "start": 2.2332371772343844,
+      "end": 2.239507480135466,
+      "end_closed": false,
+      "unused": 96,
+      "frauds_forgone": 39
+    },
+    {
+      "start": 2.239507480135466,
+      "end": 2.245710458105031,
+      "end_closed": false,
+      "unused": 95,
+      "frauds_forgone": 39
+    },
+    {
+      "start": 2.245710458105031,
+      "end": 2.251010959345339,
+      "end_closed": false,
+      "unused": 94,
+      "frauds_forgone": 38
+    },
+    {
+      "start": 2.251010959345339,
+      "end": 2.2647460634559673,
+      "end_closed": false,
+      "unused": 93,
+      "frauds_forgone": 38
+    },
+    {
+      "start": 2.2647460634559673,
+      "end": 2.3034076250280577,
+      "end_closed": false,
+      "unused": 92,
+      "frauds_forgone": 38
+    },
+    {
+      "start": 2.3034076250280577,
+      "end": 2.3110099656320955,
+      "end_closed": false,
+      "unused": 91,
+      "frauds_forgone": 37
+    },
+    {
+      "start": 2.3110099656320955,
+      "end": 2.31180497695601,
+      "end_closed": false,
+      "unused": 90,
+      "frauds_forgone": 36
+    },
+    {
+      "start": 2.31180497695601,
+      "end": 2.3126743832684773,
+      "end_closed": false,
+      "unused": 89,
+      "frauds_forgone": 36
+    },
+    {
+      "start": 2.3126743832684773,
+      "end": 2.3134275771178854,
+      "end_closed": false,
+      "unused": 88,
+      "frauds_forgone": 35
+    },
+    {
+      "start": 2.3134275771178854,
+      "end": 2.3224748059519964,
+      "end_closed": false,
+      "unused": 87,
+      "frauds_forgone": 35
+    },
+    {
+      "start": 2.3224748059519964,
+      "end": 2.3383708091772384,
+      "end_closed": false,
+      "unused": 86,
+      "frauds_forgone": 34
+    },
+    {
+      "start": 2.3383708091772384,
+      "end": 2.391225176485217,
+      "end_closed": false,
+      "unused": 85,
+      "frauds_forgone": 33
+    },
+    {
+      "start": 2.391225176485217,
+      "end": 2.399067569079755,
+      "end_closed": false,
+      "unused": 84,
+      "frauds_forgone": 33
+    },
+    {
+      "start": 2.399067569079755,
+      "end": 2.401482650841846,
+      "end_closed": false,
+      "unused": 83,
+      "frauds_forgone": 33
+    },
+    {
+      "start": 2.401482650841846,
+      "end": 2.402597711731389,
+      "end_closed": false,
+      "unused": 82,
+      "frauds_forgone": 33
+    },
+    {
+      "start": 2.402597711731389,
+      "end": 2.4044326088696737,
+      "end_closed": false,
+      "unused": 81,
+      "frauds_forgone": 32
+    },
+    {
+      "start": 2.4044326088696737,
+      "end": 2.42506441965893,
+      "end_closed": false,
+      "unused": 80,
+      "frauds_forgone": 31
+    },
+    {
+      "start": 2.42506441965893,
+      "end": 2.4270768862029404,
+      "end_closed": false,
+      "unused": 79,
+      "frauds_forgone": 31
+    },
+    {
+      "start": 2.4270768862029404,
+      "end": 2.430466764765318,
+      "end_closed": false,
+      "unused": 78,
+      "frauds_forgone": 31
+    },
+    {
+      "start": 2.430466764765318,
+      "end": 2.4308930673266063,
+      "end_closed": false,
+      "unused": 77,
+      "frauds_forgone": 31
+    },
+    {
+      "start": 2.4308930673266063,
+      "end": 2.446612884943264,
+      "end_closed": false,
+      "unused": 76,
+      "frauds_forgone": 30
+    },
+    {
+      "start": 2.446612884943264,
+      "end": 2.4537282768098816,
+      "end_closed": false,
+      "unused": 75,
+      "frauds_forgone": 30
+    },
+    {
+      "start": 2.4537282768098816,
+      "end": 2.4586886906135392,
+      "end_closed": false,
+      "unused": 74,
+      "frauds_forgone": 30
+    },
+    {
+      "start": 2.4586886906135392,
+      "end": 2.506193637633255,
+      "end_closed": false,
+      "unused": 73,
+      "frauds_forgone": 30
+    },
+    {
+      "start": 2.506193637633255,
+      "end": 2.5065567286982144,
+      "end_closed": false,
+      "unused": 72,
+      "frauds_forgone": 29
+    },
+    {
+      "start": 2.5065567286982144,
+      "end": 2.5279397206124052,
+      "end_closed": false,
+      "unused": 71,
+      "frauds_forgone": 29
+    },
+    {
+      "start": 2.5279397206124052,
+      "end": 2.530138675507856,
+      "end_closed": false,
+      "unused": 70,
+      "frauds_forgone": 29
+    },
+    {
+      "start": 2.530138675507856,
+      "end": 2.532892805180361,
+      "end_closed": false,
+      "unused": 69,
+      "frauds_forgone": 28
+    },
+    {
+      "start": 2.532892805180361,
+      "end": 2.534075529205596,
+      "end_closed": false,
+      "unused": 68,
+      "frauds_forgone": 28
+    },
+    {
+      "start": 2.534075529205596,
+      "end": 2.5487733989984482,
+      "end_closed": false,
+      "unused": 67,
+      "frauds_forgone": 28
+    },
+    {
+      "start": 2.5487733989984482,
+      "end": 2.551436884082442,
+      "end_closed": false,
+      "unused": 66,
+      "frauds_forgone": 27
+    },
+    {
+      "start": 2.551436884082442,
+      "end": 2.5522489160326858,
+      "end_closed": false,
+      "unused": 65,
+      "frauds_forgone": 27
+    },
+    {
+      "start": 2.5522489160326858,
+      "end": 2.554245965410276,
+      "end_closed": false,
+      "unused": 64,
+      "frauds_forgone": 26
+    },
+    {
+      "start": 2.554245965410276,
+      "end": 2.557116859773722,
+      "end_closed": false,
+      "unused": 63,
+      "frauds_forgone": 26
+    },
+    {
+      "start": 2.557116859773722,
+      "end": 2.592366807582852,
+      "end_closed": false,
+      "unused": 62,
+      "frauds_forgone": 25
+    },
+    {
+      "start": 2.592366807582852,
+      "end": 2.6104129971746017,
+      "end_closed": false,
+      "unused": 61,
+      "frauds_forgone": 24
+    },
+    {
+      "start": 2.6104129971746017,
+      "end": 2.610907017664966,
+      "end_closed": false,
+      "unused": 60,
+      "frauds_forgone": 24
+    },
+    {
+      "start": 2.610907017664966,
+      "end": 2.614904386039661,
+      "end_closed": false,
+      "unused": 59,
+      "frauds_forgone": 24
+    },
+    {
+      "start": 2.614904386039661,
+      "end": 2.6200235224495936,
+      "end_closed": false,
+      "unused": 58,
+      "frauds_forgone": 23
+    },
+    {
+      "start": 2.6200235224495936,
+      "end": 2.653558756422051,
+      "end_closed": false,
+      "unused": 57,
+      "frauds_forgone": 23
+    },
+    {
+      "start": 2.653558756422051,
+      "end": 2.654832143391056,
+      "end_closed": false,
+      "unused": 56,
+      "frauds_forgone": 23
+    },
+    {
+      "start": 2.654832143391056,
+      "end": 2.6747878922657016,
+      "end_closed": false,
+      "unused": 55,
+      "frauds_forgone": 23
+    },
+    {
+      "start": 2.6747878922657016,
+      "end": 2.6857158922009896,
+      "end_closed": false,
+      "unused": 54,
+      "frauds_forgone": 22
+    },
+    {
+      "start": 2.6857158922009896,
+      "end": 2.6873529543408727,
+      "end_closed": false,
+      "unused": 53,
+      "frauds_forgone": 22
+    },
+    {
+      "start": 2.6873529543408727,
+      "end": 2.6899883835331835,
+      "end_closed": false,
+      "unused": 52,
+      "frauds_forgone": 21
+    },
+    {
+      "start": 2.6899883835331835,
+      "end": 2.6935866566790994,
+      "end_closed": false,
+      "unused": 51,
+      "frauds_forgone": 20
+    },
+    {
+      "start": 2.6935866566790994,
+      "end": 2.7036014028817306,
+      "end_closed": false,
+      "unused": 50,
+      "frauds_forgone": 20
+    },
+    {
+      "start": 2.7036014028817306,
+      "end": 2.7265361357681934,
+      "end_closed": false,
+      "unused": 49,
+      "frauds_forgone": 19
+    },
+    {
+      "start": 2.7265361357681934,
+      "end": 2.729296359879324,
+      "end_closed": false,
+      "unused": 48,
+      "frauds_forgone": 18
+    },
+    {
+      "start": 2.729296359879324,
+      "end": 2.73467934297585,
+      "end_closed": false,
+      "unused": 47,
+      "frauds_forgone": 17
+    },
+    {
+      "start": 2.73467934297585,
+      "end": 2.742604046800058,
+      "end_closed": false,
+      "unused": 46,
+      "frauds_forgone": 16
+    },
+    {
+      "start": 2.742604046800058,
+      "end": 2.7461141897464083,
+      "end_closed": false,
+      "unused": 45,
+      "frauds_forgone": 15
+    },
+    {
+      "start": 2.7461141897464083,
+      "end": 2.7629217946263256,
+      "end_closed": false,
+      "unused": 44,
+      "frauds_forgone": 15
+    },
+    {
+      "start": 2.7629217946263256,
+      "end": 2.7979912673887917,
+      "end_closed": false,
+      "unused": 43,
+      "frauds_forgone": 14
+    },
+    {
+      "start": 2.7979912673887917,
+      "end": 2.8105022497585765,
+      "end_closed": false,
+      "unused": 42,
+      "frauds_forgone": 14
+    },
+    {
+      "start": 2.8105022497585765,
+      "end": 2.811438349214996,
+      "end_closed": false,
+      "unused": 41,
+      "frauds_forgone": 14
+    },
+    {
+      "start": 2.811438349214996,
+      "end": 2.8162780898671933,
+      "end_closed": false,
+      "unused": 40,
+      "frauds_forgone": 14
+    },
+    {
+      "start": 2.8162780898671933,
+      "end": 2.826362914830203,
+      "end_closed": false,
+      "unused": 39,
+      "frauds_forgone": 14
+    },
+    {
+      "start": 2.826362914830203,
+      "end": 2.8404259377734906,
+      "end_closed": false,
+      "unused": 38,
+      "frauds_forgone": 13
+    },
+    {
+      "start": 2.8404259377734906,
+      "end": 2.8511093376406222,
+      "end_closed": false,
+      "unused": 37,
+      "frauds_forgone": 13
+    },
+    {
+      "start": 2.8511093376406222,
+      "end": 2.8712590846894397,
+      "end_closed": false,
+      "unused": 36,
+      "frauds_forgone": 12
+    },
+    {
+      "start": 2.8712590846894397,
+      "end": 2.949589754952626,
+      "end_closed": false,
+      "unused": 35,
+      "frauds_forgone": 12
+    },
+    {
+      "start": 2.949589754952626,
+      "end": 2.9540274543956513,
+      "end_closed": false,
+      "unused": 34,
+      "frauds_forgone": 12
+    },
+    {
+      "start": 2.9540274543956513,
+      "end": 2.960375759687105,
+      "end_closed": false,
+      "unused": 33,
+      "frauds_forgone": 11
+    },
+    {
+      "start": 2.960375759687105,
+      "end": 2.9690078114152394,
+      "end_closed": false,
+      "unused": 32,
+      "frauds_forgone": 11
+    },
+    {
+      "start": 2.9690078114152394,
+      "end": 2.975806619354542,
+      "end_closed": false,
+      "unused": 31,
+      "frauds_forgone": 10
+    },
+    {
+      "start": 2.975806619354542,
+      "end": 2.9787590956840875,
+      "end_closed": false,
+      "unused": 30,
+      "frauds_forgone": 9
+    },
+    {
+      "start": 2.9787590956840875,
+      "end": 2.9915843080981803,
+      "end_closed": false,
+      "unused": 29,
+      "frauds_forgone": 9
+    },
+    {
+      "start": 2.9915843080981803,
+      "end": 3.0045084520641057,
+      "end_closed": false,
+      "unused": 28,
+      "frauds_forgone": 8
+    },
+    {
+      "start": 3.0045084520641057,
+      "end": 3.0115433884947733,
+      "end_closed": false,
+      "unused": 27,
+      "frauds_forgone": 7
+    },
+    {
+      "start": 3.0115433884947733,
+      "end": 3.0451434746143704,
+      "end_closed": false,
+      "unused": 26,
+      "frauds_forgone": 6
+    },
+    {
+      "start": 3.0451434746143704,
+      "end": 3.0476261638629496,
+      "end_closed": false,
+      "unused": 25,
+      "frauds_forgone": 6
+    },
+    {
+      "start": 3.0476261638629496,
+      "end": 3.0593600466981585,
+      "end_closed": false,
+      "unused": 24,
+      "frauds_forgone": 6
+    },
+    {
+      "start": 3.0593600466981585,
+      "end": 3.0751041402289876,
+      "end_closed": false,
+      "unused": 23,
+      "frauds_forgone": 6
+    },
+    {
+      "start": 3.0751041402289876,
+      "end": 3.164236375074332,
+      "end_closed": false,
+      "unused": 22,
+      "frauds_forgone": 5
+    },
+    {
+      "start": 3.164236375074332,
+      "end": 3.1930426576315365,
+      "end_closed": false,
+      "unused": 21,
+      "frauds_forgone": 5
+    },
+    {
+      "start": 3.1930426576315365,
+      "end": 3.2025880544359135,
+      "end_closed": false,
+      "unused": 20,
+      "frauds_forgone": 5
+    },
+    {
+      "start": 3.2025880544359135,
+      "end": 3.20443051741525,
+      "end_closed": false,
+      "unused": 19,
+      "frauds_forgone": 5
+    },
+    {
+      "start": 3.20443051741525,
+      "end": 3.2436116680201237,
+      "end_closed": false,
+      "unused": 18,
+      "frauds_forgone": 4
+    },
+    {
+      "start": 3.2436116680201237,
+      "end": 3.3336168935342494,
+      "end_closed": false,
+      "unused": 17,
+      "frauds_forgone": 3
+    },
+    {
+      "start": 3.3336168935342494,
+      "end": 3.3896636610242212,
+      "end_closed": false,
+      "unused": 16,
+      "frauds_forgone": 2
+    },
+    {
+      "start": 3.3896636610242212,
+      "end": 3.461134033734267,
+      "end_closed": false,
+      "unused": 15,
+      "frauds_forgone": 2
+    },
+    {
+      "start": 3.461134033734267,
+      "end": 3.4726633421461393,
+      "end_closed": false,
+      "unused": 14,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.4726633421461393,
+      "end": 3.537968634875461,
+      "end_closed": false,
+      "unused": 13,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.537968634875461,
+      "end": 3.544435824790598,
+      "end_closed": false,
+      "unused": 12,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.544435824790598,
+      "end": 3.563361548889708,
+      "end_closed": false,
+      "unused": 11,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.563361548889708,
+      "end": 3.6943207135789478,
+      "end_closed": false,
+      "unused": 10,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.6943207135789478,
+      "end": 3.7202007350146684,
+      "end_closed": false,
+      "unused": 9,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.7202007350146684,
+      "end": 3.7550963053448725,
+      "end_closed": false,
+      "unused": 8,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.7550963053448725,
+      "end": 3.7687578333941754,
+      "end_closed": false,
+      "unused": 7,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.7687578333941754,
+      "end": 3.869359090512606,
+      "end_closed": false,
+      "unused": 6,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.869359090512606,
+      "end": 3.881917646408549,
+      "end_closed": false,
+      "unused": 5,
+      "frauds_forgone": 1
+    },
+    {
+      "start": 3.881917646408549,
+      "end": 3.9551453460521526,
+      "end_closed": false,
+      "unused": 4,
+      "frauds_forgone": 0
+    },
+    {
+      "start": 3.9551453460521526,
+      "end": 3.969886230050208,
+      "end_closed": false,
+      "unused": 3,
+      "frauds_forgone": 0
+    },
+    {
+      "start": 3.969886230050208,
+      "end": 4.229434558294061,
+      "end_closed": false,
+      "unused": 2,
+      "frauds_forgone": 0
+    },
+    {
+      "start": 4.229434558294061,
+      "end": 4.240976892870247,
+      "end_closed": false,
+      "unused": 1,
+      "frauds_forgone": 0
+    },
+    {
+      "start": 4.240976892870247,
+      "end": 1000.0,
+      "end_closed": true,
+      "unused": 0,
+      "frauds_forgone": 0
+    }
+  ],
+  "friction": [
+    {
+      "phi": 1.0,
+      "ratio": 7.481953785740494
+    },
+    {
+      "phi": 5.0,
+      "ratio": 20.44586135722148
+    }
+  ],
+  "grid": [
+    {
+      "ratio": 2.0,
+      "threshold": 0.5,
+      "reviews": 652,
+      "unused": 132,
+      "frauds_forgone": 61,
+      "days_with_unused": 15,
+      "utilisation": 0.8316326530612245,
+      "declined_fraud_rate": 0.4621212121212121,
+      "declined_mean_probability": 0.3898345812445626,
+      "cost_r3": 4914,
+      "cost_r4": 4904,
+      "cost_difference": -10,
+      "relative_difference": -0.002035002035002035,
+      "cost_no_review": 5274,
+      "fixed_status": "finite",
+      "fixed_ratio": 2.1639344262295084,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 356727.159,
+      "fraud_value_forgone": 12931.894,
+      "forgone_per_unused": 97.96889393939394,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.11429946779285365
+    },
+    {
+      "ratio": 5.0,
+      "threshold": 0.2,
+      "reviews": 784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 11109,
+      "cost_r4": 11109,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 13185,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 343795.265,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.14640743913530588
+    },
+    {
+      "ratio": 10.0,
+      "threshold": 0.1,
+      "reviews": 784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 21434,
+      "cost_r4": 21434,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 26370,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 343795.265,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.14640743913530588
+    },
+    {
+      "ratio": 20.0,
+      "threshold": 0.05,
+      "reviews": 784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 42084,
+      "cost_r4": 42084,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 52740,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 343795.265,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.14640743913530588
+    },
+    {
+      "ratio": 50.0,
+      "threshold": 0.02,
+      "reviews": 784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 104034,
+      "cost_r4": 104034,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 131850,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 343795.265,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.14640743913530588
+    },
+    {
+      "ratio": 100.0,
+      "threshold": 0.01,
+      "reviews": 784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 207284,
+      "cost_r4": 207284,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 263700,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 343795.265,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.14640743913530588
+    },
+    {
+      "ratio": 200.0,
+      "threshold": 0.005,
+      "reviews": 784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 413784,
+      "cost_r4": 413784,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 527400,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 343795.265,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.14640743913530588
+    },
+    {
+      "ratio": 500.0,
+      "threshold": 0.002,
+      "reviews": 784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 1033284,
+      "cost_r4": 1033284,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 1318500,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 343795.265,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.14640743913530588
+    },
+    {
+      "ratio": 1000.0,
+      "threshold": 0.001,
+      "reviews": 784,
+      "unused": 0,
+      "frauds_forgone": 0,
+      "days_with_unused": 0,
+      "utilisation": 1.0,
+      "declined_fraud_rate": null,
+      "declined_mean_probability": null,
+      "cost_r3": 2065784,
+      "cost_r4": 2065784,
+      "cost_difference": 0,
+      "relative_difference": 0.0,
+      "cost_no_review": 2637000,
+      "fixed_status": "identical",
+      "fixed_ratio": null,
+      "fraud_value_exposed_r3": 343795.265,
+      "fraud_value_exposed_r4": 343795.265,
+      "fraud_value_forgone": 0.0,
+      "forgone_per_unused": null,
+      "amount_weighted_recall_r3": 0.14640743913530588,
+      "amount_weighted_recall_r4": 0.14640743913530588
+    }
+  ]
+}

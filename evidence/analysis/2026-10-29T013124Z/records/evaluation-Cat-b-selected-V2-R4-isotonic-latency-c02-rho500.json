@@ -1,0 +1,159 @@
+{
+  "record": "evaluation",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-10-29T013124Z",
+    "run_type": "analysis",
+    "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+    "uncommitted_changes": false,
+    "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be",
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0
+    }
+  },
+  "configuration": "Cat-b",
+  "model_role": "selected",
+  "seed": 42,
+  "score": {
+    "path": "source/records/score-Cat-b-selected-V2.json",
+    "sha256": "6c3b5a752fce19ff08c04deaf61c82e15335513096cd2d9c3fab40363e7c49df"
+  },
+  "partition": "V2",
+  "period": "latency",
+  "days": {
+    "first": 148,
+    "last": 154
+  },
+  "policy": "R4",
+  "capacity": 0.02,
+  "k": 56,
+  "threshold": 0.002,
+  "cost_ratio": 500.0,
+  "calibrator": "isotonic",
+  "calibration": {
+    "path": "records/calibration-Cat-b-isotonic-latency.json",
+    "sha256": "78d2f3d6a51f97b5ef646135b6f96a0ff1074e170ce215706d1f8b8cc2c07fb8"
+  },
+  "counts": {
+    "days": 7,
+    "transactions": 21443,
+    "frauds": 660,
+    "selected": 392,
+    "true_positives": 255,
+    "false_positives": 137,
+    "false_negatives": 405
+  },
+  "metrics": {
+    "recall": 0.38636363636363635,
+    "precision": 0.6505102040816326,
+    "frauds_per_1000_reviews": 650.5102040816327,
+    "oracle_ceiling": 0.593939393939394,
+    "normalised_recall": 0.6505102040816326,
+    "random_review_recall": 0.01828102411043231,
+    "lift": 21.13468228200371,
+    "utilisation": 1.0,
+    "capacity_to_prevalence": 0.6497878787878788,
+    "amount_weighted_recall": 0.25881350442966466,
+    "fraud_value_exposed": 65109.713,
+    "scenario_cost": 202892.0
+  },
+  "daily": [
+    {
+      "day": 148,
+      "transactions": 3060,
+      "frauds": 86,
+      "selected": 56,
+      "true_positives": 36,
+      "oracle_reviewable": 56,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 149,
+      "transactions": 2289,
+      "frauds": 66,
+      "selected": 56,
+      "true_positives": 30,
+      "oracle_reviewable": 56,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 150,
+      "transactions": 2209,
+      "frauds": 69,
+      "selected": 56,
+      "true_positives": 24,
+      "oracle_reviewable": 56,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 151,
+      "transactions": 3101,
+      "frauds": 99,
+      "selected": 56,
+      "true_positives": 37,
+      "oracle_reviewable": 56,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 152,
+      "transactions": 3896,
+      "frauds": 120,
+      "selected": 56,
+      "true_positives": 41,
+      "oracle_reviewable": 56,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 153,
+      "transactions": 3105,
+      "frauds": 126,
+      "selected": 56,
+      "true_positives": 55,
+      "oracle_reviewable": 56,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    },
+    {
+      "day": 154,
+      "transactions": 3783,
+      "frauds": 94,
+      "selected": 56,
+      "true_positives": 32,
+      "oracle_reviewable": 56,
+      "overflow": 0,
+      "unused": 0,
+      "load_ratio": 1.0,
+      "cutoff_tied_group": null
+    }
+  ],
+  "cutoff_ties": {
+    "days": 0,
+    "group_sizes": []
+  }
+}
