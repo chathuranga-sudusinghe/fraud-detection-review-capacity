@@ -725,10 +725,22 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
   - S2: a key-free day-level moving-block bootstrap (ℓ = 3 days, non-circular, built as for H3 below) that preserves each day's top-K exactly [REF-037, REF-064].
 
   A different H1 or H2 conclusion under S1 or S2 is reported as sensitivity to dependence assumptions: p_H1, p_H2 and the H1 practical category are recomputed under each, Holm is re-applied with p_H3 held at its primary value, and a conclusion differs when a rejection decision or the H1 category differs ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)). Confirmatory decisions use the primary method only.
-- **Resampling conventions** ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md), Resampling conventions; Issue #183):
-  - every Test resampling draws from root seed 42 (NumPy PCG64), with independent `SeedSequence.spawn` child streams in a fixed order: H1/H2 pigeonhole (one joint weight set for all eight configurations), S1 fraud-level bootstrap, S2 day blocks, H3 day blocks (ℓ = 3, 1, 7), RQ3 day blocks, RQ3 pigeonhole sensitivity;
+- **Resampling conventions** ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md), Resampling conventions; Issues #183 and #185):
+  - every Test resampling draws from root seed 42 (NumPy PCG64), with independent `SeedSequence.spawn` child streams in a fixed order: (1) H1/H2 pigeonhole (one joint weight set for all eight configurations), (2) S1 fraud-level bootstrap, (3) S2 day blocks, (4) H3 day blocks (ℓ = 3, 1, 7), (5) RQ3 day blocks, (6) RQ3 pigeonhole sensitivity, (7) false-negative pigeonhole (one joint weight set for all slices and configurations), (8) secondary-outcome day blocks;
   - a pigeonhole replicate whose fraud weights sum to zero counts as not rejecting in every one-sided tail, B stays 10,000 in every denominator, the replicate is excluded from the percentile intervals and the number of such replicates is reported;
-  - the Monte Carlo standard error of each unadjusted p-value is reported: √(q(1 − q)/B) for a one-sided tail proportion q, twice that of the smaller tail for p_H1, and that of the maximising component for p_H2 and p_H3.
+  - the Monte Carlo standard error of each unadjusted p-value is reported. For a one-sided tail proportion q:
+
+    $$
+    \mathrm{SE}_{\mathrm{MC}}(q) = \sqrt{\frac{q\,(1 - q)}{B}}
+    $$
+
+    where:
+
+    - `SE_MC(q)` = Monte Carlo standard error of the tail proportion q;
+    - `q` = add-one tail proportion of a one-sided p-value;
+    - `B` = number of bootstrap replicates (10,000).
+
+    For p_H1 the error is twice that of the smaller tail, and for p_H2 and p_H3 that of the maximising component.
 - **H1: two-sided difference test.** It is not a winner-selection test. p_H1 is the two-sided bootstrap p-value for δ_F = 0, in the add-one form bounded to (0, 1] ([DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md)):
 
   $$
@@ -753,7 +765,17 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
   - Uncertainty comes from a **moving-block bootstrap over Test days**, because the outcome does not depend on labels: block length 3 days, B = 10,000 bootstrap replicates, percentile interval [REF-037, REF-064]. Sensitivity block lengths are 1 and 7 days. The blocks are non-circular: block starts are drawn uniformly from Test days 1 … 28 − ℓ + 1, ⌈28 / ℓ⌉ blocks are concatenated and the series is truncated to its first 28 days; one resample set per block length is shared by the eight configurations ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
   - The 90 % CI for r is reported in every case, with its position relative to (0.016, 0.024). It describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. A CI overlapping a bound is **inconclusive**. The interval position is labelled descriptively (CI inside the band, entirely outside it, or overlapping a bound); "rate preserved within ±20 %" is said only when H3₁ is concluded by the Holm-adjusted p-value ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
   - Inference is conditional on the H3 configuration's trained model and its τ₂.
-  - Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded, t_min = max(|L − 0.02|, |U − 0.02|) / 0.02 for the 90 % CI (L, U) of r: descriptive, interval-based, not Holm-adjusted ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
+  - Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded. For the 90 % CI of r it is descriptive, interval-based and not Holm-adjusted ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)):
+
+    $$
+    t_{\min} = \frac{\max\left(\lvert L - 0.02 \rvert,\ \lvert U - 0.02 \rvert\right)}{0.02}
+    $$
+
+    where:
+
+    - `t_min` = smallest relative tolerance whose open band contains the interval;
+    - `L`, `U` = lower and upper endpoints of the 90 % CI of r;
+    - `0.02` = the 2 % target rate.
 - **Multiplicity:** **Holm** (sequentially rejective multiple-testing procedure) at family-wise α = 0.05 over the confirmatory family {H1, H2, H3} [REF-029]: three members, with H3 tested once, on the H3 configuration. Decisions use **Holm-adjusted p-values**:
 
   $$
@@ -955,7 +977,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | arg max | The argument (here, configuration) at which a quantity is largest |
 | AI, AIR | Artificial intelligence; AI Reflection (University of Greenwich statement of AI use, replacing the Declaration of AI use from 2026/27) |
 | COMP1885 | University of Greenwich Individual Project module for which this research is conducted |
-| Tier 2 | University of Greenwich AI-use tier "Supported by AI": AI may support planning, clarification and feedback; analysis and final work remain the student's |
+| Tier 2 | University of Greenwich AI-use tier "Supported by AI": AI may support planning, clarification and feedback; analysis and final work remain human-authored |
 | B | Number of bootstrap replicates (10,000) |
 | c | Review-capacity share (1 %, 2 %, 5 % or 10 %) |
 | C_FP | Extra false-alert/customer-friction cost of reviewing a legitimate transaction (sensitivity only) |
@@ -1026,7 +1048,8 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | RQ1–RQ3 | Research questions 1–3 |
 | S1, S2 | Sensitivity analyses: Owen-corrected variance; day-level moving-block bootstrap |
 | SE | Standard error |
-| q | Add-one tail proportion of a one-sided bootstrap p-value (Monte Carlo standard error √(q(1 − q)/B)) |
+| q | Add-one tail proportion of a one-sided bootstrap p-value |
+| SE_MC | Monte Carlo standard error of a bootstrap tail proportion |
 | t_min | Smallest relative tolerance whose open band contains the 90 % CI of r (H3 sensitivity) |
 | L, U | Lower and upper endpoints of the 90 % CI of r |
 | SESOI | Smallest Effect Size Of Interest (2 percentage points of Recall@2%) |

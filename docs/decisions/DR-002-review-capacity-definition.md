@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
-| Date | 2026-09-23; revised 2026-10-09 (Issue #54: pooled normalised recall; days without frauds) |
+| Date | 2026-09-23; revised 2026-10-09 (Issue #54: pooled normalised recall; days without frauds) and 2026-10-30 (Issue #193: the ceiling as a planning value) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§6, 7, 11 |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |
 
@@ -116,7 +116,7 @@ The research studies fraud detection when only a limited number of transactions 
 
 ## Consequences
 
-- **Primary metric:** Recall@2%, evaluated under the daily top-K policy R3 (review the K highest-scoring transactions each day) with K = 56. It is interpreted against the ≈ 0.6 ceiling and reported with normalised recall.
+- **Primary metric:** Recall@2%, evaluated under the daily top-K policy R3 (review the K highest-scoring transactions each day) with K = 56. It is interpreted against the ceiling (≈ 0.6, the V2-based planning value; the Test oracle-normalised recall uses the actual Test quantities, protocol Outcomes) and reported with normalised recall.
 - **Research question RQ3 must be evaluated across the capacity grid.** In the binding regime, the marginal (K-th) reviewed transaction is likely to have a high fraud probability. A cost-aware policy (R4, the calibrated cost-aware capped policy) will then rarely leave budget unused, and R4 will often coincide with R3. The informative contrasts are expected at 5 % and 10 % and at low miss-to-review cost ratios [I]. The **main RQ3 output is the break-even miss-to-review cost ratio for each capacity** [REF-008, REF-039, REF-040].
 - Policies that are not capped (R0, the default 0.5 threshold; R1, the F1-optimal threshold; R2, the capacity-rate threshold) can exceed K on a given day. Their **overflow rule** is report-only ([DR-009](DR-009-overflow-handling-for-threshold-policies.md)): R0–R2 are evaluated uncapped, and their alert demand is compared with K. Truncation is rejected because it reproduces R3 on every overflow day.
 - Review effort is counted **per transaction**.
@@ -125,7 +125,7 @@ The research studies fraud detection when only a limited number of transactions 
 
 - **Construct validity.** Real review queues work at account or case level. Reviewing one transaction of a compromised account usually triggers action on the whole account, so transaction-level K overstates the effort needed to stop entity-level fraud. IEEE-CIS has no true account or card identifier, so card-level precision [REF-046] cannot be computed.
 - **External validity.** The capacity percentages are not calibrated to any institution.
-- **Ceiling compression.** With a ceiling of ≈ 0.6, absolute differences in Recall@2% between models are compressed. Minimum detectable effects are discussed in the protocol.
+- **Ceiling compression.** With a V2-based planning ceiling of ≈ 0.6, absolute differences in Recall@2% between models are compressed. Minimum detectable effects are discussed in the protocol.
 
 ## References
 

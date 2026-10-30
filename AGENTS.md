@@ -51,7 +51,7 @@ GitHub Issue
 
 Every decision reached with an AI assistant is recorded in the repository or its issues, so that a new chat session or another assistant finds it without re-discussing it. A chat session or an assistant's own memory is never the record.
 
-- **Record final decisions the same day.** A decision the project owner finalizes is written into its owner file (see [Single source of truth](#single-source-of-truth)) through the active issue. If no issue covers it yet, it is recorded as a comment on the relevant GitHub issue, in the form `Decision (owner, YYYY-MM-DD): …`.
+- **Record final decisions the same day.** A decision the project owner finalizes is written into its owner file (see [Single source of truth](#single-source-of-truth)) through the active issue. If no issue covers it yet, it is recorded as a comment on the relevant GitHub issue, in the form `Decision (YYYY-MM-DD): …`.
 - **List open items where they will be decided.** An item discussed but not yet decided is listed in the issue that will decide it, so that nothing discussed is lost.
 - **Read before asking.** Before asking the project owner about a design item, check the owner files (`docs/protocol.md`, the Decision Records, `config/*.yaml`) and the open issues. A decided item is applied with its source cited, not asked again.
 - **Close each working session with its state.** At the end of a working session, the active issue receives a short "current state / next step" comment.
