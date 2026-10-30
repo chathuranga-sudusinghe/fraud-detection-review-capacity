@@ -46,6 +46,7 @@ from review_capacity.confirmatory.identity import (
 from review_capacity.development.records import (
     ALL_CONFIGURATIONS,
     CONFIGURATION,
+    COST_ANALYSIS,
     COUNT,
     COUNTS,
     CUTOFF_TIES,
@@ -53,6 +54,7 @@ from review_capacity.development.records import (
     DEVICE,
     DIAGNOSTIC,
     GIT_COMMIT,
+    GRID_ROW,
     METRICS,
     POSITIVE,
     PROJECT_FILE,
@@ -64,7 +66,10 @@ from review_capacity.development.records import (
     SHA256,
     STUDY_CONFIGURATION,
     TIMESTAMP,
+    _break_even_problems,
+    _curve_problems,
     _daily,
+    _grid_problems,
     _reliability,
 )
 from review_capacity.development.schema import (
@@ -2167,6 +2172,162 @@ TEST_CALIBRATION = _contract(
 )
 
 
+# --- test_rq3 -------------------------------------------------------------------------------------
+
+RQ3_REGIMES = ("identical", "r4_cheaper", "r3_cheaper", "inconclusive")
+RQ3_INTERVALS = (
+    "unused",
+    "frauds_forgone",
+    "utilisation",
+    "cost_r3",
+    "cost_r4",
+    "cost_difference",
+    "relative_difference",
+    "declined_fraud_rate",
+    "declined_mean_probability",
+    "fraud_value_exposed_r4",
+    "fraud_value_forgone",
+    "forgone_per_unused",
+    "amount_weighted_recall_r4",
+)
+RQ3_NULLABLE = (
+    "declined_fraud_rate",
+    "declined_mean_probability",
+    "forgone_per_unused",
+    "amount_weighted_recall_r4",
+)
+RQ3_GRID_ROW = Object(
+    (
+        *GRID_ROW.fields,
+        Field(
+            "intervals",
+            MapOf(INTERVAL, keys=Choice(RQ3_INTERVALS), nullable_values=True),
+            "95 % day-block intervals (null where the point value is null)",
+        ),
+        Field(
+            "frauds_forgone_pigeonhole",
+            INTERVAL,
+            "Two-way pigeonhole interval of the frauds forgone (sensitivity, stream 6)",
+        ),
+        Field("regime", Choice(RQ3_REGIMES), "Regime of the cell from the interval of ΔJ"),
+    )
+)
+RQ3_CAPACITY = Object(
+    (
+        Field("capacity", CAPACITY_SHARE, "Review-capacity share c"),
+        Field("k", POSITIVE, "Fixed daily review budget K"),
+        *(COST_ANALYSIS.body.field(name) for name in ("queue", "saturation", "break_even")),
+        COST_ANALYSIS.body.field("friction"),
+        COST_ANALYSIS.body.field("curve"),
+        Field("grid", ListOf(RQ3_GRID_ROW, min_items=1), "The ratio grid of DR-007 §2"),
+    )
+)
+
+
+def _regime_of(unused: int, interval: Mapping[str, Any]) -> str:
+    if unused == 0:
+        return "identical"
+    if interval["upper"] < 0:
+        return "r4_cheaper"
+    if interval["lower"] > 0:
+        return "r3_cheaper"
+    return "inconclusive"
+
+
+def _rq3_cell_problems(where: str, row: Mapping[str, Any]) -> list[str]:
+    problems = []
+    intervals = row["intervals"]
+    if sorted(intervals) != sorted(RQ3_INTERVALS):
+        return [f"{where}.intervals: must hold exactly {list(RQ3_INTERVALS)}"]
+    for name, interval in intervals.items():
+        if (interval is None) != (name in RQ3_NULLABLE and row[name] is None):
+            problems.append(f"{where}.intervals.{name}: null exactly when the point value is null")
+        elif interval is not None and interval["lower"] > interval["upper"]:
+            problems.append(f"{where}.intervals.{name}: lower exceeds upper")
+    delta = intervals["cost_difference"]
+    if delta is not None and row["regime"] != _regime_of(row["unused"], delta):
+        problems.append(f"{where}.regime: must follow the interval of the cost difference")
+    pigeonhole = row["frauds_forgone_pigeonhole"]
+    if pigeonhole["lower"] > pigeonhole["upper"]:
+        problems.append(f"{where}.frauds_forgone_pigeonhole: lower exceeds upper")
+    return problems
+
+
+def _rq3_rules(record: Mapping[str, Any]) -> list[str]:
+    problems: list[str] = []
+    capacities = [entry["capacity"] for entry in record["capacities"]]
+    if len(set(capacities)) != len(capacities):
+        problems.append("test_rq3.capacities: a capacity is analysed once")
+    frauds = {entry["queue"]["frauds"] for entry in record["capacities"]}
+    if len(frauds) > 1:
+        problems.append("test_rq3.capacities: every capacity counts the same frauds")
+    for i, entry in enumerate(record["capacities"]):
+        where = f"test_rq3.capacities[{i}]"
+        frame = {**entry, "days": record["days"]}
+        for check in (_grid_problems, _break_even_problems, _curve_problems):
+            problems += [p.replace("cost_analysis", where) for p in check(frame)]
+        if entry["queue"]["reviews"] > entry["k"] * (
+            record["days"]["last"] - record["days"]["first"] + 1
+        ):
+            problems.append(f"{where}.queue.reviews: at most K a day")
+        for j, row in enumerate(entry["grid"]):
+            problems += _rq3_cell_problems(f"{where}.grid[{j}]", row)
+    return problems
+
+
+def _rq3_context(record: Mapping[str, Any], context: ConfirmatoryContext) -> list[str]:
+    declaration, test = context.declaration, context.test
+    problems = [
+        f"test_rq3.days.{name}: must be {expected} (the Test partition)"
+        for name, expected in (("first", test.first_day), ("last", test.last_day))
+        if record["days"][name] != expected
+    ]
+    entries = record["capacities"]
+    if not _declared_capacities(declaration, [e["capacity"] for e in entries]):
+        problems.append("test_rq3.capacities: every declared capacity, in the declared order")
+    for i, entry in enumerate(entries):
+        where = f"test_rq3.capacities[{i}]"
+        if not _declared_pair(declaration, entry["capacity"], entry["k"]):
+            problems.append(f"{where}: capacity and K must be a declared pair")
+        if [float(r) for r in declaration.rq3.ratio_grid] != [
+            row["ratio"] for row in entry["grid"]
+        ]:
+            problems.append(f"{where}.grid: the declared ratio grid, in order")
+        for j, row in enumerate(entry["grid"]):
+            cells = [*row["intervals"].values(), row["frauds_forgone_pigeonhole"]]
+            for interval in (c for c in cells if c is not None):
+                if not _close(interval["level"], declaration.levels.difference):
+                    problems.append(f"{where}.grid[{j}]: interval level must be the declared one")
+                if interval["replicates"] != declaration.resampling.replicates:
+                    problems.append(
+                        f"{where}.grid[{j}]: interval replicates must be the declared B"
+                    )
+                if interval["undefined"] >= interval["replicates"]:
+                    problems.append(f"{where}.grid[{j}]: undefined replicates fewer than drawn")
+    return problems
+
+
+TEST_RQ3 = _contract(
+    "test_rq3",
+    1,
+    "The R4 outcomes and the RQ3 cost analysis of one configuration under one frozen calibrator "
+    "on the Test period: for each capacity the queue totals, the exact curve, the saturation and "
+    "break-even ratios, the C_FP conversions and the ratio grid, each grid row with 95 % "
+    "day-block intervals, a pigeonhole sensitivity interval of the frauds forgone and the regime "
+    "of the cell. Descriptive; scenario costs are assumptions (DR-007 §7 and §9).",
+    (
+        Field("configuration", STUDY_CONFIGURATION, "Configuration"),
+        Field("calibrator", Choice(CALIBRATION_METHODS), "Calibrator giving the probabilities"),
+        Field("partition", Choice(("Test",)), "The partition evaluated"),
+        Field("days", RECORD_DAYS, "Relative days evaluated"),
+        Field("scores_sha256", SHA256, "SHA-256 of the score file of the single scoring pass"),
+        Field("calibrator_file", CALIBRATION_FILE, "The frozen calibrator that was applied"),
+        Field("capacities", ListOf(RQ3_CAPACITY, min_items=1), "The analysis at each capacity"),
+    ),
+    _rq3_rules,
+)
+
+
 RECORD_CONTRACTS: dict[str, RecordContract] = {
     contract.kind: contract
     for contract in (
@@ -2177,6 +2338,7 @@ RECORD_CONTRACTS: dict[str, RecordContract] = {
         TEST_EVALUATION,
         TEST_WORKLOAD,
         TEST_CALIBRATION,
+        TEST_RQ3,
         TEST_RUN_END,
     )
 }
@@ -2190,6 +2352,7 @@ CONTEXT_CHECKS: dict[str, tuple[ContextCheck, ...]] = {
     "test_evaluation": (_evaluation_context, _seed_rule),
     "test_workload": (_workload_context, _seed_rule),
     "test_calibration": (_calibration_context, _seed_rule),
+    "test_rq3": (_rq3_context, _seed_rule),
     "test_run_end": (_seed_rule,),
 }
 
@@ -2296,6 +2459,10 @@ def _outcome_problems(
             lambda r: (r["configuration"], r["method"]),
             {(name, method) for name in study for method in CALIBRATION_METHODS},
         ),
+        "test_rq3": (
+            lambda r: (r["configuration"], r["calibrator"]),
+            {(name, method) for name in study for method in CALIBRATION_METHODS},
+        ),
     }
     problems: list[str] = []
     score_hash = {r["configuration"]: r["file"]["sha256"] for r in scores}
@@ -2309,10 +2476,16 @@ def _outcome_problems(
         if complete and evaluated and set(keys) != wanted:
             problems.append(f"run: needs a {kind} record for every subject ({len(wanted)})")
     problems += [
-        f"run: test_evaluation of {record['configuration']} names another score file"
+        f"run: {record['record']} of {record['configuration']} names another score file"
         for record in records
-        if record["record"] == "test_evaluation"
+        if record["record"] in ("test_evaluation", "test_rq3")
         and record["scores_sha256"] != score_hash.get(record["configuration"])
+    ]
+    problems += [
+        f"run: test_rq3 of {record['configuration']} ({record['calibrator']}) names "
+        "a calibrator that is not a frozen input"
+        for record in records
+        if record["record"] == "test_rq3" and record["calibrator_file"] not in frozen["calibrators"]
     ]
     problems += [
         f"run: test_calibration of {record['configuration']} ({record['method']}) names "
@@ -2324,7 +2497,28 @@ def _outcome_problems(
     evaluations = {r["configuration"]: r for r in records if r["record"] == "test_evaluation"}
     for workload in (r for r in records if r["record"] == "test_workload"):
         problems += _workload_agreement(workload, evaluations.get(workload["configuration"]))
+    for analysis in (r for r in records if r["record"] == "test_rq3"):
+        problems += _rq3_agreement(analysis, evaluations.get(analysis["configuration"]))
     return problems
+
+
+def _rq3_agreement(analysis: Mapping[str, Any], evaluation: Mapping[str, Any] | None) -> list[str]:
+    """The R3 queue of the cost analysis is the R3 result of the evaluation record."""
+    if evaluation is None:
+        return []
+    r3 = {entry["capacity"]: entry["counts"] for entry in evaluation["r3"]}
+    return [
+        f"run: test_rq3 of {analysis['configuration']} ({analysis['calibrator']}) counts another "
+        f"R3 queue than the evaluation at capacity {entry['capacity']}"
+        for entry in analysis["capacities"]
+        if (entry["capacity"] not in r3)
+        or (
+            r3[entry["capacity"]]["selected"],
+            r3[entry["capacity"]]["true_positives"],
+            r3[entry["capacity"]]["frauds"],
+        )
+        != (entry["queue"]["reviews"], entry["queue"]["captured"], entry["queue"]["frauds"])
+    ]
 
 
 def _workload_agreement(
