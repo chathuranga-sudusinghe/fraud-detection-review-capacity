@@ -42,6 +42,7 @@ from review_capacity.evaluation.outcomes import (
 from review_capacity.evaluation.queue import DailyQueue
 from review_capacity.evaluation.ranking import Capacity, Truth
 from review_capacity.evaluation.resampling import Replicates
+from review_capacity.evaluation.rq3 import CostSubject, rq3_outcomes
 from review_capacity.evaluation.sensitivity import analyse_s1, analyse_s2, sesoi_views
 from support.synthetic import REPO_PATHS
 
@@ -476,9 +477,38 @@ def calibration(method: str = "platt", configuration: str = "LGB-b") -> dict[str
     return record
 
 
+@cache
+def _rq3() -> dict[tuple[str, str], list[dict[str, Any]]]:
+    partition, scores_by = outcome_world()
+    raw = scores_by["LGB-b"]
+    subjects = [
+        CostSubject("LGB-b", method, raw, _calibrators()[method].predict(raw))
+        for method in ("platt", "isotonic")
+    ]
+    return rq3_outcomes(outcome_declaration(), partition, subjects, outcome_capacities())
+
+
+def rq3_record(method: str = "platt", configuration: str = "LGB-b") -> dict[str, Any]:
+    ctx = outcome_context()
+    record: dict[str, Any] = to_json_value(
+        {
+            **envelope("test_rq3"),
+            "configuration": configuration,
+            "calibrator": method,
+            "partition": "Test",
+            "days": {"first": ctx.test.first_day, "last": ctx.test.last_day},
+            "scores_sha256": scores(configuration)["file"]["sha256"],
+            "calibrator_file": file_ref(f"calibrator-{method}"),
+            "capacities": copy.deepcopy(_rq3()[("LGB-b", method)]),
+        }
+    )
+    return record
+
+
 def outcome_records() -> list[dict[str, Any]]:
     """The valid outcome records of a completed run: an evaluation for every configuration and the
-    reference, a workload for every configuration and both calibrations of every configuration.
+    reference, a workload for every configuration, and both calibrations and both cost analyses of
+    every configuration.
     The configurations other than the one computed share its numbers (the contracts name no
     model)."""
     study = ALL_CONFIGURATIONS[:-1]
@@ -486,4 +516,5 @@ def outcome_records() -> list[dict[str, Any]]:
         *(evaluation(name) for name in ALL_CONFIGURATIONS),
         *(workload(name) for name in study),
         *(calibration(method, name) for name in study for method in ("platt", "isotonic")),
+        *(rq3_record(method, name) for name in study for method in ("platt", "isotonic")),
     ]

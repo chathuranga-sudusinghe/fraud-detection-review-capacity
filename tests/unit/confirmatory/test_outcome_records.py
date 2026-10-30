@@ -34,8 +34,10 @@ def problems(record: dict[str, Any]) -> list[str]:
         c.workload,
         c.calibration,
         lambda: c.calibration("isotonic"),
+        c.rq3_record,
+        lambda: c.rq3_record("isotonic"),
     ],
-    ids=["evaluation", "reference", "workload", "platt", "isotonic"],
+    ids=["evaluation", "reference", "workload", "platt", "isotonic", "rq3-platt", "rq3-isotonic"],
 )
 def test_the_output_of_the_functions_is_a_valid_record(build: Callable[[], dict[str, Any]]) -> None:
     record = build()
@@ -252,7 +254,73 @@ def test_a_workload_describes_the_r2_alerts_of_the_evaluation() -> None:
 
 
 def test_the_kinds_are_registered_and_documented() -> None:
-    for kind in ("test_evaluation", "test_workload", "test_calibration"):
+    for kind in ("test_evaluation", "test_workload", "test_calibration", "test_rq3"):
         assert kind in RECORD_CONTRACTS
         assert f"### `{kind}`" in reference_markdown()
     assert isinstance(c.outcome_context(), ConfirmatoryContext)
+
+
+def test_the_cost_identities_are_recomputed() -> None:
+    record = c.rq3_record()
+    row = record["capacities"][1]["grid"][3]
+    refused(
+        c.mutated(record, "capacities.1.grid.3.cost_difference", row["cost_difference"] + 1),
+        "cost_difference",
+    )
+    refused(c.mutated(record, "capacities.1.grid.3.cost_r3", row["cost_r3"] + 1), "cost_r3")
+    refused(c.mutated(record, "capacities.1.grid.3.threshold", 0.5), "threshold")
+    refused(c.mutated(record, "capacities.1.queue.captured", 0), "grid")
+    refused(c.mutated(record, "capacities.1.break_even.classification", "none"), "break_even")
+    refused(c.mutated(record, "capacities.1.friction.0.ratio", 1.5), "friction")
+
+
+def test_the_regime_and_intervals_of_a_cell_are_checked() -> None:
+    record = c.rq3_record()
+    cells = [(i, j) for i, e in enumerate(record["capacities"]) for j, r in enumerate(e["grid"])]
+    i, j = next((i, j) for i, j in cells if record["capacities"][i]["grid"][j]["unused"] > 0)
+    base = f"capacities.{i}.grid.{j}"
+    wrong = (
+        "r3_cheaper"
+        if record["capacities"][i]["grid"][j]["regime"] != "r3_cheaper"
+        else "identical"
+    )
+    refused(c.mutated(record, f"{base}.regime", wrong), "regime")
+    refused(
+        c.mutated(record, f"{base}.intervals.cost_difference.lower", 1e12), "lower exceeds upper"
+    )
+    refused(c.mutated(record, f"{base}.intervals.cost_difference.level", 0.9), "level")
+    refused(c.mutated(record, f"{base}.intervals.cost_difference.replicates", 7), "declared B")
+    refused(c.mutated(record, f"{base}.frauds_forgone_pigeonhole.replicates", 7), "declared B")
+    refused(c.without(record, f"{base}.intervals.unused"), "intervals")
+    refused(c.mutated(record, f"{base}.intervals.unused", None), "null exactly")
+
+
+def test_every_declared_capacity_and_ratio_is_analysed() -> None:
+    record = c.rq3_record()
+    fewer = copy.deepcopy(record)
+    fewer["capacities"] = fewer["capacities"][:-1]
+    refused(fewer, "every declared capacity")
+    shorter = copy.deepcopy(record)
+    shorter["capacities"][0]["grid"] = shorter["capacities"][0]["grid"][:-1]
+    refused(shorter, "grid")
+
+
+def test_a_cost_analysis_belongs_to_the_run() -> None:
+    assert any("every subject (16)" in p for p in run_problems(without_records("test_rq3")))
+    other = c.mutated(c.rq3_record(), "calibrator_file.path", "outputs/elsewhere")
+    assert any("not a frozen input" in p for p in run_problems(replaced_rq3(other)))
+    wrong = c.mutated(c.rq3_record(), "scores_sha256", "0" * 64)
+    assert any("another score file" in p for p in run_problems(replaced_rq3(wrong)))
+    queue = c.mutated(c.rq3_record(), "capacities.0.queue.captured", 0)
+    assert any("another R3 queue" in p for p in run_problems(replaced_rq3(queue)))
+    assert any("once for each" in p for p in run_problems([*c.run_records(), c.rq3_record()]))
+
+
+def replaced_rq3(new: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        new
+        if r["record"] == "test_rq3"
+        and (r["configuration"], r["calibrator"]) == (new["configuration"], new["calibrator"])
+        else r
+        for r in c.run_records()
+    ]
