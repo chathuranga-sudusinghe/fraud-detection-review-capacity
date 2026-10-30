@@ -1,7 +1,8 @@
 # Code checks for every push and pull request to main that changes code (Issue #79) or a document
-# that the unit tests read as specification (the DR-015 text, the feature catalog and the GPU
-# acceptance specification; Issue #166).
-# CI runs only the checks the project owner runs locally: ruff, strict mypy and the unit tests.
+# that the unit tests read as specification (the DR-015 text, the feature catalog, the GPU
+# acceptance specification, and the protocol and Decision Records that the evaluation declaration is
+# compared with; Issues #166 and #187).
+# CI runs only the checks that are also run locally: ruff, strict mypy and the unit tests.
 # It never trains or scores a model on research data and never reads research data; unit tests fit
 # only small models on synthetic data. Only the synthetic unit tests are collected; the
 # integration tests and the GPU probe are excluded. Rules: AGENTS.md.
@@ -16,6 +17,12 @@ on:
       - "tests/**"
       - "config/**"
       - "docs/decisions/DR-015-common-training-rules.md"
+      - "docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md"
+      - "docs/decisions/DR-005-sesoi-and-h1-h2-inference.md"
+      - "docs/decisions/DR-006-bootstrap-inference-strategy.md"
+      - "docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md"
+      - "docs/decisions/DR-010-h3-confirmatory-configuration.md"
+      - "docs/protocol.md"
       - "docs/feature-catalog.md"
       - "docs/gpu-acceptance-probe.md"
       - "pyproject.toml"
@@ -29,6 +36,12 @@ on:
       - "tests/**"
       - "config/**"
       - "docs/decisions/DR-015-common-training-rules.md"
+      - "docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md"
+      - "docs/decisions/DR-005-sesoi-and-h1-h2-inference.md"
+      - "docs/decisions/DR-006-bootstrap-inference-strategy.md"
+      - "docs/decisions/DR-007-rq3-cost-ratio-and-break-even.md"
+      - "docs/decisions/DR-010-h3-confirmatory-configuration.md"
+      - "docs/protocol.md"
       - "docs/feature-catalog.md"
       - "docs/gpu-acceptance-probe.md"
       - "pyproject.toml"
