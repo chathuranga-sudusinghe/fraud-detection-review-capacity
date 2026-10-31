@@ -84,3 +84,15 @@ def test_the_scoring_marker_is_written_once_and_refuses_a_new_scoring(tmp_path: 
     assert "r1" in path.read_text(encoding="utf-8")
     refuse_if_scored(tmp_path, OTHER)  # another frozen state is independent
     assert not is_consumed(tmp_path, STATE)  # scoring is not consumption
+
+
+def test_a_resumed_evaluation_may_reuse_its_own_marker_and_no_other(tmp_path: Path) -> None:
+    from review_capacity.confirmatory.state import begin_consumption
+
+    path = begin_consumption(tmp_path, STATE, run_id="r1", scores_sha256="c" * 64)
+    assert path == marker_path(tmp_path, STATE)
+    assert begin_consumption(tmp_path, STATE, run_id="r1", scores_sha256="c" * 64) == path
+    with pytest.raises(SpecificationError, match="another run or other scores"):
+        begin_consumption(tmp_path, STATE, run_id="r2", scores_sha256="c" * 64)
+    with pytest.raises(SpecificationError, match="another run or other scores"):
+        begin_consumption(tmp_path, STATE, run_id="r1", scores_sha256="d" * 64)

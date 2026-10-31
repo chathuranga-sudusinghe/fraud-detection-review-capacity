@@ -19,6 +19,8 @@ def test_load_joins_without_target(synthetic: Synthetic) -> None:
     raw = load_raw(synthetic.features, synthetic.dataset)
     assert len(raw.joined) == len(synthetic.transaction)
     assert "isFraud" not in raw.joined.columns
+    expected = raw.joined["TransactionID"].isin(synthetic.identity["TransactionID"])
+    assert raw.has_identity.equals(expected)  # the join flag, not the non-missing fields
     assert set(raw.joined.columns) == set(synthetic.features.joined_columns) - {"isFraud"}
     assert raw.joined["TransactionDT"].dtype == "int64"
     matched = raw.joined["TransactionID"].isin(synthetic.identity["TransactionID"])

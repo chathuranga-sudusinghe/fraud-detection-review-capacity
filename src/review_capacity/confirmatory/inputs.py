@@ -17,10 +17,11 @@ import logging
 from dataclasses import dataclass
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from review_capacity.config import DatasetSpec, FeatureSpec
-from review_capacity.data.loading import check_file_checksums, load_raw
+from review_capacity.data.loading import RawData, check_file_checksums, load_raw
 from review_capacity.data.validation import check_partition_anchors, summarise_partitions
 from review_capacity.errors import DataValidationError
 from review_capacity.features.model_inputs import build_canonical_frame
@@ -44,6 +45,7 @@ class TestInputs:
     times: Keys
     days: Keys
     id_set_sha256: str
+    has_identity: npt.NDArray[np.bool_] | None = None  # rows with a row in the identity file
 
     @property
     def rows(self) -> int:
@@ -58,6 +60,14 @@ class TestInputs:
 def read_test_inputs(features: FeatureSpec, dataset: DatasetSpec, anchor_sha256: str) -> TestInputs:
     """The Test partition's inputs, once the raw files and every partition anchor are verified and
     the Test identifier hash equals the manifest's ``anchor_sha256``."""
+    return read_test_raw(features, dataset, anchor_sha256)[0]
+
+
+def read_test_raw(
+    features: FeatureSpec, dataset: DatasetSpec, anchor_sha256: str
+) -> tuple[TestInputs, RawData]:
+    """The Test inputs and the raw data they come from (no target), for the evaluation phase,
+    which reads the labels of the same rows."""
     with log_step(logger, "Reading the Test features (no target)"):
         check_file_checksums(dataset)
         raw = load_raw(features, dataset)
@@ -75,9 +85,10 @@ def read_test_inputs(features: FeatureSpec, dataset: DatasetSpec, anchor_sha256:
         ids = rows[features.key].to_numpy(dtype=np.int64)
         times = rows[features.time].to_numpy(dtype=np.int64)
         days = raw.relative_day.loc[index].to_numpy(dtype=np.int64)
+        identity = raw.has_identity.loc[index].to_numpy(dtype=np.bool_)
     if not np.array_equal(np.lexsort((ids, times)), np.arange(len(ids))):
         raise DataValidationError(
             f"The Test rows are not in time order (TransactionDT, then {features.key})"
         )
     logger.info("Test inputs: %d rows, ordered identifiers %s", len(ids), rows_identity(ids)[:12])
-    return TestInputs(frame, ids, times, days, test.transaction_id_sha256)
+    return TestInputs(frame, ids, times, days, test.transaction_id_sha256, identity), raw

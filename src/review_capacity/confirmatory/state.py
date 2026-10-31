@@ -163,3 +163,22 @@ def record_scoring(
         raise SpecificationError(f"{path.name} already exists: the scoring is recorded") from error
     logger.info("Scoring marker written: %s", path)
     return path
+
+
+def begin_consumption(
+    root: Path, frozen_state_sha256: str, *, run_id: str, scores_sha256: str
+) -> Path:
+    """Create the consumption marker before the first label is read, or accept the marker that
+    this same run created for these same scores (a resumed evaluation). A marker of another run
+    or of other scores is a consumed evaluation and is refused."""
+    path = marker_path(root, frozen_state_sha256)
+    if not path.exists():
+        return consume(root, frozen_state_sha256, run_id=run_id, scores_sha256=scores_sha256)
+    found = json.loads(path.read_text(encoding="utf-8"))
+    if (found.get("run_id"), found.get("scores_sha256")) != (run_id, scores_sha256):
+        raise SpecificationError(
+            f"{path.name} belongs to another run or other scores: the evaluation of this frozen "
+            "state is consumed"
+        )
+    logger.info("Resuming the evaluation consumed by this run: %s", path.name)
+    return path
