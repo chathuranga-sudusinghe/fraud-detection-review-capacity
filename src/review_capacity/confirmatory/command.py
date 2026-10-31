@@ -53,6 +53,7 @@ from review_capacity.confirmatory.frozen import (
 from review_capacity.confirmatory.inference_record import build_inference_record, inference_inputs
 from review_capacity.confirmatory.inputs import read_test_inputs
 from review_capacity.confirmatory.outcome_records import OutcomeSetup, publish_outcomes
+from review_capacity.confirmatory.outputs import write_outputs
 from review_capacity.confirmatory.records import (
     ConfirmatoryContext,
     ConfirmatoryRecords,
@@ -434,6 +435,7 @@ def _evaluation_phase(prep: _Prepared, run: RunDirectory) -> None:
     if any(a["outcome"] == "completed" for a in phase_records(run, EVALUATION)):
         # a crash between the completed attempt and the closing record
         close_run(run)
+        _write_outputs(run, prep.records)
         return
     close_orphans(run, identity, scores_sha256=bundle)
     attempt, started = next_attempt(run), timestamp()
@@ -491,6 +493,18 @@ def _evaluation_phase(prep: _Prepared, run: RunDirectory) -> None:
         )  # fmt: skip
         run.write_record(record_to_write, EVALUATION, attempt)
     close_run(run)
+    _write_outputs(run, prep.records)  # after the closing; a failure leaves the run closed
+
+
+def _write_outputs(run: RunDirectory, records: ConfirmatoryRecords) -> None:
+    """The summary and the figures of the closed run; a failure does not undo the evaluation."""
+    try:
+        write_outputs(run.path, records)
+    except Exception as error:
+        raise SpecificationError(
+            f"The evaluation completed and the run {run.path.name} is closed, but its summary "
+            f"and figures could not be written ({error}); regenerate them with summarise-run"
+        ) from error
 
 
 def _open_run(

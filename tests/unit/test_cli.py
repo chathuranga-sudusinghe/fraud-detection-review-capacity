@@ -447,3 +447,12 @@ def test_run_test_evaluation_logs_into_its_run_directory(tmp_path: Path) -> None
     assert resume_log is not None
     assert resume_log.name.startswith("resume-")
     assert resume_log.parent == tmp_path / "outputs" / "confirmatory" / "r"
+
+
+def test_a_confirmatory_run_directory_is_recognised_by_its_run_record(tmp_path: Path) -> None:
+    from review_capacity.cli import _is_confirmatory
+
+    (tmp_path / "records").mkdir()
+    assert not _is_confirmatory(tmp_path)
+    (tmp_path / "records" / "test_run.json").write_text("{}", encoding="utf-8")
+    assert _is_confirmatory(tmp_path)

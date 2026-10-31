@@ -134,12 +134,14 @@ Commands:
                    process (DR-013 §6; DR-015 §4); an internal step of the refit stage, not run
                    by hand
 
-    summarise-run  regenerate summary.md of a development run directory from its records alone
-                   (also after an interrupted run); reads no data and fits no model
+    summarise-run  regenerate summary.md (and, for a confirmatory run, the figures) of a run
+                   directory from its records alone (also after an interrupted run); reads no
+                   data and fits no model
 
     promote-evidence
-                   copy a completed development run's aggregate evidence (records, summary.md,
-                   run.log and a manifest with SHA-256 values) to evidence/<run type>/<run id>/,
+                   copy a completed development or confirmatory run's aggregate evidence
+                   (records, summary.md, figures, logs and a manifest with SHA-256 values) to
+                   evidence/<run type>/<run id>/,
                    a new directory; never row-level scores, fitted preprocessing artifacts or
                    models. A separate, explicit step; no run calls it
 
@@ -201,6 +203,7 @@ from review_capacity.provenance import code_provenance, write_record
 
 if TYPE_CHECKING:
     from review_capacity.confirmatory.command import TestRunOptions
+    from review_capacity.confirmatory.records import ConfirmatoryRecords
     from review_capacity.development.analysis import AnalysisOptions
     from review_capacity.development.runner import DevelopmentOptions
 
@@ -651,21 +654,54 @@ def _run_test_evaluation(args: argparse.Namespace) -> int:
     return 0
 
 
+def _confirmatory_records(paths: ProjectPaths) -> ConfirmatoryRecords:
+    """The record set of the confirmatory run, with the declared specifications."""
+    from review_capacity.confirmatory.records import ConfirmatoryContext, ConfirmatoryRecords
+    from review_capacity.evaluation.declaration import load_declaration
+
+    evaluation, _ = load_declaration(paths)
+    return ConfirmatoryRecords(ConfirmatoryContext.from_specs(load_dataset_spec(paths), evaluation))
+
+
+def _is_confirmatory(directory: Path) -> bool:
+    """Whether a run directory is a confirmatory run (it holds a ``test_run`` record)."""
+    return (directory / "records" / "test_run.json").is_file()
+
+
 def _summarise_run(args: argparse.Namespace) -> int:
+    paths = ProjectPaths.discover(args.root)
+    directory = args.run_directory.resolve()
+    if _is_confirmatory(directory):
+        from review_capacity.confirmatory.outputs import write_outputs
+
+        write_outputs(directory, _confirmatory_records(paths))
+        return 0
     from review_capacity.development.records import DevelopmentPartitions
     from review_capacity.development.rendering import write_summary
 
-    paths = ProjectPaths.discover(args.root)
     partitions = DevelopmentPartitions.from_spec(load_dataset_spec(paths), paths)
-    write_summary(args.run_directory.resolve(), partitions, paths.root)
+    write_summary(directory, partitions, paths.root)
     return 0
 
 
 def _promote_evidence(args: argparse.Namespace) -> int:
+    paths = ProjectPaths.discover(args.root)
+    if _is_confirmatory(args.run_directory.resolve()):
+        from review_capacity.confirmatory.outputs import promote as promote_confirmatory
+        from review_capacity.confirmatory.outputs import verify_promoted as verify_confirmatory
+
+        destination = promote_confirmatory(
+            args.run_directory,
+            paths.root,
+            _confirmatory_records(paths),
+            evidence_root=args.evidence_root,
+        )
+        verify_confirmatory(destination)
+        logger.info("Evidence promoted to %s", destination)
+        return 0
     from review_capacity.development.promotion import promote, verify_promoted
     from review_capacity.development.records import DevelopmentPartitions
 
-    paths = ProjectPaths.discover(args.root)
     partitions = DevelopmentPartitions.from_spec(load_dataset_spec(paths), paths)
     destination = promote(
         args.run_directory, paths.root, partitions, evidence_root=args.evidence_root
@@ -1023,14 +1059,14 @@ def build_parser() -> argparse.ArgumentParser:
     refit_fresh.set_defaults(handler=_refit_fresh)
     summarise = commands.add_parser(
         "summarise-run",
-        help="regenerate summary.md of a development run directory from its records",
+        help="regenerate summary.md of a development or confirmatory run from its records",
     )
     summarise.add_argument("run_directory", type=Path, help="the run's directory under outputs/")
     summarise.add_argument("--root", type=Path, default=None, help="project root directory")
     summarise.set_defaults(handler=_summarise_run)
     promote = commands.add_parser(
         "promote-evidence",
-        help="copy a completed development run's aggregate evidence into evidence/",
+        help="copy a completed development or confirmatory run's aggregate evidence into evidence/",
     )
     promote.add_argument("run_directory", type=Path, help="the run's directory under outputs/")
     promote.add_argument("--root", type=Path, default=None, help="project root directory")

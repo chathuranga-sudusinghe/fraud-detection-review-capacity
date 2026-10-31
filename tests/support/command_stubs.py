@@ -4,6 +4,7 @@ a temporary project. No research data and no model is read."""
 
 from __future__ import annotations
 
+import copy
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,10 +16,14 @@ import pytest
 
 from review_capacity.config import load_dataset_spec
 from review_capacity.confirmatory import command
+from review_capacity.confirmatory.evaluation import EvaluationResult, verify_saved_scores
 from review_capacity.confirmatory.frozen import EvaluatorState, FrozenBinding, check_evaluator
+from review_capacity.confirmatory.frozen_policies import FrozenPolicies
 from review_capacity.confirmatory.identity import artifact_hashes, frozen_state_id
 from review_capacity.confirmatory.inputs import TestInputs
+from review_capacity.confirmatory.outcome_records import publish_outcomes
 from review_capacity.confirmatory.scoring import attempt_directory
+from review_capacity.confirmatory.state import begin_consumption
 from review_capacity.data import loading
 from review_capacity.development.records import ALL_CONFIGURATIONS
 from review_capacity.development.trial import run_file
@@ -120,3 +125,81 @@ def install_stubs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, 
         monkeypatch.setattr(command, name, value)
     monkeypatch.setattr(loading, "load_labels", refuse_labels)
     return {"paths": paths, "counters": counters, "state": state}
+
+
+# --- the evaluation phase (Issue #207) -----------------------------------------------------------
+
+
+class Plan:
+    """What the stubbed evaluation does on the next call."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.fail_before_marker = False
+        self.fail_after_marker = False
+        self.skip_a_workload = False
+
+
+def install_evaluation_stubs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    """The scoring stubs and, on top, the stubs of the evaluation phase: the outcome and
+    inference records are those the production code builds on the synthetic outcome world."""
+    world = install_stubs(tmp_path, monkeypatch)
+    plan = Plan()
+
+    def evaluate(setup: Any) -> EvaluationResult:
+        plan.calls += 1
+        if plan.fail_before_marker:
+            plan.fail_before_marker = False
+            raise RuntimeError("the Test features could not be read")
+        saved = verify_saved_scores(setup.run, setup.binding)
+        setup.before_consumption()  # the attempt's intent, as the production code does
+        begin_consumption(
+            setup.paths.root,
+            setup.binding.frozen_state_sha256,
+            run_id=setup.run.identity["run_id"],
+            scores_sha256=saved.bundle_sha256,
+        )
+        if plan.fail_after_marker:
+            plan.fail_after_marker = False
+            raise RuntimeError("the labels could not be read")
+        records = []
+        for record in copy.deepcopy(
+            [r for r in c.outcome_records() if r["record"] != "test_scores"]
+        ):
+            kind = record["record"]
+            if kind in ("test_run", "test_phase", "test_inference"):
+                continue
+            if (
+                plan.skip_a_workload
+                and kind == "test_workload"
+                and record["configuration"] == "RES-u"
+            ):
+                continue  # an outcome record missing from the run
+            record["identity"] = setup.run.identity
+            if "scores_sha256" in record:
+                record["scores_sha256"] = saved.files[record["configuration"]]
+            parts = (record["configuration"], record.get("method") or record.get("calibrator"))
+            records.append((tuple(p for p in parts if p), record))
+        written = publish_outcomes(setup.run, records)
+        partition, _ = c.outcome_world()
+        return EvaluationResult(
+            written, partition, saved, FrozenPolicies({}, {}, {}), c.outcome_slices()
+        )
+
+    def inference(setup: Any, _inputs: Any, h3_configuration: str) -> dict[str, Any]:
+        record = copy.deepcopy(c.outcome_inference())
+        record["identity"] = setup.identity
+        assert h3_configuration == "LGB-b"
+        return record
+
+    for name, value in {
+        "load_evaluation_declaration": lambda _paths: (
+            c.outcome_declaration(),
+            SimpleNamespace(sha256=c.sha("evaluation")),
+        ),
+        "evaluate_outcomes": evaluate,
+        "inference_inputs": lambda *_a, **_k: object(),
+        "build_inference_record": inference,
+    }.items():
+        monkeypatch.setattr(command, name, value)
+    return {**world, "plan": plan}
