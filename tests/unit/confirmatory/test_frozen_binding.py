@@ -703,13 +703,10 @@ def test_every_file_group_of_the_frozen_inputs_enters_the_identity(world: World)
     groups = artifact_hashes(world.bind().frozen_inputs)
     assert set(groups) == {
         "development_run",
-        "h3_selection",
         "preprocessing",
         "models",
         "model_records",
         "model_manifests",
-        "thresholds",
-        "calibrators",
     }
     assert len(groups["preprocessing"]) == 2  # the manifest and the arrays
 
@@ -737,16 +734,24 @@ def test_declaration_hashes_are_read_from_a_record_identity() -> None:
     }
 
 
-def test_the_list_of_analysis_runs_does_not_change_the_frozen_state(world: World) -> None:
+def test_the_order_and_the_list_of_analysis_runs_do_not_change_the_frozen_state(
+    world: World,
+) -> None:
     both = world.bind()
     assert len(world.analyses) == 2
-    for subset in (world.analyses[:1], world.analyses[1:]):
+    for order in (list(reversed(world.analyses)), world.analyses[:1], world.analyses[1:]):
         try:
-            alone = world.bind(analyses=subset)
+            other = world.bind(analyses=order)
         except SpecificationError:
-            continue  # this analysis run alone does not supply the policies
-        assert alone.frozen_state_sha256 == both.frozen_state_sha256
-        assert len(alone.frozen_inputs["analysis_runs"]) == 1  # kept as provenance
-        break
-    else:
-        pytest.fail("no single analysis run supplies the policies")
+            continue  # this list alone does not supply the policies
+        assert other.frozen_state_sha256 == both.frozen_state_sha256
+    reversed_binding = world.bind(analyses=list(reversed(world.analyses)))
+    assert reversed_binding.frozen_state_sha256 == both.frozen_state_sha256
+
+
+def test_the_policies_are_bound_in_the_record_but_not_in_the_identity(world: World) -> None:
+    inputs = world.bind().frozen_inputs
+    assert {"h3_selection", "thresholds", "calibrators", "analysis_runs"} <= set(inputs)
+    assert not {"h3_selection", "thresholds", "calibrators", "analysis_runs"} & set(
+        artifact_hashes(inputs)
+    )

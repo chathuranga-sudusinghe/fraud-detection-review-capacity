@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from review_capacity.confirmatory.state import (
+    begin_scoring,
     consume,
     is_consumed,
     lock_path,
@@ -15,7 +16,9 @@ from review_capacity.confirmatory.state import (
     record_scoring,
     refuse_if_consumed,
     refuse_if_scored,
+    refuse_if_started,
     scored_path,
+    started_path,
     state_directory,
 )
 from review_capacity.errors import SpecificationError
@@ -96,3 +99,39 @@ def test_a_resumed_evaluation_may_reuse_its_own_marker_and_no_other(tmp_path: Pa
         begin_consumption(tmp_path, STATE, run_id="r2", scores_sha256="c" * 64)
     with pytest.raises(SpecificationError, match="another run or other scores"):
         begin_consumption(tmp_path, STATE, run_id="r1", scores_sha256="d" * 64)
+
+
+def test_the_started_marker_claims_the_state_for_one_run_in_one_directory(
+    tmp_path: Path,
+) -> None:
+    assert started_path(tmp_path, STATE).name == STATE + ".started.json"
+    refuse_if_started(tmp_path, STATE)  # nothing started yet
+    begin_scoring(tmp_path, STATE, run_id="run-1", directory="outputs/confirmatory/run-1")
+    begin_scoring(  # a repeated attempt of the same run in the same directory
+        tmp_path, STATE, run_id="run-1", directory="outputs/confirmatory/run-1"
+    )
+    refuse_if_started(
+        tmp_path, STATE, except_run="run-1", except_directory="outputs/confirmatory/run-1"
+    )
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
+        begin_scoring(tmp_path, STATE, run_id="run-2", directory="outputs/confirmatory/run-2")
+    with pytest.raises(SpecificationError, match="run-1"):
+        refuse_if_started(tmp_path, STATE)
+    refuse_if_started(tmp_path, OTHER)  # another frozen state is not claimed
+
+
+def test_the_same_run_identifier_in_another_directory_is_not_the_owner(tmp_path: Path) -> None:
+    begin_scoring(tmp_path, STATE, run_id="run-1", directory="outputs/confirmatory/a")
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
+        begin_scoring(tmp_path, STATE, run_id="run-1", directory="outputs/confirmatory/b")
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
+        refuse_if_started(tmp_path, STATE, except_run="run-1")  # no directory named
+
+
+def test_a_started_state_refuses_a_scoring_phase_of_any_other_run(tmp_path: Path) -> None:
+    begin_scoring(tmp_path, STATE, run_id="run-1", directory="outputs/confirmatory/run-1")
+    with pytest.raises(SpecificationError, match="owns the state"):
+        refuse_if_scored(tmp_path, STATE)
+    refuse_if_scored(
+        tmp_path, STATE, except_run="run-1", except_directory="outputs/confirmatory/run-1"
+    )

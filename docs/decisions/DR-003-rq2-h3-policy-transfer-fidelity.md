@@ -170,7 +170,7 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 
 **Sensitivity reporting (non-confirmatory).**
 - Report the 90 % CI for r against the alternative bounds ±10 %, ±25 % and ±50 %.
-- Report the smallest relative tolerance at which equivalence would be concluded, so readers can apply their own margin. It is descriptive, interval-based and continuous, computed from the 90 % CI (L, U) of r:
+- Report the infimum of the relative tolerances whose open band contains the 90 % CI of r, so readers can apply their own margin. It is descriptive, interval-based and continuous, computed from the 90 % CI (L, U) of r; it is not a test and no equivalence conclusion is drawn from it (the confirmatory conclusion is the Holm-adjusted test):
 
   $$
   t_{\min} = \frac{\max\left(\lvert L - 0.02 \rvert,\ \lvert U - 0.02 \rvert\right)}{0.02}
@@ -178,7 +178,7 @@ Evidence used (V2 daily transaction counts only; no labels; no Test data) [D]:
 
   where:
 
-  - `t_min` = smallest relative tolerance;
+  - `t_min` = infimum of the relative tolerances whose open band contains the interval;
   - `L`, `U` = lower and upper endpoints of the 90 % CI of r;
   - `0.02` = the 2 % target rate.
 
@@ -279,7 +279,7 @@ REF-004, REF-005, REF-006, REF-009, REF-023, REF-029, REF-030, REF-037, REF-038,
 | R3 | Decision policy: daily top-K review |
 | RQ2 | Research question 2 (policy-transfer fidelity) |
 | SD | Standard deviation |
-| t, t_min | A relative tolerance on r; the smallest relative tolerance whose open band contains the 90 % CI of r |
+| t, t_min | A relative tolerance on r; the infimum of the relative tolerances whose open band contains the 90 % CI of r (containment for every t > t_min) |
 | L, U | Lower and upper endpoints of the 90 % CI of r |
 | SE | Standard error |
 | SESOI | Smallest Effect Size Of Interest |

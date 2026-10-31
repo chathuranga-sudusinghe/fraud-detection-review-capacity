@@ -243,7 +243,8 @@ def _primary(inference: Record) -> list[str]:
             ],
         ),
         "",
-        f"Smallest tolerance containing the interval: {cell(h3['smallest_tolerance'])}.",
+        f"Infimum of the tolerances whose open band contains the interval (t_min; containment "
+        f"holds for every larger tolerance): {cell(h3['smallest_tolerance'])}.",
         "",
         "H3 of the other configurations is descriptive and outside the Holm family:",
         "",

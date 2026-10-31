@@ -180,3 +180,49 @@ def test_a_replaced_file_is_synchronised_before_it_is_published_and_its_director
     events = _spy(monkeypatch)
     write_atomically(tmp_path / "scores.txt", lambda out: out.write_text("x", encoding="utf-8"))
     assert events == ["fsync file", "publish", "fsync directory"]
+
+
+def test_new_parent_directories_are_synchronised_in_their_parents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events = _spy(monkeypatch)
+    write_new_atomically(tmp_path / "a" / "b" / "marker.json", "{}\n")
+    # two new directories (each itself and its parent), then the file, the publication and its
+    # directory
+    assert events == ["fsync directory"] * 4 + ["fsync file", "publish", "fsync directory"]
+
+
+def test_a_failed_synchronisation_after_publication_is_not_reported_as_existing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from review_capacity import files
+    from review_capacity.errors import FileExistsAccessError
+
+    def failing(_directory: Path) -> None:
+        raise OSError(errno.EIO, "input/output error")
+
+    monkeypatch.setattr(files, "_sync_directory", failing)
+    with pytest.raises(FileAccessError) as caught:
+        write_new_atomically(tmp_path / "marker.json", "{}\n")
+    assert not isinstance(caught.value, FileExistsAccessError)
+
+
+def test_a_file_that_exists_is_reported_as_existing_and_never_replaced(tmp_path: Path) -> None:
+    from review_capacity.errors import FileExistsAccessError
+
+    write_new_atomically(tmp_path / "marker.json", "first\n")
+    with pytest.raises(FileExistsAccessError):
+        write_new_atomically(tmp_path / "marker.json", "second\n")
+    assert (tmp_path / "marker.json").read_text(encoding="utf-8") == "first\n"
+
+
+def test_an_existing_file_is_made_durable_on_reuse(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from review_capacity.files import make_durable
+
+    path = tmp_path / "marker.json"
+    write_new_atomically(path, "{}\n")
+    events = _spy(monkeypatch)
+    make_durable(path)
+    assert events == ["fsync file", "fsync directory"]

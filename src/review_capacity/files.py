@@ -15,7 +15,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from review_capacity.errors import FileAccessError
+from review_capacity.errors import FileAccessError, FileExistsAccessError
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def write_atomically(path: Path, write: Callable[[Path], object]) -> None:
     """
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        make_directories_durable(path.parent)
         write(temporary)
         _sync_file(temporary)
         temporary.replace(path)
@@ -53,7 +53,7 @@ def write_new_atomically(path: Path, text: str) -> None:
     """
     temporary: Path | None = None
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        make_directories_durable(path.parent)
         # a temporary file of this call alone: created exclusively under a unique name, so that
         # no other call (or leftover) shares its inode with a published file
         descriptor, name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
@@ -65,7 +65,7 @@ def write_new_atomically(path: Path, text: str) -> None:
         try:
             os.link(temporary, path)
         except FileExistsError as error:
-            raise FileAccessError(f"{path}: already exists and is never replaced") from error
+            raise FileExistsAccessError(f"{path}: already exists and is never replaced") from error
         _sync_directory(path.parent)
     except FileAccessError:
         raise
@@ -74,6 +74,49 @@ def write_new_atomically(path: Path, text: str) -> None:
     finally:
         if temporary is not None:
             _remove_temporary(temporary)
+
+
+def make_directories_durable(directory: Path) -> None:
+    """Create ``directory`` and its missing parents, and synchronise each new entry in its parent
+    (Issue #211), so that a file published below survives a host crash with its directory chain."""
+    missing: list[Path] = []
+    current = directory
+    while not current.exists():
+        missing.append(current)
+        current = current.parent
+    directory.mkdir(parents=True, exist_ok=True)
+    for created in reversed(missing):
+        _sync_directory(created)
+        _sync_directory(created.parent)
+
+
+def sync_chain(path: Path, stop: Path) -> None:
+    """Synchronise the directory ``path`` and each of its parents up to and including ``stop``
+    (Issue #211). A directory that already exists is not known to be durable: an earlier
+    invocation, the logging set-up or a plain ``mkdir`` may have created it, and its entry in the
+    parent may not have reached storage. ``stop`` must be ``path`` or one of its ancestors."""
+    if stop != path and stop not in path.parents:
+        raise FileAccessError(f"{stop} is not an ancestor of {path}")
+    try:
+        current = path
+        while True:
+            _sync_directory(current)
+            if current == stop:
+                return
+            current = current.parent
+    except OSError as error:
+        raise FileAccessError(f"{path}: cannot be synchronised ({error.strerror})") from error
+
+
+def make_durable(path: Path) -> None:
+    """Synchronise an existing file and its directory entry: an accepted marker that an earlier
+    invocation published (and whose own synchronisation may not have completed) is made durable
+    before a run relies on it."""
+    try:
+        _sync_file(path)
+        _sync_directory(path.parent)
+    except OSError as error:
+        raise FileAccessError(f"{path}: cannot be synchronised ({error.strerror})") from error
 
 
 def _sync_file(path: Path) -> None:

@@ -23,7 +23,7 @@ Research questions are abbreviated RQ1–RQ3 and hypotheses H1–H3; both are st
 | 5 | Data understanding | Schema, join, time structure, class imbalance, drift, entity dependence | Done; computation findings corrected in notebook 04 ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | [Notebooks 01–04](../notebooks/README.md), [feature catalog](feature-catalog.md) |
 | 6 | Data preparation | Chronological split; feature policy (433 inputs); tree-based and neural input representations; validation contract; data pipeline | Fixed; pipeline implemented and verified on the raw data (Issue #62) | [Data-preparation record](data-preparation.md), [DR-001](decisions/DR-001-temporal-split-strategy.md), [DR-008](decisions/DR-008-feature-declaration-and-model-input-policy.md), [DR-012](decisions/DR-012-neural-network-input-representation.md) |
 | 7 | Modeling | Tree-based (LightGBM, CatBoost) and neural (ResNet-style multilayer perceptron, FT-Transformer) models, each unweighted and balanced, under one common training procedure | Model set, training-device policy and training rules fixed; development run of the eight configurations and the logistic-regression reference completed (Train, V1 and V2) | [Protocol](protocol.md), [DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md), [DR-013](decisions/DR-013-training-device-policy.md), [DR-015](decisions/DR-015-common-training-rules.md), [graphics processing unit (GPU) acceptance probe](gpu-acceptance-probe.md), [development evidence](../evidence/development/README.md) |
-| 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after the freeze | Design defined; development analyses completed (thresholds, calibration, RQ3, refits, rolling-origin supplement); H3 configuration selected (LGB-b, Issue #181); Test after the freeze | [Protocol: Statistical Plan](protocol.md#statistical-plan), [analysis evidence](../evidence/analysis/README.md), [DR-010: selection result](decisions/DR-010-h3-confirmatory-configuration.md#selection-result) |
+| 8 | Evaluation | H1–H3, RQ3 analysis, false-negative slices; one Test evaluation after the freeze | Design defined; development analyses completed (thresholds, calibration, RQ3, refits, rolling-origin supplement); H3 configuration selected (LGB-b, Issue #181); confirmatory pipeline implemented and reviewed on synthetic data; slice boundaries frozen (Issue #211); the Test evaluation runs once, after the freeze tag and an explicit approval | [Protocol: Statistical Plan](protocol.md#statistical-plan), [analysis evidence](../evidence/analysis/README.md), [DR-010: selection result](decisions/DR-010-h3-confirmatory-configuration.md#selection-result) |
 | 9 | Deployment (demonstration) | Research report; local demonstration application programming interface (API) on synthetic example requests, not dataset rows | Planned | — |
 | 10 | Feedback (review) | Supervisor review; limitations; future work | Ongoing | — |
 
@@ -33,6 +33,21 @@ FT-Transformer is the Feature Tokenizer + Transformer model ([DR-011](decisions/
 
 1. **Before the development runs:** training, policy and analysis procedures are fixed.
 2. **Before the Test period is scored:** the fitted models, calibrators, thresholds, review budgets and the H3 configuration (the model × weighting configuration on which H3 is tested) are frozen, and the protocol is tagged ([protocol: Protocol Freeze](protocol.md#protocol-freeze)).
+3. **Before the run:** the explicit approval of the run follows the tag; the command sequence and the recovery rules are in the [pipeline guide](running-the-pipeline.md#7-the-confirmatory-test-evaluation).
+
+### Freeze conditions and their evidence
+
+The seven conditions of the [protocol freeze](protocol.md#protocol-freeze), with the evidence for each at the time of writing:
+
+| # | Condition | Evidence |
+|---|---|---|
+| 1 | Every design item is resolved | The nine resolved items of the [protocol](protocol.md#design-items-before-protocol-freeze) |
+| 2 | The literature justifies the design | [Literature review](literature-review.md), [evidence matrix](literature-evidence-matrix.md) |
+| 3 | Ethics and governance status documented | [Protocol: Ethics](protocol.md#ethics), [criteria checklist](greenwich-criteria-checklist.md) |
+| 4 | Dataset statistics and split hashes reproduced by the split-generation code | [Dataset manifest](dataset.md#dataset-manifest), [data-preparation record](data-preparation.md) |
+| 5 | Hypotheses, Smallest Effect Size Of Interest (SESOI), the equivalence tolerance Δ and tests fixed | [Protocol](protocol.md), [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](decisions/DR-005-sesoi-and-h1-h2-inference.md), [DR-006](decisions/DR-006-bootstrap-inference-strategy.md); [`config/evaluation.yaml`](../config/evaluation.yaml) |
+| 6 | Cost scenarios declared | [DR-007](decisions/DR-007-rq3-cost-ratio-and-break-even.md); [`config/evaluation.yaml`](../config/evaluation.yaml) |
+| 7 | Training rules fixed; the implementation passes its automated checks | [DR-015](decisions/DR-015-common-training-rules.md); [`config/training.yaml`](../config/training.yaml); the continuous-integration run of the tagged commit |
 
 ## Symbols and notation
 
@@ -44,5 +59,8 @@ FT-Transformer is the Feature Tokenizer + Transformer model ([DR-011](decisions/
 | IBM | International Business Machines Corporation |
 | LGB-b | LightGBM with balanced class weighting: the H3 configuration ([DR-010](decisions/DR-010-h3-confirmatory-configuration.md#selection-result)) |
 | RQ1–RQ3 | Research questions of the protocol |
+| SESOI | Smallest Effect Size Of Interest |
+| Δ | Equivalence tolerance in H3: ±20 % relative around the 2 % target rate, for the realised Test alert rate r of the H3 configuration |
+| r | Share of all Test transactions flagged by the transferred V2 threshold ([protocol](protocol.md), H3) |
 | REF-NNN | Reference identifier in [`references.md`](references.md) |
 | Train, V1, V2, Test | Model-fitting partition (relative days 1–105); Validation 1 (106–126); Validation 2 (127–154); sealed confirmatory partition (155–182) |

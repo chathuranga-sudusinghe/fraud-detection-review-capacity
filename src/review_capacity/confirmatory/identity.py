@@ -51,11 +51,15 @@ def _by_configuration(files: Mapping[str, Mapping[str, str]]) -> list[str]:
 
 
 def artifact_hashes(frozen_inputs: Mapping[str, Any]) -> dict[str, list[str]]:
-    """The hashes of the frozen artifacts of a ``test_run`` record, by group. A model, its run
-    record and its manifest are keyed by their configuration."""
+    """The hashes of the frozen artifacts of a ``test_run`` record that fix the identity of the
+    frozen state, by group: the development run, the preprocessing and the models with their run
+    records and manifests, each model keyed by its configuration. The analysis-derived policies
+    (the H3 selection, the thresholds and the calibrators) are not part of it: scoring does not
+    depend on them, a choice or an order of analysis runs must not open a second evaluation, and
+    they stay bound in the ``test_run`` record and verified by hash at every invocation
+    (Issue #211)."""
     return {
         "development_run": [frozen_inputs["development_run"]["run_end"]["sha256"]],
-        "h3_selection": [frozen_inputs["h3_selection"]["sha256"]],
         "preprocessing": [
             frozen_inputs["preprocessing"]["sha256"],
             frozen_inputs["preprocessing_arrays"]["sha256"],
@@ -63,6 +67,4 @@ def artifact_hashes(frozen_inputs: Mapping[str, Any]) -> dict[str, list[str]]:
         "models": _by_configuration(frozen_inputs["models"]),
         "model_records": _by_configuration(frozen_inputs["model_records"]),
         "model_manifests": _by_configuration(frozen_inputs["model_manifests"]),
-        "thresholds": [entry["sha256"] for entry in frozen_inputs["thresholds"]],
-        "calibrators": [entry["sha256"] for entry in frozen_inputs["calibrators"]],
     }

@@ -238,9 +238,9 @@ Partition hashes and `TransactionDT` bounds are recorded in [DR-001](decisions/D
 The single confirmatory evaluation runs under the following procedure, fixed before any confirmatory code ([DR-001](decisions/DR-001-temporal-split-strategy.md); Issue #185). A Boolean flag alone never opens the Test labels.
 
 - **Authorisation.** The command takes the name of the protocol freeze tag. It runs only from a clean working tree whose HEAD is the commit of that annotated tag, and records the tag, the commit and the source fingerprint. The training identity of the development run is recorded separately; it may differ from the frozen evaluator's source fingerprint.
-- **Inputs.** Only frozen artefacts: the closed development run (main-seed models and the neural preprocessing artifact), the V2 thresholds and calibrators of the closed analysis run ([analysis evidence](../evidence/analysis/README.md), run `2026-10-29T013124Z`), the H3 selection record and the dataset manifest. Each is verified by hash before any Test row is read.
+- **Inputs.** Only frozen artefacts: the closed development run (main-seed models and the neural preprocessing artifact), the V2 thresholds and calibrators of the closed analysis run ([analysis evidence](../evidence/analysis/README.md), run `2026-10-29T013124Z`), the H3 selection record, the dataset manifest and the data-derived slice boundaries frozen in `config/evaluation.yaml` (the Train amount-band edges and the pooled categorical levels of the V2 frauds, [False-Negative Analysis](#false-negative-analysis)). Each file is verified by hash, and the slice boundaries are recomputed from Train and V2 and compared with the frozen ones, before any Test label is read and before the consumption marker is created. The lock and the markers are named by the identity of the frozen state: the commit of the tag, the declaration hashes, the development run, the preprocessing and the frozen models with their run records and manifests. The H3 selection, the thresholds, the calibrators and the analysis runs that supply them are recorded in the run and verified by hash at every invocation, but are not part of that identity: scoring does not depend on them, and no choice or order of them opens a second evaluation. A resumed run keeps the inputs recorded in its run record: any difference in them is refused before any Test row or label is read.
 - **Two phases.** Phase 1 scores the Test features of the eight configurations and the logistic-regression reference once, without labels and with the timing instrumentation; the scores are written and hashed. Phase 2 reads the Test labels, verifies the Test `transaction_id_sha256` of the manifest, and computes every outcome from the saved scores.
-- **Consumption and repeats.** A lock prevents concurrent runs. Before the labels are read, a failed phase 1 may be repeated; the failure and its log are kept and reported. Once the labels are read the evaluation is consumed: a failure in phase 2 resumes from the saved, hashed scores (computation only, no rescoring), and the command refuses any new phase 1 for the same tag.
+- **Consumption and repeats.** A lock prevents concurrent runs. Before any prediction, a started marker claims the frozen state for the run and its directory, durably. From then on only that run, in that directory, may score: a failed or interrupted phase 1 is repeated by resuming that directory, and the failure and its log are kept and reported; no other directory may start a phase 1 for the same frozen state. When the score files of phase 1 are complete, a scoring marker naming the run and the hash of the bundle is written durably before the score records and the completed record of the phase are published. Once it exists, the owning run can only publish its verified bundle, which must match the marker, and never scores again; a missing or damaged bundle stops the run before any prediction. Once the labels are read the evaluation is consumed: a failure in phase 2 resumes from the saved, hashed scores (computation only, no rescoring), and the command refuses any new phase 1 for the same tag.
 - **Record.** The run record names the tag, both identities, the phase boundaries, every repeat of phase 1 and every resume of phase 2.
 
 ## Models
@@ -773,7 +773,7 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
 
     where:
 
-    - `t_min` = smallest relative tolerance whose open band contains the interval;
+    - `t_min` = infimum of the relative tolerances whose open band contains the interval: the band contains the interval for every `t > t_min`, and at `t = t_min` an endpoint of the interval lies on the band's boundary, outside the open band;
     - `L`, `U` = lower and upper endpoints of the 90 % CI of r;
     - `0.02` = the 2 % target rate.
 - **Multiplicity:** **Holm** (sequentially rejective multiple-testing procedure) at family-wise α = 0.05 over the confirmatory family {H1, H2, H3} [REF-029]: three members, with H3 tested once, on the H3 configuration. Decisions use **Holm-adjusted p-values**:
@@ -1050,7 +1050,7 @@ Every symbol used in this protocol, in alphabetical order. Each is also defined 
 | SE | Standard error |
 | q | Add-one tail proportion of a one-sided bootstrap p-value |
 | SE_MC | Monte Carlo standard error of a bootstrap tail proportion |
-| t_min | Smallest relative tolerance whose open band contains the 90 % CI of r (H3 sensitivity) |
+| t_min | Infimum of the relative tolerances whose open band contains the 90 % CI of r: containment holds for every t > t_min (H3 sensitivity) |
 | L, U | Lower and upper endpoints of the 90 % CI of r |
 | SESOI | Smallest Effect Size Of Interest (2 percentage points of Recall@2%) |
 | SHA-256 | Secure Hash Algorithm, 256-bit |
