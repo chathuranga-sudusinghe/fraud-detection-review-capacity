@@ -28,6 +28,17 @@ from review_capacity.development.records import ALL_CONFIGURATIONS
 from review_capacity.evaluation.calibration import fit_isotonic, fit_platt
 from review_capacity.evaluation.contrasts import estimands
 from review_capacity.evaluation.declaration import EvaluationDeclaration, load_declaration
+from review_capacity.evaluation.false_negatives import (
+    Boundaries,
+    SliceVariable,
+    amount_codes,
+    amount_edges,
+    declared_levels,
+    false_negative_analysis,
+    misses_of,
+    pooled_variable,
+    week_codes,
+)
 from review_capacity.evaluation.fidelity import fidelity
 from review_capacity.evaluation.hypotheses import analyse_h1, analyse_h2, analyse_h3, decide
 from review_capacity.evaluation.inference import effect_units
@@ -505,6 +516,70 @@ def rq3_record(method: str = "platt", configuration: str = "LGB-b") -> dict[str,
     return record
 
 
+@cache
+def _false_negatives() -> tuple[Boundaries, dict[str, dict[str, Any]]]:
+    partition, scores_by = outcome_world()
+    rule = outcome_declaration().false_negative
+    rng = np.random.default_rng(23)
+    truth = partition.truth
+    fraud = truth.labels == 1
+    frauds = int(fraud.sum())
+    edges = amount_edges(truth.amounts, rule.amount_quantiles)
+    kept = {
+        name: {"A": 4000, "B": 2500, "C": 150}
+        for name in ("ProductCD", "card4", "card6", "DeviceType")
+    }
+    boundaries = Boundaries(edges, kept)
+    variables = [
+        SliceVariable(
+            "identity", ("absent", "present"), rng.integers(0, 2, frauds).astype(np.intp)
+        ),
+        *(
+            pooled_variable(
+                name, np.array(rng.choice(["A", "B", "C", "D"], frauds), dtype=np.str_), boundaries
+            )
+            for name in ("ProductCD", "card4", "card6", "DeviceType")
+        ),
+        SliceVariable(
+            "amount_band",
+            declared_levels(outcome_declaration())["amount_band"],
+            amount_codes(truth.amounts[fraud], edges),
+        ),
+        SliceVariable(
+            "week",
+            declared_levels(outcome_declaration())["week"],
+            week_codes(truth.days[fraud], rule.test_weeks),
+        ),
+        SliceVariable("entity", ("new", "recurring"), rng.integers(0, 2, frauds).astype(np.intp)),
+    ]
+    capacity = outcome_capacities()[1]  # the primary capacity, 2 %
+    found = misses_of(partition, scores_by["LGB-b"], capacity)
+    return boundaries, false_negative_analysis(
+        outcome_declaration(), partition, variables, {"LGB-b": found}, capacity
+    )
+
+
+def false_negative_record(configuration: str = "LGB-b") -> dict[str, Any]:
+    ctx = outcome_context()
+    boundaries, tables = _false_negatives()
+    record: dict[str, Any] = to_json_value(
+        {
+            **envelope("test_false_negative"),
+            "configuration": configuration,
+            "partition": "Test",
+            "days": {"first": ctx.test.first_day, "last": ctx.test.last_day},
+            "scores_sha256": scores(configuration)["file"]["sha256"],
+            **copy.deepcopy({k: v for k, v in tables["LGB-b"].items() if k != "slices"}),
+            "boundaries": {
+                "amount_edges": list(boundaries.amount_edges),
+                "kept": {name: dict(levels) for name, levels in boundaries.kept.items()},
+            },
+            "slices": copy.deepcopy(tables["LGB-b"]["slices"]),
+        }
+    )
+    return record
+
+
 def outcome_records() -> list[dict[str, Any]]:
     """The valid outcome records of a completed run: an evaluation for every configuration and the
     reference, a workload for every configuration, and both calibrations and both cost analyses of
@@ -517,4 +592,5 @@ def outcome_records() -> list[dict[str, Any]]:
         *(workload(name) for name in study),
         *(calibration(method, name) for name in study for method in ("platt", "isotonic")),
         *(rq3_record(method, name) for name in study for method in ("platt", "isotonic")),
+        *(false_negative_record(name) for name in study),
     ]

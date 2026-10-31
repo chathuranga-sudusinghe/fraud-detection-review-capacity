@@ -76,6 +76,7 @@ def test_the_kinds_and_versions_are_those_of_the_run() -> None:
         "test_workload",
         "test_calibration",
         "test_rq3",
+        "test_false_negative",
         "test_run_end",
     ]
     assert contract_versions() == dict.fromkeys(RECORD_CONTRACTS, 1)
