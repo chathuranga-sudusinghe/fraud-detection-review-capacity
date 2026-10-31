@@ -96,6 +96,19 @@ Commands:
                    development files only; the Test period is never read. Consequential: run
                    only after its scope is approved
 
+    run-test-evaluation
+                   the single authorised Test evaluation, phase 1 (--phase scoring): from a clean
+                   tree at the commit of the annotated freeze tag (--tag), with the closed
+                   development run (--development) and analysis runs (--analysis), it verifies
+                   every frozen input by hash, reads the Test features without the target and
+                   scores them once with the eight frozen models and the reference; the scores,
+                   the run record and the phase records are written to a new directory inside
+                   outputs/confirmatory/ (--output) or, to repeat a failed scoring attempt,
+                   into the unfinished run --resume. The Test labels are never read in this
+                   phase. A lock and a consumption marker (outputs/confirmatory/state/) keep
+                   the evaluation to one pass. Consequential: run only after the protocol freeze
+                   and an explicit approval
+
     analyse-development
                    the post-selection analyses of a completed development run (--source), in a
                    new analysis run that never changes the source run: stages thresholds
@@ -184,6 +197,7 @@ from review_capacity.probe.records import (
 from review_capacity.provenance import code_provenance, write_record
 
 if TYPE_CHECKING:
+    from review_capacity.confirmatory.command import TestRunOptions
     from review_capacity.development.analysis import AnalysisOptions
     from review_capacity.development.runner import DevelopmentOptions
 
@@ -588,6 +602,48 @@ def _analyse_development(args: argparse.Namespace) -> int:
     return 0
 
 
+def _test_options(args: argparse.Namespace) -> TestRunOptions:
+    """The options of ``run-test-evaluation``; the start time is fixed on ``args`` at the first
+    call, so that the log file, the records and the directory agree."""
+    from review_capacity.confirmatory.command import TestRunOptions
+    from review_capacity.development.run_output import run_id
+
+    if getattr(args, "started", None) is None:
+        args.started = run_id()
+    return TestRunOptions(
+        tag=args.tag,
+        development=args.development.resolve(),
+        analyses=tuple(path.resolve() for path in args.analysis),
+        phase=args.phase,
+        output=args.output,
+        resume=None if args.resume is None else args.resume.resolve(),
+        started=args.started,
+    )
+
+
+def _test_log(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The log file of ``run-test-evaluation``: ``run.log`` of a new run directory (shown to be
+    free) or a file of the resumed run's directory named by this start time."""
+    from review_capacity.confirmatory.command import RUN_TYPE, run_log_name
+    from review_capacity.development.run_output import check_new_directory, default_directory
+
+    options = _test_options(args)
+    if options.resume is not None:
+        return options.resume / run_log_name(args.started, resume=True)
+    target = options.output or default_directory(paths.root, RUN_TYPE, args.started)
+    return check_new_directory(target, paths.root) / run_log_name(args.started, resume=False)
+
+
+def _run_test_evaluation(args: argparse.Namespace) -> int:
+    from review_capacity.confirmatory.command import run_test_scoring
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    directory = run_test_scoring(paths, _test_options(args))
+    logger.info("Test evaluation, scoring phase written to %s", directory)
+    return 0
+
+
 def _summarise_run(args: argparse.Namespace) -> int:
     from review_capacity.development.records import DevelopmentPartitions
     from review_capacity.development.rendering import write_summary
@@ -655,6 +711,12 @@ def _log_file(args: argparse.Namespace) -> Path | None:
                 "omit --log-file"
             )
         return _development_directory(args, ProjectPaths.discover(args.root)) / RUN_LOG_NAME
+    if args.command == "run-test-evaluation":
+        if args.log_file is not None:
+            raise SpecificationError(
+                "run-test-evaluation writes its log into its run directory; omit --log-file"
+            )
+        return _test_log(args, ProjectPaths.discover(args.root))
     if args.command == "analyse-development":
         from review_capacity.development.run_output import LOG_NAME as ANALYSIS_LOG_NAME
 
@@ -874,6 +936,47 @@ def build_parser() -> argparse.ArgumentParser:
         help="new directory for this run (default: outputs/development/<UTC time>)",
     )
     development.set_defaults(handler=_run_development)
+    test_evaluation = commands.add_parser(
+        "run-test-evaluation",
+        help="the single authorised Test evaluation, phase 1: the frozen models score the Test "
+        "features once, without labels",
+    )
+    test_evaluation.add_argument("--root", type=Path, default=None, help="project root directory")
+    test_evaluation.add_argument(
+        "--tag", required=True, help="the annotated protocol freeze tag; HEAD must be its commit"
+    )
+    test_evaluation.add_argument(
+        "--development",
+        type=Path,
+        required=True,
+        help="the closed development run that trained the frozen models",
+    )
+    test_evaluation.add_argument(
+        "--analysis",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="the closed analysis runs that fixed the thresholds, calibrators and H3 selection",
+    )
+    test_evaluation.add_argument(
+        "--phase",
+        default="scoring",
+        choices=["scoring"],
+        help="the phase to run (default: scoring)",
+    )
+    test_evaluation.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="new directory for this run (default: outputs/confirmatory/<UTC time>)",
+    )
+    test_evaluation.add_argument(
+        "--resume",
+        type=Path,
+        default=None,
+        help="the unfinished run directory in which to repeat a failed scoring attempt",
+    )
+    test_evaluation.set_defaults(handler=_run_test_evaluation)
     analysis = commands.add_parser(
         "analyse-development",
         help="the post-selection analyses of a completed development run, in a new run",

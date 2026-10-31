@@ -46,6 +46,7 @@ from review_capacity.development.trial import (
     run_file,
 )
 from review_capacity.errors import DataValidationError, ModelError, SpecificationError
+from review_capacity.features.neural_preprocessing import NeuralPreprocessing
 from review_capacity.files import write_atomically
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import log_step
@@ -149,6 +150,46 @@ def verify_neural_model(
         )
 
 
+def load_saved_model(
+    configuration: Subject,
+    directory: Path,
+    *,
+    seed: int,
+    settings: ModelSettings,
+    features: FeatureSpec,
+    device: Device | None,
+    artifact: NeuralPreprocessing | None = None,
+    reference_fixed: Mapping[str, Any] | None = None,
+) -> ScoredModel:
+    """The saved model of ``configuration`` in ``directory``, reloaded on ``device`` for the
+    training ``seed``. The neural models and the reference need the preprocessing ``artifact``; the
+    reference also needs its declared fixed settings."""
+    kind = kind_of(configuration)
+    if kind == REFERENCE:
+        if artifact is None or reference_fixed is None:
+            raise SpecificationError("The reference needs the artifact and its fixed settings")
+        return LogisticRegressionReference.load(directory, artifact, reference_fixed)
+    assert isinstance(configuration, Configuration)
+    if device is None:
+        raise SpecificationError(f"{configuration.name}: a training device is needed to reload it")
+    if kind == NEURAL:
+        if artifact is None:
+            raise SpecificationError("The neural models and the reference need the neural inputs")
+        return NEURAL_MODELS[configuration.model.name].load(
+            directory,
+            configuration,
+            seed,
+            settings=settings,
+            layout=artifact.layout,
+            device=device,
+            artifact_sha256=artifact.artifact_sha256,
+        )
+    model_class, _ = TREE_MODELS[configuration.model.name]
+    return model_class.load(
+        directory, configuration, seed, settings=settings, features=features, device=device
+    )
+
+
 def load_selected(
     context: ScoringContext,
     configuration: Subject,
@@ -163,33 +204,27 @@ def load_selected(
     kind, name = kind_of(configuration), configuration.name
     where = selected.model_directory if directory is None else directory
     with log_step(logger, f"Loading the {name} saved in {where.name} (trial {selected.trial})"):
-        if kind == REFERENCE:
-            fixed = dict(context.declaration.space(REFERENCE_MODEL).fixed)
-            return LogisticRegressionReference.load(where, _neural(context).artifact, fixed)
-        assert isinstance(configuration, Configuration)
-        training = device or context.settings.training_device(configuration.model.name)
-        trained_with = context.seed if seed is None else seed
-        if kind == NEURAL:
-            neural_model = NEURAL_MODELS[configuration.model.name].load(
-                where,
-                configuration,
-                trained_with,
-                settings=context.settings,
-                layout=_neural(context).artifact.layout,
-                device=training,
-                artifact_sha256=_neural(context).artifact_sha256,
-            )
-            verify_neural_model(context, configuration, selected, neural_model)
-            return neural_model
-        model_class, _ = TREE_MODELS[configuration.model.name]
-        return model_class.load(
-            where,
+        fixed = (
+            dict(context.declaration.space(REFERENCE_MODEL).fixed) if kind == REFERENCE else None
+        )
+        training = device or (
+            None
+            if kind == REFERENCE
+            else context.settings.training_device(configuration.model.name)
+        )
+        model = load_saved_model(
             configuration,
-            trained_with,
+            where,
+            seed=context.seed if seed is None else seed,
             settings=context.settings,
             features=context.features,
             device=training,
+            artifact=None if context.neural is None else context.neural.artifact,
+            reference_fixed=fixed,
         )
+        if isinstance(model, NeuralModel):
+            verify_neural_model(context, configuration, selected, model)
+        return model
 
 
 def check_sequence(expected: Keys, actual: Keys, what: str) -> None:
