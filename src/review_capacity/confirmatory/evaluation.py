@@ -23,6 +23,7 @@ closing record are added by the command (Issue 9c). This module is the only one 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -76,6 +77,7 @@ class EvaluationSetup:
     evaluation: EvaluationDeclaration
     dataset: DatasetSpec
     features: FeatureSpec
+    before_consumption: Callable[[], None] = lambda: None  # the attempt's intent, durably
 
 
 @dataclass(frozen=True)
@@ -178,6 +180,7 @@ def evaluate_outcomes(setup: EvaluationSetup) -> EvaluationResult:
         parts = read_partitions(paths, setup.features, setup.dataset, (TRAIN, V2))
         # everything that needs no Test label is done: the evaluation is consumed now, and only
         # then is the first label reached
+        setup.before_consumption()
         begin_consumption(
             root, state, run_id=(run.identity or {})["run_id"], scores_sha256=saved.bundle_sha256
         )

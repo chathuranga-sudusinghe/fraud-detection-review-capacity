@@ -181,9 +181,13 @@ def test_run_contract_versions_are_the_current_ones() -> None:
 # --- test_phase ----------------------------------------------------------------------------------
 
 
-def test_the_scoring_phase_never_reaches_labels_and_the_evaluation_phase_does() -> None:
+def test_the_scoring_phase_never_reaches_labels_and_a_completed_evaluation_does() -> None:
     refused(c.mutated(c.phase("scoring"), "labels_accessed", True), "never reaches")
-    refused(c.mutated(c.phase("evaluation"), "labels_accessed", False), "reaches the labels")
+    refused(c.mutated(c.phase("evaluation"), "labels_accessed", False), "reached the labels")
+    # an evaluation attempt that failed before the consumption marker never reached the labels
+    early = c.mutated(c.phase("evaluation", outcome="failed"), "labels_accessed", False)
+    assert problems(early) == []
+    assert problems(c.phase("evaluation", outcome="failed")) == []  # one that reached the marker
 
 
 def test_a_failed_attempt_states_its_error_and_a_completed_one_has_none() -> None:

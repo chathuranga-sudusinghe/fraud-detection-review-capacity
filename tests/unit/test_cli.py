@@ -396,13 +396,13 @@ def test_run_test_evaluation_takes_the_tag_the_runs_and_one_phase() -> None:
     assert (args.command, args.tag, args.phase) == (
         "run-test-evaluation",
         "protocol-freeze",
-        "scoring",
+        "all",
     )
     assert [p.name for p in args.analysis] == ["a", "b"]
     assert args.resume is None
     with pytest.raises(SystemExit):
         build_parser().parse_args(["run-test-evaluation", "--development", "d", "--analysis", "a"])
-    with pytest.raises(SystemExit):  # the evaluation phase does not exist yet
+    with pytest.raises(SystemExit):  # an unknown phase
         build_parser().parse_args(
             [
                 "run-test-evaluation",
@@ -413,7 +413,7 @@ def test_run_test_evaluation_takes_the_tag_the_runs_and_one_phase() -> None:
                 "--analysis",
                 "a",
                 "--phase",
-                "evaluation",
+                "inference",
             ]
         )
 

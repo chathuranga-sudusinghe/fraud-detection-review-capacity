@@ -473,8 +473,8 @@ def _phase_rules(record: Mapping[str, Any]) -> list[str]:
     problems = []
     if phase == "scoring" and record["labels_accessed"]:
         problems.append("test_phase.labels_accessed: the scoring phase never reaches the labels")
-    if phase == "evaluation" and not record["labels_accessed"]:
-        problems.append("test_phase.labels_accessed: the evaluation phase reaches the labels")
+    if phase == "evaluation" and outcome == "completed" and not record["labels_accessed"]:
+        problems.append("test_phase.labels_accessed: a completed evaluation reached the labels")
     if outcome == "completed" and record["error"] is not None:
         problems.append("test_phase.error: must be null when the attempt completed")
     if outcome != "completed" and record["error"] is None:
@@ -504,8 +504,9 @@ TEST_PHASE = _contract(
         Field(
             "labels_accessed",
             Boolean(),
-            "Whether the attempt reached label access: recorded before the labels are read, so "
-            "that a crash cannot allow a fresh scoring",
+            "Whether the attempt reached the consumption marker, which is created before the first "
+            "label is read, so that a crash cannot allow a fresh scoring; an evaluation attempt "
+            "that fails before the marker records false",
         ),
         Field(
             "scores_sha256",
