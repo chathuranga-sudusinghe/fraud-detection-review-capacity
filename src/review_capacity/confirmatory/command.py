@@ -1,20 +1,26 @@
-"""The command of the single Test evaluation: phase 1, the scoring phase (Issue #203).
+"""The command of the single Test evaluation: phase 1 (scoring) and phase 2 (evaluation)
+(Issues #203 and #207).
 
-``run_test_scoring`` follows the protocol's Authorised Test evaluation in this order, and every
-step before the sixth stops the command without a Test row having been read:
+``run_test`` follows the protocol's Authorised Test evaluation in this order, and none of the
+first six steps reads a Test row:
 
 1. the evaluating checkout is a clean tree at the commit of the annotated freeze tag;
 2. every frozen input is verified by hash and recorded (``confirmatory.frozen.bind_frozen_inputs``);
-3. the frozen state is not consumed (the labels were not read in an earlier run);
+3. the frozen state is not consumed and, for a new scoring, not scored;
 4. the lock of the frozen state is taken;
 5. the run directory is created (or an unfinished one re-opened) and ``test_run`` is written;
-6. the Test features are read without the target and the raw files and partition anchors verified;
-7. each frozen model scores them once; the scores are hashed and described by ``test_scores``
-   records, and the attempt by a ``test_phase`` record. A failed or interrupted attempt keeps its
-   ``test_phase`` record and writes no score record; a repeat is a new attempt.
+6. a completed scoring phase has its global marker (a crash between the two is repaired);
+7. **scoring** (``--phase scoring|all``): the Test features are read without the target and each
+   frozen model scores them once; a failed or interrupted attempt keeps its ``test_phase`` record
+   and writes no score record, a repeat is a new attempt;
+8. **evaluation** (``--phase evaluation|all``): ``confirmatory.evaluation`` verifies the saved
+   scores, creates the consumption marker and only then reads the labels, and writes the outcome
+   records; the inference record follows; the whole run is checked as if the attempt were
+   complete; the completed attempt is recorded and the run is closed with ``test_run_end``. A
+   failed attempt keeps its record (``labels_accessed`` says whether *that attempt* reached the
+   marker) and the evaluation resumes from the saved scores.
 
-The run stays open: the evaluation phase (the Test labels, the outcomes, the closing record) is a
-later step that resumes from the saved, hashed scores. Nothing here reads a label.
+The labels are read only inside ``confirmatory.evaluation``; this module orchestrates.
 """
 
 from __future__ import annotations
@@ -22,18 +28,31 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from review_capacity.config import load_dataset_spec, load_feature_spec
+from review_capacity.config import DatasetSpec, load_dataset_spec, load_feature_spec
+from review_capacity.confirmatory.attempts import (
+    allocate,
+    close_orphans,
+    mark_reaching,
+    next_attempt,
+    phase_record,
+    phase_records,
+    reached,
+)
+from review_capacity.confirmatory.closing import close_run, whole_run_problems
+from review_capacity.confirmatory.evaluation import EvaluationSetup, evaluate_outcomes
 from review_capacity.confirmatory.frozen import (
     FrozenBinding,
     bind_frozen_inputs,
     evaluator_state,
 )
+from review_capacity.confirmatory.inference_record import build_inference_record, inference_inputs
 from review_capacity.confirmatory.inputs import read_test_inputs
+from review_capacity.confirmatory.outcome_records import OutcomeSetup, publish_outcomes
 from review_capacity.confirmatory.records import (
     ConfirmatoryContext,
     ConfirmatoryRecords,
@@ -61,6 +80,7 @@ from review_capacity.development.run_output import RunDirectory, load_run, run_i
 from review_capacity.development.run_start import project_file
 from review_capacity.development.runner import chosen_configurations
 from review_capacity.errors import SpecificationError
+from review_capacity.evaluation.declaration import EvaluationDeclaration
 from review_capacity.evaluation.declaration import load_declaration as load_evaluation_declaration
 from review_capacity.features.neural_preprocessing import load_neural_preprocessing
 from review_capacity.hashing import file_sha256
@@ -76,7 +96,8 @@ from review_capacity.training.preflight import release_gpu_memory
 logger = logging.getLogger(__name__)
 
 RUN_TYPE = "confirmatory"
-PHASES = ("scoring",)  # the evaluation phase is added with the labels
+PHASES = ("scoring", "evaluation", "all")
+EVALUATION = "evaluation"
 
 
 @dataclass(frozen=True)
@@ -88,7 +109,7 @@ class TestRunOptions:
     tag: str
     development: Path
     analyses: tuple[Path, ...]
-    phase: str = "scoring"
+    phase: str = "all"
     output: Path | None = None
     resume: Path | None = None
     started: str | None = None
@@ -210,6 +231,187 @@ def _publish(
         run.write_record(record, body["configuration"])
 
 
+@dataclass(frozen=True)
+class _Prepared:
+    """Everything an invocation loads and verifies before it touches a run directory."""
+
+    paths: ProjectPaths
+    options: TestRunOptions
+    started: str
+    settings: Any
+    settings_file: Any
+    declaration: Any
+    declaration_file: Any
+    evaluation: EvaluationDeclaration
+    evaluation_file: Any
+    dataset: DatasetSpec
+    binding: FrozenBinding
+    identity: dict[str, Any]
+    records: ConfirmatoryRecords
+    manifest_sha256: str
+
+
+def _prepare(paths: ProjectPaths, options: TestRunOptions, started: str) -> _Prepared:
+    """Load the declarations, check the evaluator and bind every frozen input by hash: nothing
+    here reads a Test row."""
+    root = paths.root
+    settings, settings_file = load_settings_with_snapshot(paths)
+    declaration, declaration_file = load_training_declaration(paths)
+    evaluation, evaluation_file = load_evaluation_declaration(paths)
+    dataset = load_dataset_spec(paths)
+    partitions = DevelopmentPartitions.from_spec(dataset, paths)
+    evaluator = evaluator_state(root, options.tag)
+    code = code_provenance(root)
+    development = load_run(options.development, partitions)
+    analyses = [load_run(path, partitions) for path in options.analyses]
+    manifest_sha256 = file_sha256(paths.manifest)
+    binding = bind_frozen_inputs(
+        root=root,
+        evaluator=evaluator,
+        development=development,
+        analyses=analyses,
+        manifest_path=paths.manifest,
+        capacities=[float(share) for share in evaluation.capacity.shares],
+        settings_sha256=settings_file.sha256,
+        training_declaration_sha256=declaration_file.sha256,
+        evaluation_declaration_sha256=evaluation_file.sha256,
+        dataset_manifest_sha256=manifest_sha256,
+    )
+    identity = _identity(
+        started,
+        options.tag,
+        evaluator.tag_commit,
+        code,
+        binding,
+        {
+            "settings_sha256": settings_file.sha256,
+            "training_declaration_sha256": declaration_file.sha256,
+            "evaluation_declaration_sha256": evaluation_file.sha256,
+            "dataset_manifest_sha256": manifest_sha256,
+        },
+        {
+            "main": settings.main_seed,
+            "additional": list(declaration.additional_seeds),
+            "sampler": declaration.sampler_seed,
+            "preprocessing": declaration.preprocessing_seed,
+            "resampling": evaluation.resampling.root_seed,
+        },
+    )
+    return _Prepared(
+        paths,
+        options,
+        started,
+        settings,
+        settings_file,
+        declaration,
+        declaration_file,
+        evaluation,
+        evaluation_file,
+        dataset,
+        binding,
+        identity,
+        ConfirmatoryRecords(ConfirmatoryContext.from_specs(dataset, evaluation)),
+        manifest_sha256,
+    )
+
+
+def _write_test_run(prep: _Prepared, run: RunDirectory, now: datetime | None) -> None:
+    """The ``test_run`` record, written once, first."""
+    if (run.records_dir / "test_run.json").exists():
+        return
+    paths, test = prep.paths, prep.dataset.partition("test")
+    run.write_record(
+        {
+            "record": "test_run",
+            "schema_version": contract_versions()["test_run"],
+            "identity": prep.identity,
+            "started": timestamp(now),
+            "environment": environment_record(),
+            "settings": project_file(paths, paths.models_spec, prep.settings_file.sha256),
+            "training_declaration": project_file(
+                paths, paths.training_spec, prep.declaration_file.sha256
+            ),
+            "evaluation_declaration": project_file(
+                paths, paths.evaluation_spec, prep.evaluation_file.sha256
+            ),
+            "dataset_manifest": project_file(paths, paths.manifest, prep.manifest_sha256),
+            "frozen_inputs": prep.binding.frozen_inputs,
+            "test": {
+                "first_day": test.first_day,
+                "last_day": test.last_day,
+                "rows": test.rows,
+                "transaction_id_sha256": prep.binding.test_anchor_sha256,
+            },
+            "contracts": contract_versions(),
+        }
+    )
+
+
+def run_test(
+    paths: ProjectPaths,
+    options: TestRunOptions,
+    *,
+    now: datetime | None = None,
+    release: Callable[[], None] = release_gpu_memory,
+) -> Path:
+    """The single Test evaluation: ``--phase scoring`` (phase 1, the run stays open),
+    ``evaluation`` (phase 2 on the unfinished run ``--resume``) or ``all`` (phase 1 if it is not
+    complete, then phase 2, under one lock). Returns the run directory."""
+    if options.phase not in PHASES:
+        raise SpecificationError(f"The phase must be one of {list(PHASES)}, not {options.phase!r}")
+    if options.phase == "evaluation" and options.resume is None:
+        raise SpecificationError(
+            "The evaluation phase continues an existing run: give the unfinished run (--resume)"
+        )
+    root = paths.root
+    started = options.started or run_id(now)
+    with log_step(logger, f"Test evaluation, phase {options.phase} ({options.tag})"):
+        prep = _prepare(paths, options, started)
+        state = prep.binding.frozen_state_sha256
+        scoring = options.phase in ("scoring", "all")
+        if scoring and options.resume is None:
+            refuse_if_consumed(root, state)
+            refuse_if_scored(root, state)  # before any directory is created
+        with locked(root, state, run_id=started):
+            if options.phase == "scoring":
+                refuse_if_consumed(root, state)  # a run that ended meanwhile
+            run = _open_run(root, options, started, prep.identity, prep.records)
+            scored = [a for a in _scoring_attempts(run) if a["outcome"] == "completed"]
+            if scoring and not scored:
+                refuse_if_consumed(root, state)
+                refuse_if_scored(root, state)  # a scoring that completed in another run
+                _write_test_run(prep, run, now)
+                _close_orphans(run, run.identity or prep.identity)
+                _score(paths, run, prep.binding, prep.declaration, prep.settings, release)
+            if scored:
+                _reconcile_scoring_marker(root, state, run, str(scored[-1]["scores_sha256"]))
+            if options.phase == "scoring" and scored:
+                raise SpecificationError(
+                    "The scoring phase of this run is complete; the evaluation phase is next"
+                )
+            if options.phase in ("evaluation", "all"):
+                _evaluation_phase(prep, run)
+    logger.info("Test evaluation written to %s", run.path)
+    return run.path
+
+
+def _reconcile_scoring_marker(root: Path, state: str, run: RunDirectory, bundle: str) -> None:
+    """A completed scoring phase has its global marker, whatever phase is run next: a crash
+    between the completed record and the marker is repaired here, and an existing marker must be
+    this run's, for these scores."""
+    run_id_of = (run.identity or {})["run_id"]
+    marker = scored_path(root, state)
+    if not marker.exists():
+        record_scoring(root, state, run_id=run_id_of, scores_sha256=bundle)
+        return
+    found = json.loads(marker.read_text(encoding="utf-8"))
+    if (found.get("run_id"), found.get("scores_sha256")) != (run_id_of, bundle):
+        raise SpecificationError(
+            f"{marker.name} belongs to another run or other scores than the completed scoring "
+            "of this run"
+        )
+
+
 def run_test_scoring(
     paths: ProjectPaths,
     options: TestRunOptions,
@@ -217,107 +419,78 @@ def run_test_scoring(
     now: datetime | None = None,
     release: Callable[[], None] = release_gpu_memory,
 ) -> Path:
-    """Phase 1 of the single Test evaluation; returns the run directory (left open)."""
-    if options.phase not in PHASES:
-        raise SpecificationError(f"The phase must be one of {list(PHASES)}, not {options.phase!r}")
-    root = paths.root
-    started = options.started or run_id(now)
-    with log_step(logger, f"Test evaluation, scoring phase ({options.tag})"):
-        settings, settings_file = load_settings_with_snapshot(paths)
-        declaration, declaration_file = load_training_declaration(paths)
-        evaluation, evaluation_file = load_evaluation_declaration(paths)
-        dataset = load_dataset_spec(paths)
-        partitions = DevelopmentPartitions.from_spec(dataset, paths)
-        evaluator = evaluator_state(root, options.tag)
-        code = code_provenance(root)
-        development = load_run(options.development, partitions)
-        analyses = [load_run(path, partitions) for path in options.analyses]
-        manifest_sha256 = file_sha256(paths.manifest)
-        binding = bind_frozen_inputs(
-            root=root,
-            evaluator=evaluator,
-            development=development,
-            analyses=analyses,
-            manifest_path=paths.manifest,
-            capacities=[float(share) for share in evaluation.capacity.shares],
-            settings_sha256=settings_file.sha256,
-            training_declaration_sha256=declaration_file.sha256,
-            evaluation_declaration_sha256=evaluation_file.sha256,
-            dataset_manifest_sha256=manifest_sha256,
+    """Phase 1 alone (``--phase scoring``): the run is left open."""
+    return run_test(paths, replace(options, phase="scoring"), now=now, release=release)
+
+
+def _evaluation_phase(prep: _Prepared, run: RunDirectory) -> None:
+    """One attempt of the evaluation phase on a run with a completed scoring phase."""
+    paths = prep.paths
+    scored = [a for a in _scoring_attempts(run) if a["outcome"] == "completed"]
+    if not scored:
+        raise SpecificationError("The evaluation phase follows a completed scoring phase")
+    bundle = str(scored[-1]["scores_sha256"])
+    identity = run.identity or prep.identity
+    if any(a["outcome"] == "completed" for a in phase_records(run, EVALUATION)):
+        # a crash between the completed attempt and the closing record
+        close_run(run)
+        return
+    close_orphans(run, identity, scores_sha256=bundle)
+    attempt, started = next_attempt(run), timestamp()
+    allocate(run, attempt, started)
+    outcome, error, completed_record = "completed", None, None
+    try:
+        features = load_feature_spec(paths.features_spec)
+        setup = EvaluationSetup(
+            paths,
+            run,
+            prep.binding,
+            prep.evaluation,
+            prep.dataset,
+            features,
+            before_consumption=lambda: mark_reaching(run, attempt),
         )
-        refuse_if_consumed(root, binding.frozen_state_sha256)
-        identity = _identity(
-            started,
-            options.tag,
-            evaluator.tag_commit,
-            code,
-            binding,
-            {
-                "settings_sha256": settings_file.sha256,
-                "training_declaration_sha256": declaration_file.sha256,
-                "evaluation_declaration_sha256": evaluation_file.sha256,
-                "dataset_manifest_sha256": manifest_sha256,
-            },
-            {
-                "main": settings.main_seed,
-                "additional": list(declaration.additional_seeds),
-                "sampler": declaration.sampler_seed,
-                "preprocessing": declaration.preprocessing_seed,
-                "resampling": evaluation.resampling.root_seed,
-            },
+        result = evaluate_outcomes(setup)
+        outcome_setup = OutcomeSetup(
+            prep.evaluation,
+            identity,
+            int(result.partition.truth.day_values[0]),
+            int(result.partition.truth.day_values[-1]),
+            result.saved.files,
+            result.partition.reference_volume,
         )
-        context = ConfirmatoryContext.from_specs(dataset, evaluation)
-        record_set = ConfirmatoryRecords(context)
-        state = binding.frozen_state_sha256
-        if options.resume is None:
-            refuse_if_scored(root, state)  # before any directory is created
-        with locked(root, state, run_id=started):
-            refuse_if_consumed(root, state)  # a run that ended meanwhile
-            run = _open_run(root, options, started, identity, record_set)
-            completed = [a for a in _scoring_attempts(run) if a["outcome"] == "completed"]
-            if completed:
-                if not scored_path(root, state).exists():  # a crash between record and marker
-                    record_scoring(
-                        root,
-                        state,
-                        run_id=run.path.name,
-                        scores_sha256=str(completed[-1]["scores_sha256"]),
-                    )
-                raise SpecificationError(
-                    "The scoring phase of this run is complete; the evaluation phase is next"
-                )
-            refuse_if_scored(root, state)  # a scoring that completed in another run
-            if not (run.records_dir / "test_run.json").exists():
-                test = dataset.partition("test")
-                run.write_record(
-                    {
-                        "record": "test_run",
-                        "schema_version": contract_versions()["test_run"],
-                        "identity": identity,
-                        "started": timestamp(now),
-                        "environment": environment_record(),
-                        "settings": project_file(paths, paths.models_spec, settings_file.sha256),
-                        "training_declaration": project_file(
-                            paths, paths.training_spec, declaration_file.sha256
-                        ),
-                        "evaluation_declaration": project_file(
-                            paths, paths.evaluation_spec, evaluation_file.sha256
-                        ),
-                        "dataset_manifest": project_file(paths, paths.manifest, manifest_sha256),
-                        "frozen_inputs": binding.frozen_inputs,
-                        "test": {
-                            "first_day": test.first_day,
-                            "last_day": test.last_day,
-                            "rows": test.rows,
-                            "transaction_id_sha256": binding.test_anchor_sha256,
-                        },
-                        "contracts": contract_versions(),
-                    }
-                )
-            _close_orphans(run, run.identity or identity)
-            _score(paths, run, binding, declaration, settings, release)
-    logger.info("Scoring phase written to %s (the run stays open)", run.path)
-    return run.path
+        inputs = inference_inputs(
+            prep.evaluation, result.partition, result.saved.scores, result.policies
+        )
+        record = build_inference_record(
+            outcome_setup, inputs, str(prep.binding.frozen_inputs["h3_configuration"])
+        )
+        publish_outcomes(run, [((), record)])
+        completed_record = phase_record(
+            identity, attempt, started, "completed", None,
+            scores_sha256=bundle, labels_accessed=True,
+        )  # fmt: skip
+        problems = whole_run_problems(run, completed_record)
+        if problems:
+            raise SpecificationError("The run is not complete: " + "; ".join(problems))
+    except KeyboardInterrupt:
+        outcome, error = "interrupted", "KeyboardInterrupt"
+        raise
+    except BaseException as failure:
+        outcome, error = "failed", f"{type(failure).__name__}: {failure}"
+        raise
+    finally:
+        record_to_write = (
+            completed_record
+            if outcome == "completed" and completed_record is not None
+            else phase_record(
+                identity, attempt, started, outcome, error,
+                scores_sha256=bundle,
+                labels_accessed=reached(run, attempt),
+            )
+        )  # fmt: skip
+        run.write_record(record_to_write, EVALUATION, attempt)
+    close_run(run)
 
 
 def _open_run(
@@ -415,6 +588,6 @@ def _score(
     record_scoring(
         paths.root,
         binding.frozen_state_sha256,
-        run_id=run.path.name,
+        run_id=(run.identity or {})["run_id"],
         scores_sha256=str(bundle),
     )

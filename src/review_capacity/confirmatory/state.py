@@ -68,6 +68,15 @@ def is_consumed(root: Path, frozen_state_sha256: str) -> bool:
     return marker_path(root, frozen_state_sha256).exists()
 
 
+def is_consumed_by(root: Path, frozen_state_sha256: str, run_id: str) -> bool:
+    """Whether the consumption marker exists and was created by the run ``run_id``."""
+    path = marker_path(root, frozen_state_sha256)
+    if not path.exists():
+        return False
+    found = json.loads(path.read_text(encoding="utf-8"))
+    return bool(found.get("run_id") == run_id)
+
+
 def refuse_if_consumed(root: Path, frozen_state_sha256: str) -> None:
     """Stop a new scoring phase once the labels have been read for this frozen state."""
     marker = marker_path(root, frozen_state_sha256)

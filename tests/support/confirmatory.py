@@ -13,11 +13,14 @@ from typing import Any
 import numpy as np
 
 from review_capacity.config import load_dataset_spec
+from review_capacity.confirmatory.frozen_policies import FrozenPolicies
 from review_capacity.confirmatory.identity import (
     artifact_hashes,
     declaration_hashes,
     frozen_state_id,
 )
+from review_capacity.confirmatory.inference_record import build_inference_record, inference_inputs
+from review_capacity.confirmatory.outcome_records import OutcomeSetup
 from review_capacity.confirmatory.records import (
     ConfirmatoryContext,
     contract_versions,
@@ -596,3 +599,53 @@ def outcome_records() -> list[dict[str, Any]]:
         *(rq3_record(method, name) for name in study for method in ("platt", "isotonic")),
         *(false_negative_record(name) for name in study),
     ]
+
+
+@cache
+def outcome_scores_all() -> dict[str, np.ndarray]:
+    """Scores of every configuration and the reference on the outcome world."""
+    _, scores_by = outcome_world()
+    rng = np.random.default_rng(77)
+    every = {
+        name: np.round(
+            np.clip(scores_by["LGB-b"] + rng.normal(0, 0.03, len(scores_by["LGB-b"])), 0, 1), 4
+        )
+        for name in ALL_CONFIGURATIONS
+    }
+    every["LGB-b"], every["LR"] = scores_by["LGB-b"], scores_by["LR"]
+    return every
+
+
+@cache
+def outcome_policies() -> FrozenPolicies:
+    """Frozen thresholds and calibrators for the eight configurations of the outcome world."""
+    study = ALL_CONFIGURATIONS[:-1]
+    calibrators = _calibrators()
+    return FrozenPolicies(
+        dict.fromkeys(study, THRESHOLDS),
+        {(n, m): calibrators[m] for n in study for m in ("platt", "isotonic")},
+        {(n, m): file_ref(f"calibrator-{m}") for n in study for m in ("platt", "isotonic")},
+    )
+
+
+@cache
+def outcome_setup() -> OutcomeSetup:
+    ctx = outcome_context()
+    return OutcomeSetup(
+        outcome_declaration(),
+        identity(),
+        ctx.test.first_day,
+        ctx.test.last_day,
+        {name: scores(name)["file"]["sha256"] for name in ALL_CONFIGURATIONS},
+        V2_VOLUME,
+    )
+
+
+@cache
+def outcome_inference() -> dict[str, Any]:
+    """The inference record that the production code builds on the outcome world (B = 150)."""
+    partition, _ = outcome_world()
+    inputs = inference_inputs(
+        outcome_declaration(), partition, outcome_scores_all(), outcome_policies()
+    )
+    return build_inference_record(outcome_setup(), inputs, "LGB-b")

@@ -97,17 +97,20 @@ Commands:
                    only after its scope is approved
 
     run-test-evaluation
-                   the single authorised Test evaluation, phase 1 (--phase scoring): from a clean
-                   tree at the commit of the annotated freeze tag (--tag), with the closed
-                   development run (--development) and analysis runs (--analysis), it verifies
-                   every frozen input by hash, reads the Test features without the target and
-                   scores them once with the eight frozen models and the reference; the scores,
-                   the run record and the phase records are written to a new directory inside
-                   outputs/confirmatory/ (--output) or, to repeat a failed scoring attempt,
-                   into the unfinished run --resume. The Test labels are never read in this
-                   phase. A lock and a consumption marker (outputs/confirmatory/state/) keep
-                   the evaluation to one pass. Consequential: run only after the protocol freeze
-                   and an explicit approval
+                   the single authorised Test evaluation, from a clean tree at the commit of the
+                   annotated freeze tag (--tag), with the closed development run (--development)
+                   and analysis runs (--analysis): every frozen input is verified by hash at
+                   every invocation. --phase scoring (phase 1) reads the Test features without
+                   the target and scores them once with the eight frozen models and the
+                   reference; --phase evaluation (phase 2, on the unfinished run --resume)
+                   verifies the saved scores, creates the consumption marker, reads the Test
+                   labels and writes the outcome records and the inference record, and closes the
+                   run when it is complete and consistent; --phase all (default) runs phase 1 if
+                   it is not complete and then phase 2, under one lock. Everything is written to
+                   a new directory inside outputs/confirmatory/ (--output) or, to repeat a failed
+                   attempt, into the unfinished run --resume. A lock and a consumption marker
+                   (outputs/confirmatory/state/) keep the evaluation to one pass. Consequential:
+                   run only after the protocol freeze and an explicit approval
 
     analyse-development
                    the post-selection analyses of a completed development run (--source), in a
@@ -628,6 +631,10 @@ def _test_log(args: argparse.Namespace, paths: ProjectPaths) -> Path:
     from review_capacity.development.run_output import check_new_directory, default_directory
 
     options = _test_options(args)
+    if options.phase == "evaluation" and options.resume is None:
+        raise SpecificationError(
+            "The evaluation phase continues an existing run: give the unfinished run (--resume)"
+        )
     if options.resume is not None:
         return options.resume / run_log_name(args.started, resume=True)
     target = options.output or default_directory(paths.root, RUN_TYPE, args.started)
@@ -635,12 +642,12 @@ def _test_log(args: argparse.Namespace, paths: ProjectPaths) -> Path:
 
 
 def _run_test_evaluation(args: argparse.Namespace) -> int:
-    from review_capacity.confirmatory.command import run_test_scoring
+    from review_capacity.confirmatory.command import run_test
 
     paths = ProjectPaths.discover(args.root)
     logger.info("Project root: %s", paths.root)
-    directory = run_test_scoring(paths, _test_options(args))
-    logger.info("Test evaluation, scoring phase written to %s", directory)
+    directory = run_test(paths, _test_options(args))
+    logger.info("Test evaluation (phase %s) written to %s", args.phase, directory)
     return 0
 
 
@@ -960,9 +967,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     test_evaluation.add_argument(
         "--phase",
-        default="scoring",
-        choices=["scoring"],
-        help="the phase to run (default: scoring)",
+        default="all",
+        choices=["scoring", "evaluation", "all"],
+        help="the phase to run: scoring (phase 1, the run stays open), evaluation (phase 2 on the "
+        "unfinished run --resume) or all (phase 1 if it is not complete, then phase 2; default)",
     )
     test_evaluation.add_argument(
         "--output",
@@ -974,7 +982,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--resume",
         type=Path,
         default=None,
-        help="the unfinished run directory in which to repeat a failed scoring attempt",
+        help="the unfinished run directory to continue: a failed scoring attempt is repeated, or "
+        "the evaluation phase runs on a completed scoring",
     )
     test_evaluation.set_defaults(handler=_run_test_evaluation)
     analysis = commands.add_parser(
