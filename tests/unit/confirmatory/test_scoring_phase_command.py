@@ -259,6 +259,50 @@ def test_a_completed_run_without_its_marker_is_reconciled(project: dict[str, Any
     assert project["counters"].scoring_calls == 1
 
 
+def _crash_before_the_completed_record(
+    project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Run the scoring phase, stopping it between the global marker and the completed record."""
+    real = command._phase_record
+
+    def crashing(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        if args[3] == "completed":
+            raise KeyboardInterrupt  # a kill: no record of the completed phase
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(command, "_phase_record", crashing)
+    with pytest.raises(KeyboardInterrupt):
+        run(project)
+    monkeypatch.setattr(command, "_phase_record", real)
+    (directory,) = (project["paths"].root / "outputs" / "confirmatory").glob("20*")
+    return Path(directory)
+
+
+def test_a_crash_between_the_marker_and_the_completed_record_is_recovered_in_its_directory(
+    project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = _crash_before_the_completed_record(project, monkeypatch)
+    marker = scored_path(project["paths"].root, state_of(directory))
+    assert marker.exists()  # the marker precedes the completed record
+    before = marker.read_text(encoding="utf-8")
+    run(project, resume=directory, started="2026-11-02T091000Z")  # recovers from the bundle
+    assert project["counters"].scoring_calls == 1  # no second scoring pass
+    assert marker.read_text(encoding="utf-8") == before
+    phases = [read(p) for p in sorted((directory / "records").glob("test_phase*.json"))]
+    assert [p["outcome"] for p in phases][-1] == "completed"
+
+
+def test_a_crash_between_the_marker_and_the_completed_record_blocks_a_new_directory(
+    project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = _crash_before_the_completed_record(project, monkeypatch)
+    with pytest.raises(SpecificationError, match="scoring phase of this frozen state completed"):
+        run(project, started="2026-11-02T091500Z")
+    assert project["counters"].scoring_calls == 1
+    assert len(list((project["paths"].root / "outputs" / "confirmatory").glob("20*"))) == 1
+    assert directory.exists()
+
+
 def test_the_records_of_the_scoring_phase_are_consistent_as_a_run(project: dict[str, Any]) -> None:
     directory = run(project)
     records = [read(path) for path in sorted((directory / "records").glob("*.json"))]
@@ -275,3 +319,20 @@ def test_the_files_read_after_the_binding_must_be_the_frozen_ones(tmp_path: Path
     target.write_text("another manifest", encoding="utf-8")
     with pytest.raises(SpecificationError, match="differs from the frozen preprocessing"):
         command._check_frozen_files(tmp_path, frozen, ("preprocessing",))
+
+
+def test_a_damaged_recovery_bundle_is_reported_with_its_cause(
+    project: dict[str, Any], caplog: pytest.LogCaptureFixture
+) -> None:
+    from review_capacity.confirmatory.scoring import attempt_directory, read_bundle
+
+    directory = run(project)
+    reopened = RunDirectory.reopen(
+        directory, "confirmatory", ConfirmatoryRecords(c.outcome_context())
+    )
+    bundle = attempt_directory(reopened, 1) / "bundle.json"
+    bundle.write_text("{not json", encoding="utf-8")
+    with caplog.at_level("WARNING"):
+        assert read_bundle(reopened, 1, ALL_CONFIGURATIONS) is None
+    assert "recovery bundle cannot be used" in caplog.text
+    assert "JSONDecodeError" in caplog.text

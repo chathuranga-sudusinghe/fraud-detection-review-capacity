@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import errno
 import os
+import stat
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -138,3 +140,43 @@ def test_a_file_system_without_hard_links_is_an_error_not_an_overwrite(
     with pytest.raises(FileAccessError, match="cannot be written"):
         write_new_atomically(tmp_path / "record.json", "x")
     assert list(tmp_path.iterdir()) == []
+
+
+def _spy(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """The order of synchronisations and publications, by what they act on."""
+    events: list[str] = []
+    real_fsync, real_link, real_replace = os.fsync, os.link, Path.replace
+
+    def fsync(descriptor: int) -> None:
+        kind = "directory" if stat.S_ISDIR(os.fstat(descriptor).st_mode) else "file"
+        events.append(f"fsync {kind}")
+        real_fsync(descriptor)
+
+    def link(source: Any, target: Any) -> None:
+        events.append("publish")
+        real_link(source, target)
+
+    def replace(self: Path, target: Any) -> Path:
+        events.append("publish")
+        return real_replace(self, target)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    monkeypatch.setattr(os, "link", link)
+    monkeypatch.setattr(Path, "replace", replace)
+    return events
+
+
+def test_a_new_file_is_synchronised_before_it_is_published_and_its_directory_after(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events = _spy(monkeypatch)
+    write_new_atomically(tmp_path / "marker.json", "{}\n")
+    assert events == ["fsync file", "publish", "fsync directory"]
+
+
+def test_a_replaced_file_is_synchronised_before_it_is_published_and_its_directory_after(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events = _spy(monkeypatch)
+    write_atomically(tmp_path / "scores.txt", lambda out: out.write_text("x", encoding="utf-8"))
+    assert events == ["fsync file", "publish", "fsync directory"]

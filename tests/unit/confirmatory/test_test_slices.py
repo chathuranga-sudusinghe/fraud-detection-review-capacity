@@ -15,7 +15,11 @@ import pytest
 
 from review_capacity.config import FeatureSpec
 from review_capacity.confirmatory.inputs import TestInputs
-from review_capacity.confirmatory.slices import SliceInputs, build_slice_inputs
+from review_capacity.confirmatory.slices import (
+    SliceInputs,
+    build_slice_inputs,
+    development_boundaries,
+)
 from review_capacity.development.inputs import PartitionRows
 from review_capacity.errors import DataValidationError, SpecificationError
 from review_capacity.evaluation.declaration import EvaluationDeclaration, FrozenBoundaries
@@ -109,7 +113,14 @@ def world() -> World:
 
 
 def build(w: World) -> SliceInputs:
-    return build_slice_inputs(w.declaration, FEATURES, w.test, w.labels, w.train, w.v2)
+    return build_slice_inputs(
+        w.declaration,
+        FEATURES,
+        w.test,
+        w.labels,
+        w.train,
+        development_boundaries(w.declaration, w.train, w.v2),
+    )
 
 
 def test_every_variable_has_one_code_for_each_test_fraud(world: World) -> None:
@@ -178,7 +189,7 @@ def test_slice_boundaries_that_are_not_frozen_are_refused(world: World) -> None:
     rule = dataclasses.replace(world.declaration.false_negative, boundaries=None)
     unfrozen = dataclasses.replace(world.declaration, false_negative=rule)
     with pytest.raises(SpecificationError, match="not frozen"):
-        build_slice_inputs(unfrozen, FEATURES, world.test, world.labels, world.train, world.v2)
+        development_boundaries(unfrozen, world.train, world.v2)
 
 
 def test_slice_boundaries_that_differ_from_the_frozen_ones_are_refused(world: World) -> None:
@@ -190,7 +201,7 @@ def test_slice_boundaries_that_differ_from_the_frozen_ones_are_refused(world: Wo
     )
     changed = dataclasses.replace(world.declaration, false_negative=rule)
     with pytest.raises(SpecificationError, match="amount edges"):
-        build_slice_inputs(changed, FEATURES, world.test, world.labels, world.train, world.v2)
+        development_boundaries(changed, world.train, world.v2)
     kept = {**frozen.kept, "ProductCD": {"RARE": 100}}
     rule = dataclasses.replace(
         world.declaration.false_negative,
@@ -198,4 +209,4 @@ def test_slice_boundaries_that_differ_from_the_frozen_ones_are_refused(world: Wo
     )
     changed = dataclasses.replace(world.declaration, false_negative=rule)
     with pytest.raises(SpecificationError, match="pooled levels"):
-        build_slice_inputs(changed, FEATURES, world.test, world.labels, world.train, world.v2)
+        development_boundaries(changed, world.train, world.v2)

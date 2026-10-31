@@ -63,16 +63,33 @@ def _fraud_keys(partition: PartitionRows, features: FeatureSpec) -> list[str]:
     return pseudo_entity_keys(partition.features[fraud], days, features.missing_label)
 
 
+def development_boundaries(
+    declaration: EvaluationDeclaration, train: PartitionRows, v2: PartitionRows
+) -> Boundaries:
+    """The slice boundaries recomputed from the verified development partitions and checked
+    against the frozen ones. It reads no Test row or label, so the evaluation phase calls it
+    before the consumption marker (Issue #212)."""
+    v2_frauds = v2.features[v2.labels == 1]
+    boundaries = compute_boundaries(
+        declaration,
+        train.features[AMOUNT].to_numpy(dtype=np.float64),
+        {name: _text(v2_frauds, name) for name in POOLED_VARIABLES},
+    )
+    check_frozen(boundaries, declaration)
+    return boundaries
+
+
 def build_slice_inputs(
     declaration: EvaluationDeclaration,
     features: FeatureSpec,
     test: TestInputs,
     labels: npt.NDArray[np.int8],
     train: PartitionRows,
-    v2: PartitionRows,
+    boundaries: Boundaries,
 ) -> SliceInputs:
     """The slice inputs of the Test frauds of ``test`` (``labels`` are its labels, read in the
-    evaluation phase). ``train`` and ``v2`` are the verified development partitions."""
+    evaluation phase). ``train`` is the verified Train partition (the recurring entities) and
+    ``boundaries`` the verified ones of ``development_boundaries``."""
     rule = declaration.false_negative
     if labels.shape != (test.rows,) or test.has_identity is None:
         raise DataValidationError("The slice inputs need one label and one join flag per Test row")
@@ -80,13 +97,6 @@ def build_slice_inputs(
     if not fraud.any():
         raise DataValidationError("The Test partition has no fraud: the slices are undefined")
     with log_step(logger, f"Slice inputs of {int(fraud.sum())} Test frauds"):
-        v2_frauds = v2.features[v2.labels == 1]
-        boundaries = compute_boundaries(
-            declaration,
-            train.features[AMOUNT].to_numpy(dtype=np.float64),
-            {name: _text(v2_frauds, name) for name in POOLED_VARIABLES},
-        )
-        check_frozen(boundaries, declaration)
         edges = boundaries.amount_edges
         frame = test.features[fraud].reset_index(drop=True)
         days = test.days[fraud]
