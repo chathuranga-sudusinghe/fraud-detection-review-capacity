@@ -660,7 +660,6 @@ def test_an_unknown_tag_or_a_missing_repository_is_a_specification_error(tmp_pat
 
 BASE_ARTIFACTS = {
     "development_run": [sha("dev")],
-    "analysis_runs": [sha("a1"), sha("a2")],
     "models": [f"LGB-b:{sha('m1')}", f"Cat-b:{sha('m2')}"],
 }
 BASE_DECLARATIONS = {"settings": sha("s"), "training": sha("t"), "evaluation": sha("e")}
@@ -682,7 +681,6 @@ def test_the_frozen_state_identity_is_deterministic_and_order_independent() -> N
     assert state() == state()
     reordered = {
         "models": list(reversed(BASE_ARTIFACTS["models"])),
-        "analysis_runs": list(reversed(BASE_ARTIFACTS["analysis_runs"])),
         "development_run": BASE_ARTIFACTS["development_run"],
     }
     assert state(artifacts=reordered) == state()
@@ -705,7 +703,6 @@ def test_every_file_group_of_the_frozen_inputs_enters_the_identity(world: World)
     groups = artifact_hashes(world.bind().frozen_inputs)
     assert set(groups) == {
         "development_run",
-        "analysis_runs",
         "h3_selection",
         "preprocessing",
         "models",
@@ -738,3 +735,18 @@ def test_declaration_hashes_are_read_from_a_record_identity() -> None:
         "evaluation": "3" * 64,
         "dataset_manifest": "4" * 64,
     }
+
+
+def test_the_list_of_analysis_runs_does_not_change_the_frozen_state(world: World) -> None:
+    both = world.bind()
+    assert len(world.analyses) == 2
+    for subset in (world.analyses[:1], world.analyses[1:]):
+        try:
+            alone = world.bind(analyses=subset)
+        except SpecificationError:
+            continue  # this analysis run alone does not supply the policies
+        assert alone.frozen_state_sha256 == both.frozen_state_sha256
+        assert len(alone.frozen_inputs["analysis_runs"]) == 1  # kept as provenance
+        break
+    else:
+        pytest.fail("no single analysis run supplies the policies")

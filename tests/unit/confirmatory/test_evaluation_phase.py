@@ -95,6 +95,9 @@ def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "read_partitions": lambda *_a, **_k: tick(
             "development", {"train": SimpleNamespace(), "v2": SimpleNamespace()}
         ),
+        "development_boundaries": lambda *_a, **_k: tick(
+            "boundaries", c.outcome_slices().boundaries
+        ),
         "build_slice_inputs": lambda *_a, **_k: tick("slices", c.outcome_slices()),
         "build_outcome_records": lambda *_a, **_k: tick("build", []),
         "publish_outcomes": lambda *_a, **_k: tick("publish", 0),
@@ -143,6 +146,7 @@ def test_the_consumption_marker_comes_after_the_label_free_work_and_before_the_l
         "features",
         "policies",
         "development",
+        "boundaries",
         "consume",
         "labels",
         "slices",
@@ -238,3 +242,21 @@ def test_a_record_of_another_identity_in_the_run_is_refused(world: dict[str, Any
     source.write_text(json.dumps(other), encoding="utf-8")
     with pytest.raises(SpecificationError, match="another identity"):
         verify_saved_scores(world["run"], world["setup"].binding)
+
+
+def test_a_boundary_mismatch_stops_the_evaluation_before_consumption(
+    world: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def mismatch(*_a: Any, **_k: Any) -> Any:
+        world["events"].append("boundaries")
+        raise SpecificationError("The V2 pooled levels differ from the frozen levels")
+
+    monkeypatch.setattr(phase, "development_boundaries", mismatch)
+    with (
+        locked(world["root"], STATE, run_id="r"),
+        pytest.raises(SpecificationError, match="pooled levels"),
+    ):
+        evaluate_outcomes(world["setup"])
+    assert "labels" not in world["events"]
+    assert "consume" not in world["events"]
+    assert not marker_path(world["root"], STATE).exists()

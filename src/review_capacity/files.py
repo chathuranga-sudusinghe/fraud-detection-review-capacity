@@ -24,13 +24,17 @@ def write_atomically(path: Path, write: Callable[[Path], object]) -> None:
     """Call ``write(temporary_path)``, then move the temporary file to ``path``.
 
     File-system failures are raised as ``FileAccessError``; any other error from ``write``
-    propagates unchanged.
+    propagates unchanged. The temporary file is synchronised to storage before the move and the
+    directory after it (Issue #212), so a file that was published survives a host crash with its
+    content.
     """
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         write(temporary)
+        _sync_file(temporary)
         temporary.replace(path)
+        _sync_directory(path.parent)
     except OSError as error:
         raise FileAccessError(f"{path}: cannot be written ({error.strerror})") from error
     finally:
@@ -42,7 +46,10 @@ def write_new_atomically(path: Path, text: str) -> None:
 
     The text is written to a temporary file in the same directory and hard-linked to ``path``,
     which fails if ``path`` exists (even if it was created after the caller last looked), so a
-    file written this way is never overwritten. A missing directory is created.
+    file written this way is never overwritten. A missing directory is created. The content is
+    synchronised to storage before the link and the directory after it (Issue #212): the supported
+    failure model is a process crash or a host crash on a local file system, after which the file
+    is either complete or absent.
     """
     temporary: Path | None = None
     try:
@@ -53,10 +60,13 @@ def write_new_atomically(path: Path, text: str) -> None:
         temporary = Path(name)
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
         try:
             os.link(temporary, path)
         except FileExistsError as error:
             raise FileAccessError(f"{path}: already exists and is never replaced") from error
+        _sync_directory(path.parent)
     except FileAccessError:
         raise
     except OSError as error:
@@ -64,6 +74,24 @@ def write_new_atomically(path: Path, text: str) -> None:
     finally:
         if temporary is not None:
             _remove_temporary(temporary)
+
+
+def _sync_file(path: Path) -> None:
+    """Force the content of ``path`` to storage."""
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _sync_directory(directory: Path) -> None:
+    """Force the directory entries of ``directory`` to storage."""
+    descriptor = os.open(directory, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _remove_temporary(temporary: Path) -> None:

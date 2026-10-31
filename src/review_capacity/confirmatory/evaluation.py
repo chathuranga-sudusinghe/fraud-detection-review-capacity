@@ -44,7 +44,11 @@ from review_capacity.confirmatory.records import (
     run_problems,
     scores_bundle_sha256,
 )
-from review_capacity.confirmatory.slices import SliceInputs, build_slice_inputs
+from review_capacity.confirmatory.slices import (
+    SliceInputs,
+    build_slice_inputs,
+    development_boundaries,
+)
 from review_capacity.confirmatory.state import begin_consumption, lock_path
 from review_capacity.data.loading import RawData, load_labels
 from review_capacity.development.inputs import TRAIN, V2, read_partitions
@@ -178,6 +182,7 @@ def evaluate_outcomes(setup: EvaluationSetup) -> EvaluationResult:
         capacities = [float(share) for share in setup.evaluation.capacity.shares]
         policies = load_policies(root, binding.frozen_inputs, capacities)
         parts = read_partitions(paths, setup.features, setup.dataset, (TRAIN, V2))
+        boundaries = development_boundaries(setup.evaluation, parts[TRAIN], parts[V2])
         # everything that needs no Test label is done: the evaluation is consumed now, and only
         # then is the first label reached
         setup.before_consumption()
@@ -187,7 +192,7 @@ def evaluate_outcomes(setup: EvaluationSetup) -> EvaluationResult:
         labels = _labels(raw, setup.features, setup.dataset, inputs.rows)
         truth = Truth.build(inputs.days, labels, inputs.features[AMOUNT].to_numpy(dtype=np.float64))
         slices = build_slice_inputs(
-            setup.evaluation, setup.features, inputs, labels, parts[TRAIN], parts[V2]
+            setup.evaluation, setup.features, inputs, labels, parts[TRAIN], boundaries
         )
         context = ConfirmatoryContext.from_specs(setup.dataset, setup.evaluation)
         partition = Partition(

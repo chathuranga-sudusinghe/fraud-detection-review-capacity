@@ -83,6 +83,7 @@ from review_capacity.development.runner import chosen_configurations
 from review_capacity.errors import SpecificationError
 from review_capacity.evaluation.declaration import EvaluationDeclaration
 from review_capacity.evaluation.declaration import load_declaration as load_evaluation_declaration
+from review_capacity.evaluation.false_negatives import require_frozen
 from review_capacity.features.neural_preprocessing import load_neural_preprocessing
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import log_step
@@ -259,6 +260,7 @@ def _prepare(paths: ProjectPaths, options: TestRunOptions, started: str) -> _Pre
     settings, settings_file = load_settings_with_snapshot(paths)
     declaration, declaration_file = load_training_declaration(paths)
     evaluation, evaluation_file = load_evaluation_declaration(paths)
+    require_frozen(evaluation)
     dataset = load_dataset_spec(paths)
     partitions = DevelopmentPartitions.from_spec(dataset, paths)
     evaluator = evaluator_state(root, options.tag)
@@ -380,7 +382,8 @@ def run_test(
             scored = [a for a in _scoring_attempts(run) if a["outcome"] == "completed"]
             if scoring and not scored:
                 refuse_if_consumed(root, state)
-                refuse_if_scored(root, state)  # a scoring that completed in another run
+                # a scoring that completed in another run; this run may recover its own
+                refuse_if_scored(root, state, except_run=(run.identity or prep.identity)["run_id"])
                 _write_test_run(prep, run, now)
                 _close_orphans(run, run.identity or prep.identity)
                 _score(paths, run, prep.binding, prep.declaration, prep.settings, release)
@@ -588,7 +591,11 @@ def _score(
         else:
             logger.info("Publishing the verified bundle of an earlier attempt without scoring")
         _publish(run, identity, bodies)
-        bundle = scores_bundle_sha256([body["file"]["sha256"] for body in bodies])
+        digest = scores_bundle_sha256([body["file"]["sha256"] for body in bodies])
+        # the global marker comes before the completed phase record: a crash between the two
+        # leaves a marker that only this run, which holds the verified bundle, may continue
+        _reconcile_scoring_marker(paths.root, binding.frozen_state_sha256, run, str(digest))
+        bundle = digest
     except KeyboardInterrupt:
         outcome, error = "interrupted", "KeyboardInterrupt"
         raise
@@ -599,9 +606,3 @@ def _score(
         run.write_record(
             _phase_record(identity, attempt, started, outcome, error, bundle), "scoring", attempt
         )
-    record_scoring(
-        paths.root,
-        binding.frozen_state_sha256,
-        run_id=(run.identity or {})["run_id"],
-        scores_sha256=str(bundle),
-    )

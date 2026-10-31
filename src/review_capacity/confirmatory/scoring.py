@@ -126,7 +126,9 @@ def read_bundle(
     run: RunDirectory, attempt: int, configurations: Sequence[str]
 ) -> list[dict[str, Any]] | None:
     """The bundle of an attempt if it lists exactly ``configurations`` and every score file is the
-    one it names (by hash); ``None`` for a missing or unverifiable bundle."""
+    one it names (by hash); ``None`` for a missing bundle and, with a logged warning that names the
+    cause, for one that cannot be used (a new attempt then scores again: no score was published and
+    no label was read)."""
     path = attempt_directory(run, attempt) / BUNDLE_FILE
     if not path.is_file():
         return None
@@ -137,9 +139,18 @@ def read_bundle(
             file_sha256(run.path / body["file"]["path"]) == body["file"]["sha256"]
             for body in bodies
         )
-    except (OSError, ValueError, KeyError, TypeError):
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        logger.warning(
+            "%s: the recovery bundle cannot be used (%s: %s)", path, type(error).__name__, error
+        )
         return None
-    return bodies if verified and names == list(configurations) else None
+    if not verified or names != list(configurations):
+        logger.warning(
+            "%s: the recovery bundle does not match its score files or the nine configurations",
+            path,
+        )
+        return None
+    return bodies
 
 
 def _write_scores(target: Path, frame: pd.DataFrame) -> None:

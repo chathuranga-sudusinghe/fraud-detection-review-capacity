@@ -16,6 +16,7 @@ import pytest
 
 from review_capacity.config import load_dataset_spec
 from review_capacity.confirmatory import command
+from review_capacity.confirmatory.boundaries import render_yaml
 from review_capacity.confirmatory.evaluation import EvaluationResult, verify_saved_scores
 from review_capacity.confirmatory.frozen import EvaluatorState, FrozenBinding, check_evaluator
 from review_capacity.confirmatory.frozen_policies import FrozenPolicies
@@ -42,9 +43,20 @@ class Counters:
         self.fail_next = False
 
 
+def _freeze_boundaries(path: Path) -> None:
+    """Enter the synthetic outcome world's slice boundaries in the copied declaration, as the
+    freeze enters the real ones (Issue #211)."""
+    block = render_yaml(c.outcome_slices().boundaries)
+    text = path.read_text(encoding="utf-8")
+    head, found, _ = text.partition("\n  boundaries:")  # the last entry of the last section
+    assert found, "the declaration has no boundaries entry"
+    path.write_text(head + "\n" + block, encoding="utf-8")
+
+
 def install_stubs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """A temporary project and the stubbed steps of the command."""
     shutil.copytree(REPO_PATHS.config_dir, tmp_path / "config")
+    _freeze_boundaries(tmp_path / "config" / "evaluation.yaml")
     (tmp_path / "data").mkdir()
     (tmp_path / "data" / "datapackage.json").write_text("{}", encoding="utf-8")
     paths = ProjectPaths(tmp_path)

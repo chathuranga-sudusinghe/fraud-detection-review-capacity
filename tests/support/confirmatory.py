@@ -31,7 +31,11 @@ from review_capacity.confirmatory.slices import SliceInputs
 from review_capacity.development.records import ALL_CONFIGURATIONS
 from review_capacity.evaluation.calibration import fit_isotonic, fit_platt
 from review_capacity.evaluation.contrasts import estimands
-from review_capacity.evaluation.declaration import EvaluationDeclaration, load_declaration
+from review_capacity.evaluation.declaration import (
+    EvaluationDeclaration,
+    FrozenBoundaries,
+    load_declaration,
+)
 from review_capacity.evaluation.false_negatives import (
     Boundaries,
     SliceVariable,
@@ -350,8 +354,13 @@ V2_VOLUME = 77_822 / 28  # the declared V2 volume; K = round(c x N) is 28, 56, 1
 THRESHOLDS = Thresholds(0.5, 0.3, {0.01: 0.45, 0.02: 0.35, 0.05: 0.25, 0.1: 0.15})
 
 
+POOLED_NAMES = ("ProductCD", "card4", "card6", "DeviceType")
+OUTCOME_KEPT = {name: {"A": 4000, "B": 2500, "C": 150} for name in POOLED_NAMES}
+
+
 @cache
-def outcome_declaration() -> EvaluationDeclaration:
+def unfrozen_outcome_declaration() -> EvaluationDeclaration:
+    """The declaration of the outcome world before its slice boundaries are frozen."""
     base = declaration()
     return dataclasses.replace(
         base, resampling=dataclasses.replace(base.resampling, replicates=OUTCOME_B)
@@ -359,8 +368,24 @@ def outcome_declaration() -> EvaluationDeclaration:
 
 
 @cache
+def outcome_declaration() -> EvaluationDeclaration:
+    base = declaration()
+    partition, _ = outcome_world()
+    frozen = FrozenBoundaries(
+        amount_edges(partition.truth.amounts, base.false_negative.amount_quantiles), OUTCOME_KEPT
+    )
+    unfrozen = unfrozen_outcome_declaration()
+    return dataclasses.replace(
+        unfrozen,
+        false_negative=dataclasses.replace(base.false_negative, boundaries=frozen),
+    )
+
+
+@cache
 def outcome_context() -> ConfirmatoryContext:
-    return ConfirmatoryContext.from_specs(load_dataset_spec(REPO_PATHS), outcome_declaration())
+    return ConfirmatoryContext.from_specs(
+        load_dataset_spec(REPO_PATHS), unfrozen_outcome_declaration()
+    )
 
 
 @cache
@@ -391,7 +416,7 @@ def outcome_world() -> tuple[Partition, dict[str, np.ndarray]]:
 
 @cache
 def outcome_capacities() -> tuple[Capacity, ...]:
-    decl = outcome_declaration()
+    decl = unfrozen_outcome_declaration()
     return tuple(
         Capacity(s, k) for s, k in zip(decl.capacity.shares, decl.capacity.budgets, strict=True)
     )
@@ -530,11 +555,7 @@ def outcome_slices() -> SliceInputs:
     fraud = truth.labels == 1
     frauds = int(fraud.sum())
     edges = amount_edges(truth.amounts, rule.amount_quantiles)
-    kept = {
-        name: {"A": 4000, "B": 2500, "C": 150}
-        for name in ("ProductCD", "card4", "card6", "DeviceType")
-    }
-    boundaries = Boundaries(edges, kept)
+    boundaries = Boundaries(edges, OUTCOME_KEPT)
     levels = declared_levels(outcome_declaration())
     variables = [
         SliceVariable("identity", levels["identity"], rng.integers(0, 2, frauds).astype(np.intp)),

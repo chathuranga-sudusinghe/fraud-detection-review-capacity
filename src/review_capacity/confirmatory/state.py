@@ -139,10 +139,17 @@ def locked(root: Path, frozen_state_sha256: str, *, run_id: str) -> Iterator[Pat
         logger.info("Lock released: %s", path.name)
 
 
-def refuse_if_scored(root: Path, frozen_state_sha256: str) -> None:
-    """Stop a new scoring phase once a scoring phase completed for this frozen state."""
+def refuse_if_scored(
+    root: Path, frozen_state_sha256: str, *, except_run: str | None = None
+) -> None:
+    """Stop a new scoring phase once a scoring phase completed for this frozen state. The run
+    ``except_run`` that owns the marker may continue: it recovers its own scores (Issue #212)."""
     marker = scored_path(root, frozen_state_sha256)
     if marker.exists():
+        if except_run is not None:
+            found = json.loads(marker.read_text(encoding="utf-8"))
+            if found.get("run_id") == except_run:
+                return
         raise SpecificationError(
             f"The scoring phase of this frozen state completed ({marker.name}); only a failed "
             "scoring phase may be repeated, and the evaluation phase is next"

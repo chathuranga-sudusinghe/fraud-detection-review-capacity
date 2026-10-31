@@ -55,7 +55,6 @@ def artifact_hashes(frozen_inputs: Mapping[str, Any]) -> dict[str, list[str]]:
     record and its manifest are keyed by their configuration."""
     return {
         "development_run": [frozen_inputs["development_run"]["run_end"]["sha256"]],
-        "analysis_runs": [run["run_end"]["sha256"] for run in frozen_inputs["analysis_runs"]],
         "h3_selection": [frozen_inputs["h3_selection"]["sha256"]],
         "preprocessing": [
             frozen_inputs["preprocessing"]["sha256"],
