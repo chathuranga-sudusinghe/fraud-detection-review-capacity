@@ -4,8 +4,8 @@ Test evaluation).
 Each of the eight configurations and the logistic-regression reference is reloaded from the file
 the frozen inputs name, scored once in one call on the Test features (no labels exist here), and
 its scores are written as a Parquet file of ``TransactionID`` and ``score``, hashed and described
-by a ``test_scores`` record body. The model-only scoring time of the single pass is recorded and
-the pass is never repeated for timing. The recorded time is the **end-to-end** boundary of DR-015
+by a ``test_scores`` record body. The scoring time of the single pass is recorded and the pass is
+never repeated for timing. The recorded time is the **end-to-end** boundary of DR-015
 §9 for the single pass: from the in-memory Test features (conversion, the fitted preprocessing for
 the neural models, native containers, host-device transfers) to the scores on the host, with the
 explicit CUDA synchronisation before the clock starts and after the work completes for the neural
@@ -41,7 +41,7 @@ from review_capacity.development.subjects import NEURAL, REFERENCE, kind_of, sco
 from review_capacity.development.trial import run_file
 from review_capacity.errors import DataValidationError, SpecificationError
 from review_capacity.features.neural_preprocessing import NeuralPreprocessing
-from review_capacity.files import write_atomically, write_new_atomically
+from review_capacity.files import sync_chain, write_atomically, write_new_atomically
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import log_step
 from review_capacity.models.base import Scores, checked_scores
@@ -89,6 +89,7 @@ def start_attempt(run: RunDirectory, attempt: int, started: str) -> Path:
     one is refused, so no earlier attempt's files are ever overwritten) and stamped."""
     directory = attempt_directory(run, attempt)
     directory.mkdir(parents=True, exist_ok=False)
+    sync_chain(directory, run.path)
     write_new_atomically(
         directory / ATTEMPT_FILE, json.dumps({"attempt": attempt, "started": started}) + "\n"
     )

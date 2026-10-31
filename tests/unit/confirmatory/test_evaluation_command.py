@@ -6,6 +6,7 @@ rewritten to the identity and the score files of the run under test."""
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any
@@ -239,7 +240,7 @@ def test_the_scoring_marker_is_repaired_before_any_evaluation_and_survives_an_ea
     with pytest.raises(RuntimeError, match="features could not be read"):
         run(project, phase=phase, resume=directory, started="2026-11-02T091000Z")
     assert marker.exists()  # repaired before the evaluation started
-    with pytest.raises(SpecificationError, match="scoring phase of this frozen state completed"):
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
         run(project, phase="scoring", started="2026-11-03T090000Z")  # no second scoring anywhere
     assert not (project["paths"].root / "outputs" / "confirmatory" / "2026-11-03T090000Z").exists()
 
@@ -257,3 +258,27 @@ def test_a_scoring_marker_of_other_scores_is_refused(project: dict[str, Any]) ->
     with pytest.raises(SpecificationError, match="another run or other scores"):
         run(project, phase="evaluation", resume=directory, started="2026-11-02T091000Z")
     assert project["plan"].calls == 0
+
+
+def test_a_resume_with_other_frozen_inputs_is_refused_before_the_labels(
+    project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project["plan"].fail_after_marker = True
+    with pytest.raises(RuntimeError):
+        run(project)  # scoring done, the evaluation consumed and failed
+    (directory,) = (project["paths"].root / "outputs" / "confirmatory").glob("20*")
+    calls = project["plan"].calls
+    real = command._prepare
+
+    def other_policies(*args: Any, **kwargs: Any) -> Any:
+        prepared = real(*args, **kwargs)
+        inputs = dict(prepared.binding.frozen_inputs)
+        inputs["thresholds"] = [{"path": "analysis/other.json", "sha256": "f" * 64}]
+        inputs["h3_selection"] = {"path": "analysis/other-h3.json", "sha256": "e" * 64}
+        binding = dataclasses.replace(prepared.binding, frozen_inputs=inputs)
+        return dataclasses.replace(prepared, binding=binding)
+
+    monkeypatch.setattr(command, "_prepare", other_policies)
+    with pytest.raises(SpecificationError, match="was frozen with other inputs"):
+        run(project, phase="evaluation", resume=directory, started="2026-11-02T091000Z")
+    assert project["plan"].calls == calls  # the evaluation did not start again

@@ -69,6 +69,7 @@ from review_capacity.confirmatory.scoring import (
     write_bundle,
 )
 from review_capacity.confirmatory.state import (
+    begin_scoring,
     locked,
     record_scoring,
     refuse_if_consumed,
@@ -85,6 +86,7 @@ from review_capacity.evaluation.declaration import EvaluationDeclaration
 from review_capacity.evaluation.declaration import load_declaration as load_evaluation_declaration
 from review_capacity.evaluation.false_negatives import require_frozen
 from review_capacity.features.neural_preprocessing import load_neural_preprocessing
+from review_capacity.files import make_durable, sync_chain
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import log_step
 from review_capacity.models.device import environment_record
@@ -378,12 +380,26 @@ def run_test(
         with locked(root, state, run_id=started):
             if options.phase == "scoring":
                 refuse_if_consumed(root, state)  # a run that ended meanwhile
+            if scoring and options.resume is None:
+                # a new directory is refused whatever its run identifier, under the lock too,
+                # before it is created
+                refuse_if_consumed(root, state)
+                refuse_if_scored(root, state)
             run = _open_run(root, options, started, prep.identity, prep.records)
+            # the directory chain of the run, existing or not, is made durable before any
+            # consequential work
+            sync_chain(run.path / "records", root)
+            _check_recorded_binding(run, prep)
             scored = [a for a in _scoring_attempts(run) if a["outcome"] == "completed"]
             if scoring and not scored:
                 refuse_if_consumed(root, state)
                 # a scoring that completed in another run; this run may recover its own
-                refuse_if_scored(root, state, except_run=(run.identity or prep.identity)["run_id"])
+                refuse_if_scored(
+                    root,
+                    state,
+                    except_run=(run.identity or prep.identity)["run_id"],
+                    except_directory=_directory_of(root, run),
+                )
                 _write_test_run(prep, run, now)
                 _close_orphans(run, run.identity or prep.identity)
                 _score(paths, run, prep.binding, prep.declaration, prep.settings, release)
@@ -397,6 +413,32 @@ def run_test(
                 _evaluation_phase(prep, run)
     logger.info("Test evaluation written to %s", run.path)
     return run.path
+
+
+def _directory_of(root: Path, run: RunDirectory) -> str:
+    """The run directory relative to the project root, POSIX form: the owner named by the started
+    marker (a run identifier alone has a resolution of one second)."""
+    return run.path.resolve().relative_to(root.resolve()).as_posix()
+
+
+def _check_recorded_binding(run: RunDirectory, prep: _Prepared) -> None:
+    """A resumed run keeps the frozen inputs it recorded: the H3 selection, thresholds,
+    calibrators, analysis runs and every other bound file named by the current invocation must be
+    those of its ``test_run`` record, whatever the global identity covers. Checked before any
+    Test row or label is read."""
+    path = run.record_path("test_run")
+    if not path.exists():
+        return
+    recorded = json.loads(path.read_text(encoding="utf-8"))["frozen_inputs"]
+    current = json.loads(json.dumps(prep.binding.frozen_inputs))
+    if recorded != current:
+        changed = sorted(
+            k for k in set(recorded) | set(current) if recorded.get(k) != current.get(k)
+        )
+        raise SpecificationError(
+            f"{run.path.name} was frozen with other inputs ({changed}); a resumed run keeps the "
+            "inputs it recorded, and the same development and analysis runs must be named"
+        )
 
 
 def _reconcile_scoring_marker(root: Path, state: str, run: RunDirectory, bundle: str) -> None:
@@ -414,6 +456,7 @@ def _reconcile_scoring_marker(root: Path, state: str, run: RunDirectory, bundle:
             f"{marker.name} belongs to another run or other scores than the completed scoring "
             "of this run"
         )
+    make_durable(marker)  # an accepted marker is made durable before the run relies on it
 
 
 def run_test_scoring(
@@ -552,12 +595,22 @@ def _score(
     """One attempt of the scoring phase: its ``test_phase`` record is written whatever happens,
     and the scoring marker when it completed. A bundle of nine verified score files left by an
     earlier attempt is published without scoring again."""
+    identity = run.identity or {}
+    state = binding.frozen_state_sha256
+    # the frozen state is claimed for this run, durably, before anything is predicted
+    begin_scoring(
+        paths.root, state, run_id=identity["run_id"], directory=_directory_of(paths.root, run)
+    )
     attempt = _next_attempt(run)
     started = timestamp()
-    identity = run.identity or {}
     outcome, error, bundle = "completed", None, None
     try:
         bodies = _recoverable(run)
+        if bodies is None and scored_path(paths.root, state).exists():
+            raise SpecificationError(
+                "The scoring marker of this frozen state exists but this run holds no verified "
+                "bundle of score files: nothing is scored again; restore the run directory"
+            )
         if bodies is None:
             features = load_feature_spec(paths.features_spec)
             dataset = load_dataset_spec(paths)
@@ -590,11 +643,12 @@ def _score(
             write_bundle(run, attempt, bodies)
         else:
             logger.info("Publishing the verified bundle of an earlier attempt without scoring")
-        _publish(run, identity, bodies)
         digest = scores_bundle_sha256([body["file"]["sha256"] for body in bodies])
-        # the global marker comes before the completed phase record: a crash between the two
-        # leaves a marker that only this run, which holds the verified bundle, may continue
-        _reconcile_scoring_marker(paths.root, binding.frozen_state_sha256, run, str(digest))
+        # the scoring marker comes before the publication of the records and the completed phase
+        # record: a crash after it leaves a marker that only this run, which holds the verified
+        # bundle, may continue; an existing marker must name this run and these very scores
+        _reconcile_scoring_marker(paths.root, state, run, str(digest))
+        _publish(run, identity, bodies)
         bundle = digest
     except KeyboardInterrupt:
         outcome, error = "interrupted", "KeyboardInterrupt"

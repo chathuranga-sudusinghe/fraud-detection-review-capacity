@@ -44,7 +44,7 @@ The neural architectures follow their primary source [REF-087] (main text Sectio
   - `x` = the hidden representation entering a block;
   - `Linear`, `ReLU`, `BatchNorm`, `Dropout` = affine layer, rectified linear unit, batch normalisation and dropout.
 
-- **FT-Transformer.** A feature tokenizer maps every model input to an embedding, a [CLS] (classification) token is appended, a stack of pre-normalisation (PreNorm) Transformer layers with multi-head self-attention and a ReGLU (rectified gated linear unit) feed-forward module is applied, and the prediction is made from the final [CLS] representation.
+- **FT-Transformer.** A feature tokenizer maps every model input to an embedding, a [CLS] (classification) token is placed first in the token sequence, a stack of pre-normalisation (PreNorm) Transformer layers with multi-head self-attention and a ReGLU (rectified gated linear unit) feed-forward module is applied, and the prediction is made from the final [CLS] representation.
 
 The tree-based models use the native categorical and missing-value handling of each library ([DR-008](DR-008-feature-declaration-and-model-input-policy.md)).
 

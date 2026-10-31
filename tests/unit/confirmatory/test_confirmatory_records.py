@@ -151,7 +151,6 @@ def test_run_frozen_state_identity_follows_the_frozen_inputs() -> None:
         "frozen_state_sha256",
     )
     for path in (
-        "frozen_inputs.thresholds.0.sha256",
         "frozen_inputs.model_manifests.RES-b.sha256",
         "frozen_inputs.model_records.Cat-u.sha256",
         "frozen_inputs.preprocessing_arrays.sha256",

@@ -30,6 +30,10 @@ class FileAccessError(ReviewCapacityError, OSError):
     """A required file cannot be read or an output file cannot be written."""
 
 
+class FileExistsAccessError(FileAccessError):
+    """A file that must be new already exists (it is never replaced)."""
+
+
 class ModelError(ReviewCapacityError, RuntimeError):
     """A model failed to fit or produced invalid output (for example, non-finite scores)."""
 

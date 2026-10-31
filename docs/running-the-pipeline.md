@@ -13,8 +13,10 @@ Every step below is consequential and is governed by the [execution rules](../AG
 | 4 | `run-development` | steps 1–3; processed development files | `outputs/development/<UTC start time>/` |
 | 5 | `analyse-development` | the closed development run of step 4 | `outputs/analysis/<UTC start time>/` |
 | 6 | `summarise-run`, `promote-evidence` | a completed run | `summary.md`; `evidence/<run type>/<run id>/` |
+| 7 | `declare-fn-boundaries` | Train and V2 (processed files) | `outputs/fn_boundaries/<UTC start time>/` |
+| 8 | `run-test-evaluation` | the freeze tag; the closed development and analysis runs; the raw files (Test, once) | `outputs/confirmatory/<UTC start time>/`; `outputs/confirmatory/state/` |
 
-The Test period is never read by any of these steps.
+Steps 0–7 never read the Test period. Step 8 is the single authorised Test evaluation, described in [section 7](#7-the-confirmatory-test-evaluation).
 
 ## 0. Checks before the first run
 
@@ -118,11 +120,55 @@ Each stage can be repeated in a new analysis run. The `thresholds`, `calibration
 
 `summarise-run` regenerates `summary.md` of a run directory from its records alone, also after an interrupted run; it reads no data and fits no model. `promote-evidence` copies a completed run's aggregate evidence (records, `summary.md`, `run.log` and a manifest with SHA-256 values) to `evidence/<run type>/<run id>/`, a new directory, and never row-level scores, fitted preprocessing artifacts or models. It is a separate, explicit step that no run calls.
 
+## 7. The confirmatory Test evaluation
+
+Steps 7 and 8 belong to the confirmatory stage. The design is the [authorised Test evaluation](protocol.md#authorised-test-evaluation) of the protocol; this section gives only the command sequence, the recovery rules and the planning figures.
+
+**Before the run.**
+
+1. `declare-fn-boundaries` computes the data-derived slice boundaries (Train amount-band edges, V2 pooled levels) from Train and V2 alone. Its `false_negative_boundaries.yaml` is compared with the `false_negative.boundaries` entry of `config/evaluation.yaml`, which the evaluation recomputes and compares again before it creates the consumption marker.
+2. The protocol is tagged in Git (an annotated tag on a clean tree), the four code-quality checks pass at the tagged commit, and the run is explicitly approved.
+
+**The run.** Phase 1 scores the Test features without labels and keeps the run open; phase 2 reads the labels, writes the outcome and inference records, closes the run and writes `summary.md` and the figures. The default `--phase all` runs both under one lock:
+
+```bash
+.venv/bin/review-capacity run-test-evaluation --tag <freeze tag> --development outputs/development/<UTC start time> --analysis outputs/analysis/<UTC start time>
+```
+
+`--phase scoring` and `--phase evaluation --resume <run directory>` run the phases separately. A resumed run keeps the inputs it recorded: the same development and analysis runs must be named, and any difference (other thresholds, calibrators or H3 selection) is refused before any Test row or label is read. The log is `run.log` in the run directory. The lock, the started marker, the scoring marker and the consumption marker are in `outputs/confirmatory/state/`, named by the identity of the frozen state (the commit, the declarations, the development run, the preprocessing and the models). The analysis runs listed after `--analysis` are verified and recorded, and neither their number nor their order changes that identity.
+
+**After an interruption.** Nothing is deleted by hand; the command states what it found.
+
+| Situation | What to do |
+|---|---|
+| Phase 1 failed or was interrupted before its score files were complete | Repeat it with `--resume <run directory>`: the failed attempt and its log are kept and a new attempt scores again. A new directory is refused, even with the same run identifier, because the started marker names the failed run and its directory. |
+| Phase 1 was interrupted after its score files were complete (the scoring marker exists; the score records or the phase record may be missing) | `--resume <run directory>` completes the phase from the verified bundle without scoring again. If the bundle is missing or damaged, the command stops before any prediction and names the cause; the run directory is restored, never rescored. |
+| Phase 2 failed or was interrupted | `--phase evaluation --resume <run directory>` continues from the saved, hashed scores: computation only, no rescoring. A killed attempt is recorded as interrupted. |
+| A lock file remains after a killed process | The command stops and names the file. Whether the lock is stale is decided by the person who runs it, after confirming that no process of the run is alive; the code never removes a lock. |
+| The run is closed but `summary.md` or the figures are missing | `summarise-run <run directory>` regenerates them from the records. |
+
+The started, scoring and consumption markers are never deleted or edited.
+
+**After the run.** `promote-evidence <run directory>` copies the records, `summary.md`, the figures and the logs, with a manifest, to `evidence/confirmatory/<run id>/`; it never copies the row-level score files.
+
+**Planning figures** [I]. They are not results and gate nothing. H1 and H2 are the hypotheses of the [protocol](protocol.md) (the family-effect difference test and the four-model equivalence test); MLP is the ResNet-style multilayer perceptron; MiB and GiB are mebibytes and gibibytes of memory.
+
+| Phase | Time | Memory |
+|---|---|---|
+| Phase 1, scoring | The scoring of the 78,542 Test rows with the nine frozen models. The development run scored the 77,822 V2 rows in 0.4–2.8 s for the tree-based, MLP and logistic-regression models, in 45 s for FTT-b and in 325 s for FTT-u (`V2 scoring (s)` of the development summary, one session); the nine times sum to about 6.3 minutes, dominated by FTT-u. Reading the raw files, building the canonical inputs and loading the models add to this, and the Test pass is timed once and not repeated. | Measured in the development session: the V2 end-to-end scoring phases peaked at 7.2–8.8 GiB of resident host memory per model (all scoring and latency phases: 5.5–9.5 GiB); the sampled whole-device GPU maximum during V2 scoring was 5,744 MiB for FTT-u, 5,672 MiB for FTT-b and about 3,300 MiB for each MLP. The 7,038–7,231 MiB figures of the development summary are training peaks of the selected fits, not scoring peaks. These are measurements of that process, not limits for the Test run; the 8 GiB GPU leaves headroom only if no other GPU process runs. |
+| Phase 2, evaluation | Not measured at full size. The H1–H3 inference at the declared B = 10,000 bootstrap replicates on a synthetic world of the projected Test size ran in 1.6 s in one observed run of the unit test `test_the_whole_confirmatory_analysis_runs_at_the_declared_replicate_count` (the elapsed time is not retained in the repository); the calibration, cost-grid and slice resampling of the sixteen configuration and calibrator combinations are heavier and have no measurement at B = 10,000. The first evaluation phase is itself the measurement; it is resumable. | The arrays are small (B × 8 ratios is about 0.6 MiB per statistic); the raw files and the canonical frame dominate, as in phase 1. |
+| Disk | Nine Parquet score files of 78,542 rows, each below 2 MiB (78,542 rows of an integer identifier and a float score). | |
+
 ## Symbols and notation
 
 | Symbol / abbreviation | Meaning |
 |---|---|
+| B | Number of bootstrap replicates (10,000) |
+| H1, H2 | Hypotheses 1 and 2 of the [protocol](protocol.md): the family-effect difference test and the four-model equivalence test |
+| MLP | ResNet-style multilayer perceptron ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md)) |
+| MiB, GiB | Mebibytes and gibibytes of memory (1 GiB = 1,024 MiB) |
 | CPU, GPU | Central processing unit, graphics processing unit |
+| FTT-u, FTT-b | FT-Transformer, unweighted and balanced ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md)) |
 | L-BFGS | Limited-memory Broyden–Fletcher–Goldfarb–Shanno, the optimisation algorithm of the logistic-regression solver (DR-015 §8) |
 | UTC | Coordinated Universal Time (the time of a run's directory name) |
 | K | Fixed daily review budget |

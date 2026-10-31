@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from review_capacity.confirmatory import command
+from review_capacity.confirmatory import state as state_module
 from review_capacity.confirmatory.command import TestRunOptions, run_test
 from review_capacity.confirmatory.frozen import EvaluatorState
 from review_capacity.confirmatory.records import (
@@ -131,8 +132,22 @@ def test_a_held_lock_refuses_a_second_run(project: dict[str, Any]) -> None:
         locked(project["paths"].root, state, run_id="other"),
         pytest.raises(SpecificationError, match="never removes a lock"),
     ):
+        run(project, resume=directory, started="2026-11-03T090000Z")
+    assert project["counters"].scoring_calls == 1  # only the failed attempt; no second call
+
+
+def test_a_failed_scoring_is_repeated_by_resuming_its_directory_not_in_a_new_one(
+    project: dict[str, Any],
+) -> None:
+    project["counters"].fail_next = True
+    with pytest.raises(RuntimeError):
+        run(project)
+    (directory,) = (project["paths"].root / "outputs" / "confirmatory").glob("20*")
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
         run(project, started="2026-11-03T090000Z")
     assert not (project["paths"].root / "outputs" / "confirmatory" / "2026-11-03T090000Z").exists()
+    run(project, resume=directory, started="2026-11-03T090000Z")  # the repeat
+    assert project["counters"].scoring_calls == 2  # the failed call and its repeat
 
 
 def test_a_dirty_tree_stops_before_any_test_row_is_read(project: dict[str, Any]) -> None:
@@ -194,7 +209,7 @@ def test_a_new_directory_cannot_score_again_once_a_scoring_completed(
     project: dict[str, Any],
 ) -> None:
     run(project)
-    with pytest.raises(SpecificationError, match="scoring phase of this frozen state completed"):
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
         run(project, started="2026-11-03T090000Z")
     assert not (project["paths"].root / "outputs" / "confirmatory" / "2026-11-03T090000Z").exists()
     assert project["counters"].scoring_calls == 1
@@ -296,7 +311,7 @@ def test_a_crash_between_the_marker_and_the_completed_record_blocks_a_new_direct
     project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     directory = _crash_before_the_completed_record(project, monkeypatch)
-    with pytest.raises(SpecificationError, match="scoring phase of this frozen state completed"):
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
         run(project, started="2026-11-02T091500Z")
     assert project["counters"].scoring_calls == 1
     assert len(list((project["paths"].root / "outputs" / "confirmatory").glob("20*"))) == 1
@@ -336,3 +351,91 @@ def test_a_damaged_recovery_bundle_is_reported_with_its_cause(
         assert read_bundle(reopened, 1, ALL_CONFIGURATIONS) is None
     assert "recovery bundle cannot be used" in caplog.text
     assert "JSONDecodeError" in caplog.text
+
+
+def test_a_kill_between_the_bundle_and_the_scoring_marker_cannot_be_scored_again_elsewhere(
+    project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = state_module.record_scoring
+
+    def killed(*_a: Any, **_k: Any) -> Path:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(command, "record_scoring", killed)
+    with pytest.raises(KeyboardInterrupt):
+        run(project)
+    monkeypatch.setattr(command, "record_scoring", real)
+    (directory,) = (project["paths"].root / "outputs" / "confirmatory").glob("20*")
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
+        run(project, started="2026-11-02T091500Z")  # a new directory
+    run(project, resume=directory, started="2026-11-02T091600Z")  # recovers from the bundle
+    assert project["counters"].scoring_calls == 1  # the Test features were scored once
+
+
+def test_a_marker_without_a_verified_bundle_stops_before_any_prediction(
+    project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = _crash_before_the_completed_record(project, monkeypatch)
+    for bundle in (directory / "scores").glob("attempt-*/bundle.json"):
+        bundle.unlink()  # the recovery material is gone; the marker remains
+    with pytest.raises(SpecificationError, match="holds no verified bundle"):
+        run(project, resume=directory, started="2026-11-02T091700Z")
+    assert project["counters"].scoring_calls == 1  # nothing was scored again
+
+
+def test_a_second_directory_with_the_same_run_identifier_is_not_the_owner(
+    project: dict[str, Any],
+) -> None:
+    project["counters"].fail_next = True
+    with pytest.raises(RuntimeError):
+        run(project)
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
+        run(project, started=c.RUN_ID, output=Path("outputs/confirmatory/second"))
+    assert not (project["paths"].root / "outputs" / "confirmatory" / "second").exists()
+    assert project["counters"].scoring_calls == 1
+
+
+def test_the_scoring_marker_exists_before_the_score_records_are_published(
+    project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[bool] = []
+    real = command._publish
+
+    def checking(run_directory: Any, identity: Any, bodies: Any) -> None:
+        seen.append(scored_path(project["paths"].root, run_directory_state(run_directory)).exists())
+        real(run_directory, identity, bodies)
+
+    def run_directory_state(run_directory: Any) -> str:
+        return str(run_directory.identity["frozen_state_sha256"])
+
+    monkeypatch.setattr(command, "_publish", checking)
+    run(project)
+    assert seen == [True]
+
+
+def test_the_directory_chain_of_the_run_is_synchronised_up_to_the_project_root(
+    project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from review_capacity import files
+
+    root = project["paths"].root
+    (root / "outputs" / "confirmatory").mkdir(parents=True)  # created by an earlier step
+    synced: list[Path] = []
+    real = files._sync_directory
+
+    def recording(directory: Path) -> None:
+        synced.append(Path(directory))
+        real(directory)
+
+    monkeypatch.setattr(files, "_sync_directory", recording)
+    directory = run(project)
+    for expected in (
+        root,
+        root / "outputs",
+        root / "outputs" / "confirmatory",
+        directory,
+        directory / "records",
+        root / "outputs" / "confirmatory" / "state",
+        directory / "scores" / "attempt-01",
+    ):
+        assert expected in synced, expected
