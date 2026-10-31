@@ -36,8 +36,18 @@ def problems(record: dict[str, Any]) -> list[str]:
         lambda: c.calibration("isotonic"),
         c.rq3_record,
         lambda: c.rq3_record("isotonic"),
+        c.false_negative_record,
     ],
-    ids=["evaluation", "reference", "workload", "platt", "isotonic", "rq3-platt", "rq3-isotonic"],
+    ids=[
+        "evaluation",
+        "reference",
+        "workload",
+        "platt",
+        "isotonic",
+        "rq3-platt",
+        "rq3-isotonic",
+        "false-negative",
+    ],
 )
 def test_the_output_of_the_functions_is_a_valid_record(build: Callable[[], dict[str, Any]]) -> None:
     record = build()
@@ -254,7 +264,13 @@ def test_a_workload_describes_the_r2_alerts_of_the_evaluation() -> None:
 
 
 def test_the_kinds_are_registered_and_documented() -> None:
-    for kind in ("test_evaluation", "test_workload", "test_calibration", "test_rq3"):
+    for kind in (
+        "test_evaluation",
+        "test_workload",
+        "test_calibration",
+        "test_rq3",
+        "test_false_negative",
+    ):
         assert kind in RECORD_CONTRACTS
         assert f"### `{kind}`" in reference_markdown()
     assert isinstance(c.outcome_context(), ConfirmatoryContext)
@@ -321,6 +337,138 @@ def replaced_rq3(new: dict[str, Any]) -> list[dict[str, Any]]:
         new
         if r["record"] == "test_rq3"
         and (r["configuration"], r["calibrator"]) == (new["configuration"], new["calibrator"])
+        else r
+        for r in c.run_records()
+    ]
+
+
+def fn_index(record: dict[str, Any], variable: str, level: str | None = None) -> int:
+    return next(
+        i
+        for i, row in enumerate(record["slices"])
+        if row["variable"] == variable and (level is None or row["level"] == level)
+    )
+
+
+def test_the_slice_statistics_are_recomputed() -> None:
+    record = c.false_negative_record()
+    i = fn_index(record, "identity", "present")
+    row = record["slices"][i]
+    refused(c.mutated(record, f"slices.{i}.miss_rate", 0.99), "miss_rate")
+    refused(c.mutated(record, f"slices.{i}.share", 0.99), "share")
+    refused(c.mutated(record, f"slices.{i}.misses", row["misses"] + 1), "sum")
+    refused(c.mutated(record, f"slices.{i}.misses", row["frauds"] + 1), "exceed")
+    refused(c.mutated(record, "false_negatives", record["false_negatives"] + 1), "sum")
+    refused(c.mutated(record, "frauds", record["frauds"] + 1), "sum")
+
+
+def test_the_interval_rule_follows_the_minimum_number_of_frauds() -> None:
+    record = c.false_negative_record()
+    i = fn_index(record, "identity", "present")
+    refused(c.mutated(record, f"slices.{i}.interval", None), "interval")
+    refused(c.mutated(record, f"slices.{i}.status", "fewer_than_minimum_frauds"), "status")
+    refused(c.mutated(record, f"slices.{i}.interval.level", 0.9), "level")
+    refused(c.mutated(record, f"slices.{i}.interval.replicates", 7), "declared B")
+    refused(c.mutated(record, f"slices.{i}.interval.lower", 2.0), "lower exceeds upper")
+
+
+def test_the_score_band_has_no_miss_rate_or_interval() -> None:
+    record = c.false_negative_record()
+    i = fn_index(record, "score_band")
+    row = record["slices"][i]
+    assert row["miss_rate"] is None
+    assert row["interval"] is None
+    refused(c.mutated(record, f"slices.{i}.miss_rate", 1.0), "score band")
+    refused(c.mutated(record, f"slices.{i}.status", "interval"), "score band")
+    refused(c.mutated(record, f"slices.{i}.frauds", row["frauds"] + 1), "missed frauds only")
+
+
+def test_the_boundaries_follow_the_declaration() -> None:
+    record = c.false_negative_record()
+    refused(c.mutated(record, "boundaries.amount_edges", [1.0, 2.0, 3.0]), "amount edges")
+    edges = record["boundaries"]["amount_edges"]
+    refused(c.mutated(record, "boundaries.amount_edges", edges[::-1]), "increasing")
+    refused(c.mutated(record, "boundaries.kept.card4.C", 99), "fewer than 100 V2 frauds")
+    refused(c.mutated(record, "days.last", 181), "Test partition")
+    refused(c.mutated(record, "capacity", 0.05), "primary capacity")
+    short = copy.deepcopy(record)
+    short["slices"] = [r for r in short["slices"] if r["level"] != "band 5"]
+    refused(short, "amount_band")
+
+
+def test_a_false_negative_table_belongs_to_the_run() -> None:
+    assert any(
+        "every subject (8)" in p for p in run_problems(without_records("test_false_negative"))
+    )
+    wrong = c.mutated(c.false_negative_record(), "false_negatives", 0)
+    assert any(
+        "other frauds or false negatives" in p
+        for p in run_problems(
+            [
+                wrong
+                if r["record"] == "test_false_negative" and r["configuration"] == "LGB-b"
+                else r
+                for r in c.run_records()
+            ]
+        )
+    )
+    assert any(
+        "once for each" in p for p in run_problems([*c.run_records(), c.false_negative_record()])
+    )
+
+
+def test_the_declared_levels_of_every_variable_are_required() -> None:
+    record = c.false_negative_record()
+    week = fn_index(record, "week")
+    refused(c.mutated(record, f"slices.{week}.level", "127-133"), "week levels")
+    refused(
+        c.mutated(record, f"slices.{fn_index(record, 'identity', 'present')}.level", "linked"),
+        "identity levels",
+    )
+    refused(
+        c.mutated(record, f"slices.{fn_index(record, 'entity', 'new')}.level", "fresh"),
+        "entity levels",
+    )
+    refused(
+        c.mutated(record, f"slices.{fn_index(record, 'score_band')}.level", "near"),
+        "score_band levels",
+    )
+    refused(
+        c.mutated(record, f"slices.{fn_index(record, 'amount_band')}.level", "q1"), "amount_band"
+    )
+
+
+def test_a_miss_rate_interval_lies_between_zero_and_one() -> None:
+    record = c.false_negative_record()
+    i = fn_index(record, "identity", "present")
+    interval = record["slices"][i]["interval"]
+    refused(c.mutated(record, f"slices.{i}.interval.upper", 1.5), "[0, 1]")
+    low = c.mutated(record, f"slices.{i}.interval.lower", -0.1)
+    refused(low, "[0, 1]")
+    both = c.mutated(
+        c.mutated(record, f"slices.{i}.interval.lower", 2.0), f"slices.{i}.interval.upper", 3.0
+    )
+    refused(both, "[0, 1]")
+    assert 0 <= interval["lower"] <= interval["upper"] <= 1
+
+
+def test_the_configurations_share_their_slice_boundaries() -> None:
+    other = c.mutated(c.false_negative_record("Cat-b"), "boundaries.amount_edges.0", 0.5)
+    assert any("other slice boundaries" in p for p in run_problems(replaced_fn(other)))
+    i = fn_index(c.false_negative_record(), "identity", "present")
+    moved = c.false_negative_record("Cat-b")
+    moved["slices"][i]["frauds"] += 1
+    assert any("other slice boundaries" in p for p in run_problems(replaced_fn(moved)))
+    score = c.false_negative_record("Cat-b")
+    j = fn_index(score, "score_band")
+    score["slices"][j]["frauds"] += 1  # the score band differs by configuration
+    assert not any("other slice boundaries" in p for p in run_problems(replaced_fn(score)))
+
+
+def replaced_fn(new: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        new
+        if r["record"] == "test_false_negative" and r["configuration"] == new["configuration"]
         else r
         for r in c.run_records()
     ]

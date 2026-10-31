@@ -31,6 +31,7 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, fields, is_dataclass
 from enum import Enum
+from itertools import pairwise
 from pathlib import Path
 from statistics import NormalDist
 from typing import Any
@@ -91,6 +92,21 @@ from review_capacity.development.schema import (
 from review_capacity.errors import FileAccessError, RecordContractError
 from review_capacity.evaluation.contrasts import estimands
 from review_capacity.evaluation.declaration import EvaluationDeclaration
+from review_capacity.evaluation.false_negatives import (
+    OTHER as FN_OTHER,
+)
+from review_capacity.evaluation.false_negatives import (
+    POOLED_VARIABLES as FN_POOLED,
+)
+from review_capacity.evaluation.false_negatives import (
+    STATUSES as FN_STATUSES,
+)
+from review_capacity.evaluation.false_negatives import (
+    VARIABLES as FN_VARIABLES,
+)
+from review_capacity.evaluation.false_negatives import (
+    declared_levels as fn_declared_levels,
+)
 from review_capacity.evaluation.inference import (
     H1Category,
     Interval,
@@ -2328,6 +2344,182 @@ TEST_RQ3 = _contract(
 )
 
 
+# --- test_false_negative --------------------------------------------------------------------------
+
+FN_SLICE = Object(
+    (
+        Field("variable", Choice(FN_VARIABLES), "Slicing variable"),
+        Field("level", Text(), "Level of the variable"),
+        Field("frauds", COUNT, "Test frauds in the slice (the missed frauds, for the score band)"),
+        Field("misses", COUNT, "False negatives in the slice"),
+        Field(
+            "miss_rate", UNIT_P, "misses / frauds (null: no fraud; the score band has none)", True
+        ),
+        Field("share", UNIT_P, "misses / total false negatives (null: none)", nullable=True),
+        Field("status", Choice(FN_STATUSES), "Whether the slice has an interval and why not"),
+        Field("interval", INTERVAL, "95 % pigeonhole interval of the miss rate", nullable=True),
+    )
+)
+FN_BOUNDARIES = Object(
+    (
+        Field("amount_edges", ListOf(Number(), min_items=1), "Interior Train amount-band edges"),
+        Field(
+            "kept",
+            Object(
+                tuple(
+                    Field(name, MapOf(COUNT), f"{name}: levels kept with their V2 fraud counts")
+                    for name in FN_POOLED
+                )
+            ),
+            "Levels kept by the V2 pooling rule; every other level is pooled into other",
+        ),
+    )
+)
+
+
+def _fn_slice_problems(where: str, row: Mapping[str, Any], total: int) -> list[str]:
+    problems = []
+    if row["misses"] > row["frauds"]:
+        problems.append(f"{where}.misses: exceed the frauds")
+    expected_rate = row["misses"] / row["frauds"] if row["frauds"] else None
+    expected_share = row["misses"] / total if total else None
+    if row["variable"] == "score_band":
+        if row["frauds"] != row["misses"]:
+            problems.append(f"{where}: the score band holds missed frauds only")
+        if row["miss_rate"] is not None or row["interval"] is not None:
+            problems.append(f"{where}: the score band has no miss rate and no interval")
+        if row["status"] != "not_applicable":
+            problems.append(f"{where}.status: not_applicable for the score band")
+    else:
+        if (row["miss_rate"] is None) != (expected_rate is None) or (
+            expected_rate is not None and not _near(row["miss_rate"], expected_rate)
+        ):
+            problems.append(f"{where}.miss_rate: must be misses / frauds")
+        if (row["interval"] is None) != (row["status"] != "interval"):
+            problems.append(f"{where}: an interval exactly when the status is interval")
+        if row["status"] == "not_applicable":
+            problems.append(f"{where}.status: not_applicable is for the score band")
+    if (row["share"] is None) != (expected_share is None) or (
+        expected_share is not None and not _near(row["share"], expected_share)
+    ):
+        problems.append(f"{where}.share: must be misses / the false negatives")
+    if row["interval"] is not None and row["interval"]["lower"] > row["interval"]["upper"]:
+        problems.append(f"{where}.interval: lower exceeds upper")
+    return problems
+
+
+def _fn_rules(record: Mapping[str, Any]) -> list[str]:
+    problems = []
+    total, frauds = record["false_negatives"], record["frauds"]
+    if total > frauds:
+        problems.append("test_false_negative.false_negatives: exceed the frauds")
+    slices = record["slices"]
+    order = list(dict.fromkeys(row["variable"] for row in slices))
+    if order != list(FN_VARIABLES):
+        problems.append(f"test_false_negative.slices: the variables must be {list(FN_VARIABLES)}")
+    for i, row in enumerate(slices):
+        problems += _fn_slice_problems(f"test_false_negative.slices[{i}]", row, total)
+    for variable in order:
+        rows = [row for row in slices if row["variable"] == variable]
+        levels = [row["level"] for row in rows]
+        if len(set(levels)) != len(levels):
+            problems.append(f"test_false_negative.slices: a {variable} level is listed once")
+        sums = (sum(r["frauds"] for r in rows), sum(r["misses"] for r in rows))
+        if variable == "score_band":
+            if sums[1] != total:
+                problems.append(
+                    "test_false_negative.slices: score bands sum to the false negatives"
+                )
+        elif sums != (frauds, total):
+            problems.append(
+                f"test_false_negative.slices: the {variable} levels must sum to the frauds and "
+                "the false negatives"
+            )
+    kept = record["boundaries"]["kept"]
+    for variable in FN_POOLED:
+        levels = [r["level"] for r in slices if r["variable"] == variable]
+        if levels != [*kept[variable], FN_OTHER]:
+            problems.append(
+                f"test_false_negative.slices: {variable} levels are the kept ones, then other"
+            )
+    edges = record["boundaries"]["amount_edges"]
+    if any(b <= a for a, b in pairwise(edges)):
+        problems.append("test_false_negative.boundaries.amount_edges: increasing")
+    return problems
+
+
+def _fn_context(record: Mapping[str, Any], context: ConfirmatoryContext) -> list[str]:
+    declaration, test = context.declaration, context.test
+    rule = declaration.false_negative
+    problems = [
+        f"test_false_negative.days.{name}: must be {expected} (the Test partition)"
+        for name, expected in (("first", test.first_day), ("last", test.last_day))
+        if record["days"][name] != expected
+    ]
+    if not _close(record["capacity"], float(declaration.capacity.primary)) or not _declared_pair(
+        declaration, record["capacity"], record["k"]
+    ):
+        problems.append("test_false_negative.capacity: the declared primary capacity and its K")
+    if len(record["boundaries"]["amount_edges"]) != rule.amount_quantiles - 1:
+        problems.append(f"test_false_negative.boundaries: {rule.amount_quantiles - 1} amount edges")
+    problems += [
+        f"test_false_negative.boundaries.kept: {variable} level {level} has fewer than "
+        f"{rule.minimum_frauds} V2 frauds"
+        for variable, levels in record["boundaries"]["kept"].items()
+        for level, n in levels.items()
+        if n < rule.minimum_frauds
+    ]
+    for variable, expected in fn_declared_levels(declaration).items():
+        found = [row["level"] for row in record["slices"] if row["variable"] == variable]
+        if found != list(expected):
+            problems.append(
+                f"test_false_negative.slices: the {variable} levels must be {list(expected)}"
+            )
+    for i, row in enumerate(record["slices"]):
+        where = f"test_false_negative.slices[{i}]"
+        if row["variable"] == "score_band":
+            continue
+        enough = row["frauds"] >= rule.minimum_frauds
+        if enough != (row["status"] == "interval"):
+            problems.append(
+                f"{where}.status: an interval exactly from {rule.minimum_frauds} frauds"
+            )
+        interval = row["interval"]
+        if interval is not None:
+            if not _close(interval["level"], rule.interval_level):
+                problems.append(f"{where}.interval.level: must be the declared level")
+            if interval["replicates"] != declaration.resampling.replicates:
+                problems.append(f"{where}.interval.replicates: must be the declared B")
+            if interval["undefined"] >= interval["replicates"]:
+                problems.append(f"{where}.interval.undefined: fewer than the replicates")
+            if not 0 <= interval["lower"] <= interval["upper"] <= 1:
+                problems.append(f"{where}.interval: a miss rate lies in [0, 1]")
+    return problems
+
+
+TEST_FALSE_NEGATIVE = _contract(
+    "test_false_negative",
+    1,
+    "The false-negative analysis of one configuration on the Test period: the frauds outside the "
+    "daily top-K of R3 at the primary capacity, by the pre-declared slices, with the miss rate, "
+    "the share of the false negatives and the two-way pigeonhole interval of the miss rate. "
+    "Exploratory and non-causal; the slice boundaries are fixed without Test labels.",
+    (
+        Field("configuration", STUDY_CONFIGURATION, "Configuration"),
+        Field("partition", Choice(("Test",)), "The partition analysed"),
+        Field("days", RECORD_DAYS, "Relative days analysed"),
+        Field("scores_sha256", SHA256, "SHA-256 of the score file of the single scoring pass"),
+        Field("capacity", CAPACITY_SHARE, "The primary capacity share c"),
+        Field("k", POSITIVE, "Fixed daily review budget K"),
+        Field("frauds", POSITIVE, "Test frauds"),
+        Field("false_negatives", COUNT, "Frauds outside the daily top-K"),
+        Field("boundaries", FN_BOUNDARIES, "The label-free slice boundaries"),
+        Field("slices", ListOf(FN_SLICE, min_items=1), "Every slice, in the declared order"),
+    ),
+    _fn_rules,
+)
+
+
 RECORD_CONTRACTS: dict[str, RecordContract] = {
     contract.kind: contract
     for contract in (
@@ -2339,6 +2531,7 @@ RECORD_CONTRACTS: dict[str, RecordContract] = {
         TEST_WORKLOAD,
         TEST_CALIBRATION,
         TEST_RQ3,
+        TEST_FALSE_NEGATIVE,
         TEST_RUN_END,
     )
 }
@@ -2353,6 +2546,7 @@ CONTEXT_CHECKS: dict[str, tuple[ContextCheck, ...]] = {
     "test_workload": (_workload_context, _seed_rule),
     "test_calibration": (_calibration_context, _seed_rule),
     "test_rq3": (_rq3_context, _seed_rule),
+    "test_false_negative": (_fn_context, _seed_rule),
     "test_run_end": (_seed_rule,),
 }
 
@@ -2463,6 +2657,7 @@ def _outcome_problems(
             lambda r: (r["configuration"], r["calibrator"]),
             {(name, method) for name in study for method in CALIBRATION_METHODS},
         ),
+        "test_false_negative": (lambda r: (r["configuration"],), {(name,) for name in study}),
     }
     problems: list[str] = []
     score_hash = {r["configuration"]: r["file"]["sha256"] for r in scores}
@@ -2478,7 +2673,7 @@ def _outcome_problems(
     problems += [
         f"run: {record['record']} of {record['configuration']} names another score file"
         for record in records
-        if record["record"] in ("test_evaluation", "test_rq3")
+        if record["record"] in ("test_evaluation", "test_rq3", "test_false_negative")
         and record["scores_sha256"] != score_hash.get(record["configuration"])
     ]
     problems += [
@@ -2499,7 +2694,51 @@ def _outcome_problems(
         problems += _workload_agreement(workload, evaluations.get(workload["configuration"]))
     for analysis in (r for r in records if r["record"] == "test_rq3"):
         problems += _rq3_agreement(analysis, evaluations.get(analysis["configuration"]))
+    tables = [r for r in records if r["record"] == "test_false_negative"]
+    for table in tables:
+        problems += _fn_agreement(table, evaluations.get(table["configuration"]))
+    problems += _fn_shared_boundaries(tables)
     return problems
+
+
+def _fn_shared_boundaries(tables: Sequence[Mapping[str, Any]]) -> list[str]:
+    """The slice boundaries and the slices they define are those of all configurations: the
+    boundaries, and the fraud count of every level of every variable except the score band, are
+    identical in all the false-negative records of a run."""
+    if not tables:
+        return []
+
+    def shared(table: Mapping[str, Any]) -> tuple[Any, Any]:
+        slices = [
+            (row["variable"], row["level"], row["frauds"])
+            for row in table["slices"]
+            if row["variable"] != "score_band"
+        ]
+        return table["boundaries"], slices
+
+    first = shared(tables[0])
+    return [
+        f"run: test_false_negative of {table['configuration']} has other slice boundaries or "
+        "slice fraud counts than the first configuration's"
+        for table in tables[1:]
+        if shared(table) != first
+    ]
+
+
+def _fn_agreement(table: Mapping[str, Any], evaluation: Mapping[str, Any] | None) -> list[str]:
+    """The false negatives are those of the evaluation record's R3 at the same capacity."""
+    if evaluation is None:
+        return []
+    r3 = next((e for e in evaluation["r3"] if _close(e["capacity"], table["capacity"])), None)
+    if r3 is None or (r3["counts"]["frauds"], r3["counts"]["false_negatives"]) != (
+        table["frauds"],
+        table["false_negatives"],
+    ):
+        return [
+            f"run: test_false_negative of {table['configuration']} counts other frauds or "
+            "false negatives than the evaluation"
+        ]
+    return []
 
 
 def _rq3_agreement(analysis: Mapping[str, Any], evaluation: Mapping[str, Any] | None) -> list[str]:

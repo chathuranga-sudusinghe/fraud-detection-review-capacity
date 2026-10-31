@@ -826,18 +826,18 @@ Exploratory, descriptive and non-causal. False negatives are defined under **R3 
 |---|---|
 | Identity information | Present when the transaction has a matching row in `train_identity.csv` (the one-to-one identity join of data preparation), absent otherwise; not inferred from non-missing identity fields |
 | ProductCD, card4, card6, DeviceType | The canonical levels, with missing as its own level. A level with fewer than 100 **V2** frauds is pooled into "other" for that variable. The pooling is fixed from V2 before Test access, so no Test label decides a slice boundary |
-| Transaction-amount band | Quintiles of `TransactionAmt` over all Train transactions (relative days 1–105, no labels), lower edge inclusive; the edges are recorded in the evaluation declaration |
+| Transaction-amount band | Quintiles of `TransactionAmt` over all Train transactions (relative days 1–105, no labels), lower edge inclusive; the edges are fixed before Test access, frozen in the evaluation declaration at the freeze, and repeated in every false-negative record |
 | Relative week within Test | Test days 155–161, 162–168, 169–175 and 176–182 |
-| Score band | The within-day rank of the missed fraud under the configuration's own scores, relative to K: ranks K + 1 … 2K (near miss), 2K + 1 … 5K, and above 5K. Label-free and comparable across models with different score scales |
+| Score band | The within-day rank of the missed fraud under the configuration's own scores, relative to K: ranks K + 1 … 2K (near miss), 2K + 1 … 5K, and above 5K. Label-free and comparable across models with different score scales. The band is defined on the missed frauds only, so its miss rate is 100 % by construction: it reports the fraud count and the share of the false negatives, with no miss rate and no interval |
 | Recurring vs new pseudo-entity | Recurring when the fraud's fine pseudo-entity ([DR-006](decisions/DR-006-bootstrap-inference-strategy.md)) has at least one fraud label in Train (days 1–105); otherwise new. Train labels only |
 
 The analysis will report, per slice and configuration:
 - fraud count per slice;
-- miss rate (FN, false negatives, ÷ frauds in slice);
-- uncertainty interval: the 95 % percentile interval of the slice miss rate from the two-way pigeonhole bootstrap of DR-006 (relative day × fine pseudo-entity), B = 10,000, with one joint weight set for all slices and configurations (stream 7 of DR-006). Wilson intervals are not used, because frauds cluster by day and entity;
+- miss rate (FN, false negatives, ÷ frauds in slice; none for the score band, whose slice holds missed frauds only);
+- uncertainty interval: the 95 % percentile interval of the slice miss rate from the two-way pigeonhole bootstrap of DR-006 (relative day × fine pseudo-entity), B = 10,000, with one joint weight set for all slices and configurations (stream 7 of DR-006); the score band has no interval. Wilson intervals are not used, because frauds cluster by day and entity;
 - share of total false negatives.
 
-**Interpretability rule.** After the V2-based pooling, a Test slice with fewer than 100 frauds is reported with its fraud count, miss rate and share of false negatives but without an interval, and is marked "fewer than 100 frauds".
+**Interpretability rule.** After the V2-based pooling, a Test slice with fewer than 100 frauds is reported with its fraud count, miss rate and share of false negatives but without an interval, and is marked "fewer than 100 frauds" (the score band, which has no miss rate and no interval, is outside this rule).
 
 Slice base rates differ strongly (e.g. identity present 9.4 % vs absent 2.1 % in V2 [D]), so raw false-negative counts are never interpreted alone. No causal claim will be made from subgroup associations.
 
