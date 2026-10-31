@@ -198,12 +198,39 @@ class RunDirectory:
         logger.info("Run directory %s", path)
         return cls(path, partitions, run_type, started, records)
 
+    @classmethod
+    def reopen(cls, path: Path, run_type: str, records: RecordSet) -> RunDirectory:
+        """Re-open the unfinished run in ``path`` to continue it: its first record fixes the
+        identity again, and a run that was closed (it holds its closing record) is refused."""
+        run_kind, end_kind = records.run_kind, records.end_kind
+        if (path / RECORDS_DIR / f"{end_kind}.json").exists():
+            raise SpecificationError(f"{path} is closed; a rerun uses a new directory")
+        first = path / RECORDS_DIR / f"{run_kind}.json"
+        if not first.is_file():
+            raise SpecificationError(
+                f"{path} holds no {run_kind} record; there is no run to resume"
+            )
+        identity = records.read(first, run_kind)["identity"]
+        if identity["run_type"] != run_type:
+            raise SpecificationError(
+                f"{path} is a {identity['run_type']} run, not a {run_type} run"
+            )
+        run = cls(path, None, run_type, identity["run_id"], records)
+        run._identity = dict(identity)
+        logger.info("Run directory %s re-opened", path)
+        return run
+
     @property
     def partitions(self) -> DevelopmentPartitions:
         """The development partitions of a development-pipeline run directory."""
         if self._partitions is None:
             raise SpecificationError("This run directory has no development partitions")
         return self._partitions
+
+    @property
+    def identity(self) -> dict[str, Any] | None:
+        """The run's identity, fixed by its first record (``None`` before that)."""
+        return self._identity
 
     @property
     def records_dir(self) -> Path:

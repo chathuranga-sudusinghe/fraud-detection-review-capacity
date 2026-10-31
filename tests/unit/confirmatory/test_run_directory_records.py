@@ -165,3 +165,31 @@ def test_the_development_record_set_is_the_default_and_unchanged() -> None:
     run: Any = RunDirectory(Path("x"), partitions, "development", "2026-10-25T134341Z")
     assert run.partitions is partitions
     assert isinstance(run.records, DevelopmentRecords)
+
+
+def test_an_unfinished_run_is_reopened_with_its_identity_and_continues(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    run.write_record(c.test_run())
+    run.write_record(c.phase("scoring", 1, "failed"), "scoring", 1)
+    again = RunDirectory.reopen(run.path, "confirmatory", RECORDS)
+    assert again.identity == run.identity
+    again.write_record(c.phase("scoring", 2, "completed"), "scoring", 2)
+    assert (run.path / "records" / "test_phase-scoring-2.json").exists()
+    with pytest.raises(SpecificationError, match="already exists"):
+        again.write_record(c.phase("scoring", 2, "completed"), "scoring", 2)  # never replaced
+
+
+def test_a_closed_run_or_a_directory_without_a_run_record_is_not_reopened(tmp_path: Path) -> None:
+    run = new_run(tmp_path)
+    run.write_record(c.test_run())
+    run.finish("failed", "stopped")
+    with pytest.raises(SpecificationError, match="is closed"):
+        RunDirectory.reopen(run.path, "confirmatory", RECORDS)
+    empty = tmp_path / "empty"
+    (empty / "records").mkdir(parents=True)
+    with pytest.raises(SpecificationError, match="no run to resume"):
+        RunDirectory.reopen(empty, "confirmatory", RECORDS)
+    other = new_run(tmp_path / "other")
+    other.write_record(c.test_run())
+    with pytest.raises(SpecificationError, match="not a development run"):
+        RunDirectory.reopen(other.path, "development", RECORDS)

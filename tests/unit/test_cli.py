@@ -378,3 +378,72 @@ def test_analyse_development_keeps_its_log_in_the_run_directory() -> None:
     )
     with pytest.raises(SpecificationError, match="omit --log-file"):
         _log_file(args)
+
+
+def test_run_test_evaluation_takes_the_tag_the_runs_and_one_phase() -> None:
+    args = build_parser().parse_args(
+        [
+            "run-test-evaluation",
+            "--tag",
+            "protocol-freeze",
+            "--development",
+            "outputs/development/d",
+            "--analysis",
+            "outputs/analysis/a",
+            "outputs/analysis/b",
+        ]
+    )
+    assert (args.command, args.tag, args.phase) == (
+        "run-test-evaluation",
+        "protocol-freeze",
+        "scoring",
+    )
+    assert [p.name for p in args.analysis] == ["a", "b"]
+    assert args.resume is None
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["run-test-evaluation", "--development", "d", "--analysis", "a"])
+    with pytest.raises(SystemExit):  # the evaluation phase does not exist yet
+        build_parser().parse_args(
+            [
+                "run-test-evaluation",
+                "--tag",
+                "t",
+                "--development",
+                "d",
+                "--analysis",
+                "a",
+                "--phase",
+                "evaluation",
+            ]
+        )
+
+
+def test_run_test_evaluation_logs_into_its_run_directory(tmp_path: Path) -> None:
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "features.yaml").write_text("", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    base = [
+        "run-test-evaluation",
+        "--root",
+        str(tmp_path),
+        "--tag",
+        "t",
+        "--development",
+        "d",
+        "--analysis",
+        "a",
+    ]
+    args = build_parser().parse_args(base)
+    log = _log_file(args)
+    assert log is not None
+    assert log.name == "run.log"
+    assert log.parent.parent == tmp_path / "outputs" / "confirmatory"
+    with pytest.raises(SpecificationError, match="omit --log-file"):
+        _log_file(build_parser().parse_args(["--log-file", "x.log", *base]))
+    resumed = build_parser().parse_args(
+        [*base, "--resume", str(tmp_path / "outputs" / "confirmatory" / "r")]
+    )
+    resume_log = _log_file(resumed)
+    assert resume_log is not None
+    assert resume_log.name.startswith("resume-")
+    assert resume_log.parent == tmp_path / "outputs" / "confirmatory" / "r"
