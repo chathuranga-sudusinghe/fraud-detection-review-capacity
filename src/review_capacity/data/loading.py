@@ -189,6 +189,7 @@ class RawData:
     relative_day: pd.Series
     partition: pd.Series
     identity_rows: int
+    has_identity: pd.Series  # True where the transaction has a row in the identity file
 
 
 def load_raw(features: FeatureSpec, dataset: DatasetSpec) -> RawData:
@@ -210,7 +211,11 @@ def load_raw(features: FeatureSpec, dataset: DatasetSpec) -> RawData:
         ", ".join(f"{name} {count}" for name, count in partition.value_counts(sort=False).items()),
     )
     return RawData(
-        joined=joined, relative_day=days, partition=partition, identity_rows=len(identity)
+        joined=joined,
+        relative_day=days,
+        partition=partition,
+        identity_rows=len(identity),
+        has_identity=joined[features.key].isin(identity[features.key]),
     )
 
 

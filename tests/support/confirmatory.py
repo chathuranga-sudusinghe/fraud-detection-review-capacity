@@ -24,6 +24,7 @@ from review_capacity.confirmatory.records import (
     scores_bundle_sha256,
     to_json_value,
 )
+from review_capacity.confirmatory.slices import SliceInputs
 from review_capacity.development.records import ALL_CONFIGURATIONS
 from review_capacity.evaluation.calibration import fit_isotonic, fit_platt
 from review_capacity.evaluation.contrasts import estimands
@@ -517,8 +518,9 @@ def rq3_record(method: str = "platt", configuration: str = "LGB-b") -> dict[str,
 
 
 @cache
-def _false_negatives() -> tuple[Boundaries, dict[str, dict[str, Any]]]:
-    partition, scores_by = outcome_world()
+def outcome_slices() -> SliceInputs:
+    """The slice inputs of the outcome world: boundaries, variables and the entity index."""
+    partition, _ = outcome_world()
     rule = outcome_declaration().false_negative
     rng = np.random.default_rng(23)
     truth = partition.truth
@@ -530,10 +532,9 @@ def _false_negatives() -> tuple[Boundaries, dict[str, dict[str, Any]]]:
         for name in ("ProductCD", "card4", "card6", "DeviceType")
     }
     boundaries = Boundaries(edges, kept)
+    levels = declared_levels(outcome_declaration())
     variables = [
-        SliceVariable(
-            "identity", ("absent", "present"), rng.integers(0, 2, frauds).astype(np.intp)
-        ),
+        SliceVariable("identity", levels["identity"], rng.integers(0, 2, frauds).astype(np.intp)),
         *(
             pooled_variable(
                 name, np.array(rng.choice(["A", "B", "C", "D"], frauds), dtype=np.str_), boundaries
@@ -541,21 +542,22 @@ def _false_negatives() -> tuple[Boundaries, dict[str, dict[str, Any]]]:
             for name in ("ProductCD", "card4", "card6", "DeviceType")
         ),
         SliceVariable(
-            "amount_band",
-            declared_levels(outcome_declaration())["amount_band"],
-            amount_codes(truth.amounts[fraud], edges),
+            "amount_band", levels["amount_band"], amount_codes(truth.amounts[fraud], edges)
         ),
-        SliceVariable(
-            "week",
-            declared_levels(outcome_declaration())["week"],
-            week_codes(truth.days[fraud], rule.test_weeks),
-        ),
-        SliceVariable("entity", ("new", "recurring"), rng.integers(0, 2, frauds).astype(np.intp)),
+        SliceVariable("week", levels["week"], week_codes(truth.days[fraud], rule.test_weeks)),
+        SliceVariable("entity", levels["entity"], rng.integers(0, 2, frauds).astype(np.intp)),
     ]
+    return SliceInputs(boundaries, variables, partition.entity_index)
+
+
+@cache
+def _false_negatives() -> tuple[Boundaries, dict[str, dict[str, Any]]]:
+    partition, scores_by = outcome_world()
+    slices = outcome_slices()
     capacity = outcome_capacities()[1]  # the primary capacity, 2 %
     found = misses_of(partition, scores_by["LGB-b"], capacity)
-    return boundaries, false_negative_analysis(
-        outcome_declaration(), partition, variables, {"LGB-b": found}, capacity
+    return slices.boundaries, false_negative_analysis(
+        outcome_declaration(), partition, slices.variables, {"LGB-b": found}, capacity
     )
 
 

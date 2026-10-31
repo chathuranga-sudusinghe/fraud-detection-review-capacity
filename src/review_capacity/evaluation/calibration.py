@@ -42,6 +42,7 @@ than 20 bins).
 
 from __future__ import annotations
 
+import io
 import json
 import logging
 from dataclasses import dataclass
@@ -159,7 +160,16 @@ class PlattCalibrator:
     @classmethod
     def load(cls, path: Path) -> PlattCalibrator:
         try:
-            document = json.loads(path.read_text(encoding="utf-8"))
+            return cls.from_bytes(path.read_bytes(), str(path))
+        except OSError as error:
+            raise FileAccessError(f"{path}: the Platt calibrator cannot be read") from error
+
+    @classmethod
+    def from_bytes(cls, content: bytes, source: str) -> PlattCalibrator:
+        """The calibrator of the bytes of a saved file (``source`` names it in messages)."""
+        path = source
+        try:
+            document = json.loads(content.decode("utf-8"))
             if document["method"] != "platt":
                 raise ModelError(f"{path}: not a Platt calibrator")
             return cls(
@@ -169,7 +179,7 @@ class PlattCalibrator:
                 float(document["fitting_high"]),
                 float(document["epsilon"]),
             )
-        except (OSError, ValueError, KeyError) as error:
+        except (ValueError, KeyError) as error:
             raise FileAccessError(f"{path}: the Platt calibrator cannot be read") from error
 
 
@@ -297,10 +307,18 @@ class IsotonicCalibrator:
     @classmethod
     def load(cls, path: Path) -> IsotonicCalibrator:
         try:
-            with np.load(path) as archive:
+            return cls.from_bytes(path.read_bytes(), str(path))
+        except OSError as error:
+            raise FileAccessError(f"{path}: the isotonic calibrator cannot be read") from error
+
+    @classmethod
+    def from_bytes(cls, content: bytes, source: str) -> IsotonicCalibrator:
+        """The calibrator of the bytes of a saved file (``source`` names it in messages)."""
+        try:
+            with np.load(io.BytesIO(content)) as archive:
                 return cls(archive["scores"].astype(np.float64), archive["probabilities"])
         except (OSError, ValueError, KeyError) as error:
-            raise FileAccessError(f"{path}: the isotonic calibrator cannot be read") from error
+            raise FileAccessError(f"{source}: the isotonic calibrator cannot be read") from error
 
 
 def fit_isotonic(scores: Floats, labels: Labels) -> IsotonicCalibrator:
@@ -320,6 +338,15 @@ def fit_isotonic(scores: Floats, labels: Labels) -> IsotonicCalibrator:
 
 
 type Calibrator = PlattCalibrator | IsotonicCalibrator
+
+
+def load_calibrator_bytes(method: str, content: bytes, source: str) -> Calibrator:
+    """A calibrator of ``method`` from the bytes of its saved file, which the caller has hashed."""
+    if method == "platt":
+        return PlattCalibrator.from_bytes(content, source)
+    if method == "isotonic":
+        return IsotonicCalibrator.from_bytes(content, source)
+    raise DataValidationError(f"Unknown calibration method {method!r}")
 
 
 def load_calibrator(method: str, path: Path) -> Calibrator:

@@ -5,8 +5,9 @@ the build step itself may reach the raw files:
 
 * ``data.loading``, the only module that opens the raw files (it reads and hashes them), is
   imported only by ``data.preparation``, by the raw-data contract ``data.validation`` and by the
-  Test features reader of the confirmatory evaluation, ``confirmatory.inputs`` (the raw files are
-  read again only by the confirmatory Test evaluation); the Test labels are reachable only from
+  Test features reader and the evaluation phase of the confirmatory evaluation,
+  ``confirmatory.inputs`` and ``confirmatory.evaluation`` (the raw files are read again only by
+  the confirmatory Test evaluation); the Test labels are reachable only from
   the evaluation phase: ``load_labels`` is imported by ``data.preparation`` and by the evaluation
   module alone, and ``unseal_test_labels`` is passed only there;
 * no other module reads a CSV file.
@@ -32,6 +33,7 @@ ALLOWED_IMPORTERS = {
     "review_capacity.data.preparation",
     "review_capacity.data.validation",
     "review_capacity.confirmatory.inputs",
+    "review_capacity.confirmatory.evaluation",
 }
 LABEL_IMPORTERS = {"review_capacity.data.preparation", "review_capacity.confirmatory.evaluation"}
 UNSEALERS = {"review_capacity.confirmatory.evaluation"}
@@ -100,8 +102,11 @@ def test_the_test_labels_are_reachable_only_from_the_evaluation_phase() -> None:
 
 CONFIRMATORY_OUTSIDE_EVALUATION = {
     "review_capacity.confirmatory.command",
+    "review_capacity.confirmatory.frozen_policies",
     "review_capacity.confirmatory.inputs",
+    "review_capacity.confirmatory.outcome_records",
     "review_capacity.confirmatory.scoring",
+    "review_capacity.confirmatory.slices",
     "review_capacity.confirmatory.state",
 }
 DYNAMIC_ACCESS = {"getattr", "__import__", "importlib", "eval", "exec"}
@@ -127,4 +132,4 @@ def test_the_test_features_reader_takes_only_the_feature_functions_of_the_raw_lo
         if isinstance(node, ast.ImportFrom) and node.module == "review_capacity.data.loading"
         for alias in node.names
     }
-    assert taken == {"check_file_checksums", "load_raw"}
+    assert taken == {"RawData", "check_file_checksums", "load_raw"}  # no label reader

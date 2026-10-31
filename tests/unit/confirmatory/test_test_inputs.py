@@ -42,6 +42,10 @@ def test_the_test_rows_become_the_canonical_inputs_without_the_target(
     assert set(inputs.days.tolist()) == {5}
     assert np.array_equal(np.lexsort((inputs.ids, inputs.times)), np.arange(inputs.rows))
     assert len(inputs.ordered_ids_sha256) == 64
+    assert inputs.has_identity is not None
+    assert inputs.has_identity.dtype == np.bool_
+    joined_ids = set(synthetic.identity["TransactionID"])
+    assert inputs.has_identity.tolist() == [int(i) in joined_ids for i in inputs.ids]
 
 
 def test_the_labels_of_the_test_rows_are_never_parsed(synthetic: Synthetic) -> None:
