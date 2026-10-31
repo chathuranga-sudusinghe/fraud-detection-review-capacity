@@ -17,8 +17,9 @@ from review_capacity.config import FeatureSpec
 from review_capacity.confirmatory.inputs import TestInputs
 from review_capacity.confirmatory.slices import SliceInputs, build_slice_inputs
 from review_capacity.development.inputs import PartitionRows
-from review_capacity.errors import DataValidationError
-from review_capacity.evaluation.declaration import EvaluationDeclaration
+from review_capacity.errors import DataValidationError, SpecificationError
+from review_capacity.evaluation.declaration import EvaluationDeclaration, FrozenBoundaries
+from review_capacity.evaluation.false_negatives import POOLED_VARIABLES, compute_boundaries
 from support import confirmatory as c
 
 MISSING = "__MISSING__"
@@ -90,7 +91,21 @@ def world() -> World:
     v2 = partition("v2", 900, rng)
     v2.labels[:] = 1  # 900 frauds: ProductCD W is far above 100, RARE far below
     v2.features["ProductCD"] = np.where(np.arange(900) < 5, "RARE", "W")
-    return World(c.declaration(), test, labels, train, v2)
+    base = c.declaration()
+    v2_frauds = v2.features[v2.labels == 1]
+    computed = compute_boundaries(
+        base,
+        train.features["TransactionAmt"].to_numpy(dtype=np.float64),
+        {
+            name: np.array(v2_frauds[name].to_numpy(dtype=object), dtype=np.str_)
+            for name in POOLED_VARIABLES
+        },
+    )
+    frozen = FrozenBoundaries(computed.amount_edges, computed.kept)
+    declaration = dataclasses.replace(
+        base, false_negative=dataclasses.replace(base.false_negative, boundaries=frozen)
+    )
+    return World(declaration, test, labels, train, v2)
 
 
 def build(w: World) -> SliceInputs:
@@ -157,3 +172,30 @@ def test_inputs_are_checked(world: World) -> None:
     none = dataclasses.replace(world, labels=np.zeros(400, dtype=np.int8))
     with pytest.raises(DataValidationError, match="no fraud"):
         build(none)
+
+
+def test_slice_boundaries_that_are_not_frozen_are_refused(world: World) -> None:
+    rule = dataclasses.replace(world.declaration.false_negative, boundaries=None)
+    unfrozen = dataclasses.replace(world.declaration, false_negative=rule)
+    with pytest.raises(SpecificationError, match="not frozen"):
+        build_slice_inputs(unfrozen, FEATURES, world.test, world.labels, world.train, world.v2)
+
+
+def test_slice_boundaries_that_differ_from_the_frozen_ones_are_refused(world: World) -> None:
+    frozen = world.declaration.false_negative.boundaries
+    assert frozen is not None
+    edges = (frozen.amount_edges[0] + 1.0, *frozen.amount_edges[1:])
+    rule = dataclasses.replace(
+        world.declaration.false_negative, boundaries=FrozenBoundaries(edges, frozen.kept)
+    )
+    changed = dataclasses.replace(world.declaration, false_negative=rule)
+    with pytest.raises(SpecificationError, match="amount edges"):
+        build_slice_inputs(changed, FEATURES, world.test, world.labels, world.train, world.v2)
+    kept = {**frozen.kept, "ProductCD": {"RARE": 100}}
+    rule = dataclasses.replace(
+        world.declaration.false_negative,
+        boundaries=FrozenBoundaries(frozen.amount_edges, kept),
+    )
+    changed = dataclasses.replace(world.declaration, false_negative=rule)
+    with pytest.raises(SpecificationError, match="pooled levels"):
+        build_slice_inputs(changed, FEATURES, world.test, world.labels, world.train, world.v2)

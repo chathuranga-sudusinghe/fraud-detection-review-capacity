@@ -77,6 +77,13 @@ Commands:
                    log, always run.log (--log-file is refused), to a new directory: --output, or
                    by default outputs/neural_preflight/<UTC start time, YYYY-MM-DDTHHMMSSZ>/
 
+    declare-fn-boundaries
+                   the data-derived false-negative slice boundaries (Train amount quintile edges
+                   and the V2 pooled levels) for entry into config/evaluation.yaml (Issue #211):
+                   reads the verified Train and V2 files only, never a Test row; writes
+                   false_negative_boundaries.yaml and run.log (--log-file is refused) to a new
+                   directory: --output, or by default outputs/fn_boundaries/<UTC start time>/
+
     run-development
                    the development run of the eight configurations (LightGBM, CatBoost,
                    ResNet-style MLP and FT-Transformer, each unweighted and balanced) and the
@@ -499,6 +506,29 @@ def _fit_neural_preprocessing(args: argparse.Namespace) -> int:
     return 0
 
 
+def _boundaries_directory(args: argparse.Namespace, paths: ProjectPaths) -> Path:
+    """The new directory of ``declare-fn-boundaries``, fixed on ``args`` at the first call."""
+    from review_capacity.confirmatory.boundaries import output_directory
+    from review_capacity.development.run_output import run_id
+
+    if getattr(args, "directory", None) is None:
+        if getattr(args, "started", None) is None:
+            args.started = run_id()
+        args.directory = output_directory(paths, args.started, args.output)
+    directory: Path = args.directory
+    return directory
+
+
+def _declare_boundaries(args: argparse.Namespace) -> int:
+    from review_capacity.confirmatory.boundaries import run_declare
+
+    paths = ProjectPaths.discover(args.root)
+    logger.info("Project root: %s", paths.root)
+    directory = _boundaries_directory(args, paths)
+    run_declare(paths, load_feature_spec(paths.features_spec), load_dataset_spec(paths), directory)
+    return 0
+
+
 def _preflight_directory(args: argparse.Namespace, paths: ProjectPaths) -> Path:
     """The new directory of ``preflight-neural``, fixed on ``args`` at the first call (shown to
     be free then; the log file is opened in it afterwards)."""
@@ -736,6 +766,15 @@ def _log_file(args: argparse.Namespace) -> Path | None:
                 "directory; omit --log-file"
             )
         return _preprocessing_directory(args, ProjectPaths.discover(args.root)) / FIT_LOG_NAME
+    if args.command == "declare-fn-boundaries":
+        from review_capacity.development.run_output import LOG_NAME as BOUNDARIES_LOG_NAME
+
+        if args.log_file is not None:
+            raise SpecificationError(
+                f"declare-fn-boundaries writes its log to {BOUNDARIES_LOG_NAME} in its output "
+                "directory; omit --log-file"
+            )
+        return _boundaries_directory(args, ProjectPaths.discover(args.root)) / BOUNDARIES_LOG_NAME
     if args.command == "preflight-neural":
         from review_capacity.development.preflight_run import LOG_NAME as PREFLIGHT_LOG_NAME
 
@@ -918,6 +957,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="new directory for the artifact (default: outputs/neural_preprocessing/<UTC time>)",
     )
     fit_preprocessing.set_defaults(handler=_fit_neural_preprocessing)
+    declare_boundaries = commands.add_parser(
+        "declare-fn-boundaries",
+        help="compute the false-negative slice boundaries from Train and V2 (Issue #211)",
+    )
+    declare_boundaries.add_argument(
+        "--root", type=Path, default=None, help="project root directory"
+    )
+    declare_boundaries.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="new directory (default: outputs/fn_boundaries/<UTC time>)",
+    )
+    declare_boundaries.set_defaults(handler=_declare_boundaries)
     preflight = commands.add_parser(
         "preflight-neural",
         help="micro-batch preflight of the neural models on the project GPU (DR-015 §7)",

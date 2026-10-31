@@ -28,11 +28,10 @@ from review_capacity.evaluation.false_negatives import (
     Boundaries,
     SliceVariable,
     amount_codes,
-    amount_edges,
-    check_boundaries,
+    check_frozen,
+    compute_boundaries,
     declared_levels,
     pooled_variable,
-    pooling_from_v2,
     week_codes,
 )
 from review_capacity.evaluation.resampling import Positions
@@ -82,17 +81,13 @@ def build_slice_inputs(
         raise DataValidationError("The Test partition has no fraud: the slices are undefined")
     with log_step(logger, f"Slice inputs of {int(fraud.sum())} Test frauds"):
         v2_frauds = v2.features[v2.labels == 1]
-        edges = amount_edges(
-            train.features[AMOUNT].to_numpy(dtype=np.float64), rule.amount_quantiles
+        boundaries = compute_boundaries(
+            declaration,
+            train.features[AMOUNT].to_numpy(dtype=np.float64),
+            {name: _text(v2_frauds, name) for name in POOLED_VARIABLES},
         )
-        boundaries = Boundaries(
-            edges,
-            {
-                name: pooling_from_v2(_text(v2_frauds, name), rule.minimum_frauds)
-                for name in POOLED_VARIABLES
-            },
-        )
-        check_boundaries(boundaries, declaration)
+        check_frozen(boundaries, declaration)
+        edges = boundaries.amount_edges
         frame = test.features[fraud].reset_index(drop=True)
         days = test.days[fraud]
         levels = declared_levels(declaration)

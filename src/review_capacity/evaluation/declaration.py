@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from itertools import pairwise
@@ -115,14 +115,26 @@ class Rq3:
 
 
 @dataclass(frozen=True)
+class FrozenBoundaries:
+    """The data-derived slice boundaries, frozen before Test access (Issue #211): the interior
+    amount-band edges of the Train amounts and, for each pooled categorical variable, the levels
+    kept with their V2 fraud counts, most frequent first."""
+
+    amount_edges: tuple[float, ...]
+    kept: Mapping[str, Mapping[str, int]]
+
+
+@dataclass(frozen=True)
 class FalseNegative:
-    """The rule parameters of the false-negative slices (protocol False-Negative Analysis)."""
+    """The rule parameters of the false-negative slices (protocol False-Negative Analysis).
+    ``boundaries`` is ``None`` until the data-derived boundaries are frozen."""
 
     minimum_frauds: int
     amount_quantiles: int
     score_band_multiples: tuple[int, ...]
     interval_level: float
     test_weeks: tuple[tuple[int, int], ...]
+    boundaries: FrozenBoundaries | None = None
 
 
 @dataclass(frozen=True)
@@ -399,8 +411,11 @@ def _false_negative(raw: object) -> FalseNegative:
             "score_band_multiples",
             "interval_level",
             "test_weeks",
+            "boundaries",
         ),
     )
+    minimum = _integer(entry["minimum_frauds"], "false_negative.minimum_frauds", minimum=1)
+    quantiles = _integer(entry["amount_quantiles"], "false_negative.amount_quantiles", minimum=2)
     multiples = _increasing(
         _integers(entry["score_band_multiples"], "false_negative.score_band_multiples", minimum=1),
         "false_negative.score_band_multiples",
@@ -412,12 +427,52 @@ def _false_negative(raw: object) -> FalseNegative:
         if next_first != previous_last + 1:
             raise SpecificationError("false_negative.test_weeks must be consecutive days")
     return FalseNegative(
-        _integer(entry["minimum_frauds"], "false_negative.minimum_frauds", minimum=1),
-        _integer(entry["amount_quantiles"], "false_negative.amount_quantiles", minimum=2),
+        minimum,
+        quantiles,
         multiples,
         _unit(entry["interval_level"], "false_negative.interval_level"),
         weeks,
+        _boundaries(entry["boundaries"], minimum, quantiles),
     )
+
+
+POOLED_NAMES = ("ProductCD", "card4", "card6", "DeviceType")
+
+
+def _boundaries(raw: object, minimum: int, quantiles: int) -> FrozenBoundaries | None:
+    if raw is None:
+        return None
+    entry = _mapping(raw, "false_negative.boundaries", ("amount_edges", "kept"))
+    edges = tuple(
+        _number(item, "false_negative.boundaries.amount_edges")
+        for item in _items(entry["amount_edges"], "false_negative.boundaries.amount_edges")
+    )
+    if len(edges) != quantiles - 1 or any(b <= a for a, b in pairwise(edges)):
+        raise SpecificationError(
+            f"false_negative.boundaries.amount_edges: {quantiles - 1} increasing edges, "
+            f"not {list(edges)}"
+        )
+    kept_raw = _mapping(entry["kept"], "false_negative.boundaries.kept", POOLED_NAMES)
+    kept: dict[str, dict[str, int]] = {}
+    for name in POOLED_NAMES:
+        levels = kept_raw[name]
+        if not isinstance(levels, dict) or not levels:
+            raise SpecificationError(f"false_negative.boundaries.kept.{name} must be a mapping")
+        counts = {
+            str(level): _integer(
+                n, f"false_negative.boundaries.kept.{name}.{level}", minimum=minimum
+            )
+            for level, n in levels.items()
+        }
+        if "other" in counts:
+            raise SpecificationError(f"false_negative.boundaries.kept.{name}: no level 'other'")
+        order = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+        if list(counts.items()) != order:
+            raise SpecificationError(
+                f"false_negative.boundaries.kept.{name}: most frequent first, ties by name"
+            )
+        kept[name] = counts
+    return FrozenBoundaries(edges, kept)
 
 
 def parse_declaration(raw: dict[str, Any]) -> EvaluationDeclaration:

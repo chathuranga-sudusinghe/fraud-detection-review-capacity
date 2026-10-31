@@ -8,7 +8,9 @@
 # (config/models.yaml, DR-013) and the partitions (config/dataset.yaml, DR-001). The H3
 # configuration is not named: its single source is the H3 selection record (DR-010). The
 # data-derived false-negative slice boundaries (amount-band edges, pooled categorical levels) are
-# frozen in this file by a later issue (Issue #187, decision 2); only their rules are here.
+# frozen in this file at the freeze (Issue #187, decision 2; Issue #211): `false_negative.boundaries`
+# holds the values computed from Train and V2 by the command declare-fn-boundaries; the Test
+# evaluation refuses a missing (null) value and a value that differs from the recomputed one.
 
 # docs/decisions/DR-006-bootstrap-inference-strategy.md (Resampling conventions) and
 # docs/decisions/DR-003-rq2-h3-policy-transfer-fidelity.md (block construction)
@@ -93,3 +95,27 @@ false_negative:
     - [162, 168]
     - [169, 175]
     - [176, 182]
+  boundaries:                   # Issue #211: from Train (edges) and the V2 frauds (levels, 2,637)
+    amount_edges:
+      - 35.95
+      - 57.95
+      - 100.0
+      - 160.5
+    kept:
+      ProductCD:
+        "W": 1329
+        "C": 965
+        "R": 121
+        "H": 120
+        "S": 102
+      card4:
+        "visa": 1693
+        "mastercard": 796
+        "discover": 119
+      card6:
+        "debit": 1442
+        "credit": 1195
+      DeviceType:
+        "__MISSING__": 1372
+        "desktop": 719
+        "mobile": 546

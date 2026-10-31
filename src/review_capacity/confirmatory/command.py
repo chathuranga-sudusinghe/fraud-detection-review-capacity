@@ -83,6 +83,7 @@ from review_capacity.development.runner import chosen_configurations
 from review_capacity.errors import SpecificationError
 from review_capacity.evaluation.declaration import EvaluationDeclaration
 from review_capacity.evaluation.declaration import load_declaration as load_evaluation_declaration
+from review_capacity.evaluation.false_negatives import require_frozen
 from review_capacity.features.neural_preprocessing import load_neural_preprocessing
 from review_capacity.hashing import file_sha256
 from review_capacity.logging_setup import log_step
@@ -259,6 +260,7 @@ def _prepare(paths: ProjectPaths, options: TestRunOptions, started: str) -> _Pre
     settings, settings_file = load_settings_with_snapshot(paths)
     declaration, declaration_file = load_training_declaration(paths)
     evaluation, evaluation_file = load_evaluation_declaration(paths)
+    require_frozen(evaluation)
     dataset = load_dataset_spec(paths)
     partitions = DevelopmentPartitions.from_spec(dataset, paths)
     evaluator = evaluator_state(root, options.tag)

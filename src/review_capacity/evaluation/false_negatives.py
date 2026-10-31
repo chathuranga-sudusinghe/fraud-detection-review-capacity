@@ -43,7 +43,7 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-from review_capacity.errors import DataValidationError
+from review_capacity.errors import DataValidationError, SpecificationError
 from review_capacity.evaluation.declaration import EvaluationDeclaration
 from review_capacity.evaluation.outcomes import Partition, interval_record
 from review_capacity.evaluation.ranking import Capacity
@@ -120,6 +120,51 @@ def pooling_from_v2(values: npt.NDArray[np.str_], minimum: int) -> dict[str, int
     if OTHER in kept:
         raise DataValidationError(f"A level named {OTHER!r} would collide with the pooled level")
     return dict(sorted(kept.items(), key=lambda item: (-item[1], item[0])))
+
+
+def compute_boundaries(
+    declaration: EvaluationDeclaration,
+    train_amounts: npt.NDArray[np.float64],
+    v2_values: Mapping[str, npt.NDArray[np.str_]],
+) -> Boundaries:
+    """The label-free boundaries from the development data: the Train amount edges and the levels
+    of each pooled variable kept from the V2 frauds ``v2_values`` (Issue #211)."""
+    rule = declaration.false_negative
+    boundaries = Boundaries(
+        amount_edges(train_amounts, rule.amount_quantiles),
+        {name: pooling_from_v2(v2_values[name], rule.minimum_frauds) for name in POOLED_VARIABLES},
+    )
+    check_boundaries(boundaries, declaration)
+    return boundaries
+
+
+def check_frozen(boundaries: Boundaries, declaration: EvaluationDeclaration) -> None:
+    """The boundaries computed from the development data equal the ones frozen in the
+    declaration; a declaration without frozen boundaries is refused."""
+    frozen = declaration.false_negative.boundaries
+    if frozen is None:
+        raise SpecificationError(
+            "false_negative.boundaries is not frozen in config/evaluation.yaml: the slice "
+            "boundaries must be declared before the Test evaluation"
+        )
+    if tuple(boundaries.amount_edges) != tuple(frozen.amount_edges):
+        raise SpecificationError(
+            f"The Train amount edges {list(boundaries.amount_edges)} differ from the frozen "
+            f"edges {list(frozen.amount_edges)}"
+        )
+    computed = {name: list(levels.items()) for name, levels in boundaries.kept.items()}
+    declared = {name: list(levels.items()) for name, levels in frozen.kept.items()}
+    if computed != declared:
+        raise SpecificationError("The V2 pooled levels differ from the frozen levels")
+
+
+def require_frozen(declaration: EvaluationDeclaration) -> None:
+    """Refuse a declaration whose slice boundaries are not frozen."""
+    if declaration.false_negative.boundaries is None:
+        raise SpecificationError(
+            "false_negative.boundaries is not frozen in config/evaluation.yaml: the slice "
+            "boundaries must be declared before the Test evaluation"
+        )
 
 
 def amount_edges(train_amounts: npt.NDArray[np.float64], quantiles: int) -> tuple[float, ...]:

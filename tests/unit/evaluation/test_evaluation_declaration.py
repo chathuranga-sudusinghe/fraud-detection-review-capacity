@@ -359,3 +359,52 @@ def test_the_false_negative_block_matches_the_protocol(declaration: EvaluationDe
     assert rules.test_weeks == tuple(zip(days[::2], days[1::2], strict=True))
     assert "ranks K + 1 … 2K (near miss), 2K + 1 … 5K, and above 5K" in PROTOCOL
     assert rules.score_band_multiples == (1, 2, 5)
+
+
+def _frozen() -> dict[str, Any]:
+    levels = {"W": 400, "C": 120}
+    return {
+        "amount_edges": [10.0, 20.0, 30.0, 40.0],
+        "kept": {name: dict(levels) for name in ("ProductCD", "card4", "card6", "DeviceType")},
+    }
+
+
+def test_the_real_declaration_freezes_the_boundaries(declaration: EvaluationDeclaration) -> None:
+    frozen = declaration.false_negative.boundaries
+    assert frozen is not None
+    assert len(frozen.amount_edges) == declaration.false_negative.amount_quantiles - 1
+    assert set(frozen.kept) == {"ProductCD", "card4", "card6", "DeviceType"}
+
+
+def test_boundaries_may_be_entered_and_are_parsed_exactly() -> None:
+    data = raw()
+    data["false_negative"]["boundaries"] = _frozen()
+    frozen = parse_declaration(data).false_negative.boundaries
+    assert frozen is not None
+    assert frozen.amount_edges == (10.0, 20.0, 30.0, 40.0)
+    assert list(frozen.kept["ProductCD"].items()) == [("W", 400), ("C", 120)]
+
+
+def test_a_null_boundaries_entry_is_an_unfrozen_declaration() -> None:
+    data = raw()
+    data["false_negative"]["boundaries"] = None
+    assert parse_declaration(data).false_negative.boundaries is None
+
+
+def test_frozen_boundaries_are_checked() -> None:
+    def with_boundaries(change: Any) -> Any:
+        def apply(d: dict[str, Any]) -> None:
+            d["false_negative"]["boundaries"] = _frozen()
+            change(d["false_negative"]["boundaries"])
+
+        return apply
+
+    rejects(with_boundaries(lambda b: b.update(amount_edges=[10.0, 20.0])), "increasing edges")
+    rejects(with_boundaries(lambda b: b.update(amount_edges=[10.0, 5.0, 30.0, 40.0])), "increasing")
+    rejects(with_boundaries(lambda b: b["kept"].pop("card6")), "card6")
+    rejects(with_boundaries(lambda b: b["kept"]["card4"].update(Z=50)), "at least 100")
+    rejects(with_boundaries(lambda b: b["kept"]["card4"].update(other=500)), "no level 'other'")
+    rejects(
+        with_boundaries(lambda b: b["kept"].update(card4={"C": 120, "W": 400})),
+        "most frequent first",
+    )
