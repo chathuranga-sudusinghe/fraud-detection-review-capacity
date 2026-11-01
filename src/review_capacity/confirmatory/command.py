@@ -74,6 +74,7 @@ from review_capacity.confirmatory.state import (
     record_scoring,
     refuse_if_consumed,
     refuse_if_scored,
+    refuse_if_started,
     scored_path,
 )
 from review_capacity.development.inputs import TRAIN, read_partitions
@@ -390,6 +391,15 @@ def run_test(
             # consequential work
             sync_chain(run.path / "records", root)
             _check_recorded_binding(run, prep)
+            if options.resume is not None:
+                # only the run and the directory the started marker names may continue, whether
+                # the next step is scoring recovery or the evaluation: a copied run is refused
+                refuse_if_started(
+                    root,
+                    state,
+                    except_run=(run.identity or prep.identity)["run_id"],
+                    except_directory=_directory_of(root, run),
+                )
             scored = [a for a in _scoring_attempts(run) if a["outcome"] == "completed"]
             if scoring and not scored:
                 refuse_if_consumed(root, state)

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze), Issue #27, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Frozen (accepted before the freeze), Issue #27, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-25; revised 2026-10-09 (Issue #54) and 2026-10-17 (Issue #115: R1 threshold selection) |
 | Evidence source | Internal policy definitions in the [protocol](../protocol.md); existing Decision Records [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and [DR-007](DR-007-rq3-cost-ratio-and-break-even.md); an algebraic argument about thresholds and daily top-K selection; the existing label-free daily-volume inspection of the feasibility audit (`notebooks/01_dataset_feasibility_audit.ipynb` §3). No labels or model scores were inspected for this record. No new Test-period data were inspected; this record relies only on previously logged, label-free structural evidence from the feasibility audit. |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-007](DR-007-rq3-cost-ratio-and-break-even.md), [protocol](../protocol.md) |

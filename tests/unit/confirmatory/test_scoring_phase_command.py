@@ -413,7 +413,7 @@ def test_the_scoring_marker_exists_before_the_score_records_are_published(
     assert seen == [True]
 
 
-def test_the_directory_chain_of_the_run_is_synchronised_up_to_the_project_root(
+def test_the_directory_chain_of_the_run_is_synchronised_before_the_first_prediction(
     project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from review_capacity import files
@@ -421,14 +421,22 @@ def test_the_directory_chain_of_the_run_is_synchronised_up_to_the_project_root(
     root = project["paths"].root
     (root / "outputs" / "confirmatory").mkdir(parents=True)  # created by an earlier step
     synced: list[Path] = []
-    real = files._sync_directory
+    before_prediction: list[list[Path]] = []
+    real_sync = files._sync_directory
+    real_score = vars(command)["score_test_models"]
 
     def recording(directory: Path) -> None:
         synced.append(Path(directory))
-        real(directory)
+        real_sync(directory)
+
+    def scoring(*args: Any, **kwargs: Any) -> Any:
+        before_prediction.append(list(synced))  # what was durable when prediction began
+        return real_score(*args, **kwargs)
 
     monkeypatch.setattr(files, "_sync_directory", recording)
+    monkeypatch.setattr(command, "score_test_models", scoring)
     directory = run(project)
+    (snapshot,) = before_prediction
     for expected in (
         root,
         root / "outputs",
@@ -438,4 +446,4 @@ def test_the_directory_chain_of_the_run_is_synchronised_up_to_the_project_root(
         root / "outputs" / "confirmatory" / "state",
         directory / "scores" / "attempt-01",
     ):
-        assert expected in synced, expected
+        assert expected in snapshot, expected

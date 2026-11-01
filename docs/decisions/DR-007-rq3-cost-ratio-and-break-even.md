@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze), Issue #13, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Frozen (accepted before the freeze), Issue #13, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-24; revised 2026-10-09 (Issue #54: eight configurations; boundary cases; interpretation of R4 losses) 2026-10-17 (Issue #91: calibration details; conditional bootstrap intervals) and 2026-10-30 (Issue #183: resampling construction and streams by reference; Issue #185: calibration interpretation; Issue #193: primary interpretation wording) |
 | Evidence source | Decision-theoretic derivation (checked numerically on synthetic data only); cost-sensitive learning, cost-curve and decision-curve literature; `notebooks/01_dataset_feasibility_audit.ipynb` §§6, 11, 12; for the calibration details (§8), Kull et al. [REF-132], Lin, Lin and Weng [REF-133], the REF-018 supplement and the scikit-learn 1.9.1 source of isotonic regression [REF-134], with an independent review in Issue #91. **No Test labels, no model scores and no new dataset computations were used.** |
 | Related | [DR-002](DR-002-review-capacity-definition.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |
