@@ -103,11 +103,11 @@ uv sync --locked --extra ml --extra dl --extra dev
 
 ## Status
 
-**Research design documented and accepted in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); every design item resolved; protocol not yet frozen.**
+**Research design documented and accepted in line with the University of Greenwich criteria ([criteria checklist](docs/greenwich-criteria-checklist.md)); every design item resolved; protocol frozen at the tag `protocol-freeze-v1`.**
 
 The ethics and governance status is documented in the [protocol](docs/protocol.md#ethics); no formal ethics approval or exemption is claimed.
 
 Next steps:
 
 1. Development run on Train, Validation 1 (V1) and Validation 2 (V2) and its analysis runs, including the rolling-origin supplement: completed and promoted to [`evidence/development/`](evidence/development/README.md) and [`evidence/analysis/`](evidence/analysis/README.md); H3 configuration selected: LGB-b, LightGBM with balanced class weighting ([DR-010](docs/decisions/DR-010-h3-confirmatory-configuration.md#selection-result)).
-2. Review of the development evidence; protocol freeze; single Test evaluation; statistical analysis and reporting.
+2. Single Test evaluation, after the explicit approval of the run; statistical analysis and reporting.

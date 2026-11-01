@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -282,3 +283,30 @@ def test_a_resume_with_other_frozen_inputs_is_refused_before_the_labels(
     with pytest.raises(SpecificationError, match="was frozen with other inputs"):
         run(project, phase="evaluation", resume=directory, started="2026-11-02T091000Z")
     assert project["plan"].calls == calls  # the evaluation did not start again
+
+
+def test_a_copied_run_is_refused_after_completed_scoring_and_after_an_interrupted_evaluation(
+    project: dict[str, Any],
+) -> None:
+    root = project["paths"].root
+    run(project, phase="scoring")
+    (directory,) = (root / "outputs" / "confirmatory").glob("20*")
+    scoring_copy = root / "outputs" / "confirmatory" / "copy-after-scoring"
+    shutil.copytree(directory, scoring_copy)
+    calls = project["plan"].calls
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
+        run(project, phase="evaluation", resume=scoring_copy, started="2026-11-02T091000Z")
+    assert project["plan"].calls == calls  # no evaluation started
+    assert not marker_path(root, state_of(directory)).exists()  # no label was reachable
+
+    project["plan"].fail_after_marker = True
+    with pytest.raises(RuntimeError):
+        run(project, phase="evaluation", resume=directory, started="2026-11-02T091100Z")
+    interrupted_copy = root / "outputs" / "confirmatory" / "copy-after-interruption"
+    shutil.copytree(directory, interrupted_copy)
+    calls = project["plan"].calls
+    with pytest.raises(SpecificationError, match="owns the state until its run ends"):
+        run(project, phase="evaluation", resume=interrupted_copy, started="2026-11-02T091200Z")
+    assert project["plan"].calls == calls
+    run(project, phase="evaluation", resume=directory, started="2026-11-02T091300Z")  # the owner
+    assert (directory / "records" / "test_run_end.json").exists()

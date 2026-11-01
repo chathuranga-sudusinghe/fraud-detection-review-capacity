@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Frozen (accepted before the freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-23; revised 2026-10-09 (Issue #54: pooled normalised recall; days without frauds) and 2026-10-30 (Issue #193: the ceiling as a planning value) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§6, 7, 11 |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [protocol](../protocol.md) |

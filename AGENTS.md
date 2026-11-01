@@ -98,7 +98,7 @@ The temporal partitions are defined in [DR-001](docs/decisions/DR-001-temporal-s
 
 ## Current research scope
 
-The research design is defined in [`docs/protocol.md`](docs/protocol.md) (working, pre-freeze) and the [Decision Records](docs/decisions/README.md); the definitions are not repeated here. In brief:
+The research design is defined in [`docs/protocol.md`](docs/protocol.md) (frozen at the tag `protocol-freeze-v1`) and the [Decision Records](docs/decisions/README.md); the definitions are not repeated here. In brief:
 
 - **Models:** tree-based (LightGBM, CatBoost) and neural (ResNet-style multilayer perceptron, MLP; FT-Transformer, Feature Tokenizer + Transformer), each trained unweighted and with balanced class weighting: eight configurations under one common training procedure ([DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md)).
 - **Review capacity:** simulated scenarios of 1 %, 2 % (primary), 5 % and 10 % of transactions, each turned into a fixed daily review budget K ([DR-002](docs/decisions/DR-002-review-capacity-definition.md)).
@@ -171,8 +171,8 @@ A Decision Record states its decision in full, because the record is the dated e
 
 When a methodological decision changes, open a GitHub Issue and follow the record-maintenance policy in [`docs/decisions/README.md`](docs/decisions/README.md#record-maintenance-policy):
 
-1. **Before the protocol freeze** (the current stage), revise the relevant research documents and Decision Records **in place**, so that they describe the current design only. Do not add narrative about earlier designs; the revision history is kept in Git commits, pull requests and issues.
-2. **After the protocol freeze** (the protocol is tagged in Git), do not edit frozen records. Record any change in a **new Decision Record that supersedes** the earlier one, and set the earlier record's status to *Superseded by DR-NNN*.
+1. **Before the protocol freeze** (the stage until the tag `protocol-freeze-v1`), revise the relevant research documents and Decision Records **in place**, so that they describe the current design only. Do not add narrative about earlier designs; the revision history is kept in Git commits, pull requests and issues.
+2. **After the protocol freeze** (the protocol is tagged in Git as `protocol-freeze-v1`; the current stage), do not edit frozen records. Record any change in a **new Decision Record that supersedes** the earlier one, and set the earlier record's status to *Superseded by DR-NNN*.
 3. At every stage:
    - Decision Record numbers are permanent: never renumber, reuse or delete a record;
    - keep each record's "Alternatives considered" content and its truthful status and approval information, including anything still pending review;

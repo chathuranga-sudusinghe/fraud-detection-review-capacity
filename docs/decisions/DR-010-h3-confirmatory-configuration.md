@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze), Issue #29, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Frozen (accepted before the freeze), Issue #29, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-26; revised 2026-10-09 (Issue #54: selection pool of eight configurations; Holm-level H3 decision); selection result recorded 2026-10-30 (Issue #181) |
 | Evidence source | The protocol's hypothesis, policy and multiplicity definitions; [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md) and [DR-005](DR-005-sesoi-and-h1-h2-inference.md); the existing power projections of DR-005. The rule was fixed without labels, model scores or new dataset computations. The [selection result](#selection-result) applies the rule to the development-run scores on Train, Validation 1 and Validation 2 only; no Test-period data were inspected. |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-003](DR-003-rq2-h3-policy-transfer-fidelity.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md), [DR-006](DR-006-bootstrap-inference-strategy.md), [DR-009](DR-009-overflow-handling-for-threshold-policies.md), [DR-011](DR-011-model-set-tree-based-and-neural-families.md), [protocol](../protocol.md) |

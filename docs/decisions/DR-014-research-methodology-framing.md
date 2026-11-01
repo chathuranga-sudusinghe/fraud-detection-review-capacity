@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze), Issue #85, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)) |
+| Status | Frozen (accepted before the freeze), Issue #85, in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)) |
 | Date | 2026-10-13 (Issue #85; resolves protocol design item 7) |
 | Evidence source | The Foundational Methodology for Data Science published by International Business Machines Corporation (IBM) [REF-085], read in full (reference identifiers REF-NNN are listed in [`docs/references.md`](../references.md)); two peer-reviewed reviews of data-science process methodologies [REF-125, REF-126], read in the parts cited; University of Greenwich guidance [REF-054, REF-112, REF-113]. No dataset values, labels or model results were used. |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-004](DR-004-github-issue-driven-workflow.md), [protocol](../protocol.md), [research lifecycle](../research-lifecycle.md) |
@@ -14,7 +14,7 @@ A data-science study is easier to follow and to assess when its work is organise
 Two facts shape the decision:
 
 - **[G]** For research-oriented projects, the University of Greenwich requires a rigorous methodology [REF-112]. Neither the project guidance [REF-112], the student handbook [REF-113] nor the programme page [REF-054] prescribes a particular data-science process model; all three were checked for this on 13 October 2026. The COMP1885 module handbook (Individual Project) [REF-055] has not been obtained.
-- **[I]** The study is designed for confirmatory evaluation, and its protocol remains pre-freeze: its procedures are fixed before the development model runs, and the final Test period is sealed and evaluated once ([protocol: Protocol Freeze](../protocol.md#protocol-freeze)). General process models are iterative by design and refine a model after its evaluation and after deployment [REF-085]. Adopting one therefore requires stating where that iteration is allowed and where it is not.
+- **[I]** The study is designed for confirmatory evaluation, and its protocol is frozen before the Test evaluation: its procedures were fixed before the development model runs, and the final Test period is sealed and evaluated once ([protocol: Protocol Freeze](../protocol.md#protocol-freeze)). General process models are iterative by design and refine a model after its evaluation and after deployment [REF-085]. Adopting one therefore requires stating where that iteration is allowed and where it is not.
 
 ## Decision
 
@@ -82,7 +82,7 @@ A peer-reviewed review of the methodology reports that it lacks team roles and g
 - **The primary source is an industry white paper.** REF-085 is not peer-reviewed. Its content, its relation to CRISP-DM and its weaknesses are supported by the peer-reviewed reviews REF-125 and REF-126. The framework structures the work; it is not evidence for any result.
 - **CRISP-DM is more widely used.** Some readers may expect it; the direct mapping between the two models reduces this cost.
 - **A framework does not ensure rigour by itself.** Rigour comes from the protocol, the Decision Records, the sealed Test period and the protocol freeze.
-- **Module handbook not obtained.** If the COMP1885 module handbook [REF-055] prescribes a process model, this record is revised before the protocol freeze.
+- **Module handbook not obtained.** If the COMP1885 module handbook [REF-055] prescribes a process model, a new record that supersedes this one is needed.
 
 ## References
 

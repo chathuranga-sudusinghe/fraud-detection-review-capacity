@@ -85,7 +85,7 @@ Referencing counts for at most 5 % of the marks where it is assessed (REF-107 §
 | Requirement [G] | Source | Where the project meets it | Status |
 |---|---|---|---|
 | Academic integrity; assessment misconduct procedure; Turnitin checks | REF-113; REF-109 | Analysis and writing remain independent work; source verification statuses recorded in the [reference register](references.md) | Ongoing |
-| Commitment to research integrity (Concordat) | REF-052 | Documented protocol awaiting freeze; sealed Test period; Decision Records and reproducible evidence | Ongoing |
+| Commitment to research integrity (Concordat) | REF-052 | Protocol frozen at the tag `protocol-freeze-v1`; sealed Test period; Decision Records and reproducible evidence | Ongoing |
 | Research data: a data management plan; data retained for at least 10 years; data made open only where legally, commercially and ethically appropriate | REF-115 (applies to staff and postgraduate students actively engaged in research) | Data handling documented in [`dataset.md`](dataset.md); the competition data cannot be redistributed (REF-049), so code, metadata and aggregate results are kept in the repository and the data stay local | Met as far as applicable |
 | Competition data used within its terms (non-commercial; no redistribution) | REF-049 (data owner's terms) | [Dataset data-use terms](dataset.md#data-use-terms); [data-access rule](dataset.md#data-access-after-the-parquet-build) | Met |
 

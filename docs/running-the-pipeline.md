@@ -137,6 +137,8 @@ Steps 7 and 8 belong to the confirmatory stage. The design is the [authorised Te
 
 `--phase scoring` and `--phase evaluation --resume <run directory>` run the phases separately. A resumed run keeps the inputs it recorded: the same development and analysis runs must be named, and any difference (other thresholds, calibrators or H3 selection) is refused before any Test row or label is read. The log is `run.log` in the run directory. The lock, the started marker, the scoring marker and the consumption marker are in `outputs/confirmatory/state/`, named by the identity of the frozen state (the commit, the declarations, the development run, the preprocessing and the models). The analysis runs listed after `--analysis` are verified and recorded, and neither their number nor their order changes that identity.
 
+**If the command refuses before scoring.** It checks, before any Test row is read, that the tag is annotated and names the commit of HEAD, that the working tree has no tracked or untracked changes, and that the closed development run and the analysis runs it is given are the original local run directories (each file is verified by its recorded hash). A promoted copy under `evidence/` omits the fitted preprocessing artifact and the models and cannot replace them. The fix is to check out the tagged commit, clean the tree, and restore the original local artifacts at their recorded paths; models are never retrained, and no marker is deleted, to get past a refusal.
+
 **After an interruption.** Nothing is deleted by hand; the command states what it found.
 
 | Situation | What to do |

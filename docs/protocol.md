@@ -2,11 +2,11 @@
 
 ## Status
 
-**Working protocol — pre-freeze. Not yet confirmatory.**
+**Frozen protocol — confirmatory from the commit tagged `protocol-freeze-v1`.**
 
 This file defines the confirmatory research design. It builds on the dataset feasibility audit ([`notebooks/01_dataset_feasibility_audit.ipynb`](../notebooks/01_dataset_feasibility_audit.ipynb), conclusion: *"Suitable with methodological changes"*), the data-understanding notebooks 02–03 and the structured literature review ([`literature-review.md`](literature-review.md)). Methodology decisions are recorded in [`docs/decisions/`](decisions/README.md) (DR-001–DR-015).
 
-The remaining items are listed under [Design items before protocol freeze](#design-items-before-protocol-freeze). The protocol becomes confirmatory only when every item is resolved and the file is tagged in Git.
+Every design item listed under [Design items before protocol freeze](#design-items-before-protocol-freeze) is resolved, and the protocol is tagged in Git as `protocol-freeze-v1`; from that commit it is confirmatory. A change to it follows the supersession process of the [Decision Records](decisions/README.md#record-maintenance-policy).
 
 **Test-set status:** the final Test period (relative days 155–182) is **sealed**. Its labels have not been used for any analysis.
 
@@ -765,7 +765,7 @@ See [DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md).
   - Uncertainty comes from a **moving-block bootstrap over Test days**, because the outcome does not depend on labels: block length 3 days, B = 10,000 bootstrap replicates, percentile interval [REF-037, REF-064]. Sensitivity block lengths are 1 and 7 days. The blocks are non-circular: block starts are drawn uniformly from Test days 1 … 28 − ℓ + 1, ⌈28 / ℓ⌉ blocks are concatenated and the series is truncated to its first 28 days; one resample set per block length is shared by the eight configurations ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
   - The 90 % CI for r is reported in every case, with its position relative to (0.016, 0.024). It describes uncertainty only and does not determine rejection: the decision uses the Holm-adjusted p-value, so a 90 % CI inside the band can accompany a non-rejection after multiplicity adjustment. A CI overlapping a bound is **inconclusive**. The interval position is labelled descriptively (CI inside the band, entirely outside it, or overlapping a bound); "rate preserved within ±20 %" is said only when H3₁ is concluded by the Holm-adjusted p-value ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)).
   - Inference is conditional on the H3 configuration's trained model and its τ₂.
-  - Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the smallest tolerance at which equivalence would be concluded. For the 90 % CI of r it is descriptive, interval-based and not Holm-adjusted ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)):
+  - Non-confirmatory sensitivity: the CI is also reported against ±10 %, ±25 % and ±50 % bounds, together with the infimum of the relative tolerances whose open band contains the interval (`t_min`; no equivalence conclusion is drawn from it). For the 90 % CI of r it is descriptive, interval-based and not Holm-adjusted ([DR-003](decisions/DR-003-rq2-h3-policy-transfer-fidelity.md)):
 
     $$
     t_{\min} = \frac{\max\left(\lvert L - 0.02 \rvert,\ \lvert U - 0.02 \rvert\right)}{0.02}

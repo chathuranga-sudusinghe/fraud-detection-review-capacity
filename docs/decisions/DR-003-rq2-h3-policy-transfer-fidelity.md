@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted (pre-freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
+| Status | Frozen (accepted before the freeze) in line with the University of Greenwich criteria ([criteria checklist](../greenwich-criteria-checklist.md)); supervisor feedback welcome, not a precondition |
 | Date | 2026-09-23; revised 2026-09-24 (Issue #7: tolerance Δ = 0.004, ±20 % relative) 2026-10-09 (Issue #54: Holm-level H3 decision; zero-alert days in the rate/volume decomposition) and 2026-10-30 (Issue #183: block construction, smallest equivalence tolerance, interval labels; Issue #185: interval wording of the daily-budget statistics; Issue #193: wording of historical and supervisor statements) |
 | Evidence source | `notebooks/01_dataset_feasibility_audit.ipynb`, §§3, 6, 14, 17. For Δ: V2 daily transaction counts (label-free) and the equivalence-testing literature |
 | Related | [DR-001](DR-001-temporal-split-strategy.md), [DR-002](DR-002-review-capacity-definition.md), [DR-005](DR-005-sesoi-and-h1-h2-inference.md) (multiplicity plan), [DR-006](DR-006-bootstrap-inference-strategy.md) (H1/H2 bootstrap), [DR-009](DR-009-overflow-handling-for-threshold-policies.md) (overflow rule and workload definitions), [DR-010](DR-010-h3-confirmatory-configuration.md) (H3 configuration), [protocol](../protocol.md) |

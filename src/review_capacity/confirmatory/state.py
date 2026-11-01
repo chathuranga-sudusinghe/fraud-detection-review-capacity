@@ -1,6 +1,6 @@
 """The one-pass guard of the Test evaluation (Issue #203; protocol, Authorised Test evaluation).
 
-Three files in a fixed directory outside the dated run directories, named by the identity of the
+Four files in a fixed directory outside the dated run directories, named by the identity of the
 frozen state (commit and hashes, not the tag name), so that a repeat in a new run directory still
 finds them:
 
