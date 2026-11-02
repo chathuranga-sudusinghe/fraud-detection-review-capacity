@@ -20,8 +20,18 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from review_capacity.confirmatory.figures import FIGURE_TITLES, FIGURES_DIR, figure_files
 from review_capacity.confirmatory.records import contract_of
-from review_capacity.development.records import ALL_CONFIGURATIONS
+from review_capacity.confirmatory.report_tables import (
+    calibration_sensitivity,
+    ceilings_of,
+    configuration_order,
+    converted_intervals,
+    non_monotone,
+    rq3_outcomes,
+    span,
+    table,
+)
 from review_capacity.development.run_output import LoadedRun
 from review_capacity.development.schema import ListOf, MapOf, Object
 from review_capacity.development.summary import cell, code
@@ -58,26 +68,8 @@ CAUTIONS = {
 }
 
 
-def table(header: Sequence[str], body: Sequence[Sequence[str]]) -> list[str]:
-    """A Markdown table; every cell is already formatted."""
-    return [
-        "| " + " | ".join(header) + " |",
-        "|" + "---|" * len(header),
-        *("| " + " | ".join(row) + " |" for row in body),
-    ]
-
-
-def span(interval: Record | None) -> str:
-    """An interval as the pair of its exact endpoints."""
-    return "—" if interval is None else cell([interval["lower"], interval["upper"]])
-
-
 def _by(records: Sequence[Record], kind: str) -> list[Record]:
     return [r for r in records if r["record"] == kind]
-
-
-def _configuration_order(name: str) -> int:
-    return ALL_CONFIGURATIONS.index(name)
 
 
 def _run_section(run: LoadedRun, records: Sequence[Record]) -> list[str]:
@@ -304,6 +296,8 @@ def _primary(inference: Record) -> list[str]:
         ),
         "",
         "Basis: " + cell(inference["effect_basis"]) + ".",
+        "",
+        *converted_intervals(inference),
     ]
 
 
@@ -406,7 +400,7 @@ def _with_interval(entry: Record, name: str) -> list[str]:
 
 
 def _secondary(evaluations: Sequence[Record]) -> list[str]:
-    ordered = sorted(evaluations, key=lambda r: _configuration_order(r["configuration"]))
+    ordered = sorted(evaluations, key=lambda r: configuration_order(r["configuration"]))
     capacities = [e["capacity"] for e in ordered[0]["r3"]]
     lines = ["## Secondary outcomes", "", "95 % percentile bootstrap intervals (DR-006).", ""]
     for index, capacity in enumerate(capacities):
@@ -506,13 +500,19 @@ def _secondary(evaluations: Sequence[Record]) -> list[str]:
     return lines
 
 
-def _rq2(workloads: Sequence[Record]) -> list[str]:
-    ordered = sorted(workloads, key=lambda r: _configuration_order(r["configuration"]))
+def _rq2(workloads: Sequence[Record], h3_configuration: str) -> list[str]:
+    ordered = sorted(
+        workloads,
+        key=lambda r: (
+            r["configuration"] != h3_configuration,
+            configuration_order(r["configuration"]),
+        ),
+    )
     lines = [
         "## RQ2: daily-budget fidelity of R2 (point values)",
         "",
-        "The decomposition is against the V2 reference volume; the budget term is the rounding "
-        "of K.",
+        "The H3 configuration is listed first. The decomposition is against the V2 reference "
+        "volume; the budget term is the rounding of K.",
         "",
     ]
     for index, entry in enumerate(ordered[0]["entries"]):
@@ -566,7 +566,7 @@ def _calibration(calibrations: Sequence[Record]) -> list[str]:
     for method, role in (("platt", "primary"), ("isotonic", "sensitivity")):
         chosen = sorted(
             (r for r in calibrations if r["method"] == method),
-            key=lambda r: _configuration_order(r["configuration"]),
+            key=lambda r: configuration_order(r["configuration"]),
         )
         lines += [f"### {method} ({role})", ""]
         body = []
@@ -638,11 +638,13 @@ def _calibration(calibrations: Sequence[Record]) -> list[str]:
     return lines
 
 
-def _rq3(analyses: Sequence[Record]) -> list[str]:
+def _rq3(analyses: Sequence[Record], evaluations: Sequence[Record]) -> list[str]:
     ordered = sorted(
-        analyses, key=lambda r: (r["calibrator"], _configuration_order(r["configuration"]))
+        analyses, key=lambda r: (r["calibrator"], configuration_order(r["configuration"]))
     )
     lines = ["## RQ3: R4 against R3", "", CAUTIONS["rq3"], ""]
+    lines += [*calibration_sensitivity(ordered), "", *non_monotone(ordered), ""]
+    ceilings = ceilings_of(evaluations)
     for method in ("platt", "isotonic"):
         chosen = [r for r in ordered if r["calibrator"] == method]
         if not chosen:
@@ -826,6 +828,7 @@ def _rq3(analyses: Sequence[Record]) -> list[str]:
                     ],
                 ),
                 "",
+                *rq3_outcomes(chosen, index, ceilings),
             ]
     return lines
 
@@ -835,7 +838,7 @@ def _false_negatives(tables: Sequence[Record], h3_configuration: str) -> list[st
         tables,
         key=lambda r: (
             r["configuration"] != h3_configuration,
-            _configuration_order(r["configuration"]),
+            configuration_order(r["configuration"]),
         ),
     )
     first = ordered[0]
@@ -885,7 +888,7 @@ def _false_negatives(tables: Sequence[Record], h3_configuration: str) -> list[st
 
 
 def _timing(scores: Sequence[Record]) -> list[str]:
-    ordered = sorted(scores, key=lambda r: _configuration_order(r["configuration"]))
+    ordered = sorted(scores, key=lambda r: configuration_order(r["configuration"]))
     return [
         "## Test scoring time",
         "",
@@ -914,6 +917,28 @@ def _long(kind: ListOf, items: list[Any]) -> bool:
 
 
 SYMBOLS: tuple[tuple[str, str], ...] = (
+    ("JSON", "JavaScript Object Notation, the format of the records"),
+    ("CI, interval", "confidence (percentile bootstrap) interval; 95 % unless the level is stated"),
+    ("V2", "Validation 2, relative days 127 to 154"),
+    ("Test", "the confirmatory partition, relative days 155 to 182"),
+    ("RQ2, RQ3", "research questions 2 (policy-transfer fidelity) and 3 (cost-aware capacity use)"),
+    ("pp", "percentage points"),
+    (
+        "LGB, Cat, RES, FTT",
+        "LightGBM, CatBoost, ResNet-style multilayer perceptron, FT-Transformer; "
+        "suffix -u unweighted, -b balanced class weighting (e.g. LGB-b)",
+    ),
+    ("LR", "the logistic-regression reference"),
+    ("t_min", "infimum of the relative tolerances whose open band contains the H3 interval"),
+    ("Precision@K points", "precision of the daily top-K review, in percentage points"),
+    (
+        "oracle ceiling",
+        "largest recall a daily top-K review can reach (reviewable frauds / frauds)",
+    ),
+    ("normalised recall", "frauds captured divided by the oracle-reviewable frauds"),
+    ("Holm", "Holm step-down procedure over H1, H2 and H3"),
+    ("regime, classification", "the pre-declared labels of a grid cell and of rho_BE (DR-007)"),
+    ("Platt, isotonic", "the two calibrators of p-hat; Platt is primary, isotonic a sensitivity"),
     ("K", "fixed daily review budget (reviews per relative day) of a capacity scenario"),
     ("rho", "miss-to-review cost ratio of the scenario cost J = reviews + rho x missed frauds"),
     ("p*", "cost-derived probability threshold 1 / rho of R4"),
@@ -952,6 +977,22 @@ def _symbols() -> list[str]:
         "",
         *table(["Symbol or term", "Meaning"], [[code(name), meaning] for name, meaning in SYMBOLS]),
     ]
+
+
+def _figures(records: Sequence[Record]) -> list[str]:
+    """The figures of the run as relative links; the files are written beside the summary."""
+    files = figure_files(records)
+    if not files:
+        return []
+    lines = ["## Figures", "", "Drawn from the saved aggregates of the records; no resampling.", ""]
+    for file in files:
+        lines += [
+            f"### {FIGURE_TITLES[file]}",
+            "",
+            f"![{FIGURE_TITLES[file]}]({FIGURES_DIR}/{file})",
+            "",
+        ]
+    return lines[:-1]
 
 
 def _entries(value: object) -> str:
@@ -1005,13 +1046,16 @@ def render_summary(run: LoadedRun) -> str:
         lines += ["", *_primary(inference[0]), "", *_sensitivities(inference[0])]
     for builder, kind in (
         (_secondary, "test_evaluation"),
-        (_rq2, "test_workload"),
+        (lambda found: _rq2(found, h3), "test_workload"),
         (_calibration, "test_calibration"),
-        (_rq3, "test_rq3"),
+        (lambda found: _rq3(found, _by(records, "test_evaluation")), "test_rq3"),
     ):
         found = _by(records, kind)
         if found:
             lines += ["", *builder(found)]
+    shown = _figures(records)
+    if shown:
+        lines += ["", *shown]
     tables = _by(records, "test_false_negative")
     if tables:
         lines += ["", *_false_negatives(tables, h3)]

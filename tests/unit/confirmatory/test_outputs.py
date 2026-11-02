@@ -17,9 +17,11 @@ from review_capacity.confirmatory.figures import (
     COST_FIGURE,
     FIGURES_DIR,
     REFERENCE_RATIO,
+    RELIABILITY_FIGURES,
     UTILISATION_FIGURE,
     _curve,
     _value_below,
+    figure_files,
     render_figures,
 )
 from review_capacity.confirmatory.outputs import (
@@ -29,8 +31,14 @@ from review_capacity.confirmatory.outputs import (
     write_outputs,
 )
 from review_capacity.confirmatory.records import ConfirmatoryRecords
+from review_capacity.confirmatory.report_tables import (
+    ceilings_of,
+    converted_intervals,
+    rq3_outcomes,
+)
 from review_capacity.confirmatory.summary import render_summary
 from review_capacity.development.run_output import LoadedRun, load_run
+from review_capacity.development.summary import cell
 from review_capacity.errors import RecordContractError, SpecificationError
 from support import command_stubs as stubs
 from support import confirmatory as c
@@ -141,7 +149,11 @@ def test_the_figures_are_reproducible_and_agree_with_the_break_even_values(
     records = [r for _, r in run.records]
     first, second = render_figures(records), render_figures(records)
     assert first == second  # byte for byte
-    assert set(first) == {f"{FIGURES_DIR}/{COST_FIGURE}", f"{FIGURES_DIR}/{UTILISATION_FIGURE}"}
+    assert set(first) == {
+        f"{FIGURES_DIR}/{file}"
+        for file in (COST_FIGURE, UTILISATION_FIGURE, *RELIABILITY_FIGURES.values())
+    }
+    assert set(first) == {f"{FIGURES_DIR}/{file}" for file in figure_files(records)}
     for content in first.values():
         assert b"<svg" in content[:600]
         assert b"<dc:date>" not in content  # no date: the file is reproducible
@@ -173,6 +185,7 @@ def test_writing_the_outputs_again_gives_the_same_files(world: dict[str, Any]) -
         "summary.md",
         f"{FIGURES_DIR}/{COST_FIGURE}",
         f"{FIGURES_DIR}/{UTILISATION_FIGURE}",
+        *(f"{FIGURES_DIR}/{file}" for file in RELIABILITY_FIGURES.values()),
     }
 
 
@@ -389,3 +402,60 @@ def test_the_summary_ends_with_the_symbols_and_notation_section(world: dict[str,
     text = render_summary(load_run(world["directory"], records=RECORDS))
     assert text.rstrip().splitlines().count("## Symbols and notation") == 1
     assert text.index("## Symbols and notation") > text.index("## Records")
+
+
+def test_the_summary_reports_calibration_sensitivity_and_non_monotone_curves(
+    world: dict[str, Any],
+) -> None:
+    run = load_run(world["directory"], records=RECORDS)
+    summary = render_summary(run)
+    rq3 = [r for _, r in run.records if r["record"] == "test_rq3"]
+    assert "### Calibration sensitivity (isotonic against Platt)" in summary
+    assert "### Non-monotone RQ3 curves" in summary
+    primary = {r["configuration"]: r for r in rq3 if r["calibrator"] == "platt"}
+    other = {r["configuration"]: r for r in rq3 if r["calibrator"] == "isotonic"}
+    pairs = sum(len(r["capacities"]) for r in primary.values())
+    changed = sum(
+        a["break_even"]["classification"] != b["break_even"]["classification"]
+        for name, r in primary.items()
+        for a, b in zip(r["capacities"], other[name]["capacities"], strict=True)
+    )
+    assert f"Classification changes: {changed} of {pairs}" in summary
+    results = [e for r in rq3 for e in r["capacities"]]
+    flagged = sum(not e["break_even"]["single_interval"] for e in results)
+    assert f"is not a single interval in {flagged} of {len(results)} results" in summary
+
+
+def test_the_summary_links_every_figure_and_the_files_exist(world: dict[str, Any]) -> None:
+    run = load_run(world["directory"], records=RECORDS)
+    summary = render_summary(run)
+    for file in figure_files([r for _, r in run.records]):
+        assert f"({FIGURES_DIR}/{file})" in summary
+        assert (world["directory"] / FIGURES_DIR / file).is_file()
+
+
+def test_the_converted_intervals_are_the_recorded_factors_times_the_interval(
+    world: dict[str, Any],
+) -> None:
+    run = load_run(world["directory"], records=RECORDS)
+    inference = next(r for _, r in run.records if r["record"] == "test_inference")
+    lines = converted_intervals(inference)
+    basis = inference["effect_basis"]
+    lower = inference["h1"]["interval"]["lower"]
+    row = next(line for line in lines if line.startswith('| `"family"`'))
+    assert cell(100 * lower) in row
+    assert cell(lower * basis["frauds"]) in row
+
+
+def test_the_rq3_outcome_rows_agree_with_the_recorded_queue(world: dict[str, Any]) -> None:
+    run = load_run(world["directory"], records=RECORDS)
+    rq3 = [r for _, r in run.records if r["record"] == "test_rq3" and r["calibrator"] == "platt"]
+    evaluations = [r for _, r in run.records if r["record"] == "test_evaluation"]
+    ceilings = ceilings_of(evaluations)
+    lines = rq3_outcomes(rq3, 0, ceilings)
+    entry = rq3[0]["capacities"][0]
+    captured4 = entry["queue"]["captured"] - entry["grid"][0]["frauds_forgone"]
+    assert cell(captured4) in lines[4]
+    assert sum(1 for line in lines if line.startswith("| ")) - 1 == sum(
+        len(r["capacities"][0]["grid"]) for r in rq3
+    )

@@ -1,11 +1,17 @@
 """The cost figures of the Test evaluation (Issue #209; DR-007 §2 and §9).
 
 Two Scalable Vector Graphics (SVG) figures drawn from the exact curve segments of the ``test_rq3``
-records of the Platt (primary) calibrator, with no resampling and no new analysis:
+records of the Platt (primary) calibrator, with no resampling and no new analysis, and one
+reliability diagram per calibrator (Issue #217) drawn from the saved bins of the
+``test_calibration`` records:
 
 - the **cost-difference curve**: relative Delta J against log rho, one panel per capacity, one
   line per configuration;
-- the **utilisation curve**: R4 utilisation against log rho.
+- the **utilisation curve**: R4 utilisation against log rho;
+- the **reliability diagrams** (``reliability_platt.svg``, ``reliability_isotonic.svg``): the
+  mean calibrated probability against the observed fraud rate of each equal-count bin, one panel
+  per configuration, with the diagonal of perfect calibration. They are descriptive (DR-007
+  section 8): no binomial interval bars are drawn, because frauds cluster across days.
 
 On a segment of ratios rho that R4 declines ``u`` queue members, ``f`` of them frauds,
 
@@ -41,9 +47,15 @@ from typing import Any, cast
 import numpy as np
 import numpy.typing as npt
 
+from review_capacity.development.records import ALL_CONFIGURATIONS
+
 FIGURES_DIR = "figures"
 COST_FIGURE = "cost_difference.svg"
 UTILISATION_FIGURE = "utilisation.svg"
+RELIABILITY_FIGURES = {
+    "platt": "reliability_platt.svg",
+    "isotonic": "reliability_isotonic.svg",
+}
 CALIBRATOR = "platt"
 SAMPLES_PER_DECADE = 40
 # DR-007 section 2 [D]: V2 has 77,822 transactions and 2,637 frauds (3.39 %); the ratio at which
@@ -53,6 +65,12 @@ RATIO_MAX = 1000.0
 TITLE = {
     COST_FIGURE: "Relative cost difference Delta J / J_R3 of R4 against R3 (Platt, Test)",
     UTILISATION_FIGURE: "R4 utilisation (Platt, Test)",
+}
+FIGURE_TITLES = {
+    COST_FIGURE: "Relative cost difference of R4 against R3 (Platt, primary)",
+    UTILISATION_FIGURE: "R4 utilisation (Platt, primary)",
+    RELIABILITY_FIGURES["platt"]: "Reliability diagram on the Test rows (Platt, primary)",
+    RELIABILITY_FIGURES["isotonic"]: "Reliability diagram on the Test rows (isotonic, sensitivity)",
 }
 PALETTE = (
     "#4C78A8",
@@ -118,8 +136,69 @@ def _style() -> dict[str, Any]:
     }
 
 
+def figure_files(records: Sequence[Mapping[str, Any]]) -> list[str]:
+    """The file names ``render_figures`` writes for ``records`` (the summary links them)."""
+    kinds = {
+        (r["record"], r["calibrator"] if r["record"] == "test_rq3" else r["method"])
+        for r in records
+        if r["record"] in ("test_rq3", "test_calibration")
+    }
+    names = [COST_FIGURE, UTILISATION_FIGURE] if ("test_rq3", CALIBRATOR) in kinds else []
+    return names + [
+        file
+        for method, file in RELIABILITY_FIGURES.items()
+        if ("test_calibration", method) in kinds
+    ]
+
+
+def _reliability(pyplot: Any, records: Sequence[Mapping[str, Any]], method: str) -> bytes:
+    """The reliability diagram of one calibrator: one panel per configuration, the points of the
+    saved bins (mean probability, observed rate) joined in order of probability."""
+    chosen = sorted(
+        (r for r in records if r["record"] == "test_calibration" and r["method"] == method),
+        key=lambda r: ALL_CONFIGURATIONS.index(r["configuration"]),
+    )
+    columns = 4
+    rows = math.ceil(len(chosen) / columns)
+    figure, axes = pyplot.subplots(
+        rows, columns, figsize=(3.2 * columns, 3.2 * rows), squeeze=False
+    )
+    for axis in axes.ravel():
+        axis.set_visible(False)
+    for number, record in enumerate(chosen):
+        axis = axes[number // columns][number % columns]
+        axis.set_visible(True)
+        bins = record["diagnostic"]["reliability"]
+        axis.plot([0, 1], [0, 1], color="#888888", ls="--", lw=0.7)
+        axis.plot(
+            [b["mean_probability"] for b in bins],
+            [b["observed_rate"] for b in bins],
+            "o-", color=PALETTE[0], ms=3, lw=0.9,
+        )  # fmt: skip
+        axis.set_xlim(0.0, 1.0)
+        axis.set_ylim(0.0, 1.0)
+        axis.set_title(record["configuration"], fontsize=9)
+        axis.set_xlabel("mean calibrated probability", fontsize=7)
+        axis.set_ylabel("observed fraud rate", fontsize=7)
+        axis.tick_params(labelsize=7)
+        axis.grid(True, lw=0.3, color="#DDDDDD")
+    figure.suptitle(FIGURE_TITLES[RELIABILITY_FIGURES[method]], fontsize=10)
+    figure.text(
+        0.5, 0.005,
+        "equal-count bins of the Test rows; dashed line: perfect calibration; descriptive, "
+        "no interval bars",
+        ha="center", fontsize=6,
+    )  # fmt: skip
+    figure.tight_layout(rect=(0, 0.03, 1, 0.97))
+    buffer = io.BytesIO()
+    figure.savefig(buffer, format="svg", metadata={"Date": None, "Creator": "review-capacity"})
+    pyplot.close(figure)
+    return buffer.getvalue()
+
+
 def render_figures(records: Sequence[Mapping[str, Any]]) -> dict[str, bytes]:
-    """The two figures (file name -> SVG bytes) from the ``test_rq3`` records in ``records``."""
+    """The figures (file name -> SVG bytes) from the ``test_rq3`` and ``test_calibration`` records
+    in ``records``: the two cost figures and the reliability diagrams."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -130,11 +209,11 @@ def render_figures(records: Sequence[Mapping[str, Any]]) -> dict[str, bytes]:
         for record in records
         if record["record"] == "test_rq3" and record["calibrator"] == CALIBRATOR
     }
+    figures: dict[str, bytes] = {}
     if not analyses:
-        return {}
+        return _reliability_figures(records)
     names = sorted(analyses, key=lambda name: list(analyses).index(name))
     capacities = [entry["capacity"] for entry in analyses[names[0]]["capacities"]]
-    figures: dict[str, bytes] = {}
     with matplotlib.rc_context(cast(Any, _style())):
         for file, cost in ((COST_FIGURE, True), (UTILISATION_FIGURE, False)):
             figure, axes = pyplot.subplots(
@@ -179,4 +258,19 @@ def render_figures(records: Sequence[Mapping[str, Any]]) -> dict[str, bytes]:
             )
             pyplot.close(figure)
             figures[f"{FIGURES_DIR}/{file}"] = buffer.getvalue()
-    return figures
+    return figures | _reliability_figures(records)
+
+
+def _reliability_figures(records: Sequence[Mapping[str, Any]]) -> dict[str, bytes]:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    from matplotlib import pyplot
+
+    found = {r["method"] for r in records if r["record"] == "test_calibration"}
+    with matplotlib.rc_context(cast(Any, _style())):
+        return {
+            f"{FIGURES_DIR}/{file}": _reliability(pyplot, records, method)
+            for method, file in RELIABILITY_FIGURES.items()
+            if method in found
+        }
