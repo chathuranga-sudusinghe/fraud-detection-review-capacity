@@ -1,0 +1,62 @@
+{
+  "record": "test_scores",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-11-01T104408Z",
+    "run_type": "confirmatory",
+    "evaluator": {
+      "code_commit": "9997da7a292c266908e97c5458d10912fbd81d74",
+      "uncommitted_changes": false,
+      "source_sha256": "e4c4343ed3a28cd2744ca08ef7baf0a33224b1e7d353c12197f8de86a8284fee"
+    },
+    "freeze": {
+      "tag": "protocol-freeze-v1",
+      "tag_commit": "9997da7a292c266908e97c5458d10912fbd81d74"
+    },
+    "training": {
+      "run_id": "2026-10-25T134341Z",
+      "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+      "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be"
+    },
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "training_declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "evaluation_declaration_sha256": "7e3233f8acdf1d0ff55e8b5da1bbb7f31f0f82856d19876e6b4bf834608bef0d",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0,
+      "resampling": 42
+    },
+    "frozen_state_sha256": "252e81b35cd8355fbdb53cbbf2769f76e917c6bf6040a5d57ad6088d4c09b67e"
+  },
+  "configuration": "RES-u",
+  "partition": "Test",
+  "days": {
+    "first": 155,
+    "last": 182
+  },
+  "rows": 78542,
+  "model": {
+    "path": "outputs/development/2026-10-25T134341Z/models/RES-u/trial-08/model.pt",
+    "sha256": "9aec2cefb7508a9968137c893dccaf530d072642c24e403ac01a8cf7240d1094"
+  },
+  "file": {
+    "path": "scores/attempt-01/RES-u.parquet",
+    "sha256": "2f029ebb1d28c01022130c263ee9180072c04989151c58cb5e288f25f7a5388e"
+  },
+  "format": "parquet",
+  "min_score": 6.227228926583143e-07,
+  "max_score": 0.9999999998058327,
+  "distinct_scores": 78326,
+  "device": "gpu",
+  "timing": {
+    "passes": 1,
+    "seconds": 1.9450990350014763,
+    "rows_per_second": 40379.434973058014
+  }
+}
