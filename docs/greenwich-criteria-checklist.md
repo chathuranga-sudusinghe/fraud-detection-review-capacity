@@ -67,9 +67,9 @@ Referencing counts for at most 5 % of the marks where it is assessed (REF-107 §
 | Requirement [G] | Source | Where the project meets it | Status |
 |---|---|---|---|
 | The Research Ethics Policy applies to master's students' research | REF-050 §1.2 | [Protocol, Ethics](protocol.md#ethics) | Met |
-| Fully anonymised secondary data should not need ethical approval; a taught student is advised by the programme or module leader | REF-051 | No ethics application required: the supervisor's written guidance of 3 October 2026 (no personal data or personally identifiable information, PII; no restrictions on data use, reporting, code or storage), recorded in Issue #31 and the [protocol](protocol.md#ethics); no formal approval or exemption claimed | Met; the supervisor's comment on the dataset is pending |
+| Fully anonymised secondary data should not need ethical approval; a taught student is advised by the programme or module leader | REF-051 | No ethics application required: the supervisor's written guidance of 3 October 2026 (no personal data or personally identifiable information, PII; no restrictions on data use, reporting, code or storage), recorded in Issue #31 and the [protocol](protocol.md#ethics); no formal approval or exemption claimed | Met; the supervisor's email of 11 October 2026 approved the dataset |
 | Research involving criminal subject matter requires ethical consideration and is Higher Risk; Higher-Risk student projects are reviewed by the Faculty Research Ethics Committee and then the University Research Ethics Board, and research should not commence until the relevant approval has been granted | REF-050 §1.3.4, §2.2.1 iv, §2.4, §2.13 | Documented ethical considerations: false-positive and false-negative harms, re-identification risk, fairness limits ([protocol, Ethics](protocol.md#ethics)) | Met as a documented consideration under the supervisor's guidance |
-| Data stored securely: University OneDrive where possible; laptops used for data must be encrypted | REF-051 | Raw and row-level data stay on the local machine and are never committed ([dataset](dataset.md#data-use-terms)) | **Action:** confirm that the laptop's disk is encrypted |
+| Data stored securely: University OneDrive where possible; laptops used for data must be encrypted | REF-051 | Raw and row-level data stay on the local machine and are never committed ([dataset](dataset.md#data-use-terms)) | Confirmed on 2 November 2026: the local drives show the BitLocker drive-encryption lock in Windows file explorer (an observation, not a separate technical verification) |
 
 ## 5. Use of AI
 
@@ -96,10 +96,11 @@ Referencing counts for at most 5 % of the marks where it is assessed (REF-107 §
 | 1 | COMP1885 AI-use tier | Confirm Tier 2 against the assessment brief, with the module leader |
 | 2 | Applicable Assessment and Feedback Policy (2025 or 2019) and the word count | Confirm with the module leader |
 | 3 | COMP1885 module handbook, brief and customised rubric (REF-055) | Obtain from Moodle when available; until then the generic Level 7 rubric is the working standard |
-| 4 | Supervisor's comment on the dataset | Requested after the supervisor's ethics guidance of 3 October 2026; record it when received |
-| 5 | Encrypted storage of the local data | Confirm disk encryption on the laptop |
+| 4 | Supervisor's comment on the dataset | Done: received by email on 11 October 2026, which approved the dataset |
+| 5 | Encrypted storage of the local data | Done on 2 November 2026: BitLocker lock shown on both local drives (observation) |
 | 6 | AI Reflection | Write the AIR at submission from the recorded workflow |
-| 7 | Supervision schedule and presentation | Agree the meeting schedule with the supervisor; confirm presentation dates and requirements |
+| 7 | Supervision schedule and presentation | Agree the meeting schedule with the supervisor; confirm presentation dates and requirements (not yet confirmed) |
+| 8 | Official assessment and submission dates, the assessment briefs and the Moodle materials | A clarification request was emailed to the programme team on 2 November 2026; the reply is awaited |
 
 ## Symbols and notation
 

@@ -83,7 +83,8 @@ fraud-detection-review-capacity/
 │   ├── features.yaml                    # model-input roles (433 inputs)
 │   ├── dataset.yaml                     # raw files, partitions and integrity anchors (DR-001)
 │   ├── models.yaml                      # device and numerical settings, LightGBM build (DR-013)
-│   └── training.yaml                    # search budget, seeds, spaces, early stopping (DR-015)
+│   ├── training.yaml                    # search budget, seeds, spaces, early stopping (DR-015)
+│   └── evaluation.yaml                  # resampling, inference, capacity, cost and slice settings of the evaluation
 ├── src/review_capacity/                 # research code and the review-capacity command
 │   ├── data/                            # loading, validation and preparation
 │   ├── features/                        # model inputs and the shared neural preprocessing
@@ -91,10 +92,11 @@ fraud-detection-review-capacity/
 │   ├── training/                        # training declaration, candidate sampler, search-cost prediction
 │   ├── evaluation/                      # review queue, threshold policies, calibration, cost analysis
 │   ├── development/                     # search, scoring, analysis, record contracts, summaries
+│   ├── confirmatory/                    # the single Test evaluation: guard, scoring, outcomes, records, summary
 │   └── probe/                           # GPU and batching acceptance probes
 ├── tests/                               # unit tests on synthetic data; opt-in integration tests
 ├── notebooks/                           # data-understanding notebooks 01-04
-├── evidence/                            # probes, acceptance records, duplicate audit; development and analysis run records
+├── evidence/                            # probes, acceptance records, duplicate audit; development, analysis and confirmatory run records
 ├── scripts/                             # engineering scripts (GPU memory feasibility probe)
 ├── data/                                # dataset manifest and local data
 │   ├── datapackage.json                 # dataset manifest (committed)
@@ -133,4 +135,5 @@ The ethics and governance status is documented in the [protocol](docs/protocol.m
 Next steps:
 
 1. Development run on Train, Validation 1 (V1) and Validation 2 (V2) and its analysis runs, including the rolling-origin supplement: completed and promoted to [`evidence/development/`](evidence/development/README.md) and [`evidence/analysis/`](evidence/analysis/README.md); H3 configuration selected: LGB-b, LightGBM with balanced class weighting ([DR-010](docs/decisions/DR-010-h3-confirmatory-configuration.md#selection-result)).
-2. Single Test evaluation, after the explicit approval of the run; statistical analysis and reporting.
+2. Single confirmatory Test evaluation, after the explicit approval of the run: completed (run `2026-11-01T104408Z`, tag `protocol-freeze-v1`); report completed and aggregate evidence promoted to [`evidence/confirmatory/`](evidence/confirmatory/README.md).
+3. Closure of the research phase: full repository inspection (Issue #223); the written report follows the University assessment documents.

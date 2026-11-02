@@ -6,8 +6,7 @@ This review sets out the evidence behind the study's research questions and its 
 
 ## 1. Overview of credit-card fraud-detection research
 
-**Cherif, A., Badhib, A., Ammar, H., Alshehri, S., Kalkatawi, M. & Imine, A. (2023) 'Credit card fraud detection in the era of disruptive technologies: a systematic review'**\
-*Journal of King Saud University – Computer and Information Sciences*, 35(1), pp. 145–174. doi:10.1016/j.jksuci.2022.11.008 [REF-056].
+**Cherif et al. (2023)** [REF-056](references.md#ref-056).
 
 Checked relevance (abstract):
 
@@ -25,8 +24,7 @@ Checked relevance (abstract):
 
 **Combined tree and neural pipelines.**
 
-**Anh Luong, N.D. & Xie, S. (2026) 'Explainable ensemble machine learning for financial transaction fraud detection: insights from XGBoost and deep neural networks'**\
-*The Journal of Finance and Data Science*, 12, 100195. doi:10.1016/j.jfds.2026.100195 [REF-059].
+**Anh Luong & Xie (2026)** [REF-059](references.md#ref-059).
 
 Checked relevance (abstract):
 
@@ -50,8 +48,7 @@ Whether thresholds are selected on validation data, and which metrics are report
 
 **Threshold selection as a separate step.**
 
-**Leevy, J.L., Johnson, J.M., Hancock, J. & Khoshgoftaar, T.M. (2023) 'Threshold optimization and random undersampling for imbalanced credit card data'**\
-*Journal of Big Data*, 10, 58. doi:10.1186/s40537-023-00738-z [REF-057].
+**Leevy et al. (2023)** [REF-057](references.md#ref-057).
 
 Checked relevance (abstract):
 
@@ -63,8 +60,7 @@ Checked relevance (abstract):
 
 **Calibrated, cost-sensitive operating policies.**
 
-**Hossain, M.S., Akter, S., Chy, K.S., Islam, M.A., Shahiduzzaman, M., Kabtia, M., Sourav, M.S.A. & Raihan, D.I. (2026) 'TEMPLAR fraud a verifier grounded calibrated and cost sensitive framework for transaction fraud detection'**\
-*Discover Data*, 4, 20. doi:10.1007/s44248-026-00117-y [REF-058].
+**Hossain et al. (2026)** [REF-058](references.md#ref-058).
 
 Checked relevance (abstract):
 
@@ -80,8 +76,7 @@ Absolute cost-derived probability thresholds require calibrated probability esti
 
 **Risk-controlled decisions.**
 
-**Zhu, R., Zhang, X., Wang, T., Liao, J., Chung, S.-H. & Zhang, X. (2026) 'DISCO: decoupling representation learning and risk control for reliable credit card fraud detection'**\
-*Decision Support Systems*, 208, 114717. doi:10.1016/j.dss.2026.114717 [REF-060].
+**Zhu et al. (2026)** [REF-060](references.md#ref-060).
 
 Checked relevance (publisher abstract; full text not read):
 
