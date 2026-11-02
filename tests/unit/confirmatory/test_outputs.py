@@ -459,3 +459,13 @@ def test_the_rq3_outcome_rows_agree_with_the_recorded_queue(world: dict[str, Any
     assert sum(1 for line in lines if line.startswith("| ")) - 1 == sum(
         len(r["capacities"][0]["grid"]) for r in rq3
     )
+
+
+def test_the_summary_states_that_values_are_recorded_or_derived_from_recorded_fields(
+    world: dict[str, Any],
+) -> None:
+    summary = render_summary(load_run(world["directory"], records=RECORDS))
+    opening = summary.split("\n\n", 2)[1]
+    assert "recorded fields" in opening
+    assert "deterministic comparisons and arithmetic derived from recorded fields" in opening
+    assert "exact literal of a record field" not in summary

@@ -9,6 +9,29 @@
 
 Fraud teams can review only a limited number of transactions per day, so a fraud model is useful only through the rule that turns its scores into a daily review queue. Using the IEEE-CIS Fraud Detection data (IEEE-CIS = IEEE Computational Intelligence Society), this study trains two tree-based models (LightGBM, CatBoost) and two neural models (ResNet-style multilayer perceptron, MLP; Feature Tokenizer + Transformer, FT-Transformer), each with and without class weighting, on the earliest period, selects thresholds and review rules on later validation periods, and evaluates them **once** on a sealed final period. The contribution is an integrated, pre-specified evaluation of this full path ([research contribution](docs/research-foundation.md#research-contribution); full design in the [research protocol](docs/protocol.md)). Its most distinctive component is a test of whether a score threshold chosen on validation data still produces its intended alert rate on later data (research question RQ2, hypothesis H3). The study also compares the tree-based and neural families and class weighting at fixed capacity (RQ1, hypotheses H1 and H2) and asks when a calibrated cost-aware rule is cheaper than always filling the review budget (RQ3).
 
+## Research architecture
+
+The path from the data to the confirmatory evidence, at a high level. Each stage is specified in its owner document: the [protocol](docs/protocol.md) and the [Decision Records](docs/decisions/README.md) (DR) for the design (the partitions in [DR-001](docs/decisions/DR-001-temporal-split-strategy.md), the models in [DR-011](docs/decisions/DR-011-model-set-tree-based-and-neural-families.md), review capacity in [DR-002](docs/decisions/DR-002-review-capacity-definition.md)), the [research lifecycle](docs/research-lifecycle.md) for status and gates, and [running the pipeline](docs/running-the-pipeline.md) for the commands.
+
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "12px"}, "flowchart": {"nodeSpacing": 14, "rankSpacing": 22, "padding": 6, "htmlLabels": true}}}%%
+flowchart TD
+    A["IEEE-CIS labelled transactions<br>(raw files stay local)<br>temporal split by relative day"] --> C["Train<br>model fitting"]
+    A --> D["Validation 1 (V1)<br>tuning, early stopping"]
+    A --> E["Validation 2 (V2)<br>calibration, thresholds,<br>budgets, H3 choice"]
+    A --> F["Test<br>sealed"]
+    C --> G["Eight model configurations<br>tree-based and neural,<br>unweighted and class-weighted"]
+    D --> G
+    G --> H["Development on V2<br>calibrated scores, decision policies,<br>daily budgets, H3 configuration"]
+    E --> H
+    H --> I{{"Protocol freeze<br>tag protocol-freeze-v1<br>frozen models and decision artifacts"}}
+    I --> J["One confirmatory Test evaluation<br>scoring, then evaluation"]
+    F --> J
+    J --> K["Outcomes: H1, H2, H3,<br>RQ3 cost analysis, false-negative slices<br>aggregate evidence"]
+```
+
+Test labels are accessed only during the authorised confirmatory evaluation after the freeze; Test results do not inform model selection, thresholds, policies or hypotheses.
+
 ## Research questions and hypotheses
 
 Stated in full, with their estimands and tests, in the [research protocol](docs/protocol.md). In brief:

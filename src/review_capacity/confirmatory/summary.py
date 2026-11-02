@@ -1,9 +1,11 @@
 """The Markdown summary of a closed confirmatory run (Issue #209; DR-006, DR-007, DR-015 §9).
 
 ``render_summary`` is a pure function of the run's JSON records: the same records give the same
-bytes, and every number in a table is the exact JSON literal of a record field (a compact code
-span, as in the development summary). A table only selects and arranges record values; nothing
-new is computed. The sections are, in order: the run and its attempts; the primary confirmatory
+bytes. A table cell is the exact JSON literal of a record field (a compact code span, as in the
+development summary), or a deterministic comparison or arithmetic on recorded fields, which is
+built in ``report_tables`` (Issue #217). No statistic is estimated here.
+
+The sections are, in order: the run and its attempts; the primary confirmatory
 results (H1, H2, H3, the Holm decision); the sensitivities (S1, S2, the SESOI views, McNemar);
 the secondary outcomes of every configuration and the reference; RQ2; the calibration
 diagnostics; RQ3; the false-negative slices (the H3 configuration first); the Test scoring times;
@@ -1037,8 +1039,9 @@ def render_summary(run: LoadedRun) -> str:
     lines = [
         f"# Confirmatory run {run.identity['run_id']}",
         "",
-        "Generated from the JSON records of this run directory; not edited by hand. Every number "
-        "is the exact literal of a record field.",
+        "Generated from the saved JSON (JavaScript Object Notation) records of this run directory; "
+        "not edited by hand. Values are recorded fields, or deterministic comparisons and "
+        "arithmetic derived from recorded fields.",
         "",
         *_run_section(run, records),
     ]
