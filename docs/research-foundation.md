@@ -18,7 +18,7 @@ In operational settings, review resources are limited. Therefore, a useful fraud
 
 Temporal change can alter score distributions, fraud prevalence, feature distributions, and realised alert volume. This creates a research problem at the boundary between predictive ranking and operational decision policy.
 
-In the IEEE-CIS (IEEE Computational Intelligence Society) Fraud Detection development data, fraud prevalence is about 3.5 %, an imbalance ratio (legitimate : fraud) of about 28 : 1. This is described as **imbalanced / low-prevalence**, not "severely" imbalanced: that label is conventionally reserved for ratios of about 100 : 1 and above [REF-002, REF-001]. The practical difficulty comes from low prevalence combined with temporal drift and a review budget that, at 2 % capacity, is smaller than the daily number of frauds ([DR-002](decisions/DR-002-review-capacity-definition.md)).
+In the IEEE-CIS (IEEE Computational Intelligence Society) Fraud Detection development data, fraud prevalence is about 3.5 %, an imbalance ratio (legitimate : fraud) of about 28 : 1 **[D]** ([dataset documentation](dataset.md)). This is described as **imbalanced / low-prevalence**, not "severely" imbalanced: that label is conventionally reserved for ratios of about 100 : 1 and above [REF-002, REF-001]. The practical difficulty comes from low prevalence combined with temporal drift and a review budget that, at 2 % capacity, is smaller than the daily number of frauds ([DR-002](decisions/DR-002-review-capacity-definition.md)).
 
 ### Operational setting
 

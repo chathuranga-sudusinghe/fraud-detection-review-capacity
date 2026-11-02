@@ -40,7 +40,7 @@ REVIEW_CAPACITY_INTEGRATION=1 uv run --no-sync pytest tests/integration/test_log
 REVIEW_CAPACITY_INTEGRATION=1 uv run --no-sync pytest tests/integration/test_gpu_memory_handoff.py
 ```
 
-**GPU child-process check** (Issue #175). The fresh-process refit of the analysis starts a child that does not inherit the parent's allocator cap, and the parent's cached GPU memory stays in use on the device until the parent releases it. The check sizes its requests from the device memory that no process uses (read device-wide with `nvidia-smi`, because under WSL2 a process's own reading does not see another's cache) and skips when too little is left, so it does not ask for anything near the physical limit: a synthetic child applies the allocator cap with a small allowed size and must be refused by its own allocator beyond it, at once; and the device-wide memory in use (`nvidia-smi`) must still count the parent's cache after its tensors are freed and no longer count it after `release_gpu_memory`. It reads no data and writes nothing:
+**GPU child-process check** (Issue #175). The fresh-process refit of the analysis starts a child that does not inherit the parent's allocator cap, and the parent's cached GPU memory stays in use on the device until the parent releases it. The check sizes its requests from the device memory that no process uses (read device-wide with `nvidia-smi`, because under Windows Subsystem for Linux 2 (WSL2) a process's own reading does not see another's cache) and skips when too little is left, so it does not ask for anything near the physical limit: a synthetic child applies the allocator cap with a small allowed size and must be refused by its own allocator beyond it, at once; and the device-wide memory in use (`nvidia-smi`) must still count the parent's cache after its tensors are freed and no longer count it after `release_gpu_memory`. It reads no data and writes nothing:
 
 ```bash
 REVIEW_CAPACITY_INTEGRATION=1 uv run --no-sync pytest tests/integration/test_gpu_child_process.py
@@ -169,6 +169,7 @@ The started, scoring and consumption markers are never deleted or edited.
 | H1, H2 | Hypotheses 1 and 2 of the [protocol](protocol.md): the family-effect difference test and the four-model equivalence test |
 | MLP | ResNet-style multilayer perceptron ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md)) |
 | MiB, GiB | Mebibytes and gibibytes of memory (1 GiB = 1,024 MiB) |
+| WSL2 | Windows Subsystem for Linux 2, the Linux environment on Windows in which the runs are made |
 | CPU, GPU | Central processing unit, graphics processing unit |
 | FTT-u, FTT-b | FT-Transformer, unweighted and balanced ([DR-011](decisions/DR-011-model-set-tree-based-and-neural-families.md)) |
 | L-BFGS | Limited-memory Broyden–Fletcher–Goldfarb–Shanno, the optimisation algorithm of the logistic-regression solver (DR-015 §8) |

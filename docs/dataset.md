@@ -42,7 +42,7 @@ The Kaggle competition also provides:
 - `test_identity.csv`
 - `sample_submission.csv`
 
-For this MSc study, the labelled Kaggle training data are used to construct the project's own reproducible chronological train, validation and final test partitions. The original Kaggle competition test set does not contain the `isFraud` labels and therefore cannot serve as the primary labelled holdout for the dissertation's statistical evaluation.
+For this Master of Science (MSc) study, the labelled Kaggle training data are used to construct the project's own reproducible chronological train, validation and final test partitions. The original Kaggle competition test set does not contain the `isFraud` labels and therefore cannot serve as the primary labelled holdout for the dissertation's statistical evaluation.
 
 ## Key Dataset Characteristics
 
@@ -156,9 +156,9 @@ No separate copy of the Test rows is made: they stay only in the raw files, whos
 **How the code enforces the rule.**
 
 - **Verified reader.** Before it returns any data, the reader checks each processed file against its provenance record: SHA-256, rows, columns, the raw-file checksums declared in `config/dataset.yaml`, the fingerprint of the feature declaration (a SHA-256 over the column roles the build uses, taken from the loaded `config/features.yaml`: the key, time and target names, the excluded, categorical, numeric-coded, numeric and derived inputs and the missing label; a file built under another declaration is rejected as stale, a change that cannot alter a stored value, such as a comment, a library-handling block or a prose reason, does not invalidate it, and a record without a fingerprint is rejected until it is migrated), the declared columns and their storage types, and the [DR-001](decisions/DR-001-temporal-split-strategy.md) anchors recomputed from the file's identifier and time columns before any label is read.
-- **One raw-data module.** Only the module that reads the raw files can open them, and only the data-preparation stage and its validation contract use it; an automated test enforces this boundary.
+- **One raw-data module.** Only the module that reads the raw files can open them. The data-preparation stage and its validation contract use it, and so do the Test-feature reader and the evaluation phase of the single confirmatory evaluation (`confirmatory.inputs`, `confirmatory.evaluation`), the only code that reaches the Test labels, after the protocol freeze and the explicit approval of the run; an automated test enforces this boundary.
 - **Built once.** The data-preparation stage refuses to write over processed files that already exist.
-- **Development labels only.** Labels are parsed only up to the last development row ([Dataset Manifest](#dataset-manifest)).
+- **Development labels only in preparation.** The data-preparation stage parses labels only up to the last development row ([Dataset Manifest](#dataset-manifest)).
 
 **Provenance migration (Issue #125).** The records written by the build of 10 October 2026 carry only the whole-file SHA-256 of `config/features.yaml`, so any edit of that file, even one that cannot change a stored value, would have made every processed file stale. `review-capacity migrate-provenance` verifies each processed file with all the checks of the verified reader's file verification (SHA-256, rows, columns, storage types, raw-source hashes and the DR-001 anchors; for a record that has no fingerprint yet, the recorded whole-file hash must also still equal the current file's, so the migration runs with the declaration the files were built with, before any later edit of it) and writes its record again with the fingerprint, the SHA-256 of the previous record and the code identity of the migration. The data files are not rewritten, so their SHA-256 values and the DR-001 anchors are unchanged by construction; no raw file is read. All files are verified before any record is written, and `--check-only` verifies without writing.
 
@@ -195,6 +195,7 @@ Computation findings in the data-understanding notebooks are corrected in develo
 | Parquet | Column-oriented file format used for the local processed files |
 | Provenance record | `*.provenance.json` file describing how a processed file was produced |
 | GPU | Graphics processing unit |
+| MSc | Master of Science |
 | IEEE-CIS | IEEE Computational Intelligence Society |
 | [D] | Evidence tag: observed dataset evidence |
 | [I] | Evidence tag: inference or recommendation |

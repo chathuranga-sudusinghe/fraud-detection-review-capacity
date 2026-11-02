@@ -8,7 +8,7 @@ This file defines the confirmatory research design. It builds on the dataset fea
 
 Every design item listed under [Design items before protocol freeze](#design-items-before-protocol-freeze) is resolved, and the protocol is tagged in Git as `protocol-freeze-v1`; from that commit it is confirmatory. A change to it follows the supersession process of the [Decision Records](decisions/README.md#record-maintenance-policy).
 
-**Test-set status:** the final Test period (relative days 155–182) is **sealed**. Its labels have not been used for any analysis.
+**Test-set status:** the final Test period (relative days 155–182) was **sealed** until the single confirmatory evaluation of 1 November 2026 (run `2026-11-01T104408Z`, tag `protocol-freeze-v1`). Its labels were not used for any analysis before that evaluation, and have been used only there.
 
 Citations use Reference IDs from [`docs/references.md`](references.md).
 
