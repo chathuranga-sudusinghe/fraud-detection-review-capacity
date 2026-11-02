@@ -1,0 +1,62 @@
+{
+  "record": "test_scores",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-11-01T104408Z",
+    "run_type": "confirmatory",
+    "evaluator": {
+      "code_commit": "9997da7a292c266908e97c5458d10912fbd81d74",
+      "uncommitted_changes": false,
+      "source_sha256": "e4c4343ed3a28cd2744ca08ef7baf0a33224b1e7d353c12197f8de86a8284fee"
+    },
+    "freeze": {
+      "tag": "protocol-freeze-v1",
+      "tag_commit": "9997da7a292c266908e97c5458d10912fbd81d74"
+    },
+    "training": {
+      "run_id": "2026-10-25T134341Z",
+      "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+      "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be"
+    },
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "training_declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "evaluation_declaration_sha256": "7e3233f8acdf1d0ff55e8b5da1bbb7f31f0f82856d19876e6b4bf834608bef0d",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0,
+      "resampling": 42
+    },
+    "frozen_state_sha256": "252e81b35cd8355fbdb53cbbf2769f76e917c6bf6040a5d57ad6088d4c09b67e"
+  },
+  "configuration": "LGB-u",
+  "partition": "Test",
+  "days": {
+    "first": 155,
+    "last": 182
+  },
+  "rows": 78542,
+  "model": {
+    "path": "outputs/development/2026-10-25T134341Z/models/LGB-u/trial-05/model.txt",
+    "sha256": "ef48b83b448b72512e435e7de6a9e96290012861927403eff324c7eb933a7731"
+  },
+  "file": {
+    "path": "scores/attempt-01/LGB-u.parquet",
+    "sha256": "2260f47bbaa03fa5bda472d04a1b82acda966c1aac1b2c94764392b1af740f72"
+  },
+  "format": "parquet",
+  "min_score": 3.062045048994841e-06,
+  "max_score": 0.9998299750944358,
+  "distinct_scores": 77754,
+  "device": "cpu",
+  "timing": {
+    "passes": 1,
+    "seconds": 1.5121858540005633,
+    "rows_per_second": 51939.382842534345
+  }
+}

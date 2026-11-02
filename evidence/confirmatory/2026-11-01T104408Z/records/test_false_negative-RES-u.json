@@ -1,0 +1,561 @@
+{
+  "record": "test_false_negative",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-11-01T104408Z",
+    "run_type": "confirmatory",
+    "evaluator": {
+      "code_commit": "9997da7a292c266908e97c5458d10912fbd81d74",
+      "uncommitted_changes": false,
+      "source_sha256": "e4c4343ed3a28cd2744ca08ef7baf0a33224b1e7d353c12197f8de86a8284fee"
+    },
+    "freeze": {
+      "tag": "protocol-freeze-v1",
+      "tag_commit": "9997da7a292c266908e97c5458d10912fbd81d74"
+    },
+    "training": {
+      "run_id": "2026-10-25T134341Z",
+      "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+      "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be"
+    },
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "training_declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "evaluation_declaration_sha256": "7e3233f8acdf1d0ff55e8b5da1bbb7f31f0f82856d19876e6b4bf834608bef0d",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0,
+      "resampling": 42
+    },
+    "frozen_state_sha256": "252e81b35cd8355fbdb53cbbf2769f76e917c6bf6040a5d57ad6088d4c09b67e"
+  },
+  "configuration": "RES-u",
+  "partition": "Test",
+  "days": {
+    "first": 155,
+    "last": 182
+  },
+  "scores_sha256": "2f029ebb1d28c01022130c263ee9180072c04989151c58cb5e288f25f7a5388e",
+  "capacity": 0.02,
+  "k": 56,
+  "frauds": 2774,
+  "false_negatives": 1961,
+  "boundaries": {
+    "amount_edges": [
+      35.95,
+      57.95,
+      100.0,
+      160.5
+    ],
+    "kept": {
+      "ProductCD": {
+        "W": 1329,
+        "C": 965,
+        "R": 121,
+        "H": 120,
+        "S": 102
+      },
+      "card4": {
+        "visa": 1693,
+        "mastercard": 796,
+        "discover": 119
+      },
+      "card6": {
+        "debit": 1442,
+        "credit": 1195
+      },
+      "DeviceType": {
+        "__MISSING__": 1372,
+        "desktop": 719,
+        "mobile": 546
+      }
+    }
+  },
+  "slices": [
+    {
+      "variable": "identity",
+      "level": "absent",
+      "frauds": 1191,
+      "misses": 1027,
+      "miss_rate": 0.8623005877413937,
+      "share": 0.52371239163692,
+      "status": "interval",
+      "interval": {
+        "lower": 0.7987197990813484,
+        "upper": 0.9173714023270054,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "identity",
+      "level": "present",
+      "frauds": 1583,
+      "misses": 934,
+      "miss_rate": 0.5900189513581807,
+      "share": 0.47628760836308004,
+      "status": "interval",
+      "interval": {
+        "lower": 0.5202780780456167,
+        "upper": 0.6572038309468156,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "ProductCD",
+      "level": "W",
+      "frauds": 1167,
+      "misses": 1011,
+      "miss_rate": 0.8663239074550129,
+      "share": 0.5155532891381948,
+      "status": "interval",
+      "interval": {
+        "lower": 0.8014180254523763,
+        "upper": 0.9217160125580803,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "ProductCD",
+      "level": "C",
+      "frauds": 1149,
+      "misses": 671,
+      "miss_rate": 0.5839860748476936,
+      "share": 0.3421723610402856,
+      "status": "interval",
+      "interval": {
+        "lower": 0.5007419172143849,
+        "upper": 0.6641094472970072,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "ProductCD",
+      "level": "R",
+      "frauds": 197,
+      "misses": 94,
+      "miss_rate": 0.47715736040609136,
+      "share": 0.0479347271800102,
+      "status": "interval",
+      "interval": {
+        "lower": 0.324020379258793,
+        "upper": 0.6280487804878049,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "ProductCD",
+      "level": "H",
+      "frauds": 136,
+      "misses": 115,
+      "miss_rate": 0.8455882352941176,
+      "share": 0.05864354920958695,
+      "status": "interval",
+      "interval": {
+        "lower": 0.7,
+        "upper": 0.9507071115215885,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "ProductCD",
+      "level": "S",
+      "frauds": 125,
+      "misses": 70,
+      "miss_rate": 0.56,
+      "share": 0.035696073431922486,
+      "status": "interval",
+      "interval": {
+        "lower": 0.269836811128946,
+        "upper": 0.8757427055702918,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "ProductCD",
+      "level": "other",
+      "frauds": 0,
+      "misses": 0,
+      "miss_rate": null,
+      "share": 0.0,
+      "status": "fewer_than_minimum_frauds",
+      "interval": null
+    },
+    {
+      "variable": "card4",
+      "level": "visa",
+      "frauds": 1843,
+      "misses": 1336,
+      "miss_rate": 0.7249050461204558,
+      "share": 0.6812850586435492,
+      "status": "interval",
+      "interval": {
+        "lower": 0.6662652460454812,
+        "upper": 0.783033676227916,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "card4",
+      "level": "mastercard",
+      "frauds": 826,
+      "misses": 552,
+      "miss_rate": 0.6682808716707022,
+      "share": 0.28148903620601734,
+      "status": "interval",
+      "interval": {
+        "lower": 0.5836788175754415,
+        "upper": 0.7457661850514031,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "card4",
+      "level": "discover",
+      "frauds": 74,
+      "misses": 52,
+      "miss_rate": 0.7027027027027027,
+      "share": 0.026517083120856707,
+      "status": "fewer_than_minimum_frauds",
+      "interval": null
+    },
+    {
+      "variable": "card4",
+      "level": "other",
+      "frauds": 31,
+      "misses": 21,
+      "miss_rate": 0.6774193548387096,
+      "share": 0.010708822029576747,
+      "status": "fewer_than_minimum_frauds",
+      "interval": null
+    },
+    {
+      "variable": "card6",
+      "level": "debit",
+      "frauds": 1553,
+      "misses": 1158,
+      "miss_rate": 0.7456535737282679,
+      "share": 0.590515043345232,
+      "status": "interval",
+      "interval": {
+        "lower": 0.6802523985213053,
+        "upper": 0.8062941828616147,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "card6",
+      "level": "credit",
+      "frauds": 1206,
+      "misses": 794,
+      "miss_rate": 0.6583747927031509,
+      "share": 0.4048954614992351,
+      "status": "interval",
+      "interval": {
+        "lower": 0.5828560538560539,
+        "upper": 0.7317083896432631,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "card6",
+      "level": "other",
+      "frauds": 15,
+      "misses": 9,
+      "miss_rate": 0.6,
+      "share": 0.004589495155532891,
+      "status": "fewer_than_minimum_frauds",
+      "interval": null
+    },
+    {
+      "variable": "DeviceType",
+      "level": "__MISSING__",
+      "frauds": 1223,
+      "misses": 1053,
+      "miss_rate": 0.8609975470155355,
+      "share": 0.5369709331973483,
+      "status": "interval",
+      "interval": {
+        "lower": 0.7981817805850064,
+        "upper": 0.9153851291184327,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "DeviceType",
+      "level": "desktop",
+      "frauds": 678,
+      "misses": 368,
+      "miss_rate": 0.5427728613569321,
+      "share": 0.18765935747067822,
+      "status": "interval",
+      "interval": {
+        "lower": 0.44691921228618475,
+        "upper": 0.6338267475425182,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "DeviceType",
+      "level": "mobile",
+      "frauds": 873,
+      "misses": 540,
+      "miss_rate": 0.6185567010309279,
+      "share": 0.27536970933197347,
+      "status": "interval",
+      "interval": {
+        "lower": 0.522270764861821,
+        "upper": 0.7102821750586685,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "DeviceType",
+      "level": "other",
+      "frauds": 0,
+      "misses": 0,
+      "miss_rate": null,
+      "share": 0.0,
+      "status": "fewer_than_minimum_frauds",
+      "interval": null
+    },
+    {
+      "variable": "amount_band",
+      "level": "band 1",
+      "frauds": 773,
+      "misses": 465,
+      "miss_rate": 0.6015523932729625,
+      "share": 0.23712391636919938,
+      "status": "interval",
+      "interval": {
+        "lower": 0.5079570333880679,
+        "upper": 0.6939556779774405,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "amount_band",
+      "level": "band 2",
+      "frauds": 396,
+      "misses": 289,
+      "miss_rate": 0.7297979797979798,
+      "share": 0.14737378888322283,
+      "status": "interval",
+      "interval": {
+        "lower": 0.5995145631067961,
+        "upper": 0.8533341346153847,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "amount_band",
+      "level": "band 3",
+      "frauds": 496,
+      "misses": 363,
+      "miss_rate": 0.7318548387096774,
+      "share": 0.18510963793982663,
+      "status": "interval",
+      "interval": {
+        "lower": 0.6349612974042814,
+        "upper": 0.8210358353583536,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "amount_band",
+      "level": "band 4",
+      "frauds": 473,
+      "misses": 358,
+      "miss_rate": 0.7568710359408034,
+      "share": 0.182559918408975,
+      "status": "interval",
+      "interval": {
+        "lower": 0.6548025847536992,
+        "upper": 0.8441871645796064,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "amount_band",
+      "level": "band 5",
+      "frauds": 636,
+      "misses": 486,
+      "miss_rate": 0.7641509433962265,
+      "share": 0.24783273839877615,
+      "status": "interval",
+      "interval": {
+        "lower": 0.6818150769995032,
+        "upper": 0.8381983526041134,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "week",
+      "level": "155-161",
+      "frauds": 565,
+      "misses": 378,
+      "miss_rate": 0.6690265486725664,
+      "share": 0.19275879653238143,
+      "status": "interval",
+      "interval": {
+        "lower": 0.590006342284033,
+        "upper": 0.7461449455173158,
+        "level": 0.95,
+        "undefined": 6,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "week",
+      "level": "162-168",
+      "frauds": 729,
+      "misses": 529,
+      "miss_rate": 0.7256515775034293,
+      "share": 0.26976032636409997,
+      "status": "interval",
+      "interval": {
+        "lower": 0.6376659905693086,
+        "upper": 0.8047781146277082,
+        "level": 0.95,
+        "undefined": 4,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "week",
+      "level": "169-175",
+      "frauds": 733,
+      "misses": 553,
+      "miss_rate": 0.7544338335607094,
+      "share": 0.28199898011218766,
+      "status": "interval",
+      "interval": {
+        "lower": 0.6456084170067221,
+        "upper": 0.8805233487479924,
+        "level": 0.95,
+        "undefined": 1,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "week",
+      "level": "176-182",
+      "frauds": 747,
+      "misses": 501,
+      "miss_rate": 0.6706827309236948,
+      "share": 0.25548189699133095,
+      "status": "interval",
+      "interval": {
+        "lower": 0.5773478812868358,
+        "upper": 0.7475235644673164,
+        "level": 0.95,
+        "undefined": 4,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "entity",
+      "level": "new",
+      "frauds": 2488,
+      "misses": 1810,
+      "miss_rate": 0.727491961414791,
+      "share": 0.9229984701682815,
+      "status": "interval",
+      "interval": {
+        "lower": 0.6783109249069542,
+        "upper": 0.7763311929137915,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "entity",
+      "level": "recurring",
+      "frauds": 286,
+      "misses": 151,
+      "miss_rate": 0.527972027972028,
+      "share": 0.07700152983171851,
+      "status": "interval",
+      "interval": {
+        "lower": 0.3770048170783465,
+        "upper": 0.6905835790203899,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    {
+      "variable": "score_band",
+      "level": "K+1 to 2K",
+      "frauds": 297,
+      "misses": 297,
+      "miss_rate": null,
+      "share": 0.1514533401325854,
+      "status": "not_applicable",
+      "interval": null
+    },
+    {
+      "variable": "score_band",
+      "level": "2K+1 to 5K",
+      "frauds": 373,
+      "misses": 373,
+      "miss_rate": null,
+      "share": 0.19020907700152984,
+      "status": "not_applicable",
+      "interval": null
+    },
+    {
+      "variable": "score_band",
+      "level": "above 5K",
+      "frauds": 1291,
+      "misses": 1291,
+      "miss_rate": null,
+      "share": 0.6583375828658847,
+      "status": "not_applicable",
+      "interval": null
+    }
+  ]
+}

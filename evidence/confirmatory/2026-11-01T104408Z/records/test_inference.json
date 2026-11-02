@@ -1,0 +1,923 @@
+{
+  "record": "test_inference",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-11-01T104408Z",
+    "run_type": "confirmatory",
+    "evaluator": {
+      "code_commit": "9997da7a292c266908e97c5458d10912fbd81d74",
+      "uncommitted_changes": false,
+      "source_sha256": "e4c4343ed3a28cd2744ca08ef7baf0a33224b1e7d353c12197f8de86a8284fee"
+    },
+    "freeze": {
+      "tag": "protocol-freeze-v1",
+      "tag_commit": "9997da7a292c266908e97c5458d10912fbd81d74"
+    },
+    "training": {
+      "run_id": "2026-10-25T134341Z",
+      "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+      "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be"
+    },
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "training_declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "evaluation_declaration_sha256": "7e3233f8acdf1d0ff55e8b5da1bbb7f31f0f82856d19876e6b4bf834608bef0d",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0,
+      "resampling": 42
+    },
+    "frozen_state_sha256": "252e81b35cd8355fbdb53cbbf2769f76e917c6bf6040a5d57ad6088d4c09b67e"
+  },
+  "resampling": {
+    "replicates": 10000,
+    "root_seed": 42,
+    "block_length": 3,
+    "block_length_sensitivity": [
+      1,
+      7
+    ]
+  },
+  "undefined_replicates": {
+    "pigeonhole_h1_h2": 0,
+    "naive_s1": 0,
+    "day_block_s2": 0,
+    "day_block_h3": 0
+  },
+  "h1": {
+    "estimate": -0.06506849315068491,
+    "p": {
+      "value": 0.00019998000199980003,
+      "mc_se": 0.00019998000199980003
+    },
+    "interval": {
+      "lower": -0.08318160133759174,
+      "upper": -0.0474739179706843,
+      "level": 0.9,
+      "undefined": 0,
+      "replicates": 10000
+    },
+    "position": "beyond",
+    "difference_interval": {
+      "lower": -0.08697107285479379,
+      "upper": -0.04385219546928115,
+      "level": 0.95,
+      "undefined": 0,
+      "replicates": 10000
+    },
+    "within_family": [
+      {
+        "name": "within:Cat-LGB",
+        "estimate": -0.008651766402307137,
+        "interval": {
+          "lower": -0.02834569402014841,
+          "upper": 0.011098986276476827,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "within:FTT-RES",
+        "estimate": 0.03208363374188894,
+        "interval": {
+          "lower": -0.00019122518330868672,
+          "upper": 0.06475375849118796,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      }
+    ],
+    "interaction": {
+      "name": "interaction",
+      "estimate": 0.012256669069935111,
+      "interval": {
+        "lower": -0.01449372350153792,
+        "upper": 0.0396679229556071,
+        "level": 0.95,
+        "undefined": 0,
+        "replicates": 10000
+      }
+    },
+    "interaction_splits": false,
+    "by_weighting": [
+      {
+        "name": "family:u",
+        "estimate": -0.0711968276856525,
+        "interval": {
+          "lower": -0.1003063139862632,
+          "upper": -0.04413999013234267,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "family:b",
+        "estimate": -0.058940158615717386,
+        "interval": {
+          "lower": -0.08179751405058702,
+          "upper": -0.036764639303747584,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      }
+    ],
+    "cells": [
+      {
+        "name": "cell:LGB-b-LGB-u",
+        "estimate": 0.007209805335255948,
+        "interval": {
+          "lower": -0.011319778553366432,
+          "upper": 0.02635976731986703,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "cell:Cat-b-Cat-u",
+        "estimate": -0.02595529920692141,
+        "interval": {
+          "lower": -0.05106905574709808,
+          "upper": -0.002256205372813476,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "cell:RES-b-RES-u",
+        "estimate": 0.006488824801730353,
+        "interval": {
+          "lower": -0.030764478828092634,
+          "upper": 0.04637255584943434,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "cell:FTT-b-FTT-u",
+        "estimate": -0.0007209805335255948,
+        "interval": {
+          "lower": -0.026785714285714246,
+          "upper": 0.026527901986218745,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "cell:Cat-u-LGB-u",
+        "estimate": 0.007930785868781542,
+        "interval": {
+          "lower": -0.01454602213603252,
+          "upper": 0.031025158045914013,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "cell:Cat-b-LGB-b",
+        "estimate": -0.025234318673395817,
+        "interval": {
+          "lower": -0.05288877784460086,
+          "upper": 0.0019267553618907106,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "cell:FTT-u-RES-u",
+        "estimate": 0.03568853640951691,
+        "interval": {
+          "lower": -0.005583715127497705,
+          "upper": 0.08140617639698516,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "name": "cell:FTT-b-RES-b",
+        "estimate": 0.028478731074260966,
+        "interval": {
+          "lower": -0.00979415105507048,
+          "upper": 0.06512676885008861,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      }
+    ]
+  },
+  "h2": {
+    "models": [
+      {
+        "model": "LGB",
+        "estimate": 0.007209805335255948,
+        "p_lower": {
+          "value": 0.0032996700329967,
+          "mc_se": 0.0005734790502424692
+        },
+        "p_upper": {
+          "value": 0.0851914808519148,
+          "mc_se": 0.0027916642427443282
+        },
+        "interval": {
+          "lower": -0.008400599212299107,
+          "upper": 0.02293233082706764,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "crossing",
+        "difference_interval": {
+          "lower": -0.011319778553366432,
+          "upper": 0.02635976731986703,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "model": "Cat",
+        "estimate": -0.02595529920692141,
+        "p_lower": {
+          "value": 0.6874312568743126,
+          "mc_se": 0.004635402074755926
+        },
+        "p_upper": {
+          "value": 0.00029997000299970003,
+          "mc_se": 0.00017317044233846617
+        },
+        "interval": {
+          "lower": -0.04668158927690972,
+          "upper": -0.006165612455480744,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "crossing",
+        "difference_interval": {
+          "lower": -0.05106905574709808,
+          "upper": -0.002256205372813476,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "model": "RES",
+        "estimate": 0.006488824801730353,
+        "p_lower": {
+          "value": 0.08339166083391661,
+          "mc_se": 0.002764733110759113
+        },
+        "p_upper": {
+          "value": 0.2450754924507549,
+          "mc_se": 0.004301319512088992
+        },
+        "interval": {
+          "lower": -0.024598603284978583,
+          "upper": 0.03962941094172018,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "crossing",
+        "difference_interval": {
+          "lower": -0.030764478828092634,
+          "upper": 0.04637255584943434,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      },
+      {
+        "model": "FTT",
+        "estimate": -0.0007209805335255948,
+        "p_lower": {
+          "value": 0.0710928907109289,
+          "mc_se": 0.0025697994396702015
+        },
+        "p_upper": {
+          "value": 0.06429357064293571,
+          "mc_se": 0.0024527516673507237
+        },
+        "interval": {
+          "lower": -0.02267514283223851,
+          "upper": 0.021844799741001078,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "crossing",
+        "difference_interval": {
+          "lower": -0.026785714285714246,
+          "upper": 0.026527901986218745,
+          "level": 0.95,
+          "undefined": 0,
+          "replicates": 10000
+        }
+      }
+    ],
+    "p": {
+      "value": 0.6874312568743126,
+      "mc_se": 0.004635402074755926
+    }
+  },
+  "h3": {
+    "configuration": "LGB-b",
+    "rate": 0.021364365562374272,
+    "primary": {
+      "block_length": 3,
+      "p_lower": {
+        "value": 0.00029997000299970003,
+        "mc_se": 0.00017317044233846617
+      },
+      "p_upper": {
+        "value": 0.014198580141985802,
+        "mc_se": 0.001183088351051493
+      },
+      "p": {
+        "value": 0.014198580141985802,
+        "mc_se": 0.001183088351051493
+      },
+      "interval": {
+        "lower": 0.01885881535754523,
+        "upper": 0.02332113803636083,
+        "level": 0.9,
+        "undefined": 0,
+        "replicates": 10000
+      },
+      "position": "inside"
+    },
+    "sensitivity": [
+      {
+        "block_length": 1,
+        "p_lower": {
+          "value": 9.999000099990002e-05,
+          "mc_se": 9.999000099990002e-05
+        },
+        "p_upper": {
+          "value": 0.010498950104989501,
+          "mc_se": 0.001019250810727293
+        },
+        "p": {
+          "value": 0.010498950104989501,
+          "mc_se": 0.001019250810727293
+        },
+        "interval": {
+          "lower": 0.019541233053754804,
+          "upper": 0.023242898564572522,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "inside"
+      },
+      {
+        "block_length": 7,
+        "p_lower": {
+          "value": 9.999000099990002e-05,
+          "mc_se": 9.999000099990002e-05
+        },
+        "p_upper": {
+          "value": 0.0081991800819918,
+          "mc_se": 0.0009017734487095342
+        },
+        "p": {
+          "value": 0.0081991800819918,
+          "mc_se": 0.0009017734487095342
+        },
+        "interval": {
+          "lower": 0.019622818147103385,
+          "upper": 0.02317356747128343,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "inside"
+      }
+    ],
+    "tolerances": [
+      {
+        "tolerance": 0.1,
+        "lower": 0.018000000000000002,
+        "upper": 0.022000000000000002,
+        "position": "crossing"
+      },
+      {
+        "tolerance": 0.25,
+        "lower": 0.015,
+        "upper": 0.025,
+        "position": "inside"
+      },
+      {
+        "tolerance": 0.5,
+        "lower": 0.01,
+        "upper": 0.03,
+        "position": "inside"
+      }
+    ],
+    "smallest_tolerance": 0.16605690181804145,
+    "others": [
+      {
+        "configuration": "LGB-u",
+        "rate": 0.02099513636016399,
+        "interval": {
+          "lower": 0.018656568144081363,
+          "upper": 0.022793266769064877,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "inside"
+      },
+      {
+        "configuration": "Cat-u",
+        "rate": 0.022497517251916174,
+        "interval": {
+          "lower": 0.020005190219808934,
+          "upper": 0.024519914411912713,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "crossing"
+      },
+      {
+        "configuration": "RES-u",
+        "rate": 0.03022586641542105,
+        "interval": {
+          "lower": 0.023503077369868428,
+          "upper": 0.04057891098428832,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "crossing"
+      },
+      {
+        "configuration": "FTT-u",
+        "rate": 0.021593542308573757,
+        "interval": {
+          "lower": 0.019416277788502183,
+          "upper": 0.023494034100047755,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "inside"
+      },
+      {
+        "configuration": "Cat-b",
+        "rate": 0.021644470474395865,
+        "interval": {
+          "lower": 0.020011863137074735,
+          "upper": 0.023569892184006482,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "inside"
+      },
+      {
+        "configuration": "RES-b",
+        "rate": 0.022026431718061675,
+        "interval": {
+          "lower": 0.019963376152189145,
+          "upper": 0.02411020788756249,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "crossing"
+      },
+      {
+        "configuration": "FTT-b",
+        "rate": 0.023656133024369128,
+        "interval": {
+          "lower": 0.021615610115360187,
+          "upper": 0.025292137415377305,
+          "level": 0.9,
+          "undefined": 0,
+          "replicates": 10000
+        },
+        "position": "crossing"
+      }
+    ]
+  },
+  "holm": {
+    "adjusted": [
+      0.0005999400059994001,
+      0.6874312568743126,
+      0.028397160283971604
+    ],
+    "rejected": [
+      true,
+      false,
+      true
+    ]
+  },
+  "decisions": {
+    "h1_rejected": true,
+    "h2_equivalent": false,
+    "h3_preserved": true,
+    "h1_category": "difference of practically meaningful size"
+  },
+  "s1": {
+    "quantities": [
+      {
+        "name": "family",
+        "estimate": -0.06506849315068491,
+        "v_pigeonhole": 0.00011871884767389136,
+        "v_naive": 2.075405957081458e-05,
+        "se": 0.008786963555874248
+      },
+      {
+        "name": "weighting:LGB",
+        "estimate": 0.007209805335255948,
+        "v_pigeonhole": 9.266052121529867e-05,
+        "v_naive": 2.205537091713474e-05,
+        "se": 0.006967767173279342
+      },
+      {
+        "name": "weighting:Cat",
+        "estimate": -0.02595529920692141,
+        "v_pigeonhole": 0.00015191860261030854,
+        "v_naive": 4.190082715166679e-05,
+        "se": 0.008253299237697308
+      },
+      {
+        "name": "weighting:RES",
+        "estimate": 0.006488824801730353,
+        "v_pigeonhole": 0.00038563271993056325,
+        "v_naive": 4.7065657115127784e-05,
+        "se": 0.017073412245368753
+      },
+      {
+        "name": "weighting:FTT",
+        "estimate": -0.0007209805335255948,
+        "v_pigeonhole": 0.0001828024412808933,
+        "v_naive": 3.818549689958539e-05,
+        "se": 0.010316561805258695
+      }
+    ],
+    "p_h1": 1.3103489593974006e-13,
+    "interval_h1": {
+      "lower": -0.07952176202545508,
+      "upper": -0.05061522427591475,
+      "level": 0.9,
+      "undefined": 0,
+      "replicates": 0
+    },
+    "position_h1": "beyond",
+    "p_h2": 0.7647192914780963,
+    "intervals_h2": [
+      {
+        "lower": -0.004251151771465985,
+        "upper": 0.01867076244197788,
+        "level": 0.9,
+        "undefined": 0,
+        "replicates": 0
+      },
+      {
+        "lower": -0.03953076839236365,
+        "upper": -0.012379830021479174,
+        "level": 0.9,
+        "undefined": 0,
+        "replicates": 0
+      },
+      {
+        "lower": -0.021594439254502117,
+        "upper": 0.03457208885796283,
+        "level": 0.9,
+        "undefined": 0,
+        "replicates": 0
+      },
+      {
+        "lower": -0.017690214636574386,
+        "upper": 0.016248253569523197,
+        "level": 0.9,
+        "undefined": 0,
+        "replicates": 0
+      }
+    ],
+    "comparison": {
+      "p_h1": 1.3103489593974006e-13,
+      "p_h2": 0.7647192914780963,
+      "holm": {
+        "adjusted": [
+          3.931046878192202e-13,
+          0.7647192914780963,
+          0.028397160283971604
+        ],
+        "rejected": [
+          true,
+          false,
+          true
+        ]
+      },
+      "h1_rejected": true,
+      "h2_rejected": false,
+      "h1_category": "difference of practically meaningful size",
+      "differs": false
+    },
+    "reasons": []
+  },
+  "s2": {
+    "p_h1": {
+      "value": 0.00019998000199980003,
+      "mc_se": 0.00019998000199980003
+    },
+    "p_h2": {
+      "value": 0.9713028697130287,
+      "mc_se": 0.0016695390082374203
+    },
+    "h1_interval": {
+      "lower": -0.07801154089806203,
+      "upper": -0.054556431200805784,
+      "level": 0.9,
+      "undefined": 0,
+      "replicates": 10000
+    },
+    "h1_position": "beyond",
+    "comparison": {
+      "p_h1": 0.00019998000199980003,
+      "p_h2": 0.9713028697130287,
+      "holm": {
+        "adjusted": [
+          0.0005999400059994001,
+          0.9713028697130287,
+          0.028397160283971604
+        ],
+        "rejected": [
+          true,
+          false,
+          true
+        ]
+      },
+      "h1_rejected": true,
+      "h2_rejected": false,
+      "h1_category": "difference of practically meaningful size",
+      "differs": false
+    }
+  },
+  "sesoi_views": [
+    {
+      "sesoi": 0.01,
+      "h1_position": "beyond",
+      "h1_category": "difference of practically meaningful size",
+      "h2_positions": [
+        "crossing",
+        "crossing",
+        "crossing",
+        "crossing"
+      ]
+    },
+    {
+      "sesoi": 0.03,
+      "h1_position": "beyond",
+      "h1_category": "difference of practically meaningful size",
+      "h2_positions": [
+        "inside",
+        "crossing",
+        "crossing",
+        "inside"
+      ]
+    },
+    {
+      "sesoi": 0.05,
+      "h1_position": "crossing",
+      "h1_category": "difference of uncertain practical size",
+      "h2_positions": [
+        "inside",
+        "inside",
+        "inside",
+        "inside"
+      ]
+    }
+  ],
+  "mcnemar": [
+    {
+      "first": "LGB-b",
+      "second": "LGB-u",
+      "only_first": 95,
+      "only_second": 75,
+      "p": 0.14483096954373903
+    },
+    {
+      "first": "Cat-b",
+      "second": "Cat-u",
+      "only_first": 124,
+      "only_second": 196,
+      "p": 6.76089212654319e-05
+    },
+    {
+      "first": "RES-b",
+      "second": "RES-u",
+      "only_first": 193,
+      "only_second": 175,
+      "p": 0.3755407854902259
+    },
+    {
+      "first": "FTT-b",
+      "second": "FTT-u",
+      "only_first": 148,
+      "only_second": 150,
+      "p": 0.9538185474056513
+    },
+    {
+      "first": "Cat-u",
+      "second": "LGB-u",
+      "only_first": 145,
+      "only_second": 123,
+      "p": 0.19947967705602676
+    },
+    {
+      "first": "Cat-b",
+      "second": "LGB-b",
+      "only_first": 159,
+      "only_second": 229,
+      "p": 0.0004455492796988992
+    },
+    {
+      "first": "FTT-u",
+      "second": "RES-u",
+      "only_first": 262,
+      "only_second": 163,
+      "p": 1.803989394424926e-06
+    },
+    {
+      "first": "FTT-b",
+      "second": "RES-b",
+      "only_first": 239,
+      "only_second": 160,
+      "p": 8.978141070357746e-05
+    }
+  ],
+  "effect_basis": {
+    "frauds": 2774,
+    "days": 28,
+    "k": 56,
+    "oracle_ceiling": 0.5645277577505408
+  },
+  "effect_units": [
+    {
+      "estimand": "family",
+      "percentage_points": -6.506849315068491,
+      "frauds_per_partition": -180.49999999999994,
+      "frauds_per_day": -6.446428571428569,
+      "precision_at_k_points": -11.51147959183673,
+      "normalised_recall": -0.11526181353767558
+    },
+    {
+      "estimand": "interaction",
+      "percentage_points": 1.225666906993511,
+      "frauds_per_partition": 34.0,
+      "frauds_per_day": 1.2142857142857142,
+      "precision_at_k_points": 2.1683673469387754,
+      "normalised_recall": 0.021711366538952743
+    },
+    {
+      "estimand": "family:u",
+      "percentage_points": -7.11968276856525,
+      "frauds_per_partition": -197.50000000000003,
+      "frauds_per_day": -7.05357142857143,
+      "precision_at_k_points": -12.595663265306126,
+      "normalised_recall": -0.12611749680715198
+    },
+    {
+      "estimand": "family:b",
+      "percentage_points": -5.894015861571739,
+      "frauds_per_partition": -163.50000000000003,
+      "frauds_per_day": -5.839285714285715,
+      "precision_at_k_points": -10.42729591836735,
+      "normalised_recall": -0.10440613026819925
+    },
+    {
+      "estimand": "within:Cat-LGB",
+      "percentage_points": -0.8651766402307137,
+      "frauds_per_partition": -24.0,
+      "frauds_per_day": -0.8571428571428571,
+      "precision_at_k_points": -1.530612244897959,
+      "normalised_recall": -0.01532567049808429
+    },
+    {
+      "estimand": "within:FTT-RES",
+      "percentage_points": 3.208363374188894,
+      "frauds_per_partition": 88.99999999999991,
+      "frauds_per_day": 3.1785714285714257,
+      "precision_at_k_points": 5.67602040816326,
+      "normalised_recall": 0.056832694763729194
+    },
+    {
+      "estimand": "cell:LGB-b-LGB-u",
+      "percentage_points": 0.7209805335255948,
+      "frauds_per_partition": 20.0,
+      "frauds_per_day": 0.7142857142857143,
+      "precision_at_k_points": 1.2755102040816326,
+      "normalised_recall": 0.012771392081736908
+    },
+    {
+      "estimand": "cell:Cat-b-Cat-u",
+      "percentage_points": -2.595529920692141,
+      "frauds_per_partition": -72.0,
+      "frauds_per_day": -2.5714285714285716,
+      "precision_at_k_points": -4.591836734693878,
+      "normalised_recall": -0.045977011494252866
+    },
+    {
+      "estimand": "cell:RES-b-RES-u",
+      "percentage_points": 0.6488824801730353,
+      "frauds_per_partition": 18.0,
+      "frauds_per_day": 0.6428571428571429,
+      "precision_at_k_points": 1.1479591836734695,
+      "normalised_recall": 0.011494252873563216
+    },
+    {
+      "estimand": "cell:FTT-b-FTT-u",
+      "percentage_points": -0.07209805335255948,
+      "frauds_per_partition": -2.0,
+      "frauds_per_day": -0.07142857142857142,
+      "precision_at_k_points": -0.12755102040816327,
+      "normalised_recall": -0.0012771392081736908
+    },
+    {
+      "estimand": "cell:Cat-u-LGB-u",
+      "percentage_points": 0.7930785868781542,
+      "frauds_per_partition": 22.0,
+      "frauds_per_day": 0.7857142857142857,
+      "precision_at_k_points": 1.403061224489796,
+      "normalised_recall": 0.014048531289910599
+    },
+    {
+      "estimand": "cell:Cat-b-LGB-b",
+      "percentage_points": -2.523431867339582,
+      "frauds_per_partition": -70.0,
+      "frauds_per_day": -2.5,
+      "precision_at_k_points": -4.464285714285714,
+      "normalised_recall": -0.044699872286079176
+    },
+    {
+      "estimand": "cell:FTT-u-RES-u",
+      "percentage_points": 3.5688536409516916,
+      "frauds_per_partition": 98.99999999999991,
+      "frauds_per_day": 3.5357142857142825,
+      "precision_at_k_points": 6.313775510204077,
+      "normalised_recall": 0.06321839080459765
+    },
+    {
+      "estimand": "cell:FTT-b-RES-b",
+      "percentage_points": 2.8478731074260963,
+      "frauds_per_partition": 78.99999999999991,
+      "frauds_per_day": 2.8214285714285685,
+      "precision_at_k_points": 5.038265306122443,
+      "normalised_recall": 0.050446998722860736
+    },
+    {
+      "estimand": "weighting:LGB",
+      "percentage_points": 0.7209805335255948,
+      "frauds_per_partition": 20.0,
+      "frauds_per_day": 0.7142857142857143,
+      "precision_at_k_points": 1.2755102040816326,
+      "normalised_recall": 0.012771392081736908
+    },
+    {
+      "estimand": "weighting:Cat",
+      "percentage_points": -2.595529920692141,
+      "frauds_per_partition": -72.0,
+      "frauds_per_day": -2.5714285714285716,
+      "precision_at_k_points": -4.591836734693878,
+      "normalised_recall": -0.045977011494252866
+    },
+    {
+      "estimand": "weighting:RES",
+      "percentage_points": 0.6488824801730353,
+      "frauds_per_partition": 18.0,
+      "frauds_per_day": 0.6428571428571429,
+      "precision_at_k_points": 1.1479591836734695,
+      "normalised_recall": 0.011494252873563216
+    },
+    {
+      "estimand": "weighting:FTT",
+      "percentage_points": -0.07209805335255948,
+      "frauds_per_partition": -2.0,
+      "frauds_per_day": -0.07142857142857142,
+      "precision_at_k_points": -0.12755102040816327,
+      "normalised_recall": -0.0012771392081736908
+    }
+  ]
+}

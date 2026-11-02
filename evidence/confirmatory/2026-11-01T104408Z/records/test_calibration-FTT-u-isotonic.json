@@ -1,0 +1,189 @@
+{
+  "record": "test_calibration",
+  "schema_version": 1,
+  "identity": {
+    "run_id": "2026-11-01T104408Z",
+    "run_type": "confirmatory",
+    "evaluator": {
+      "code_commit": "9997da7a292c266908e97c5458d10912fbd81d74",
+      "uncommitted_changes": false,
+      "source_sha256": "e4c4343ed3a28cd2744ca08ef7baf0a33224b1e7d353c12197f8de86a8284fee"
+    },
+    "freeze": {
+      "tag": "protocol-freeze-v1",
+      "tag_commit": "9997da7a292c266908e97c5458d10912fbd81d74"
+    },
+    "training": {
+      "run_id": "2026-10-25T134341Z",
+      "code_commit": "6e2ff564e7b5a0dc505b7ee9c9465b4449da0092",
+      "source_sha256": "06540fd34ff853bfdc88ca3bc4ac291f656f392683bb6261f513353667abb5be"
+    },
+    "settings_sha256": "84e8b74a49c1d1fc7f56b03df352183da8d7555c4975b8eef6ef5bb67e282d1c",
+    "training_declaration_sha256": "3b206368e3930880fd6a45b13b2c6a21a52cb4b87b8242813191648b9e0ce4f7",
+    "evaluation_declaration_sha256": "7e3233f8acdf1d0ff55e8b5da1bbb7f31f0f82856d19876e6b4bf834608bef0d",
+    "dataset_manifest_sha256": "eb67c7bdca3509c11abba36147a3ed66406db4caa1570035dc62eeb7910bdfeb",
+    "seeds": {
+      "main": 42,
+      "additional": [
+        43,
+        44
+      ],
+      "sampler": 42,
+      "preprocessing": 0,
+      "resampling": 42
+    },
+    "frozen_state_sha256": "252e81b35cd8355fbdb53cbbf2769f76e917c6bf6040a5d57ad6088d4c09b67e"
+  },
+  "configuration": "FTT-u",
+  "method": "isotonic",
+  "role": "sensitivity",
+  "partition": "Test",
+  "days": {
+    "first": 155,
+    "last": 182
+  },
+  "calibrator": {
+    "path": "outputs/analysis/2026-10-29T013124Z/calibrators/FTT-u-isotonic-primary.npz",
+    "sha256": "6a974d2b9fd7b8f67418fa3772e03edd30f596316c86434abb7d299cae8942dc"
+  },
+  "diagnostic": {
+    "rows_used": "held_out",
+    "days": {
+      "first": 155,
+      "last": 182
+    },
+    "rows": 78542,
+    "frauds": 2774,
+    "brier": 0.02595641038578506,
+    "log_loss": 0.11203061578154995,
+    "metric_clipped": 15,
+    "intercept": 0.0014988881222185561,
+    "slope": 0.9631996924623428,
+    "out_of_range": {
+      "below": 1,
+      "above": 1
+    },
+    "reliability": [
+      {
+        "bin": 1,
+        "min_probability": 0.0,
+        "max_probability": 0.010204081632653059,
+        "mean_probability": 0.010202175989917881,
+        "transactions": 16064,
+        "frauds": 223,
+        "observed_rate": 0.013881972111553785
+      },
+      {
+        "bin": 2,
+        "min_probability": 0.010866585472178746,
+        "max_probability": 0.012793948363755959,
+        "mean_probability": 0.012793861695759717,
+        "transactions": 31273,
+        "frauds": 362,
+        "observed_rate": 0.011575480446391456
+      },
+      {
+        "bin": 3,
+        "min_probability": 0.01391305907041064,
+        "max_probability": 0.014190744055228842,
+        "mean_probability": 0.014190707246508694,
+        "transactions": 7544,
+        "frauds": 117,
+        "observed_rate": 0.015509013785790032
+      },
+      {
+        "bin": 4,
+        "min_probability": 0.014271026198925181,
+        "max_probability": 0.01644736842105263,
+        "mean_probability": 0.016424350954207294,
+        "transactions": 309,
+        "frauds": 6,
+        "observed_rate": 0.019417475728155338
+      },
+      {
+        "bin": 5,
+        "min_probability": 0.01730613100311416,
+        "max_probability": 0.022951977401129944,
+        "mean_probability": 0.020805378190898727,
+        "transactions": 6155,
+        "frauds": 120,
+        "observed_rate": 0.01949634443541836
+      },
+      {
+        "bin": 6,
+        "min_probability": 0.023314404080828303,
+        "max_probability": 0.02590673575129533,
+        "mean_probability": 0.025713586506096474,
+        "transactions": 1864,
+        "frauds": 57,
+        "observed_rate": 0.0305793991416309
+      },
+      {
+        "bin": 7,
+        "min_probability": 0.026726057906458798,
+        "max_probability": 0.03645377661125693,
+        "mean_probability": 0.0334786783181157,
+        "transactions": 5766,
+        "frauds": 177,
+        "observed_rate": 0.030697190426638918
+      },
+      {
+        "bin": 8,
+        "min_probability": 0.042286819532801105,
+        "max_probability": 0.059684684684684686,
+        "mean_probability": 0.05639281166824874,
+        "transactions": 2685,
+        "frauds": 147,
+        "observed_rate": 0.054748603351955305
+      },
+      {
+        "bin": 9,
+        "min_probability": 0.059823860921716855,
+        "max_probability": 0.08084358523725835,
+        "mean_probability": 0.07734636691791968,
+        "transactions": 3151,
+        "frauds": 293,
+        "observed_rate": 0.09298635353855919
+      },
+      {
+        "bin": 10,
+        "min_probability": 0.086798877688527,
+        "max_probability": 1.0,
+        "mean_probability": 0.35667351033550376,
+        "transactions": 3731,
+        "frauds": 1272,
+        "observed_rate": 0.3409273653176092
+      }
+    ]
+  },
+  "intervals": {
+    "brier": {
+      "lower": 0.0234179193205951,
+      "upper": 0.02854151125907041,
+      "level": 0.95,
+      "undefined": 0,
+      "replicates": 10000
+    },
+    "log_loss": {
+      "lower": 0.1029718232629202,
+      "upper": 0.12143492543458405,
+      "level": 0.95,
+      "undefined": 0,
+      "replicates": 10000
+    },
+    "intercept": {
+      "lower": -0.1037257121014496,
+      "upper": 0.09710636143766284,
+      "level": 0.95,
+      "undefined": 0,
+      "replicates": 10000
+    },
+    "slope": {
+      "lower": 0.9220018208982771,
+      "upper": 1.0044555274477913,
+      "level": 0.95,
+      "undefined": 0,
+      "replicates": 10000
+    }
+  }
+}
