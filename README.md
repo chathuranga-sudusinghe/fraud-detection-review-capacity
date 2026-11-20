@@ -104,6 +104,10 @@ fraud-detection-review-capacity/
 │   └── processed/                       # processed development files (local, never committed)
 ├── outputs/                             # run outputs (ignored by Git)
 ├── .github/workflows/ci.yml             # continuous-integration checks
+├── LICENSE                              # Apache License 2.0 (code)
+├── LICENSE-docs                         # CC BY 4.0 (documentation and aggregate results)
+├── NOTICE                               # original author, repository and licence split
+├── CITATION.cff                         # citation metadata ("Cite this repository")
 ├── pyproject.toml                       # pinned dependencies
 ├── uv.lock                              # locked environment
 └── .python-version                      # Python version
@@ -137,3 +141,14 @@ Next steps:
 1. Development run on Train, Validation 1 (V1) and Validation 2 (V2) and its analysis runs, including the rolling-origin supplement: completed and promoted to [`evidence/development/`](evidence/development/README.md) and [`evidence/analysis/`](evidence/analysis/README.md); H3 configuration selected: LGB-b, LightGBM with balanced class weighting ([DR-010](docs/decisions/DR-010-h3-confirmatory-configuration.md#selection-result)).
 2. Single confirmatory Test evaluation, after the explicit approval of the run: completed (run `2026-11-01T104408Z`, tag `protocol-freeze-v1`); report completed and aggregate evidence promoted to [`evidence/confirmatory/`](evidence/confirmatory/README.md).
 3. Closure of the research phase: full repository inspection (Issue #223); the written report follows the University assessment documents.
+
+## Licence and citation
+
+Copyright 2026 Chathuranga Sudusinghe. Original repository: <https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity>.
+
+- **Documentation and aggregate results** (`README.md`, `AGENTS.md`, `docs/`, `notebooks/`, `evidence/`): [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE-docs).
+- **All other files, including the code** (`src/`, `tests/`, `scripts/`, `config/`, `.github/`): [Apache License, Version 2.0](LICENSE).
+- Redistributions and derivative works retain the [`NOTICE`](NOTICE) file, credit the original author and indicate the changes made.
+- **Citation:** [`CITATION.cff`](CITATION.cff) (GitHub: "Cite this repository").
+- The IEEE-CIS competition data are not included and are not covered by either licence; they are used under the Competition Rules ([dataset](docs/dataset.md#data-use-terms)).
+- Versions before Issue #228 were released under the MIT License.
