@@ -13,7 +13,9 @@ The final Test period (relative days 155–182) is sealed ([DR-001](../docs/deci
 | [`03_merged_dataset_inspection.ipynb`](03_merged_dataset_inspection.ipynb) | Merged (joined) development dataset: join validity, shape and roles, class imbalance (bar charts), identity coverage, merged missingness | Keys (all rows); full columns for the first 511,998 rows only (relative days 1–154) | Test represented by its row count only; no Test-period label read |
 | [`04_development_data_corrections.ipynb`](04_development_data_corrections.ipynb) | Corrections to notebooks 01 and 02: raw header names, oracle ceilings on Validation 2, Population Stability Index with a separate missing bin, `V` missingness blocks; each recomputed with the original and the corrected method ([Issue #59](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/59)) | Header lines; keys (all rows); full columns for the first 511,998 rows only (relative days 1–154) | As notebook 03: day-154 boundary asserted; no Test-period label read |
 
-Reading order: 02 → 03 for the current data view; 01 for the full feasibility evidence and split rationale; 04 for the corrections to 01 and 02.
+| [`05_report_figures.ipynb`](05_report_figures.ipynb) | Report figures ([Issue #230](https://github.com/chathuranga-sudusinghe/fraud-detection-review-capacity/issues/230)): exports the saved class-balance and prevalence charts of notebooks 03 and 01 byte for byte, and draws Recall@2% by configuration and the daily R2 alert demand against K (fixed daily review budget) from the confirmatory evidence; writes the figures and a SHA-256 manifest to `outputs/report_figures/<UTC time>/` | Saved outputs of notebooks 01 and 03; promoted aggregate records of the confirmatory run `evidence/confirmatory/2026-11-01T104408Z/records/` | Runs after the single confirmatory evaluation and reads only its aggregate records; no raw, processed or row-level data |
+
+Reading order: 02 → 03 for the current data view; 01 for the full feasibility evidence and split rationale; 04 for the corrections to 01 and 02; 05 for the report figures.
 
 From the data-preparation stage onwards, the reusable code is the `review_capacity` package ([`src/review_capacity/`](../src/review_capacity/), Issue #62). New notebooks load, validate and partition the data through it instead of repeating that logic. Notebooks 01–04 stay unchanged as saved evidence.
 
@@ -82,9 +84,13 @@ Notebook 01 is the pre-freeze feasibility record and is kept unchanged. Where it
 | MSc | Master of Science |
 | FT-Transformer | Feature Tokenizer + Transformer (a neural model for tabular data) |
 | H1, H2, H3; H3₀ | Confirmatory hypotheses: model-family effect; class-weighting effect; alert-rate transfer fidelity. H3₀ is the null hypothesis of H3 |
+| K | Fixed daily review budget (reviews per relative day); 56 at the primary 2 % capacity |
+| LGB-b | LightGBM with balanced class weighting, the configuration of H3 |
 | MLP | Multilayer perceptron |
 | PSI | Population Stability Index (a measure of distribution shift) |
-| R0, R4 | Decision policies: default 0.5 threshold; calibrated cost-aware capped review |
+| R0, R2, R4 | Decision policies: default 0.5 threshold; validation-selected 2 % rate threshold; calibrated cost-aware capped review |
+| Recall@2% | Share of all frauds reviewed under the daily top-K policy at 2 % capacity |
+| UTC | Coordinated Universal Time (run-directory timestamps) |
 | REF-NNN | Reference identifier in `docs/references.md` |
 | ρ | Miss-to-review cost ratio |
 | `isFraud` | Target: 1 = fraud, 0 = legitimate |
